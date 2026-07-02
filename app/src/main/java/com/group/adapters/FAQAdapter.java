@@ -1,0 +1,66 @@
+package com.group.adapters;
+
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageView;
+import android.widget.TextView;
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
+import com.group.healthup.R;
+import com.group.models.FAQ;
+import java.util.List;
+
+public class FAQAdapter extends RecyclerView.Adapter<FAQAdapter.ViewHolder> {
+    private List<FAQ> faqList;
+
+    public FAQAdapter(List<FAQ> faqList) {
+        this.faqList = faqList;
+    }
+
+    public void updateList(List<FAQ> newList) {
+        this.faqList = newList;
+        notifyDataSetChanged();
+    }
+
+    @NonNull
+    @Override
+    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_faq, parent, false);
+        return new ViewHolder(view);
+    }
+
+    @Override
+    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+        FAQ faq = faqList.get(position);
+        holder.tvQuestion.setText(faq.getQuestion());
+        holder.tvAnswer.setText(faq.getAnswer());
+        
+        holder.tvAnswer.setVisibility(faq.isExpanded() ? View.VISIBLE : View.GONE);
+        holder.ivArrow.setRotation(faq.isExpanded() ? 90f : -90f);
+
+        holder.layoutHeader.setOnClickListener(v -> {
+            faq.setExpanded(!faq.isExpanded());
+            notifyItemChanged(position);
+        });
+    }
+
+    @Override
+    public int getItemCount() {
+        return faqList != null ? faqList.size() : 0;
+    }
+
+    public static class ViewHolder extends RecyclerView.ViewHolder {
+        TextView tvQuestion, tvAnswer;
+        ImageView ivArrow;
+        View layoutHeader;
+
+        public ViewHolder(@NonNull View itemView) {
+            super(itemView);
+            tvQuestion = itemView.findViewById(R.id.tv_faq_question);
+            tvAnswer = itemView.findViewById(R.id.tv_faq_answer);
+            ivArrow = itemView.findViewById(R.id.iv_faq_arrow);
+            layoutHeader = itemView.findViewById(R.id.layout_faq_header);
+        }
+    }
+}
