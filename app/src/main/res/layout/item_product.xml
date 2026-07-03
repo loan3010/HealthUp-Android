@@ -1,12 +1,100 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:layout_margin="@dimen/spacing_s"
+    app:cardCornerRadius="@dimen/radius_l"
+    app:cardElevation="@dimen/shadow_card_elevation"
+    app:cardBackgroundColor="@color/neutral_white">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="item_product Item" />
+        android:orientation="vertical"
+        android:padding="@dimen/spacing_s">
 
-</LinearLayout>
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="120dp">
+
+            <ImageView
+                android:id="@+id/ivProduct"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@color/neutral_light_grey" />
+
+            <TextView
+                android:id="@+id/tvBadgeNew"
+                style="@style/Widget.HealthUp.Badge.New"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:text="MỚI"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/tvBadgeHot"
+                style="@style/Widget.HealthUp.Badge.Hot"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="4dp"
+                android:text="HOT"
+                android:visibility="gone" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/tvProductName"
+            style="@style/TextAppearance.HealthUp.SubContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_s"
+            android:ellipsize="end"
+            android:maxLines="2"
+            android:text="Product Name"
+            android:textColor="@color/neutral_black"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_xs"
+            android:gravity="bottom"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvProductPrice"
+                    style="@style/TextAppearance.HealthUp.Content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="100.000đ"
+                    android:textColor="@color/primary_default"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvOriginalPrice"
+                    style="@style/TextAppearance.HealthUp.CaptionLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="120.000đ"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnAddToCart"
+                android:layout_width="@dimen/icon_circle_size_small"
+                android:layout_height="@dimen/icon_circle_size_small"
+                android:background="@drawable/bg_circle_green"
+                android:padding="6dp"
+                android:src="@drawable/ic_plus"
+                app:tint="@color/neutral_white" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

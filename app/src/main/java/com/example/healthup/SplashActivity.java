@@ -1,24 +1,28 @@
 package com.example.healthup;
 
-import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
-
 import android.content.Intent;
-import android.os.Handler;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.splashscreen.SplashScreen;
 
 public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
+        // Nạp dữ liệu Firebase nếu trống
         FirebaseManager.getInstance().seedProductsIfEmpty();
         FirebaseManager.getInstance().seedOrdersIfEmpty();
 
-        new Handler().postDelayed(() -> {
-            startActivity(new Intent(SplashActivity.this, MainActivity.class));
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            // Vào thẳng trang Home
+            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
+            startActivity(intent);
             finish();
-        }, 2000); // Delay 2 seconds
+        }, 1500);
     }
 }

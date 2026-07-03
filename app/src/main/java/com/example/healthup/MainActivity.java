@@ -3,10 +3,9 @@ package com.example.healthup;
 import android.content.Intent;
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class MainActivity extends AppCompatActivity {
     @Override
@@ -16,7 +15,31 @@ public class MainActivity extends AppCompatActivity {
         
         BottomNavigationView navView = findViewById(R.id.bottom_navigation);
         
-        handleIntent(getIntent());
+        navView.setOnItemSelectedListener(item -> {
+            Fragment selectedFragment = null;
+            int id = item.getItemId();
+            
+            if (id == R.id.nav_home) {
+                selectedFragment = new HomeFragment();
+            } else if (id == R.id.nav_categories) {
+                selectedFragment = new ProductListFragment();
+            } else if (id == R.id.nav_cart) {
+                selectedFragment = new CartFragment();
+            } else if (id == R.id.nav_notifications) {
+                selectedFragment = new HomeFragment();
+            } else if (id == R.id.nav_profile) {
+                selectedFragment = new ProfileFragment();
+            }
+
+            if (selectedFragment != null) {
+                loadFragment(selectedFragment);
+            }
+            return true;
+        });
+
+        if (savedInstanceState == null) {
+            handleIntent(getIntent());
+        }
     }
 
     @Override
@@ -42,8 +65,8 @@ public class MainActivity extends AppCompatActivity {
             fragment.setArguments(args);
             loadFragment(fragment);
         } else {
-            // Load OrderHistoryFragment by default for testing
-            loadFragment(new OrderHistoryFragment());
+            // Mặc định load HomeFragment nếu không có yêu cầu điều hướng đặc biệt
+            loadFragment(new HomeFragment());
         }
     }
 
