@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <inset
+            android:insetLeft="8dp"
+            android:insetRight="8dp"
+            android:insetTop="12dp"
+            android:insetBottom="12dp">
+            <shape android:shape="rectangle">
+                <solid android:color="@color/navbar_active_pill_light" />
+                <corners android:radius="16dp" />
+            </shape>
+        </inset>
+    </item>
+    <item android:drawable="@android:color/transparent" />
+</selector>

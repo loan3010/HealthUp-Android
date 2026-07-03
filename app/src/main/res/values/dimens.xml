@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- =====================================================
+         3. SPACING SCALE — bội số của 4px
+         ===================================================== -->
+    <dimen name="spacing_xs">4dp</dimen>   <!-- Gap nhỏ nhất, icon padding -->
+    <dimen name="spacing_s">8dp</dimen>    <!-- Gap icon với text, badge padding -->
+    <dimen name="spacing_m">12dp</dimen>   <!-- Gap giữa các card, chip padding -->
+    <dimen name="spacing_l">16dp</dimen>   <!-- Horizontal padding màn hình -->
+    <dimen name="spacing_xl">20dp</dimen>  <!-- Padding section, card internal -->
+    <dimen name="spacing_2xl">24dp</dimen> <!-- Gap giữa các section -->
+    <dimen name="spacing_3xl">32dp</dimen> <!-- Gap lớn giữa block -->
+    <dimen name="spacing_4xl">48dp</dimen> <!-- Hero padding, top spacing -->
+
+    <!-- =====================================================
+         4. BORDER RADIUS
+         ===================================================== -->
+    <dimen name="radius_xs">4dp</dimen>    <!-- Badge, tag nhỏ -->
+    <dimen name="radius_s">8dp</dimen>     <!-- Button small, cart button 28x28 -->
+    <dimen name="radius_m">12dp</dimen>    <!-- Button large, input field, flash bar -->
+    <dimen name="radius_l">14dp</dimen>    <!-- Card sản phẩm -->
+    <dimen name="radius_xl">16dp</dimen>   <!-- Banner, navbar container -->
+    <dimen name="radius_2xl">18dp</dimen>  <!-- Banner lớn (promotional) -->
+    <dimen name="radius_full">99dp</dimen> <!-- Search bar, chip, pill badge, icon circle -->
+
+    <!-- =====================================================
+         5. SHADOW & BORDER
+         ===================================================== -->
+    <dimen name="shadow_card_elevation">2dp</dimen>
+    <dimen name="border_width_default">1.5dp</dimen>
+    <dimen name="border_width_thin">1dp</dimen>
+
+    <!-- =====================================================
+         6/7. INPUT & BUTTON
+         ===================================================== -->
+    <dimen name="input_height">48dp</dimen>
+    <dimen name="input_padding_horizontal">16dp</dimen>
+    <dimen name="input_padding_vertical">12dp</dimen>
+    <dimen name="icon_circle_size_small">28dp</dimen>
+
+    <!-- =====================================================
+         9. NAVBAR
+         ===================================================== -->
+    <dimen name="navbar_height">80dp</dimen>
+    <dimen name="navbar_safe_area_bottom">20dp</dimen>
+    <dimen name="navbar_border_top">1dp</dimen>
+    <dimen name="navbar_radius">16dp</dimen>
+    <dimen name="navbar_icon_size">20dp</dimen>
+    <dimen name="navbar_active_pill_width">40dp</dimen>
+    <dimen name="navbar_active_pill_height">32dp</dimen>
+
+    <!-- =====================================================
+         2. TYPOGRAPHY SIZES (sp)
+         ===================================================== -->
+    <dimen name="text_size_title">28sp</dimen>
+    <dimen name="text_size_sub_title">20sp</dimen>
+    <dimen name="text_size_content">16sp</dimen>
+    <dimen name="text_size_sub_content">14sp</dimen>
+    <dimen name="text_size_button_large">15sp</dimen>
+    <dimen name="text_size_button_small">13sp</dimen>
+    <dimen name="text_size_edit_text">16sp</dimen>
+    <dimen name="text_size_caption_label">11sp</dimen>
+
+</resources>
