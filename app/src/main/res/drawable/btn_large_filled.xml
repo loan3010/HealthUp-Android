@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Large Filled: Default = nền Primary, chữ Cream · Disabled = nền Light Grey, chữ Grey -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/neutral_light_grey" />
+            <corners android:radius="@dimen/radius_m" />
+        </shape>
+    </item>
+    <item android:state_pressed="true">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/primary_shade_2" />
+            <corners android:radius="@dimen/radius_m" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/primary_default" />
+            <corners android:radius="@dimen/radius_m" />
+        </shape>
+    </item>
+</selector>

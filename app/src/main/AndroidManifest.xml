@@ -19,7 +19,8 @@
 
         <activity
             android:name="com.example.healthup.SplashActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -35,6 +36,15 @@
         <activity android:name="com.example.healthup.OrderDetailActivity" />
         <activity android:name="com.example.healthup.AddressFormActivity" />
         <activity android:name="com.example.healthup.AboutActivity" />
+        <activity android:name="com.example.healthup.AccountInfoActivity" />
+        <activity android:name="com.example.healthup.PaymentInfoActivity" />
+        <activity android:name="com.example.healthup.ChangeUsernameActivity" />
+        <activity android:name="com.example.healthup.ChangePasswordActivity" />
+        <activity android:name="com.example.healthup.ChangeEmailActivity" />
+        <activity android:name="com.example.healthup.ChangePhoneActivity" />
+        <activity android:name="com.example.healthup.NotificationSettingsActivity" />
+        <activity android:name="com.example.healthup.LanguageSettingsActivity" />
+        <activity android:name="com.example.healthup.AccessSettingsActivity" />
 
     </application>
 

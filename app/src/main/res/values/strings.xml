@@ -1,3 +1,18 @@
 <resources>
     <string name="app_name">HealthUp</string>
+    <string name="welcome_back">Xin chào</string>
+    <string name="search_hint">Tìm granola, snack lành mạnh...</string>
+    <string name="home_question">Bạn muốn ăn gì hôm nay?</string>
+    <string name="flash_sale_title">⚡ FLASH SALE</string>
+    <string name="new_products_title">Sản phẩm mới nhất</string>
+    <string name="view_all">Xem tất cả</string>
+    <string name="buy_now">Mua ngay →</string>
+    <string name="weekly_promo">TUẦN NÀY</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_categories">Danh mục</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_notifications">Thông báo</string>
+    <string name="nav_profile">Tài khoản</string>
 </resources>

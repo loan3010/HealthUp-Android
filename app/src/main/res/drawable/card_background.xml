@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dùng cho card thường (View + background), shadow thật nên dùng MaterialCardView
+     với app:cardElevation="@dimen/shadow_card_elevation" thay vì shape này -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/neutral_white" />
+    <corners android:radius="@dimen/radius_l" />
+</shape>

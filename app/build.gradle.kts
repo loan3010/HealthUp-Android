@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.healthup"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.healthup"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -40,6 +40,7 @@ dependencies {
     implementation(libs.appcompat)
     implementation(libs.material)
     implementation(libs.constraintlayout)
+    implementation(libs.splashscreen)
 
     // Firebase
     implementation(platform("com.google.firebase:firebase-bom:34.15.0"))
