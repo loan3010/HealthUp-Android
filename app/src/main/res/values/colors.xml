@@ -1,5 +1,26 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Primary & Secondary -->
+    <color name="primary">#36873A</color>
+    <color name="secondary">#A2C37F</color>
+
+    <!-- Tints -->
+    <color name="tint_light">#EEF5E2</color>
+    <color name="tint_medium">#DDEACC</color>
+
+    <!-- Neutrals -->
+    <color name="text_main">#1F1915</color>
+    <color name="text_secondary">#524D4A</color>
+    <color name="text_hint">#A09894</color>
+    <color name="border_color">#E0D9D5</color>
+    <color name="white">#FFFFFF</color>
+    <color name="bg_cream">#FAF6F0</color>
+
+    <!-- Semantic -->
+    <color name="error">#E53835</color>
+    <color name="warning">#FFEE97</color>
+    <color name="status_amber">#FF8F00</color>
+
+    <!-- Standard -->
+    <color name="black">#1F1915</color>
 </resources>
