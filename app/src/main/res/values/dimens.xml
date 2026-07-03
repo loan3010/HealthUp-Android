@@ -1,23 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<<<<<<< HEAD
-    <dimen name="spacing_xs">4dp</dimen>
-    <dimen name="spacing_s">8dp</dimen>
-    <dimen name="spacing_m">12dp</dimen>
-    <dimen name="spacing_l">16dp</dimen>
-    <dimen name="spacing_xl">20dp</dimen>
-    <dimen name="spacing_2xl">24dp</dimen>
-    <dimen name="spacing_3xl">32dp</dimen>
-    <dimen name="spacing_4xl">48dp</dimen>
-
-    <dimen name="radius_xs">4dp</dimen>
-    <dimen name="radius_s">8dp</dimen>
-    <dimen name="radius_m">12dp</dimen>
-    <dimen name="radius_l">14dp</dimen>
-    <dimen name="radius_xl">16dp</dimen>
-    <dimen name="radius_full">99dp</dimen>
-=======
-
     <!-- =====================================================
          3. SPACING SCALE — bội số của 4px
          ===================================================== -->
@@ -78,6 +60,4 @@
     <dimen name="text_size_button_small">13sp</dimen>
     <dimen name="text_size_edit_text">16sp</dimen>
     <dimen name="text_size_caption_label">11sp</dimen>
-
->>>>>>> b8d292e0cfe737865c4c4cb55e766deabc09c798
 </resources>

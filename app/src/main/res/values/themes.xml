@@ -1,5 +1,6 @@
-<<<<<<< HEAD
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+
     <!-- Base application theme. -->
     <style name="Base.Theme.HealthUp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
@@ -20,6 +21,13 @@
         <item name="colorControlActivated">@color/primary</item>
         <item name="android:windowBackground">@color/bg_cream</item>
         <item name="android:statusBarColor">@color/bg_cream</item>
+    </style>
+
+    <!-- Modern Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/bg_cream</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.HealthUp</item>
     </style>
 
     <!-- Text Styles -->
@@ -74,44 +82,4 @@
     <style name="BottomSheetStyle" parent="Widget.MaterialComponents.BottomSheet.Modal">
         <item name="android:background">@android:color/transparent</item>
     </style>
-=======
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-
-    <!-- Theme gốc HealthUp — kế thừa Theme.MaterialComponents (đổi parent nếu app
-         dùng Material3: "Theme.Material3.DayNight.NoActionBar") -->
-    <style name="Theme.HealthUp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/primary_default</item>
-        <item name="colorPrimaryDark">@color/primary_shade_2</item>
-        <item name="colorAccent">@color/secondary_default</item>
-        <item name="colorError">@color/action_error</item>
-
-        <item name="android:colorBackground">@color/neutral_cream</item>
-        <item name="android:textColorPrimary">@color/neutral_black</item>
-        <item name="android:textColorSecondary">@color/neutral_dark_grey</item>
-        <item name="android:textColorHint">@color/neutral_grey</item>
-
-        <item name="android:fontFamily">@font/be_vietnam_pro</item>
-        <item name="fontFamily">@font/be_vietnam_pro</item>
-
-        <item name="android:statusBarColor">@color/neutral_cream</item>
-        <item name="android:windowLightStatusBar">true</item>
-    </style>
-
-    <!-- Biến thể Dark mode: đặt trong values-night/themes.xml khi cần override sâu hơn -->
-    <style name="Theme.HealthUp.Dark" parent="Theme.HealthUp">
-        <item name="android:colorBackground">@color/neutral_black</item>
-        <item name="android:textColorPrimary">@color/neutral_cream</item>
-        <item name="android:statusBarColor">@color/neutral_black</item>
-        <item name="android:windowLightStatusBar">false</item>
-    </style>
-
-    <!-- Modern Splash Screen Theme -->
-    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/neutral_cream</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
-        <item name="postSplashScreenTheme">@style/Theme.HealthUp</item>
-    </style>
-
->>>>>>> b8d292e0cfe737865c4c4cb55e766deabc09c798
 </resources>
