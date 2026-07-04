@@ -24,6 +24,7 @@ import com.example.models.Product;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class HomeFragment extends Fragment {
@@ -206,15 +207,26 @@ public class HomeFragment extends Fragment {
         firestoreManager.getNewProducts(100, task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 Log.d("HomeFragment", "New products fetched: " + task.getResult().size());
-                newProducts.clear();
-                allProductsForSearch.clear();
+                
+                List<Product> allFetchedProducts = new ArrayList<>();
                 for (QueryDocumentSnapshot document : task.getResult()) {
-                    Log.d("HomeFragment", "New Product Found: " + document.get("name"));
                     Product prod = document.toObject(Product.class);
                     prod.setId(document.getId());
-                    newProducts.add(prod);
-                    allProductsForSearch.add(prod); // Lưu vào danh sách tìm kiếm
+                    allFetchedProducts.add(prod);
                 }
+
+                // Lưu toàn bộ vào danh sách tìm kiếm
+                allProductsForSearch.clear();
+                allProductsForSearch.addAll(allFetchedProducts);
+
+                // Lấy ngẫu nhiên tầm 10 sản phẩm để hiện ra trang Home
+                newProducts.clear();
+                if (!allFetchedProducts.isEmpty()) {
+                    Collections.shuffle(allFetchedProducts);
+                    int limit = Math.min(allFetchedProducts.size(), 10);
+                    newProducts.addAll(allFetchedProducts.subList(0, limit));
+                }
+
                 newProductAdapter.notifyDataSetChanged();
             } else {
                 Log.e("HomeFragment", "Error fetching new products", task.getException());
@@ -227,6 +239,7 @@ public class HomeFragment extends Fragment {
                 Log.d("HomeFragment", "Blogs fetched: " + task.getResult().size());
                 blogs.clear();
                 for (QueryDocumentSnapshot document : task.getResult()) {
+                    Log.d("HomeFragment", "Blog Raw Data: " + document.getData());
                     Blog blog = document.toObject(Blog.class);
                     blog.setId(document.getId());
                     blogs.add(blog);

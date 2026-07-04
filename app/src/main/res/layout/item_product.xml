@@ -51,7 +51,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_s"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:lines="2"
             android:text="Product Name"
             android:textColor="@color/neutral_black"
             android:textStyle="bold" />
@@ -60,7 +60,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_xs"
-            android:gravity="bottom"
+            android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <LinearLayout
@@ -86,6 +86,16 @@
                     android:text="120.000đ"
                     android:visibility="gone" />
             </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnWishlist"
+                android:layout_width="@dimen/icon_circle_size_small"
+                android:layout_height="@dimen/icon_circle_size_small"
+                android:layout_marginEnd="@dimen/spacing_xs"
+                android:background="@drawable/bg_circle_light"
+                android:padding="6dp"
+                android:src="@drawable/ic_wishlist"
+                app:tint="@color/primary_default" />
 
             <ImageView
                 android:id="@+id/btnAddToCart"

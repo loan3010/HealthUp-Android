@@ -30,6 +30,20 @@ public class ProfileFragment extends Fragment {
                     .addToBackStack(null)
                     .commit();
         });
+
+        // Mở trang Quản lý đơn hàng
+        binding.cardOrderHistory.setOnClickListener(v -> {
+            getParentFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new OrderHistoryFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
+        // Mở trang Đổi trả (Cần Activity nên dùng Intent)
+        binding.cardRefund.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(getActivity(), ReturnRefundActivity.class);
+            startActivity(intent);
+        });
     }
 
     @Override
