@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Khi được check, hiện icon tròn xanh tick trắng -->
+    <item android:drawable="@drawable/ic_check_circle" android:state_checked="true" />
+    <!-- Khi không check, hiện vòng tròn trống viền xám -->
+    <item android:drawable="@drawable/ic_circle_unselected" android:state_checked="false" />
+    <item android:drawable="@drawable/ic_circle_unselected" />
+</selector>

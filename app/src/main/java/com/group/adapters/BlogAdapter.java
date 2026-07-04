@@ -59,10 +59,28 @@ public class BlogAdapter extends RecyclerView.Adapter<BlogAdapter.ViewHolder> {
         SimpleDateFormat sdf = new SimpleDateFormat("dd 'tháng' MM, yyyy", new Locale("vi", "VN"));
         holder.tvDate.setText(sdf.format(new Date(blog.getTimestamp())));
 
-        Glide.with(holder.itemView.getContext())
-                .load(blog.getImageUrl())
-                .placeholder(R.drawable.ic_launcher_background)
-                .into(holder.ivImage);
+        // Xử lý hiển thị ảnh Blog từ assets hoặc web
+        String imagePath = blog.getImageUrl();
+        if (imagePath != null && !imagePath.isEmpty()) {
+            if (imagePath.startsWith("http")) {
+                Glide.with(holder.itemView.getContext())
+                        .load(imagePath)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(holder.ivImage);
+            } else {
+                // Hỗ trợ ảnh từ assets
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                if (!cleanPath.startsWith("images/")) {
+                    cleanPath = "images/blogs/" + cleanPath;
+                }
+                Glide.with(holder.itemView.getContext())
+                        .load("file:///android_asset/" + cleanPath)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(holder.ivImage);
+            }
+        }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) listener.onBlogClick(blog);

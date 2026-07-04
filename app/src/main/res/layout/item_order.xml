@@ -1,12 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:layout_marginHorizontal="@dimen/spacing_l"
+    android:layout_marginVertical="@dimen/spacing_s"
+    app:cardBackgroundColor="@color/white"
+    app:cardCornerRadius="@dimen/radius_l"
+    app:cardElevation="2dp">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="item_order Item" />
+        android:orientation="vertical"
+        android:paddingBottom="@dimen/spacing_l">
 
-</LinearLayout>
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:paddingHorizontal="@dimen/spacing_xl"
+            android:paddingTop="@dimen/spacing_l"
+            android:paddingBottom="@dimen/spacing_s"
+            android:text="Hoàn thành"
+            android:textColor="@color/primary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/lnItemsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+        <LinearLayout
+            android:id="@+id/tvShowMoreContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:orientation="horizontal"
+            android:padding="@dimen/spacing_s"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvShowMore"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Xem thêm 2 sản phẩm"
+                android:textColor="@color/text_hint"
+                android:textSize="12sp" />
+
+            <ImageView
+                android:layout_width="10dp"
+                android:layout_height="10dp"
+                android:layout_marginStart="4dp"
+                android:src="@drawable/ic_arrow_down"
+                app:tint="@color/text_hint" />
+        </LinearLayout>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginHorizontal="@dimen/spacing_xl"
+            android:layout_marginVertical="@dimen/spacing_s"
+            android:background="@color/border_color" />
+
+        <TextView
+            android:id="@+id/tvTotalPrice"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:paddingHorizontal="@dimen/spacing_xl"
+            android:paddingBottom="@dimen/spacing_m"
+            android:text="Tổng số tiền (3 sản phẩm): 233.000đ"
+            android:textColor="@color/text_main"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:id="@+id/lnActionButtons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/spacing_s">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnActionLeft"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="6dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="8dp"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:singleLine="true"
+                app:cornerRadius="@dimen/radius_s"
+                app:strokeColor="@color/border_color"
+                app:strokeWidth="1dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:textColor="@color/text_main"
+                android:text="Trả hàng/Hoàn tiền" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnActionMiddle"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:layout_marginEnd="6dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="10dp"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:singleLine="true"
+                app:cornerRadius="@dimen/radius_s"
+                app:strokeColor="@color/border_color"
+                app:strokeWidth="1dp"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                android:textColor="@color/text_main"
+                android:text="Đánh giá" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnActionRight"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="36dp"
+                android:minHeight="0dp"
+                android:minWidth="0dp"
+                android:paddingHorizontal="14dp"
+                android:textAllCaps="false"
+                android:textSize="12sp"
+                android:singleLine="true"
+                app:cornerRadius="@dimen/radius_s"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:insetLeft="0dp"
+                android:insetRight="0dp"
+                app:strokeColor="@color/border_color"
+                app:strokeWidth="1dp"
+                android:backgroundTint="@android:color/transparent"
+                android:textColor="@color/text_main"
+                android:text="Mua lại" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

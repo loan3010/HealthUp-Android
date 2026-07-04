@@ -20,6 +20,7 @@ public class Product implements Serializable {
     private int soldCount;
     private int stockCount;
     private boolean favorite;
+    private boolean isSelected = false;
     
     private String ingredients;
     private List<NutritionItem> nutrition;
@@ -72,6 +73,16 @@ public class Product implements Serializable {
     public boolean isFavorite() { return favorite; }
     public void setFavorite(boolean favorite) { this.favorite = favorite; }
 
+    public boolean isSelected() { return isSelected; }
+    public void setSelected(boolean selected) { isSelected = selected; }
+
+    public boolean isNew() { return true; }
+    public boolean isHot() { return false; }
+
+    public static List<Product> getDummyProducts() {
+        return new java.util.ArrayList<>();
+    }
+
     public String getIngredients() { return ingredients; }
     public void setIngredients(String ingredients) { this.ingredients = ingredients; }
 
@@ -102,6 +113,25 @@ public class Product implements Serializable {
             return (int) (((originalPrice - price) / originalPrice) * 100);
         }
         return 0;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Product product = (Product) o;
+        return Double.compare(product.price, price) == 0 &&
+                Float.compare(product.rating, rating) == 0 &&
+                favorite == product.favorite &&
+                isSelected == product.isSelected &&
+                java.util.Objects.equals(id, product.id) &&
+                java.util.Objects.equals(name, product.name) &&
+                java.util.Objects.equals(category, product.category);
+    }
+
+    @Override
+    public int hashCode() {
+        return java.util.Objects.hash(id, name, price, category, rating, favorite, isSelected);
     }
 
     public static class ProductVariant implements Serializable {

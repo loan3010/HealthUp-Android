@@ -6,8 +6,10 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.google.android.material.button.MaterialButton;
 import com.group.healthup.R;
 import com.group.models.Product;
@@ -19,7 +21,6 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
     private List<Product> productList;
     private OnProductClickListener listener;
     private boolean selectionMode = false;
-    private List<String> selectedIds = new java.util.ArrayList<>();
 
     public interface OnProductClickListener {
         void onProductClick(Product product);
@@ -33,21 +34,47 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
     }
 
     public void updateData(List<Product> newList) {
+        DiffUtil.DiffResult diffResult = DiffUtil.calculateDiff(new ProductDiffCallback(this.productList, newList));
         this.productList = newList;
-        notifyDataSetChanged();
+        diffResult.dispatchUpdatesTo(this);
+    }
+
+    private static class ProductDiffCallback extends DiffUtil.Callback {
+        private final List<Product> oldList;
+        private final List<Product> newList;
+
+        public ProductDiffCallback(List<Product> oldList, List<Product> newList) {
+            this.oldList = oldList;
+            this.newList = newList;
+        }
+
+        @Override
+        public int getOldListSize() {
+            return oldList != null ? oldList.size() : 0;
+        }
+
+        @Override
+        public int getNewListSize() {
+            return newList != null ? newList.size() : 0;
+        }
+
+        @Override
+        public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
+            return oldList.get(oldItemPosition).getId().equals(newList.get(newItemPosition).getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(int oldItemPosition, int newItemPosition) {
+            Product oldProduct = oldList.get(oldItemPosition);
+            Product newProduct = newList.get(newItemPosition);
+            return oldProduct.equals(newProduct);
+        }
     }
 
     public void setSelectionMode(boolean mode) {
         this.selectionMode = mode;
-        if (!mode) selectedIds.clear();
-        notifyDataSetChanged();
-    }
-
-    public void toggleSelection(String productId) {
-        if (selectedIds.contains(productId)) {
-            selectedIds.remove(productId);
-        } else {
-            selectedIds.add(productId);
+        if (!mode) {
+            for (Product p : productList) p.setSelected(false);
         }
         notifyDataSetChanged();
     }
@@ -62,7 +89,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Product product = productList.get(position);
-        holder.bind(product, listener, selectionMode, selectedIds.contains(product.getId()));
+        holder.bind(product, listener, selectionMode);
     }
 
     @Override
@@ -71,24 +98,23 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
     }
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView imgProduct, btnFavorite;
+        ImageView imgProduct, btnFavorite, btnAdd;
         TextView tvName, tvPrice, tvRating, tvSoldCount;
-        MaterialButton btnAdd;
         android.widget.CheckBox cbSelect;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            imgProduct = itemView.findViewById(R.id.img_product);
-            btnFavorite = itemView.findViewById(R.id.btn_favorite);
-            tvName = itemView.findViewById(R.id.tv_product_name);
-            tvPrice = itemView.findViewById(R.id.tv_product_price);
-            tvRating = itemView.findViewById(R.id.tv_rating);
-            tvSoldCount = itemView.findViewById(R.id.tv_sold_count);
-            btnAdd = itemView.findViewById(R.id.btn_add_to_cart);
-            cbSelect = itemView.findViewById(R.id.cb_select);
+            imgProduct = itemView.findViewById(R.id.ivProduct);
+            btnFavorite = itemView.findViewById(R.id.btnWishlist);
+            tvName = itemView.findViewById(R.id.tvProductName);
+            tvPrice = itemView.findViewById(R.id.tvProductPrice);
+            tvRating = itemView.findViewById(R.id.tvRating);
+            tvSoldCount = itemView.findViewById(R.id.tvSoldCount);
+            btnAdd = itemView.findViewById(R.id.btnAddToCart);
+            cbSelect = itemView.findViewById(R.id.cbSelect);
         }
 
-        public void bind(Product product, OnProductClickListener listener, boolean selectionMode, boolean isSelected) {
+        public void bind(Product product, OnProductClickListener listener, boolean selectionMode) {
             tvName.setText(product.getName());
             
             NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
@@ -100,15 +126,27 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
             Glide.with(itemView.getContext())
                     .load(product.getImageUrl())
                     .placeholder(R.drawable.ic_launcher_background)
+                    .diskCacheStrategy(DiskCacheStrategy.ALL)
+                    .centerCrop()
                     .into(imgProduct);
 
             if (selectionMode) {
                 cbSelect.setVisibility(View.VISIBLE);
-                cbSelect.setChecked(isSelected);
+                cbSelect.setChecked(product.isSelected());
+                cbSelect.setClickable(false); // Để itemView nhận sự kiện click
+                
+                // Cập nhật background nếu được chọn
+                if (product.isSelected()) {
+                    itemView.setBackgroundResource(R.drawable.bg_product_selected);
+                } else {
+                    itemView.setBackgroundResource(R.drawable.bg_product_unselected);
+                }
+                
                 btnFavorite.setVisibility(View.GONE);
                 btnAdd.setVisibility(View.GONE);
             } else {
                 cbSelect.setVisibility(View.GONE);
+                itemView.setBackgroundResource(R.drawable.bg_product_unselected);
                 btnFavorite.setVisibility(View.VISIBLE);
                 btnAdd.setVisibility(View.VISIBLE);
                 btnFavorite.setImageResource(product.isFavorite() ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);

@@ -1,4 +1,4 @@
-package com.example.healthup.firebase;
+package com.group.healthup.firebase;
 
 public class AuthManager {
     private static AuthManager instance;

@@ -55,13 +55,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
     public static class ViewHolder extends RecyclerView.ViewHolder {
         ImageView imgProduct;
-        TextView tvName, tvPrice, tvQuantity;
+        TextView tvName, tvVariant, tvPrice, tvQuantity;
         ImageButton btnMinus, btnPlus, btnDelete;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             imgProduct = itemView.findViewById(R.id.iv_cart_item_image);
             tvName = itemView.findViewById(R.id.tv_cart_item_name);
+            tvVariant = itemView.findViewById(R.id.tv_cart_item_variant);
             tvPrice = itemView.findViewById(R.id.tv_cart_item_price);
             tvQuantity = itemView.findViewById(R.id.tv_cart_item_quantity);
             btnMinus = itemView.findViewById(R.id.btn_minus);
@@ -72,8 +73,17 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         public void bind(CartItem item, OnCartItemChangeListener listener) {
             if (item.getProduct() != null) {
                 tvName.setText(item.getProduct().getName());
+                
+                if (item.getVariantName() != null && !item.getVariantName().isEmpty()) {
+                    tvVariant.setText(item.getVariantName());
+                    tvVariant.setVisibility(View.VISIBLE);
+                } else {
+                    tvVariant.setVisibility(View.GONE);
+                }
+
                 NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
-                tvPrice.setText(formatter.format(item.getProduct().getPrice()) + "đ");
+                double displayPrice = item.getPrice() > 0 ? item.getPrice() : item.getProduct().getPrice();
+                tvPrice.setText(formatter.format(displayPrice) + "đ");
                 
                 Glide.with(itemView.getContext())
                         .load(item.getProduct().getImageUrl())

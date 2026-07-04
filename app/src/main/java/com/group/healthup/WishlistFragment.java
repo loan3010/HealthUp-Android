@@ -141,20 +141,21 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
     private void applyFilters() {
-        filteredWishlist.clear();
+        List<Product> newList = new ArrayList<>();
         for (Product product : wishlist) {
             boolean matchesSearch = product.getName().toLowerCase().contains(currentSearchQuery);
             boolean matchesSale = !showOnlyOnSale || (product.getOriginalPrice() > product.getPrice());
             
             if (matchesSearch && matchesSale) {
-                filteredWishlist.add(product);
+                newList.add(product);
             }
         }
-        wishlistAdapter.notifyDataSetChanged();
+        filteredWishlist = newList;
+        wishlistAdapter.updateData(new ArrayList<>(filteredWishlist));
         
         // Handle empty filtered results vs overall empty wishlist
         if (filteredWishlist.isEmpty() && !wishlist.isEmpty()) {
-            // Show a "no results found" if needed, or just let it be empty
+            // Show a "no results found" if needed
         }
     }
 
@@ -238,19 +239,33 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
     private void deleteSelected() {
-        // Logic to remove from favorites in Firestore
-        Toast.makeText(getContext(), "Đã xóa " + selectedProducts.size() + " sản phẩm", Toast.LENGTH_SHORT).show();
-        wishlist.removeAll(selectedProducts);
+        if (selectedProducts.isEmpty()) {
+            Toast.makeText(getContext(), "Vui lòng chọn sản phẩm cần xóa", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        int count = selectedProducts.size();
         
-        // In reality, loop through selectedProducts and update Firestore
+        // Loop through selectedProducts and update Firestore
         for (Product p : selectedProducts) {
              FirestoreManager.getInstance().getProductsCollection().document(p.getId())
                      .update("favorite", false);
+             
+             // Xóa khỏi list local
+             for (int i = 0; i < wishlist.size(); i++) {
+                 if (wishlist.get(i).getId().equals(p.getId())) {
+                     wishlist.remove(i);
+                     break;
+                 }
+             }
         }
+        
+        Toast.makeText(getContext(), "Đã xóa " + count + " sản phẩm", Toast.LENGTH_SHORT).show();
         
         selectedProducts.clear();
         isEditMode = false;
         wishlistAdapter.setSelectionMode(false);
+        applyFilters();
         updateUI();
     }
 
@@ -262,12 +277,21 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     @Override
     public void onProductClick(Product product) {
         if (isEditMode) {
-            wishlistAdapter.toggleSelection(product.getId());
-            if (selectedProducts.contains(product)) {
-                selectedProducts.remove(product);
-            } else {
+            boolean isCurrentlySelected = product.isSelected();
+            product.setSelected(!isCurrentlySelected);
+            
+            if (!isCurrentlySelected) {
                 selectedProducts.add(product);
+            } else {
+                // Remove by ID to be safe
+                for (int i = 0; i < selectedProducts.size(); i++) {
+                    if (selectedProducts.get(i).getId().equals(product.getId())) {
+                        selectedProducts.remove(i);
+                        break;
+                    }
+                }
             }
+            wishlistAdapter.updateData(new ArrayList<>(filteredWishlist));
             updateDeleteButtonText();
         } else {
             android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
@@ -281,29 +305,55 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         if (!isEditMode) {
             com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
             if (user == null) {
-                Toast.makeText(getContext(), "Vui lòng đăng nhập để thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
                 return;
             }
-            String userId = user.getUid();
-            
-            FirestoreManager.getInstance().getFirestore().collection("cart")
-                    .whereEqualTo("userId", userId)
-                    .whereEqualTo("productId", product.getId())
-                    .get()
-                    .addOnSuccessListener(queryDocumentSnapshots -> {
-                        if (!queryDocumentSnapshots.isEmpty()) {
-                            DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                            long currentQty = doc.getLong("quantity");
-                            doc.getReference().update("quantity", currentQty + 1);
-                        } else {
-                            com.group.models.CartItem newItem = new com.group.models.CartItem(
-                                    product.getId(), product, 1, userId);
-                            FirestoreManager.getInstance().getFirestore().collection("cart")
-                                    .add(newItem);
-                        }
-                        Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
-                    });
+
+            if (product.isHasVariants()) {
+                showVariantSheet(product);
+            } else {
+                performAddToCart(product, null, 1);
+            }
         }
+    }
+
+    private void showVariantSheet(Product product) {
+        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) -> {
+            performAddToCart(product, variant, quantity);
+        });
+        sheet.show(getChildFragmentManager(), "VariantSelection");
+    }
+
+    private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
+        String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
+        String productId = product.getId();
+        String variantId = (variant != null) ? variant.getId() : null;
+
+        FirestoreManager.getInstance().getFirestore().collection("cart")
+                .whereEqualTo("userId", userId)
+                .whereEqualTo("productId", productId)
+                .whereEqualTo("variantId", variantId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        long currentQty = doc.getLong("quantity");
+                        doc.getReference().update("quantity", currentQty + quantity);
+                    } else {
+                        com.group.models.CartItem newItem = new com.group.models.CartItem(
+                                productId, product, quantity, userId);
+                        if (variant != null) {
+                            newItem.setVariantId(variant.getId());
+                            newItem.setVariantName(variant.getName());
+                            newItem.setPrice(variant.getPrice());
+                        } else {
+                            newItem.setPrice(product.getPrice());
+                        }
+                        FirestoreManager.getInstance().getFirestore().collection("cart")
+                                .add(newItem);
+                    }
+                    Toast.makeText(getContext(), getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
+                });
     }
 
     @Override

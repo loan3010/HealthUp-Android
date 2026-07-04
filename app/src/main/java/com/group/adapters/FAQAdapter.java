@@ -7,15 +7,23 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.transition.TransitionManager;
 import com.group.healthup.R;
 import com.group.models.FAQ;
 import java.util.List;
 
 public class FAQAdapter extends RecyclerView.Adapter<FAQAdapter.ViewHolder> {
     private List<FAQ> faqList;
+    private RecyclerView recyclerView;
 
     public FAQAdapter(List<FAQ> faqList) {
         this.faqList = faqList;
+    }
+
+    @Override
+    public void onAttachedToRecyclerView(@NonNull RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        this.recyclerView = recyclerView;
     }
 
     public void updateList(List<FAQ> newList) {
@@ -40,7 +48,12 @@ public class FAQAdapter extends RecyclerView.Adapter<FAQAdapter.ViewHolder> {
         holder.ivArrow.setRotation(faq.isExpanded() ? 90f : -90f);
 
         holder.layoutHeader.setOnClickListener(v -> {
-            faq.setExpanded(!faq.isExpanded());
+            boolean expanded = faq.isExpanded();
+            faq.setExpanded(!expanded);
+            
+            if (recyclerView != null) {
+                TransitionManager.beginDelayedTransition(recyclerView);
+            }
             notifyItemChanged(position);
         });
     }

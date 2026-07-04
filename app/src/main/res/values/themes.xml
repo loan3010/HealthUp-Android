@@ -1,9 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
+
     <!-- Base application theme. -->
     <style name="Base.Theme.HealthUp" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <item name="android:fontFamily">@font/be_vietnam</item>
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorAccent">@color/primary</item>
+        <item name="colorSecondary">@color/primary</item>
+        <item name="colorControlActivated">@color/primary</item>
+        <item name="android:windowBackground">@color/bg_cream</item>
+        <item name="android:statusBarColor">@color/bg_cream</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
     </style>
 
     <style name="Theme.HealthUp" parent="Base.Theme.HealthUp" />
+
+    <style name="Theme.PhotoPicker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorAccent">@color/primary</item>
+        <item name="colorSecondary">@color/primary</item>
+        <item name="colorControlActivated">@color/primary</item>
+        <item name="android:windowBackground">@color/bg_cream</item>
+        <item name="android:statusBarColor">@color/bg_cream</item>
+    </style>
+
+    <!-- Modern Splash Screen Theme -->
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/bg_cream</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.HealthUp</item>
+    </style>
+
+    <!-- Text Styles -->
+    <style name="TabTextAppearance" parent="TextAppearance.Design.Tab">
+        <item name="android:textSize">14sp</item>
+        <item name="textAllCaps">false</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+    </style>
+
+    <!-- Button Styles -->
+    <style name="ButtonSmallFilled" parent="Widget.MaterialComponents.Button">
+        <item name="backgroundTint">@color/primary</item>
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_s</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/bg_cream</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="ButtonSmallOutline" parent="Widget.MaterialComponents.Button.OutlinedButton">
+        <item name="android:insetTop">0dp</item>
+        <item name="android:insetBottom">0dp</item>
+        <item name="cornerRadius">@dimen/radius_s</item>
+        <item name="strokeColor">@color/border_color</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="android:textColor">@color/text_main</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:paddingLeft">8dp</item>
+        <item name="android:paddingRight">8dp</item>
+    </style>
+
+    <style name="ButtonSmallOutlineError" parent="ButtonSmallOutline">
+        <item name="strokeColor">@color/error</item>
+        <item name="android:textColor">@color/error</item>
+    </style>
+
+    <style name="ButtonSmallOutlinePrimary" parent="ButtonSmallOutline">
+        <item name="strokeColor">@color/primary</item>
+        <item name="android:textColor">@color/primary</item>
+    </style>
+
+    <style name="BottomSheetDialogTheme" parent="Theme.MaterialComponents.DayNight.BottomSheetDialog">
+        <item name="bottomSheetStyle">@style/BottomSheetStyle</item>
+    </style>
+
+    <style name="BottomSheetStyle" parent="Widget.MaterialComponents.BottomSheet.Modal">
+        <item name="android:background">@android:color/transparent</item>
+    </style>
 </resources>

@@ -3,7 +3,7 @@
     <string name="author_prefix">Bởi: %1$s</string>
     <string name="faq_title">Câu hỏi thường gặp</string>
     <string name="blog_title">Cẩm nang sức khỏe</string>
-    <string name="search_hint">Tìm kiếm...</string>
+    <string name="search_hint">Tìm granola, snack lành mạnh...</string>
     <string name="all_categories">Tất cả</string>
     <string name="faq_category_title">Danh mục trợ giúp</string>
     <string name="faq_search_result">Kết quả tìm kiếm</string>
@@ -33,4 +33,18 @@
     <string name="view_all">Xem tất cả</string>
     <string name="customer_reviews">Đánh giá khách hàng</string>
     <string name="may_also_like">Có thể bạn quan tâm</string>
+
+    <string name="welcome_back">Xin chào</string>
+    <string name="home_question">Bạn muốn ăn gì hôm nay?</string>
+    <string name="flash_sale_title">⚡ FLASH SALE</string>
+    <string name="new_products_title">Sản phẩm mới nhất</string>
+    <string name="weekly_promo">TUẦN NÀY</string>
+
+    <!-- Bottom Nav -->
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_categories">Danh mục</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_notifications">Thông báo</string>
+    <string name="nav_profile">Tài khoản</string>
+    <string name="no_reviews">Chưa có đánh giá nào cho sản phẩm này.</string>
 </resources>

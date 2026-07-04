@@ -29,7 +29,7 @@ public class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
         Glide.with(holder.itemView.getContext())
                 .load(imageUrls.get(position))
-                .placeholder(R.drawable.placeholder_product)
+                .placeholder(R.drawable.ic_launcher_background)
                 .into(holder.imageView);
     }
 

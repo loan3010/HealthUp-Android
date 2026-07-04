@@ -4,61 +4,407 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/neutral_cream">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingBottom="80dp">
+        android:paddingBottom="@dimen/spacing_4xl">
 
-        <!-- Header -->
-        <RelativeLayout
+        <!-- Header Section -->
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="16dp"
-            android:background="@color/white">
+            android:orientation="vertical"
+            android:paddingHorizontal="@dimen/spacing_l"
+            android:paddingTop="@dimen/spacing_xl">
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Chào mừng bạn đến với HealthUp"
-                android:textColor="@color/text_dark"
-                android:textSize="18sp"
+                android:text="@string/app_name"
+                android:textColor="@color/primary_default"
+                android:textSize="20sp"
+                android:textFontWeight="700"
+                tools:targetApi="p" />
+
+            <TextView
+                style="@style/TextAppearance.HealthUp.SubContent"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_l"
+                android:text="@string/welcome_back" />
+
+            <TextView
+                style="@style/TextAppearance.HealthUp.SubTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/home_question"
+                android:textColor="@color/neutral_black" />
+
+            <!-- Search Bar -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/input_height"
+                android:layout_marginTop="@dimen/spacing_l"
+                android:background="@drawable/bg_search_bar"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/spacing_m">
+
+                <ImageView
+                    android:id="@+id/ivSearchIcon"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_search"
+                    app:tint="@color/neutral_grey" />
+
+                <EditText
+                    android:id="@+id/etSearch"
+                    style="@style/TextAppearance.HealthUp.EditText"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:background="@null"
+                    android:hint="@string/search_hint"
+                    android:imeOptions="actionSearch"
+                    android:inputType="text"
+                    android:paddingHorizontal="@dimen/spacing_s"
+                    android:textColorHint="@color/neutral_grey"
+                    android:textSize="14sp" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_marginEnd="@dimen/spacing_s"
+                    android:src="@drawable/ic_mic"
+                    app:tint="@color/neutral_grey" />
+
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:src="@drawable/ic_camera"
+                    app:tint="@color/neutral_grey" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Container chứa nội dung chính (sẽ ẩn khi tìm kiếm) -->
+        <LinearLayout
+            android:id="@+id/mainContent"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Categories horizontal -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvCategories"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_xl"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/spacing_l"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:listitem="@layout/item_category" />
+
+        <!-- Main Banner -->
+        <androidx.cardview.widget.CardView
+            android:layout_width="match_parent"
+            android:layout_height="160dp"
+            android:layout_marginHorizontal="@dimen/spacing_l"
+            android:layout_marginTop="@dimen/spacing_xl"
+            app:cardCornerRadius="@dimen/radius_xl"
+            app:cardElevation="0dp">
+
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@color/primary_shade_3">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:orientation="vertical"
+                    android:padding="@dimen/spacing_xl">
+
+                    <TextView
+                        style="@style/Widget.HealthUp.Badge.Accent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/weekly_promo" />
+
+                    <TextView
+                        style="@style/TextAppearance.HealthUp.SubTitle"
+                        android:layout_width="200dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_s"
+                        android:text="Granola Giảm 30%\nCho đơn đầu tiên"
+                        android:textColor="@color/neutral_white" />
+
+                    <TextView
+                        style="@style/TextAppearance.HealthUp.ButtonSmall"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="@dimen/spacing_s"
+                        android:text="@string/buy_now"
+                        android:textColor="@color/neutral_white"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/ivBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:scaleType="centerCrop"
+                    android:alpha="0.3"
+                    android:src="@color/primary_shade_3" />
+            </FrameLayout>
+        </androidx.cardview.widget.CardView>
+
+        <!-- Flash Sale Section -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/spacing_l"
+            android:layout_marginTop="@dimen/spacing_2xl"
+            android:background="@drawable/bg_flash_sale"
+            android:backgroundTint="@color/primary_shade_5"
+            android:orientation="vertical"
+            android:paddingVertical="@dimen/spacing_m">
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="@dimen/spacing_m">
+
+                <TextView
+                    android:id="@+id/tvFlashSaleTitle"
+                    style="@style/TextAppearance.HealthUp.Content"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/flash_sale_title"
+                    android:textColor="@color/neutral_white"
+                    android:textStyle="bold" />
+
+                <TextView
+                    style="@style/Widget.HealthUp.Badge.Hot"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:layout_toEndOf="@id/tvFlashSaleTitle"
+                    android:backgroundTint="@color/action_error"
+                    android:text="-40%"
+                    android:textColor="@color/neutral_white" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_circle_green"
+                        android:backgroundTint="@color/primary_default"
+                        android:padding="4dp"
+                        android:text="02"
+                        android:textColor="@color/neutral_white"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="2dp"
+                        android:text=":"
+                        android:textColor="@color/neutral_white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_circle_green"
+                        android:backgroundTint="@color/primary_default"
+                        android:padding="4dp"
+                        android:text="35"
+                        android:textColor="@color/neutral_white"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="2dp"
+                        android:text=":"
+                        android:textColor="@color/neutral_white" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_circle_green"
+                        android:backgroundTint="@color/primary_default"
+                        android:padding="4dp"
+                        android:text="18"
+                        android:textColor="@color/neutral_white"
+                        android:textSize="10sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </RelativeLayout>
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvFlashSale"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/spacing_m"
+                android:clipToPadding="false"
+                android:orientation="horizontal"
+                android:paddingHorizontal="@dimen/spacing_m"
+                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                tools:listitem="@layout/item_product" />
+        </LinearLayout>
+
+        <!-- Sub-categories Chips -->
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_2xl"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/spacing_l"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/chipGranola"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Granola"
+                    android:backgroundTint="@color/primary_tint_5" />
+
+                <TextView
+                    android:id="@+id/chipHatDieu"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:text="Hạt điều"
+                    android:backgroundTint="@color/neutral_white"
+                    android:textColor="@color/neutral_black" />
+
+                <TextView
+                    android:id="@+id/chipRongBien"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:text="Snack rong biển"
+                    android:backgroundTint="@color/neutral_white"
+                    android:textColor="@color/neutral_black" />
+
+                <TextView
+                    android:id="@+id/chipYenMach"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:text="Yến mạch"
+                    android:backgroundTint="@color/neutral_white"
+                    android:textColor="@color/neutral_black" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <!-- New Products Title -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_2xl"
+            android:paddingHorizontal="@dimen/spacing_l">
+
+            <TextView
+                style="@style/TextAppearance.HealthUp.SubTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/new_products_title"
+                android:textColor="@color/neutral_black" />
+
+            <TextView
+                android:id="@+id/tvViewAllNew"
+                style="@style/TextAppearance.HealthUp.CaptionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="@string/view_all"
+                android:textColor="@color/primary_default"
                 android:textStyle="bold" />
         </RelativeLayout>
 
-        <!-- Banner Placeholder -->
-        <com.google.android.material.card.MaterialCardView
-            android:layout_width="match_parent"
-            android:layout_height="180dp"
-            android:layout_margin="16dp"
-            app:cardCornerRadius="16dp"
-            app:cardElevation="0dp">
-            <ImageView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_launcher_background" />
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- Section Title -->
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            android:text="Sản phẩm nổi bật"
-            android:textColor="@color/text_dark"
-            android:textSize="18sp"
-            android:textStyle="bold" />
-
-        <!-- Product List -->
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_home_products"
+            android:id="@+id/rvNewProducts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
-            android:paddingHorizontal="8dp"
+            android:layout_marginTop="@dimen/spacing_m"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/spacing_s"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="2"
+            tools:listitem="@layout/item_product" />
+
+        <!-- Blogs Section -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_2xl"
+            android:paddingHorizontal="@dimen/spacing_l">
+
+            <TextView
+                style="@style/TextAppearance.HealthUp.SubTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Kiến thức sức khỏe"
+                android:textColor="@color/neutral_black" />
+
+            <TextView
+                android:id="@+id/tvViewAllBlogs"
+                style="@style/TextAppearance.HealthUp.CaptionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="@string/view_all"
+                android:textColor="@color/primary_default"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvBlogs"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_m"
+            android:clipToPadding="false"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/spacing_l"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+            tools:listitem="@layout/item_blog" />
+
+        </LinearLayout>
+
+        <!-- Danh sách kết quả tìm kiếm thời gian thực -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvRealtimeSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/spacing_s"
             app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
             app:spanCount="2"
             tools:listitem="@layout/item_product" />

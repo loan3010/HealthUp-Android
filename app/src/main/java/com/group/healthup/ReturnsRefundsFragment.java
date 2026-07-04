@@ -1,4 +1,4 @@
-package com.example.healthup;
+package com.group.healthup;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;

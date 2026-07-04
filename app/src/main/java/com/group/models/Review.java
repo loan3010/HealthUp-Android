@@ -1,12 +1,17 @@
 package com.group.models;
 
-public class Review {
+import java.io.Serializable;
+import java.util.List;
+
+public class Review implements Serializable {
     private String userName;
     private String userAvatar;
     private float rating;
     private String comment;
     private String date;
     private String imageUrl;
+    private List<String> mediaUris;
+    private long createdAt;
 
     public Review() {}
 
@@ -14,6 +19,13 @@ public class Review {
         this.userName = userName;
         this.rating = rating;
         this.comment = comment;
+    }
+
+    public Review(float rating, String comment, List<String> mediaUris, long createdAt) {
+        this.rating = rating;
+        this.comment = comment;
+        this.mediaUris = mediaUris;
+        this.createdAt = createdAt;
     }
 
     // Getters and Setters
@@ -29,4 +41,8 @@ public class Review {
     public void setDate(String date) { this.date = date; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    public List<String> getMediaUris() { return mediaUris; }
+    public void setMediaUris(List<String> mediaUris) { this.mediaUris = mediaUris; }
+    public long getCreatedAt() { return createdAt; }
+    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
 }

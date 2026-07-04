@@ -25,7 +25,7 @@
 
     <style name="Widget.HealthUp.BottomNav.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
         <item name="android:color">#E1F2E4</item>
-        <item name="app:shapeAppearance">@style/ShapeAppearance.HealthUp.Indicator</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.HealthUp.Indicator</item>
     </style>
 
     <style name="ShapeAppearance.HealthUp.Indicator" parent="ShapeAppearance.MaterialComponents.MediumComponent">

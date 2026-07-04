@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Search bar: nền Cream, radius full (pill) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@color/neutral_cream" />
+    <stroke android:width="@dimen/border_width_default" android:color="@color/neutral_light_grey" />
+    <corners android:radius="@dimen/radius_full" />
+</shape>

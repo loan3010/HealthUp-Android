@@ -36,7 +36,8 @@ public class MainActivity extends AppCompatActivity {
 
         // Set default selection
         if (savedInstanceState == null) {
-            navView.setSelectedItemId(R.id.nav_category);
+            navView.setSelectedItemId(R.id.nav_home);
+            loadFragment(new HomeFragment());
         }
     }
 

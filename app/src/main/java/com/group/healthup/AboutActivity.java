@@ -1,4 +1,4 @@
-package com.example.healthup;
+package com.group.healthup;
 
 import android.os.Bundle;
 import androidx.appcompat.app.AppCompatActivity;

@@ -4,12 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/neutral_cream">
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/bg_light"
+        android:background="@color/neutral_cream"
         app:elevation="0dp">
 
         <LinearLayout
@@ -31,14 +31,14 @@
                     android:layout_height="40dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:src="@drawable/ic_back"
-                    app:tint="@color/text_dark" />
+                    app:tint="@color/neutral_black" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_centerInParent="true"
                     android:text="Danh mục"
-                    android:textColor="@color/text_dark"
+                    android:textColor="@color/neutral_black"
                     android:textSize="18sp"
                     android:textStyle="bold" />
             </RelativeLayout>
@@ -56,7 +56,7 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_search"
-                    app:tint="@color/text_gray" />
+                    app:tint="@color/neutral_grey" />
 
                 <EditText
                     android:id="@+id/et_search"
@@ -76,14 +76,14 @@
                     android:layout_height="20dp"
                     android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_mic"
-                    app:tint="@color/text_gray" />
+                    app:tint="@color/neutral_grey" />
 
                 <ImageView
                     android:id="@+id/btn_camera_search"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_camera"
-                    app:tint="@color/text_gray" />
+                    app:tint="@color/neutral_grey" />
             </LinearLayout>
 
             <HorizontalScrollView
@@ -118,7 +118,7 @@
 
             <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
+                android:layout_height="wrap_content">
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_products"
@@ -151,7 +151,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="Có thể bạn quan tâm"
-                        android:textColor="@color/text_dark"
+                        android:textColor="@color/neutral_black"
                         android:textSize="16sp"
                         android:textStyle="bold" />
 
@@ -161,7 +161,7 @@
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:text="Xem tất cả"
-                        android:textColor="@color/text_gray"
+                        android:textColor="@color/neutral_grey"
                         android:textSize="12sp" />
                 </RelativeLayout>
 
@@ -185,9 +185,9 @@
         android:layout_gravity="bottom|center_horizontal"
         android:layout_marginBottom="16dp"
         android:text="Bộ lọc"
-        android:textColor="@color/white"
-        app:backgroundTint="@color/primary_green"
+        android:textColor="@color/neutral_white"
+        app:backgroundTint="@color/primary_default"
         app:icon="@drawable/ic_filter"
-        app:iconTint="@color/white" />
+        app:iconTint="@color/neutral_white" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

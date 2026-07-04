@@ -6,6 +6,18 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -19,7 +31,8 @@
 
         <activity
             android:name="com.group.healthup.SplashActivity"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -36,6 +49,35 @@
         <activity android:name="com.group.healthup.AddressFormActivity" />
         <activity android:name="com.group.healthup.AboutActivity" />
         <activity android:name="com.group.healthup.BlogDetailActivity" />
+
+        <activity android:name="com.group.healthup.AccountInfoActivity" />
+        <activity android:name="com.group.healthup.PaymentInfoActivity" />
+        <activity android:name="com.group.healthup.ChangeUsernameActivity" />
+        <activity android:name="com.group.healthup.ChangePasswordActivity" />
+        <activity android:name="com.group.healthup.ChangeEmailActivity" />
+        <activity android:name="com.group.healthup.ChangePhoneActivity" />
+        <activity android:name="com.group.healthup.NotificationSettingsActivity" />
+        <activity android:name="com.group.healthup.LanguageSettingsActivity" />
+        <activity android:name="com.group.healthup.AccessSettingsActivity" />
+
+        <activity android:name="com.group.healthup.ReturnRefundActivity" />
+        <activity
+            android:name="com.group.healthup.ReturnRefundDetailActivity"
+            android:theme="@style/Theme.PhotoPicker" />
+        <activity android:name="com.group.healthup.ReturnRefundHistoryDetailActivity" />
+        <activity android:name="com.group.healthup.WriteReviewActivity" />
+        <activity android:name="com.group.healthup.ViewReviewsActivity" />
+        <activity android:name="com.group.healthup.ProductReviewsActivity" />
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 

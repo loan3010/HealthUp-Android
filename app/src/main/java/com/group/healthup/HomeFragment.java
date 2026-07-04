@@ -10,39 +10,75 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.group.healthup.R;
 import com.group.adapters.ProductAdapter;
 import com.group.healthup.firebase.FirestoreManager;
+import com.group.models.Category;
 import com.group.models.Product;
 import java.util.ArrayList;
 import java.util.List;
 
-public class HomeFragment extends Fragment implements ProductAdapter.OnProductClickListener {
+public class HomeFragment extends Fragment implements ProductAdapter.OnProductClickListener, CategoryAdapter.OnCategoryClickListener {
 
-    private RecyclerView rvHomeProducts;
+    private RecyclerView rvHomeProducts, rvCategories;
     private ProductAdapter productAdapter;
+    private CategoryAdapter categoryAdapter;
     private List<Product> productList = new ArrayList<>();
+    private List<Category> categoryList = new ArrayList<>();
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
         initViews(view);
+        fetchCategories();
         fetchProducts();
         return view;
     }
 
     private void initViews(View view) {
-        rvHomeProducts = view.findViewById(R.id.rv_home_products);
+        rvHomeProducts = view.findViewById(R.id.rvNewProducts);
         productAdapter = new ProductAdapter(productList, this);
         rvHomeProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvHomeProducts.setAdapter(productAdapter);
+
+        rvCategories = view.findViewById(R.id.rvCategories);
+        categoryAdapter = new CategoryAdapter(categoryList, this);
+        rvCategories.setLayoutManager(new androidx.recyclerview.widget.LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
+        rvCategories.setAdapter(categoryAdapter);
+
+        view.findViewById(R.id.tvViewAllNew).setOnClickListener(v -> navigateToCategory(null));
+    }
+
+    private void fetchCategories() {
+        FirestoreManager.getInstance().getFirestore().collection("categories")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    categoryList.clear();
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        Category category = doc.toObject(Category.class);
+                        if (category != null) {
+                            category.setId(doc.getId());
+                            categoryList.add(category);
+                        }
+                    }
+                    if (categoryList.isEmpty()) {
+                        // Dummy data if Firestore is empty
+                        categoryList.add(new Category("1", "Hạt dinh dưỡng", "fruit.png"));
+                        categoryList.add(new Category("2", "Granola", "fruit.png"));
+                        categoryList.add(new Category("3", "Trái cây sấy", "fruit.png"));
+                        categoryList.add(new Category("4", "Đồ ăn vặt", "fruit.png"));
+                    }
+                    categoryAdapter.notifyDataSetChanged();
+                });
     }
 
     private void fetchProducts() {
         FirestoreManager.getInstance().getProductsCollection()
-                .limit(10) // Lấy 10 sản phẩm mới nhất hoặc nổi bật
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(10)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     productList.clear();
@@ -61,9 +97,38 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     }
 
     @Override
+    public void onCategoryClick(Category category) {
+        navigateToCategory(category.getName());
+    }
+
+    private void navigateToCategory(String categoryName) {
+        if (getActivity() instanceof MainActivity) {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
+            navView.setSelectedItemId(R.id.nav_category);
+            
+            // Pass category filter to ProductListFragment
+            ProductListFragment fragment = new ProductListFragment();
+            if (categoryName != null) {
+                Bundle args = new Bundle();
+                args.putString("category", categoryName);
+                fragment.setArguments(args);
+            }
+            mainActivity.getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .commit();
+        }
+    }
+
+    @Override
     public void onProductClick(Product product) {
+        if (product == null || product.getId() == null) {
+            Toast.makeText(getContext(), "Dữ liệu sản phẩm không hợp lệ", Toast.LENGTH_SHORT).show();
+            return;
+        }
         android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
         intent.putExtra("product", product);
+        intent.putExtra("productId", product.getId());
         startActivity(intent);
     }
 
@@ -102,7 +167,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        long currentQty = doc.getLong("quantity");
+                        Long currentQtyLong = doc.getLong("quantity");
+                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
                         doc.getReference().update("quantity", currentQty + quantity);
                     } else {
                         com.group.models.CartItem newItem = new com.group.models.CartItem(

@@ -76,7 +76,7 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="bottom|end"
                 android:layout_margin="16dp"
-                android:background="@drawable/bg_index_indicator"
+                android:background="@drawable/bg_circle_translucent"
                 android:paddingHorizontal="10dp"
                 android:paddingVertical="2dp"
                 android:text="1/5"
@@ -325,6 +325,16 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     tools:listitem="@layout/item_review" />
+
+                <TextView
+                    android:id="@+id/tv_no_reviews"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:text="@string/no_reviews"
+                    android:textColor="@color/text_gray"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <View

@@ -4,15 +4,15 @@
     <font
         android:fontStyle="normal"
         android:fontWeight="400"
-        android:font="@font/be_vietnam_regular"
+        android:font="@font/be_vietnam_pro_regular"
         app:fontStyle="normal"
         app:fontWeight="400"
-        app:font="@font/be_vietnam_regular" />
+        app:font="@font/be_vietnam_pro_regular" />
     <font
         android:fontStyle="normal"
         android:fontWeight="700"
-        android:font="@font/be_vietnam_bold"
+        android:font="@font/be_vietnam_pro_bold"
         app:fontStyle="normal"
         app:fontWeight="700"
-        app:font="@font/be_vietnam_bold" />
+        app:font="@font/be_vietnam_pro_bold" />
 </font-family>

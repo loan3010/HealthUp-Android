@@ -44,7 +44,13 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         product = (Product) getIntent().getSerializableExtra("product");
         if (product == null) {
-            finish();
+            String productId = getIntent().getStringExtra("productId");
+            if (productId != null) {
+                fetchProductDetails(productId);
+            } else {
+                Toast.makeText(this, "Không tìm thấy thông tin sản phẩm", Toast.LENGTH_SHORT).show();
+                finish();
+            }
             return;
         }
 
@@ -52,6 +58,23 @@ public class ProductDetailActivity extends AppCompatActivity {
         setupProductInfo();
         setupExpandableSections();
         setupRecommendations();
+    }
+
+    private void fetchProductDetails(String productId) {
+        FirestoreManager.getInstance().getProductsCollection().document(productId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    product = documentSnapshot.toObject(Product.class);
+                    if (product != null) {
+                        product.setId(documentSnapshot.getId());
+                        initViews();
+                        setupProductInfo();
+                        setupExpandableSections();
+                        setupRecommendations();
+                    } else {
+                        finish();
+                    }
+                })
+                .addOnFailureListener(e -> finish());
     }
 
     private void initViews() {
@@ -199,23 +222,29 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
     private void setupSection(View sectionView, String title, String content) {
+        if (sectionView == null) return;
+        
         TextView tvTitle = sectionView.findViewById(R.id.tv_section_title);
         TextView tvContent = sectionView.findViewById(R.id.tv_section_content);
         View btnExpand = sectionView.findViewById(R.id.btn_expand);
         ImageView ivArrow = sectionView.findViewById(R.id.iv_expand_arrow);
 
-        tvTitle.setText(title);
-        tvContent.setText(content != null ? content : "Thông tin đang được cập nhật...");
+        if (tvTitle != null) tvTitle.setText(title);
+        if (tvContent != null) tvContent.setText(content != null ? content : "Thông tin đang được cập nhật...");
 
-        btnExpand.setOnClickListener(v -> {
-            if (tvContent.getVisibility() == View.GONE) {
-                tvContent.setVisibility(View.VISIBLE);
-                ivArrow.setRotation(90);
-            } else {
-                tvContent.setVisibility(View.GONE);
-                ivArrow.setRotation(-90);
-            }
-        });
+        if (btnExpand != null) {
+            btnExpand.setOnClickListener(v -> {
+                if (tvContent != null && ivArrow != null) {
+                    if (tvContent.getVisibility() == View.GONE) {
+                        tvContent.setVisibility(View.VISIBLE);
+                        ivArrow.setRotation(90);
+                    } else {
+                        tvContent.setVisibility(View.GONE);
+                        ivArrow.setRotation(-90);
+                    }
+                }
+            });
+        }
     }
 
     private void setupRecommendations() {
@@ -223,29 +252,71 @@ public class ProductDetailActivity extends AppCompatActivity {
         recommendationAdapter = new ProductAdapter(recommendations, new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product p) {
-                // Open another detail activity
+                if (p == null || p.getId() == null) return;
+                android.content.Intent intent = new android.content.Intent(ProductDetailActivity.this, ProductDetailActivity.class);
+                intent.putExtra("product", p);
+                intent.putExtra("productId", p.getId());
+                startActivity(intent);
+                finish();
             }
             @Override
             public void onAddToCart(Product p) {
-                Toast.makeText(ProductDetailActivity.this, "Đã thêm vào giỏ", Toast.LENGTH_SHORT).show();
+                if (p.isHasVariants()) {
+                    showVariantSelection(false);
+                } else {
+                    addToCart(1);
+                }
             }
             @Override
             public void onFavoriteClick(Product p) {
-                p.setFavorite(!p.isFavorite());
-                recommendationAdapter.notifyDataSetChanged();
+                toggleFavorite();
             }
         });
 
         rvRecommendations.setLayoutManager(new GridLayoutManager(this, 2));
         rvRecommendations.setAdapter(recommendationAdapter);
 
-        FirestoreManager.getInstance().getProductsCollection().limit(4).get()
+        FirestoreManager.getInstance().getProductsCollection()
+                .whereEqualTo("cat", product.getCategory())
+                .limit(4).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
+                    recommendations.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         Product p = doc.toObject(Product.class);
-                        if (p != null) recommendations.add(p);
+                        if (p != null && !p.getId().equals(product.getId())) {
+                            p.setId(doc.getId());
+                            recommendations.add(p);
+                        }
                     }
                     recommendationAdapter.notifyDataSetChanged();
+                });
+        
+        fetchReviews();
+    }
+
+    private void fetchReviews() {
+        List<com.group.models.Review> reviews = new ArrayList<>();
+        ProductReviewEntryAdapter reviewAdapter = new ProductReviewEntryAdapter(reviews);
+        rvReviews.setLayoutManager(new LinearLayoutManager(this));
+        rvReviews.setAdapter(reviewAdapter);
+
+        // Giả sử review được lưu trong sub-collection 'reviews' của mỗi product
+        FirestoreManager.getInstance().getProductsCollection()
+                .document(product.getId())
+                .collection("reviews")
+                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .limit(5)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    reviews.clear();
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        com.group.models.Review r = doc.toObject(com.group.models.Review.class);
+                        if (r != null) reviews.add(r);
+                    }
+                    reviewAdapter.notifyDataSetChanged();
+                    if (reviews.isEmpty()) {
+                        findViewById(R.id.tv_no_reviews).setVisibility(View.VISIBLE);
+                    }
                 });
     }
 
@@ -308,7 +379,8 @@ public class ProductDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        long currentQty = doc.getLong("quantity");
+                        Long currentQtyLong = doc.getLong("quantity");
+                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
                         doc.getReference().update("quantity", currentQty + quantity);
                     } else {
                         com.group.models.CartItem newItem = new com.group.models.CartItem(

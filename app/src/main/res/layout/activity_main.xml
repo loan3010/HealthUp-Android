@@ -6,7 +6,7 @@
 
     <FrameLayout
         android:id="@+id/fragment_container"
-        android:layout_width="match_parent"
+        android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
         app:layout_constraintEnd_toEndOf="parent"
@@ -15,18 +15,19 @@
 
     <com.google.android.material.bottomnavigation.BottomNavigationView
         android:id="@+id/bottom_navigation"
-        style="@style/Widget.HealthUp.BottomNavigationView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:elevation="8dp"
+        android:layout_width="0dp"
+        android:layout_height="@dimen/navbar_height"
+        android:background="@drawable/bg_navbar"
         app:itemIconTint="@color/nav_item_color"
         app:itemTextColor="@color/nav_item_color"
+        app:itemBackground="@drawable/nav_item_background"
+        app:itemIconSize="@dimen/navbar_icon_size"
+        app:itemTextAppearanceActive="@style/TextAppearance.HealthUp.NavLabel.Active"
+        app:itemTextAppearanceInactive="@style/TextAppearance.HealthUp.NavLabel.Inactive"
         app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav_menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:menu="@menu/bottom_nav_menu" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
-
