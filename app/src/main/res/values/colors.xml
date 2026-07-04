@@ -2,4 +2,33 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <color name="brand_primary">#36873A</color>
+    <color name="brand_primary_dark">#2D7031</color>
+    <!-- About screen: dedicated darker/lighter greens (do NOT overwrite brand_primary_dark) -->
+    <color name="brand_primary_darker">#255928</color>
+    <color name="brand_primary_light">#E8F3E9</color>
+    <color name="error">#E53835</color>
+    <color name="screen_background">#FAF6F0</color>
+    <color name="text_primary">#1F1915</color>
+    <color name="text_secondary">#524D4A</color>
+    <color name="placeholder">#A09894</color>
+    <color name="border_default">#E0D9D5</color>
+    <color name="divider_color">#E0D9D5</color>
+    <color name="button_text_on_primary">#FFFFFF</color>
+    <color name="button_text_disabled">#A09894</color>
+    <color name="facebook_blue">#1877F2</color>
+    <color name="google_red">#EA4335</color>
+    <color name="social_text">#524D4A</color>
+    <color name="dialog_scrim">#99000000</color>
+    <color name="notification_icon_bg">#E8F3E9</color>
+
+    <!-- Chat -->
+    <color name="chat_user_bubble">#36873A</color>
+    <color name="chat_bot_bubble">#FFFFFF</color>
+    <color name="chat_system_bg">#ECE7E1</color>
+    <color name="chat_bubble_text_on_user">#FFFFFF</color>
+    <color name="chat_online_green">#4CAF50</color>
+    <color name="chat_status_chip_bg">#E8F3E9</color>
+    <color name="chat_chip_bg">#FFFFFF</color>
+    <color name="chat_header_subtitle">#DDEFD9</color>
 </resources>

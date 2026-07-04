@@ -1,0 +1,103 @@
+﻿Downloading https://services.gradle.org/distributions/gradle-9.3.1-bin.zip
+.............10%.............20%.............30%.............40%.............50%.............60%.............70%.............80%.............90%.............100%
+
+Welcome to Gradle 9.3.1!
+
+Here are the highlights of this release:
+ - Test reporting improvements
+ - Error and warning improvements
+ - Build authoring improvements
+
+For more details see https://docs.gradle.org/9.3.1/release-notes.html
+
+Starting a Gradle Daemon (subsequent builds will be faster)
+.\gradlew.bat : 
+At C:\Users\pc\AppData\Local\Temp\ps-script-ad394ad5-5a13-496b-99e8-b924c01aafbf.ps1:91 char:1
++ .\gradlew.bat :app:checkDebugAarMetadata --stacktrace 2>&1 | Out-File ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Unable to download toolchain matching the requirements ({languageVersion=21, vendor=any vendor, 
+implementation=vendor-specific, nativeImageCapable=false}) from 
+'https://api.foojay.io/disco/v3.0/ids/39701d92e1756bb2f141eb67cd4c660e/redirect', due to: C:\Users\pc\AppData\Local\Tem
+p\cursor-sandbox-cache\522f03cf77ee6819d6cf77e122502229\gradle\.tmp\jdks\OpenJDK21U-jdk_x64_windows_hotspot_21-any-vend
+or-2114003847349755610196.tmp\jdk-21.0.7+6 -> C:\Users\pc\AppData\Local\Temp\cursor-sandbox-cache\522f03cf77ee6819d6cf7
+7e122502229\gradle\jdks\eclipse_adoptium-21-amd64-windows.2
+
+* Try:
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+* Exception is:
+org.gradle.jvm.toolchain.internal.install.exceptions.ToolchainDownloadException: Unable to download toolchain matching 
+the requirements ({languageVersion=21, vendor=any vendor, implementation=vendor-specific, nativeImageCapable=false}) 
+from 'https://api.foojay.io/disco/v3.0/ids/39701d92e1756bb2f141eb67cd4c660e/redirect', due to: C:\Users\pc\AppData\Loca
+l\Temp\cursor-sandbox-cache\522f03cf77ee6819d6cf77e122502229\gradle\.tmp\jdks\OpenJDK21U-jdk_x64_windows_hotspot_21-any
+-vendor-2114003847349755610196.tmp\jdk-21.0.7+6 -> C:\Users\pc\AppData\Local\Temp\cursor-sandbox-cache\522f03cf77ee6819
+d6cf77e122502229\gradle\jdks\eclipse_adoptium-21-amd64-windows.2
+	at org.gradle.launcher.daemon.toolchain.DaemonJavaToolchainProvisioningService.tryInstall(DaemonJavaToolchainProvision
+ingService.java:107)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.downloadToolchain(JavaToolchainQueryService.java:229)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.lambda$query$2(JavaToolchainQueryService.java:199)
+	at java.base/java.util.Optional.orElseGet(Optional.java:368)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.query(JavaToolchainQueryService.java:199)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.lambda$resolveToolchain$1(JavaToolchainQueryService.jav
+a:166)
+	at java.base/java.util.concurrent.ConcurrentHashMap.computeIfAbsent(ConcurrentHashMap.java:1735)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.resolveToolchain(JavaToolchainQueryService.java:164)
+	at org.gradle.jvm.toolchain.internal.JavaToolchainQueryService.lambda$findMatchingToolchain$0(JavaToolchainQueryServic
+e.java:142)
+	at org.gradle.api.internal.provider.DefaultProvider.calculateOwnValue(DefaultProvider.java:73)
+	at org.gradle.api.internal.provider.AbstractMinimalProvider.calculateOwnPresentValue(AbstractMinimalProvider.java:80)
+	at org.gradle.api.internal.provider.AbstractMinimalProvider.get(AbstractMinimalProvider.java:100)
+	at org.gradle.launcher.daemon.client.DefaultDaemonStarter.startDaemon(DefaultDaemonStarter.java:111)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.doStartDaemon(DefaultDaemonConnector.java:219)
+	at org.gradle.launcher.daemon.client.DefaultDaemonConnector.startDaemon(DefaultDaemonConnector.java:213)
+	at org.gradle.launcher.daemon.client.DaemonClient.execute(DaemonClient.java:169)
+	at org.gradle.launcher.daemon.client.DaemonClient.execute(DaemonClient.java:97)
+	at org.gradle.launcher.cli.RunBuildAction.run(RunBuildAction.java:56)
+	at org.gradle.internal.Actions$RunnableActionAdapter.execute(Actions.java:167)
+	at org.gradle.launcher.cli.DefaultCommandLineActionFactory$ParseAndBuildAction.execute(DefaultCommandLineActionFactory
+.java:377)
+	at org.gradle.launcher.cli.DefaultCommandLineActionFactory$ParseAndBuildAction.execute(DefaultCommandLineActionFactory
+.java:341)
+	at org.gradle.launcher.cli.DebugLoggerWarningAction.execute(DebugLoggerWarningAction.java:74)
+	at org.gradle.launcher.cli.DebugLoggerWarningAction.execute(DebugLoggerWarningAction.java:30)
+	at org.gradle.launcher.cli.WelcomeMessageAction.execute(WelcomeMessageAction.java:97)
+	at org.gradle.launcher.cli.WelcomeMessageAction.execute(WelcomeMessageAction.java:40)
+	at org.gradle.launcher.cli.NativeServicesInitializingAction.execute(NativeServicesInitializingAction.java:50)
+	at org.gradle.launcher.cli.NativeServicesInitializingAction.execute(NativeServicesInitializingAction.java:27)
+	at org.gradle.launcher.cli.ExceptionReportingAction.execute(ExceptionReportingAction.java:41)
+	at org.gradle.launcher.cli.ExceptionReportingAction.execute(ExceptionReportingAction.java:26)
+	at 
+org.gradle.launcher.cli.DefaultCommandLineActionFactory$WithLogging.execute(DefaultCommandLineActionFactory.java:489)
+	at org.gradle.launcher.Main.doAction(Main.java:35)
+	at org.gradle.launcher.bootstrap.EntryPoint.run(EntryPoint.java:53)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.gradle.launcher.bootstrap.ProcessBootstrap.runNoExit(ProcessBootstrap.java:72)
+	at org.gradle.launcher.bootstrap.ProcessBootstrap.run(ProcessBootstrap.java:39)
+	at org.gradle.launcher.GradleMain.main(GradleMain.java:26)
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:104)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:565)
+	at org.gradle.wrapper.GradleWrapperMain.main(SourceFile:70)
+Caused by: java.nio.file.AccessDeniedException: C:\Users\pc\AppData\Local\Temp\cursor-sandbox-cache\522f03cf77ee6819d6c
+f77e122502229\gradle\.tmp\jdks\OpenJDK21U-jdk_x64_windows_hotspot_21-any-vendor-2114003847349755610196.tmp\jdk-21.0.7+6
+ -> C:\Users\pc\AppData\Local\Temp\cursor-sandbox-cache\522f03cf77ee6819d6cf77e122502229\gradle\jdks\eclipse_adoptium-2
+1-amd64-windows.2
+	at java.base/sun.nio.fs.WindowsException.translateToIOException(WindowsException.java:89)
+	at java.base/sun.nio.fs.WindowsException.rethrowAsIOException(WindowsException.java:104)
+	at java.base/sun.nio.fs.WindowsFileCopy.move(WindowsFileCopy.java:310)
+	at java.base/sun.nio.fs.WindowsFileSystemProvider.move(WindowsFileSystemProvider.java:288)
+	at java.base/java.nio.file.Files.move(Files.java:1323)
+	at org.gradle.jvm.toolchain.internal.install.DefaultJdkCacheDirectory.provisionFromArchive(DefaultJdkCacheDirectory.ja
+va:178)
+	at org.gradle.launcher.daemon.toolchain.DaemonJavaToolchainProvisioningService.tryInstall(DaemonJavaToolchainProvision
+ingService.java:90)
+	... 39 more
+

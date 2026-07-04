@@ -1,0 +1,72 @@
+{
+  "hero": {
+    "title": "HealthUp – Cung cấp thực phẩm cho lối sống lành mạnh",
+    "description": "Khơi nguồn năng lượng tự nhiên từ những hạt mầm và trái cây tinh khiết nhất.",
+    "image": "hero_banner.jpg"
+  },
+  "story": {
+    "title": "Câu chuyện thương hiệu",
+    "paragraphs": [
+      "HealthUp được sinh ra từ niềm đam mê dinh dưỡng lành mạnh và mong muốn mang đến sự tiện lợi cho những người bận rộn.",
+      "Từ một căn bếp nhỏ chế biến granola thủ công, HealthUp đã lớn mạnh thành người bạn đồng hành đáng tin cậy của hàng triệu người Việt."
+    ],
+    "quote": "\u201cSức khỏe không chỉ là đích đến, mà là cách chúng ta lựa chọn mỗi ngày.\u201d"
+  },
+  "values": [
+    {
+      "icon": "leaf",
+      "title": "Tự nhiên",
+      "description": "Thành phần 100% từ nguồn gốc thực vật sạch."
+    },
+    {
+      "icon": "verified",
+      "title": "Chọn lọc kỹ lưỡng",
+      "description": "Từng hạt mầm đều được kiểm định chất lượng gắt gao."
+    },
+    {
+      "icon": "eco",
+      "title": "Dinh dưỡng rõ ràng",
+      "description": "Thông tin chỉ số rõ ràng trên từng bao bì sản phẩm."
+    },
+    {
+      "icon": "schedule",
+      "title": "Tiện lợi mỗi ngày",
+      "description": "Thiết kế gói nhỏ gọn, dễ dàng mang đi khắp mọi nơi."
+    }
+  ],
+  "qualities": [
+    {
+      "title": "Granola thủ công",
+      "description": "Nướng chậm ở nhiệt độ thấp để giữ trọn vị giòn tan."
+    },
+    {
+      "title": "Trái cây sấy lạnh",
+      "description": "Công nghệ sấy thăng hoa giữ nguyên 99% vitamin."
+    },
+    {
+      "title": "Hạt dinh dưỡng cao cấp",
+      "description": "Nhập khẩu chính ngạch từ các vùng nguyên liệu sạch."
+    },
+    {
+      "title": "Đóng gói thân thiện",
+      "description": "Sử dụng bao bì có khả năng tái chế, bảo vệ môi trường."
+    }
+  ],
+  "statistics": {
+    "badge": "THỐNG KÊ ẤN TƯỢNG",
+    "title": "Mạng lưới phân phối toàn quốc",
+    "subtitle": "Chúng tôi có mặt tại hơn 63 tỉnh thành để phục vụ bạn tốt hơn.",
+    "items": [
+      { "number": "20.000+", "label": "Khách hàng thân thiết" },
+      { "number": "98%", "label": "Độ hài lòng dịch vụ" },
+      { "number": "Top 100", "label": "Thương hiệu uy tín" },
+      { "number": "5+", "label": "Năm kinh nghiệm" }
+    ]
+  },
+  "gallery": [
+    "gallery_1.jpg",
+    "gallery_2.jpg",
+    "gallery_3.jpg",
+    "gallery_4.jpg"
+  ]
+}
