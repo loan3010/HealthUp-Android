@@ -31,10 +31,39 @@ public class BlogAdapter extends RecyclerView.Adapter<BlogAdapter.BlogViewHolder
         holder.tvTitle.setText(blog.getTitle());
         holder.tvSummary.setText(blog.getContent());
 
-        Glide.with(holder.itemView.getContext())
-                .load(blog.getImageUrl())
-                .placeholder(android.R.drawable.ic_menu_gallery)
-                .into(holder.ivBlog);
+        // Xử lý hiển thị ảnh Blog từ assets hoặc web
+        String imagePath = blog.getImageUrl();
+        
+        if (imagePath != null && !imagePath.isEmpty()) {
+            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+            
+            if (cleanPath.startsWith("images/")) {
+                Glide.with(holder.itemView.getContext())
+                        .load("file:///android_asset/" + cleanPath)
+                        .placeholder(R.color.neutral_light_grey)
+                        .error(R.color.neutral_light_grey)
+                        .into(holder.ivBlog);
+            } else if (imagePath.startsWith("http")) {
+                Glide.with(holder.itemView.getContext())
+                        .load(imagePath)
+                        .placeholder(R.color.neutral_light_grey)
+                        .error(R.color.neutral_light_grey)
+                        .into(holder.ivBlog);
+            } else {
+                // Thử tìm trong thư mục blogs nếu chỉ có tên file
+                Glide.with(holder.itemView.getContext())
+                        .load("file:///android_asset/images/blogs/" + cleanPath)
+                        .placeholder(R.color.neutral_light_grey)
+                        .error(R.color.neutral_light_grey)
+                        .into(holder.ivBlog);
+            }
+        } else {
+            // NẾU IMAGEURL TRỐNG: Tự động lấy một tấm ảnh mặc định trong kho của bạn
+            Glide.with(holder.itemView.getContext())
+                    .load("file:///android_asset/images/blogs/hat-dinh-duong-suc-khoe.jpg")
+                    .placeholder(R.color.neutral_light_grey)
+                    .into(holder.ivBlog);
+        }
     }
 
     @Override

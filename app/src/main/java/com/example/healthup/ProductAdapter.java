@@ -6,6 +6,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
@@ -99,6 +100,13 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         } else {
             holder.ivProduct.setImageResource(R.color.neutral_light_grey);
         }
+
+        // Xử lý thêm vào wishlist
+        holder.btnWishlist.setOnClickListener(v -> {
+            // Sau này bạn có thể thêm logic lưu vào Firebase wishlist ở đây
+            Toast.makeText(holder.itemView.getContext(), 
+                "Đã thêm " + product.getName() + " vào yêu thích", Toast.LENGTH_SHORT).show();
+        });
     }
 
     @Override
@@ -110,7 +118,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         ImageView ivProduct;
         TextView tvName, tvPrice, tvOriginalPrice;
         TextView tvBadgeNew, tvBadgeHot;
-        ImageView btnAdd;
+        ImageView btnAdd, btnWishlist;
 
         public ProductViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -121,6 +129,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             tvBadgeNew = itemView.findViewById(R.id.tvBadgeNew);
             tvBadgeHot = itemView.findViewById(R.id.tvBadgeHot);
             btnAdd = itemView.findViewById(R.id.btnAddToCart);
+            btnWishlist = itemView.findViewById(R.id.btnWishlist);
         }
     }
 }

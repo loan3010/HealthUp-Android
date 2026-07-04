@@ -45,6 +45,17 @@ public class Product implements Serializable {
     public int getSoldCount() { return soldCount; }
     public void setSoldCount(int soldCount) { this.soldCount = soldCount; }
 
+    public String getImageUrl() {
+        if (images != null && !images.isEmpty()) {
+            return images.get(0);
+        }
+        return "";
+    }
+
+    public String getCategory() {
+        return cat;
+    }
+
     public static List<Product> getDummyProducts() {
         List<Product> list = new ArrayList<>();
         // Mockup dữ liệu mẫu nếu Firebase trống
