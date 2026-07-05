@@ -71,26 +71,30 @@ public class OrderListFragment extends Fragment {
             
             List<Order> filteredOrders = new ArrayList<>();
             for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                Order o = doc.toObject(Order.class);
-                if (o == null) continue;
-                o.setId(doc.getId());
+                try {
+                    Order o = doc.toObject(Order.class);
+                    if (o == null) continue;
+                    o.setId(doc.getId());
 
-                String orderStatus = o.getStatus().toLowerCase().trim();
-                
-                if ("all".equals(filter)) {
-                    filteredOrders.add(o);
-                } else if ("delivered".equals(filter)) {
-                    if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
+                    String orderStatus = o.getStatus().toLowerCase().trim();
+                    
+                    if ("all".equals(filter)) {
                         filteredOrders.add(o);
+                    } else if ("delivered".equals(filter)) {
+                        if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
+                            filteredOrders.add(o);
+                        }
+                    } else if ("returned".equals(filter)) {
+                        if ("returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
+                            filteredOrders.add(o);
+                        }
+                    } else {
+                        if (orderStatus.equals(filter)) {
+                            filteredOrders.add(o);
+                        }
                     }
-                } else if ("returned".equals(filter)) {
-                    if ("returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
-                        filteredOrders.add(o);
-                    }
-                } else {
-                    if (orderStatus.equals(filter)) {
-                        filteredOrders.add(o);
-                    }
+                } catch (Exception e) {
+                    android.util.Log.e("OrderListFragment", "Lỗi nạp đơn hàng: " + doc.getId(), e);
                 }
             }
 
@@ -122,10 +126,14 @@ public class OrderListFragment extends Fragment {
             
             allRecommendProducts = new ArrayList<>();
             for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                Product p = doc.toObject(Product.class);
-                if (p != null) {
-                    p.setId(doc.getId());
-                    allRecommendProducts.add(p);
+                try {
+                    Product p = doc.toObject(Product.class);
+                    if (p != null) {
+                        p.setId(doc.getId());
+                        allRecommendProducts.add(p);
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("OrderListFragment", "Lỗi nạp sản phẩm gợi ý: " + doc.getId(), e);
                 }
             }
             

@@ -1,18 +1,29 @@
 package com.example.healthup.firebase;
 
+import com.example.models.Blog;
 import com.example.models.Category;
+import com.example.models.FAQ;
 import com.example.models.Product;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class FirestoreManager {
     private static FirestoreManager instance;
-    private FirebaseFirestore db;
+    private final FirebaseFirestore db;
+    private final FirebaseAuth auth;
 
     private FirestoreManager() {
         db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
     }
 
     public static synchronized FirestoreManager getInstance() {
@@ -22,38 +33,16 @@ public class FirestoreManager {
         return instance;
     }
 
+    private String getUserId() {
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "test_user";
+    }
+
     public void getCategories(OnCompleteListener<QuerySnapshot> listener) {
         db.collection("categories").get().addOnCompleteListener(listener);
     }
 
-    public void getFlashSaleProducts(OnCompleteListener<QuerySnapshot> listener) {
-        // Thử cả 2 trường hợp đặt tên: isFlashSale và is_flash_sale
-        db.collection("products")
-                .whereEqualTo("isFlashSale", true)
-                .get()
-                .addOnCompleteListener(task -> {
-                    if (task.isSuccessful() && task.getResult().isEmpty()) {
-                        // Nếu không có, thử query theo snake_case
-                        db.collection("products")
-                                .whereEqualTo("is_flash_sale", true)
-                                .get()
-                                .addOnCompleteListener(listener);
-                    } else {
-                        listener.onComplete(task);
-                    }
-                });
-    }
-
     public void getNewProducts(int limit, OnCompleteListener<QuerySnapshot> listener) {
         db.collection("products")
-                .limit(limit)
-                .get()
-                .addOnCompleteListener(listener);
-    }
-
-    public void getBlogs(int limit, OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("blogs")
-                .orderBy("publishedAt", Query.Direction.DESCENDING)
                 .limit(limit)
                 .get()
                 .addOnCompleteListener(listener);
@@ -66,12 +55,62 @@ public class FirestoreManager {
                 .addOnCompleteListener(listener);
     }
 
-    public void searchProducts(String query, OnCompleteListener<QuerySnapshot> listener) {
-        // Firestore search is basic, usually done by searching prefix or using external service.
-        // For simple search, we fetch and filter locally or use whereGreaterThanOrEqualTo
+    public void getProductDetail(String productId, OnCompleteListener<DocumentSnapshot> listener) {
+        db.collection("products").document(productId).get().addOnCompleteListener(listener);
+    }
+
+    // --- Wishlist ---
+    public void getWishlist(OnCompleteListener<QuerySnapshot> listener) {
+        db.collection("wishlist")
+                .whereEqualTo("userId", getUserId())
+                .get()
+                .addOnCompleteListener(listener);
+    }
+
+    public Task<Void> addToWishlist(Product product) {
+        Map<String, Object> item = new HashMap<>();
+        item.put("userId", getUserId());
+        item.put("productId", product.getId());
+        item.put("timestamp", FieldValue.serverTimestamp());
+        item.put("productName", product.getName());
+        item.put("productPrice", product.getPrice());
+        item.put("productImage", product.getImageUrl());
+        
+        return db.collection("wishlist").document(getUserId() + "_" + product.getId()).set(item);
+    }
+
+    public Task<Void> removeFromWishlist(String productId) {
+        return db.collection("wishlist").document(getUserId() + "_" + productId).delete();
+    }
+
+    public void checkWishlistStatus(String productId, OnCompleteListener<DocumentSnapshot> listener) {
+        db.collection("wishlist").document(getUserId() + "_" + productId).get().addOnCompleteListener(listener);
+    }
+
+    public void getFlashSaleProducts(OnCompleteListener<QuerySnapshot> listener) {
         db.collection("products")
-                .whereGreaterThanOrEqualTo("name", query)
-                .whereLessThanOrEqualTo("name", query + "\uf8ff")
+                .whereEqualTo("isFlashSale", true)
+                .get()
+                .addOnCompleteListener(listener);
+    }
+
+    // --- FAQs ---
+    public void getFAQs(OnCompleteListener<QuerySnapshot> listener) {
+        db.collection("faqs").get().addOnCompleteListener(listener);
+    }
+
+    // --- Blogs ---
+    public void getBlogs(int limit, OnCompleteListener<QuerySnapshot> listener) {
+        db.collection("blogs")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .limit(limit)
+                .get()
+                .addOnCompleteListener(listener);
+    }
+
+    public void getBlogs(OnCompleteListener<QuerySnapshot> listener) {
+        db.collection("blogs")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnCompleteListener(listener);
     }

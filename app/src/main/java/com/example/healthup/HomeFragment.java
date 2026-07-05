@@ -172,10 +172,13 @@ public class HomeFragment extends Fragment {
                 Log.d("HomeFragment", "Categories fetched: " + task.getResult().size());
                 categories.clear();
                 for (QueryDocumentSnapshot document : task.getResult()) {
-                    Log.d("HomeFragment", "Category Raw Data: " + document.getData());
-                    Category cat = document.toObject(Category.class);
-                    cat.setId(document.getId());
-                    categories.add(cat);
+                    try {
+                        Category cat = document.toObject(Category.class);
+                        cat.setId(document.getId());
+                        categories.add(cat);
+                    } catch (Exception e) {
+                        Log.e("HomeFragment", "Lỗi nạp danh mục: " + document.getId(), e);
+                    }
                 }
                 categoryAdapter.notifyDataSetChanged();
             } else {
@@ -192,10 +195,13 @@ public class HomeFragment extends Fragment {
                 }
                 flashSaleProducts.clear();
                 for (QueryDocumentSnapshot document : task.getResult()) {
-                    Log.d("HomeFragment", "Product Raw Data: " + document.getData());
-                    Product prod = document.toObject(Product.class);
-                    prod.setId(document.getId());
-                    flashSaleProducts.add(prod);
+                    try {
+                        Product prod = document.toObject(Product.class);
+                        prod.setId(document.getId());
+                        flashSaleProducts.add(prod);
+                    } catch (Exception e) {
+                        Log.e("HomeFragment", "Lỗi nạp sản phẩm Flash Sale: " + document.getId(), e);
+                    }
                 }
                 flashSaleAdapter.notifyDataSetChanged();
             } else {
@@ -210,9 +216,13 @@ public class HomeFragment extends Fragment {
                 
                 List<Product> allFetchedProducts = new ArrayList<>();
                 for (QueryDocumentSnapshot document : task.getResult()) {
-                    Product prod = document.toObject(Product.class);
-                    prod.setId(document.getId());
-                    allFetchedProducts.add(prod);
+                    try {
+                        Product prod = document.toObject(Product.class);
+                        prod.setId(document.getId());
+                        allFetchedProducts.add(prod);
+                    } catch (Exception e) {
+                        Log.e("HomeFragment", "Lỗi nạp sản phẩm mới: " + document.getId(), e);
+                    }
                 }
 
                 // Lưu toàn bộ vào danh sách tìm kiếm
@@ -239,10 +249,13 @@ public class HomeFragment extends Fragment {
                 Log.d("HomeFragment", "Blogs fetched: " + task.getResult().size());
                 blogs.clear();
                 for (QueryDocumentSnapshot document : task.getResult()) {
-                    Log.d("HomeFragment", "Blog Raw Data: " + document.getData());
-                    Blog blog = document.toObject(Blog.class);
-                    blog.setId(document.getId());
-                    blogs.add(blog);
+                    try {
+                        Blog blog = document.toObject(Blog.class);
+                        blog.setId(document.getId());
+                        blogs.add(blog);
+                    } catch (Exception e) {
+                        Log.e("HomeFragment", "Lỗi nạp blog: " + document.getId(), e);
+                    }
                 }
                 blogAdapter.notifyDataSetChanged();
             } else {

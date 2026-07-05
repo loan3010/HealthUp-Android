@@ -1,6 +1,5 @@
 package com.example.models;
 
-import com.google.firebase.Timestamp;
 import java.io.Serializable;
 
 public class Blog implements Serializable {
@@ -8,7 +7,8 @@ public class Blog implements Serializable {
     private String title;
     private String content;
     private String imageUrl;
-    private Timestamp publishedAt;
+    private long timestamp;
+    private String author;
 
     public Blog() {}
 
@@ -20,6 +20,8 @@ public class Blog implements Serializable {
     public void setContent(String content) { this.content = content; }
     public String getImageUrl() { return imageUrl; }
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
-    public Timestamp getPublishedAt() { return publishedAt; }
-    public void setPublishedAt(Timestamp publishedAt) { this.publishedAt = publishedAt; }
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+    public String getAuthor() { return author; }
+    public void setAuthor(String author) { this.author = author; }
 }

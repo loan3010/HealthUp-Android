@@ -59,7 +59,43 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_xs"
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_star_yellow" />
+
+            <TextView
+                android:id="@+id/tvRating"
+                style="@style/TextAppearance.HealthUp.CaptionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="2dp"
+                android:text="4.9"
+                android:textColor="@color/neutral_black" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="10dp"
+                android:layout_marginHorizontal="6dp"
+                android:background="@color/neutral_grey" />
+
+            <TextView
+                android:id="@+id/tvSoldCount"
+                style="@style/TextAppearance.HealthUp.CaptionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Đã bán 1.1k"
+                android:textColor="@color/neutral_grey" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -84,6 +120,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="120.000đ"
+                    android:textColor="@color/neutral_grey"
                     android:visibility="gone" />
             </LinearLayout>
 

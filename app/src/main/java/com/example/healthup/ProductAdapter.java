@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.content.Intent;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -11,8 +12,6 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
 import com.example.models.Product;
-import com.google.firebase.storage.FirebaseStorage;
-import com.google.firebase.storage.StorageReference;
 import java.text.DecimalFormat;
 import java.util.List;
 
@@ -42,6 +41,10 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         Product product = products.get(position);
         holder.tvName.setText(product.getName());
         
+        // Rating and Sold Count
+        holder.tvRating.setText(product.getStars() != null ? product.getStars() : "0.0");
+        holder.tvSoldCount.setText("Đã bán " + (product.getSoldCount() > 0 ? product.getSoldCount() : product.getSold()));
+
         DecimalFormat df = new DecimalFormat("#,###đ");
         holder.tvPrice.setText(df.format(product.getPrice()));
 
@@ -65,47 +68,36 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             holder.tvBadgeHot.setVisibility(View.GONE);
         }
 
-        // Xử lý hiển thị ảnh
+        // Image loading
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             String imagePath = product.getImages().get(0);
-            
-            // Xử lý đường dẫn
-            String cleanPath = imagePath;
-            if (cleanPath.startsWith("/")) {
-                cleanPath = cleanPath.substring(1);
-            }
-            
-            // Nếu đường dẫn bắt đầu bằng images/ (đúng với cấu trúc trong assets)
-            if (cleanPath.startsWith("images/")) {
-                Glide.with(holder.itemView.getContext())
-                        .load("file:///android_asset/" + cleanPath)
-                        .placeholder(R.color.neutral_light_grey)
-                        .error(R.color.neutral_light_grey)
-                        .into(holder.ivProduct);
-            } else if (imagePath.startsWith("http")) {
-                // Nếu là URL web
-                Glide.with(holder.itemView.getContext())
-                        .load(imagePath)
-                        .placeholder(R.color.neutral_light_grey)
-                        .error(R.color.neutral_light_grey)
-                        .into(holder.ivProduct);
+            String fullPath;
+            if (imagePath.startsWith("http")) {
+                fullPath = imagePath;
             } else {
-                // Thử tìm trực tiếp trong assets/images/products nếu chỉ có tên file
-                Glide.with(holder.itemView.getContext())
-                        .load("file:///android_asset/images/products/" + cleanPath)
-                        .placeholder(R.color.neutral_light_grey)
-                        .error(R.color.neutral_light_grey)
-                        .into(holder.ivProduct);
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                fullPath = "file:///android_asset/" + cleanPath;
             }
-        } else {
-            holder.ivProduct.setImageResource(R.color.neutral_light_grey);
+            
+            Glide.with(holder.itemView.getContext())
+                    .load(fullPath)
+                    .placeholder(R.color.neutral_light_grey)
+                    .into(holder.ivProduct);
         }
 
-        // Xử lý thêm vào wishlist
+        holder.itemView.setOnClickListener(v -> {
+            Intent intent = new Intent(v.getContext(), ProductDetailActivity.class);
+            intent.putExtra("product_id", product.getId());
+            v.getContext().startActivity(intent);
+        });
+
         holder.btnWishlist.setOnClickListener(v -> {
-            // Sau này bạn có thể thêm logic lưu vào Firebase wishlist ở đây
-            Toast.makeText(holder.itemView.getContext(), 
-                "Đã thêm " + product.getName() + " vào yêu thích", Toast.LENGTH_SHORT).show();
+            // Wishlist logic will be handled here or via callback
+            Toast.makeText(holder.itemView.getContext(), "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+        });
+
+        holder.btnAdd.setOnClickListener(v -> {
+            Toast.makeText(holder.itemView.getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
         });
     }
 
@@ -114,10 +106,16 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         return products.size();
     }
 
+    public void updateList(List<Product> newList) {
+        this.products = newList;
+        notifyDataSetChanged();
+    }
+
     static class ProductViewHolder extends RecyclerView.ViewHolder {
         ImageView ivProduct;
         TextView tvName, tvPrice, tvOriginalPrice;
         TextView tvBadgeNew, tvBadgeHot;
+        TextView tvRating, tvSoldCount;
         ImageView btnAdd, btnWishlist;
 
         public ProductViewHolder(@NonNull View itemView) {
@@ -128,6 +126,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             tvOriginalPrice = itemView.findViewById(R.id.tvOriginalPrice);
             tvBadgeNew = itemView.findViewById(R.id.tvBadgeNew);
             tvBadgeHot = itemView.findViewById(R.id.tvBadgeHot);
+            tvRating = itemView.findViewById(R.id.tvRating);
+            tvSoldCount = itemView.findViewById(R.id.tvSoldCount);
             btnAdd = itemView.findViewById(R.id.btnAddToCart);
             btnWishlist = itemView.findViewById(R.id.btnWishlist);
         }
