@@ -33,7 +33,8 @@ public class Product implements Serializable {
     private String origin;
 
     private Object weights;
-    private List<String> packagingTypes;
+    private List<Object> packagingTypes;
+    private List<Object> flavors;
     private Object sale;
     private int stock;
     private Object reviews;
@@ -116,6 +117,9 @@ public class Product implements Serializable {
     }
     public void setSoldCount(int soldCount) { this.soldCount = soldCount; }
 
+    public int getStock() { return stock > 0 ? stock : stockCount; }
+    public void setStock(int stock) { this.stock = stock; }
+
     public int getStockCount() { return stockCount > 0 ? stockCount : stock; }
     public void setStockCount(int stockCount) { this.stockCount = stockCount; }
 
@@ -131,11 +135,26 @@ public class Product implements Serializable {
     public boolean isFlashSale() { return isFlashSale; }
     public void setFlashSale(boolean flashSale) { isFlashSale = flashSale; }
 
-    public boolean isNew() { return isNew; }
-    public void setNew(boolean aNew) { isNew = aNew; }
+    public boolean isNew() { return true; }
+    public boolean isHot() { return false; }
 
-    public boolean isHot() { return isHot; }
-    public void setHot(boolean hot) { isHot = hot; }
+    public List<Object> getWeights() {
+        if (weights instanceof List) return (List<Object>) weights;
+        return new ArrayList<>();
+    }
+    public void setWeights(Object weights) { this.weights = weights; }
+
+    public List<Object> getFlavors() {
+        if (flavors != null) return flavors;
+        return new ArrayList<>();
+    }
+    public void setFlavors(List<Object> flavors) { this.flavors = flavors; }
+
+    public List<Object> getPackagingTypes() {
+        if (packagingTypes != null) return packagingTypes;
+        return new ArrayList<>();
+    }
+    public void setPackagingTypes(List<Object> packagingTypes) { this.packagingTypes = packagingTypes; }
 
     public String getImageUrl() {
         if (images != null && !images.isEmpty()) {
@@ -163,7 +182,6 @@ public class Product implements Serializable {
         return list;
     }
 
-    // Remaining getters and setters
     public String getIngredients() { return ingredients; }
     public void setIngredients(String ingredients) { this.ingredients = ingredients; }
     public List<NutritionItem> getNutrition() { return nutrition; }
