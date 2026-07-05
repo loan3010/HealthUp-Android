@@ -1,29 +1,16 @@
 package com.example.healthup.firebase;
 
-import com.example.models.Blog;
-import com.example.models.Category;
-import com.example.models.FAQ;
-import com.example.models.Product;
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FieldValue;
+import com.google.firebase.firestore.CollectionReference;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
-import com.google.firebase.firestore.QuerySnapshot;
-
-import java.util.HashMap;
-import java.util.Map;
+import com.example.models.Product;
 
 public class FirestoreManager {
     private static FirestoreManager instance;
-    private final FirebaseFirestore db;
-    private final FirebaseAuth auth;
+    private FirebaseFirestore db;
 
     private FirestoreManager() {
         db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
     }
 
     public static synchronized FirestoreManager getInstance() {
@@ -33,94 +20,47 @@ public class FirestoreManager {
         return instance;
     }
 
-    private String getUserId() {
-        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
+    public FirebaseFirestore getFirestore() {
+        return db;
     }
 
-    public void getCategories(OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("categories").get().addOnCompleteListener(listener);
+    public CollectionReference getProductsCollection() {
+        return db.collection("products");
     }
 
-    public void getNewProducts(int limit, OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("products")
-                .limit(limit)
-                .get()
-                .addOnCompleteListener(listener);
-    }
+    public Query getFilteredProducts(String category, String sortOrder, double minPrice, double maxPrice, float minRating) {
+        Query query = db.collection("products");
 
-    public void getProductsByCategory(String categoryName, OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("products")
-                .whereEqualTo("cat", categoryName)
-                .get()
-                .addOnCompleteListener(listener);
-    }
-
-    public void getProductDetail(String productId, OnCompleteListener<DocumentSnapshot> listener) {
-        db.collection("products").document(productId).get().addOnCompleteListener(listener);
-    }
-
-    // --- Wishlist ---
-    public void getWishlist(OnCompleteListener<QuerySnapshot> listener) {
-        String uid = getUserId();
-        if (uid == null) {
-            return;
+        // 1. Lọc theo danh mục (Ưu tiên lọc field này trước)
+        if (category != null && !category.isEmpty() && !category.equals("Tất cả")) {
+            query = query.whereEqualTo("cat", category);
         }
-        db.collection("wishlist")
-                .whereEqualTo("userId", uid)
-                .get()
-                .addOnCompleteListener(listener);
-    }
 
-    public Task<Void> addToWishlist(Product product) {
-        String uid = getUserId();
-        if (uid == null) return null;
-        
-        Map<String, Object> item = new HashMap<>();
-        item.put("userId", uid);
-        item.put("productId", product.getId());
-        item.put("timestamp", FieldValue.serverTimestamp());
-        item.put("productName", product.getName());
-        item.put("productPrice", product.getPrice());
-        item.put("productImage", product.getImageUrl());
-        
-        return db.collection("wishlist").document(uid + "_" + product.getId()).set(item);
-    }
+        // 2. Lọc theo giá - CHỈ lọc nếu không phải dải mặc định
+        if (minPrice > 0 || maxPrice < 10000000) {
+            query = query.whereGreaterThanOrEqualTo("price", minPrice)
+                         .whereLessThanOrEqualTo("price", maxPrice);
+            // Lưu ý: Nếu lọc range trên field 'price', Firestore yêu cầu orderBy trên chính field đó trước
+            query = query.orderBy("price", Query.Direction.ASCENDING);
+        }
 
-    public Task<Void> removeFromWishlist(String productId) {
-        String uid = getUserId();
-        if (uid == null) return null;
-        return db.collection("wishlist").document(uid + "_" + productId).delete();
-    }
+        // 3. Sắp xếp
+        if (sortOrder != null) {
+            if (sortOrder.equals("Giá Thấp-Cao")) {
+                // Đã được handle bởi logic range filter nếu có
+                if (!(minPrice > 0 || maxPrice < 10000000)) {
+                    query = query.orderBy("price", Query.Direction.ASCENDING);
+                }
+            } else if (sortOrder.equals("Giá Cao-Thấp")) {
+                query = query.orderBy("price", Query.Direction.DESCENDING);
+            } else if (sortOrder.equals("Mới nhất")) {
+                query = query.orderBy("createdAt", Query.Direction.DESCENDING);
+            } else if (sortOrder.equals("Phổ biến")) {
+                // Sắp xếp theo số lượng bán nếu có field 'sold'
+                query = query.orderBy("sold", Query.Direction.DESCENDING);
+            }
+        }
 
-    public void checkWishlistStatus(String productId, OnCompleteListener<DocumentSnapshot> listener) {
-        String uid = getUserId();
-        if (uid == null) return;
-        db.collection("wishlist").document(uid + "_" + productId).get().addOnCompleteListener(listener);
-    }
-
-    public void getFlashSaleProducts(OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("products")
-                .whereEqualTo("isFlashSale", true)
-                .get()
-                .addOnCompleteListener(listener);
-    }
-
-    // --- FAQs ---
-    public void getFAQs(OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("faqs").get().addOnCompleteListener(listener);
-    }
-
-    // --- Blogs ---
-    public void getBlogs(int limit, OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("blogs")
-                .limit(limit)
-                .get()
-                .addOnCompleteListener(listener);
-    }
-
-    public void getBlogs(OnCompleteListener<QuerySnapshot> listener) {
-        db.collection("blogs")
-                .get()
-                .addOnCompleteListener(listener);
+        return query;
     }
 }

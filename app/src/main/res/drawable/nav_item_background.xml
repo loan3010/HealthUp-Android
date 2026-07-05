@@ -2,13 +2,13 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:state_checked="true">
         <inset
-            android:insetLeft="8dp"
-            android:insetRight="8dp"
-            android:insetTop="12dp"
-            android:insetBottom="12dp">
+            android:insetLeft="10dp"
+            android:insetRight="10dp"
+            android:insetTop="10dp"
+            android:insetBottom="10dp">
             <shape android:shape="rectangle">
                 <solid android:color="@color/navbar_active_pill_light" />
-                <corners android:radius="16dp" />
+                <corners android:radius="12dp" />
             </shape>
         </inset>
     </item>

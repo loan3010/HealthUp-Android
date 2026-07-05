@@ -49,8 +49,11 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
         }
 
         public void bind(Review review) {
+            binding.tvUserName.setText(review.getUserName() != null ? review.getUserName() : "Khách hàng");
             binding.ratingBar.setRating(review.getRating());
-            binding.tvDate.setText(sdf.format(new Date(review.getCreatedAt())));
+            if (review.getCreatedAt() != null) {
+                binding.tvDate.setText(sdf.format(review.getCreatedAt().toDate()));
+            }
             binding.tvComment.setText(review.getComment());
             
             if (review.getComment() == null || review.getComment().isEmpty()) {

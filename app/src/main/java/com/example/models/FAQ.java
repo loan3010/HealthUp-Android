@@ -9,6 +9,12 @@ public class FAQ {
 
     public FAQ() {}
 
+    public FAQ(String question, String answer, String category) {
+        this.question = question;
+        this.answer = answer;
+        this.category = category;
+    }
+
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
     public String getQuestion() { return question; }

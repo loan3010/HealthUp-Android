@@ -27,6 +27,7 @@ import com.example.healthup.databinding.ItemWriteReviewBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.Review;
+import com.google.firebase.Timestamp;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -216,7 +217,7 @@ public class WriteReviewActivity extends AppCompatActivity {
                     }
 
                     if (realIndex != -1) {
-                        Review review = new Review(rating, comment, uploadedUrlsMap.get(realIndex), System.currentTimeMillis());
+                        Review review = new Review(rating, comment, uploadedUrlsMap.get(realIndex), Timestamp.now());
                         saveTasks.add(FirebaseManager.getInstance().updateItemReview(order.getId(), realIndex, review, order.getItems()));
                     }
                 }

@@ -30,7 +30,7 @@ public class FAQAdapter extends RecyclerView.Adapter<FAQAdapter.FAQViewHolder> {
         holder.tvQuestion.setText(faq.getQuestion());
         holder.tvAnswer.setText(faq.getAnswer());
         holder.tvAnswer.setVisibility(faq.isExpanded() ? View.VISIBLE : View.GONE);
-        holder.ivToggle.setRotation(faq.isExpanded() ? 180 : 0);
+        holder.ivToggle.setRotation(faq.isExpanded() ? 90 : -90);
 
         holder.itemView.setOnClickListener(v -> {
             faq.setExpanded(!faq.isExpanded());
@@ -49,9 +49,9 @@ public class FAQAdapter extends RecyclerView.Adapter<FAQAdapter.FAQViewHolder> {
 
         public FAQViewHolder(@NonNull View itemView) {
             super(itemView);
-            tvQuestion = itemView.findViewById(R.id.tvQuestion);
-            tvAnswer = itemView.findViewById(R.id.tvAnswer);
-            ivToggle = itemView.findViewById(R.id.ivToggle);
+            tvQuestion = itemView.findViewById(R.id.tv_faq_question);
+            tvAnswer = itemView.findViewById(R.id.tv_faq_answer);
+            ivToggle = itemView.findViewById(R.id.iv_faq_arrow);
         }
     }
 }

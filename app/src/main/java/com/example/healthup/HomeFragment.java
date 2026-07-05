@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -7,266 +8,354 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
-
+import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.example.healthup.databinding.FragmentHomeBinding;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.example.healthup.ProductAdapter;
+import com.example.healthup.BlogAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Blog;
 import com.example.models.Category;
 import com.example.models.Product;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-public class HomeFragment extends Fragment {
-    private FragmentHomeBinding binding;
-    private FirestoreManager firestoreManager;
-    
+public class HomeFragment extends Fragment implements ProductAdapter.OnProductClickListener, CategoryAdapter.OnCategoryClickListener, BlogAdapter.OnBlogClickListener {
+
+    private RecyclerView rvNewProducts, rvCategories, rvFlashSale, rvBlogs;
+    private ProductAdapter newProductAdapter, flashSaleAdapter;
     private CategoryAdapter categoryAdapter;
-    private ProductAdapter flashSaleAdapter;
-    private ProductAdapter newProductAdapter;
     private BlogAdapter blogAdapter;
-    private ProductAdapter searchRealtimeAdapter;
+
+    private List<Product> newProductList = new ArrayList<>();
+    private List<Product> flashSaleList = new ArrayList<>();
+    private List<Category> categoryList = new ArrayList<>();
+    private List<Blog> blogList = new ArrayList<>();
+    private List<Product> allProductsForSearch = new ArrayList<>();
+    private List<String> bannerImages = new ArrayList<>();
+    private int currentBannerIndex = 0;
+
+    // Countdown Timer logic
+    private android.os.Handler timerHandler = new android.os.Handler(android.os.Looper.getMainLooper());
+    private long endTime; 
     
-    private final List<Category> categories = new ArrayList<>();
-    private final List<Product> flashSaleProducts = new ArrayList<>();
-    private final List<Product> newProducts = new ArrayList<>();
-    private final List<Blog> blogs = new ArrayList<>();
-    private final List<Product> allProductsForSearch = new ArrayList<>();
-    private final List<Product> searchResults = new ArrayList<>();
+    // Banner Slider logic
+    private Runnable bannerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (!bannerImages.isEmpty()) {
+                View view = getView();
+                if (view != null) {
+                    ImageView ivBanner = view.findViewById(R.id.ivBanner);
+                    if (ivBanner != null) {
+                        Glide.with(HomeFragment.this)
+                                .load("file:///android_asset/images/banners/" + bannerImages.get(currentBannerIndex))
+                                .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
+                                .into(ivBanner);
+                        
+                        currentBannerIndex = (currentBannerIndex + 1) % bannerImages.size();
+                    }
+                }
+            }
+            timerHandler.postDelayed(this, 2000); // 2 giây đổi 1 lần
+        }
+    };
+    private Runnable timerRunnable = new Runnable() {
+        @Override
+        public void run() {
+            long millis = endTime - System.currentTimeMillis();
+            if (millis > 0) {
+                int seconds = (int) (millis / 1000);
+                int minutes = seconds / 60;
+                int hours = minutes / 60;
+                seconds = seconds % 60;
+                minutes = minutes % 60;
+
+                View view = getView();
+                if (view != null) {
+                    TextView tvH = view.findViewById(R.id.tvTimerHour);
+                    TextView tvM = view.findViewById(R.id.tvTimerMinute);
+                    TextView tvS = view.findViewById(R.id.tvTimerSecond);
+                    if (tvH != null) tvH.setText(String.format("%02d", hours));
+                    if (tvM != null) tvM.setText(String.format("%02d", minutes));
+                    if (tvS != null) tvS.setText(String.format("%02d", seconds));
+                }
+                timerHandler.postDelayed(this, 1000);
+            }
+        }
+    };
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = FragmentHomeBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        View view = inflater.inflate(R.layout.fragment_home, container, false);
+        
+        // Cấu hình danh sách banner từ assets
+        bannerImages.clear();
+        bannerImages.addAll(Arrays.asList(
+            "banner01.jpg", "banner02.jpg", "banner03.jpg", 
+            "banner04.jpg", "banner05.jpg", "banner06.jpg", "banner07.jpg",
+            "freshfood.jpg", "goodfood.jpg", "healthyfood.jpg"
+        ));
+        Collections.shuffle(bannerImages);
+
+        initViews(view);
+        setupSearch(view);
+        fetchCategories();
+        fetchProducts();
+        fetchBlogs();
+
+        // Khởi động đồng hồ đếm ngược (giả lập 2 giờ)
+        endTime = System.currentTimeMillis() + (2 * 60 * 60 * 1000);
+        timerHandler.post(timerRunnable);
+        
+        // Khởi động slider banner
+        timerHandler.post(bannerRunnable);
+
+        return view;
     }
 
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
+    private void initViews(View view) {
+        // Categories
+        rvCategories = view.findViewById(R.id.rvCategories);
+        categoryAdapter = new CategoryAdapter(categoryList, this);
+        rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
+        rvCategories.setAdapter(categoryAdapter);
 
-        firestoreManager = FirestoreManager.getInstance();
+        // Flash Sale (Horizontal)
+        rvFlashSale = view.findViewById(R.id.rvFlashSale);
+        flashSaleAdapter = new ProductAdapter(flashSaleList, this, true);
+        LinearLayoutManager flashSaleLM = new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false);
+        rvFlashSale.setLayoutManager(flashSaleLM);
+        rvFlashSale.setAdapter(flashSaleAdapter);
 
-        setupRecyclerViews();
-        setupSearch();
-        loadBanner();
-        loadData();
+        // Flash Sale Scroll Buttons
+        View btnLeft = view.findViewById(R.id.btnFlashSaleLeft);
+        View btnRight = view.findViewById(R.id.btnFlashSaleRight);
+
+        btnLeft.setOnClickListener(v -> {
+            int pos = flashSaleLM.findFirstVisibleItemPosition();
+            if (pos > 0) rvFlashSale.smoothScrollToPosition(pos - 1);
+        });
+
+        btnRight.setOnClickListener(v -> {
+            int pos = flashSaleLM.findLastVisibleItemPosition();
+            if (pos < flashSaleAdapter.getItemCount() - 1) rvFlashSale.smoothScrollToPosition(pos + 1);
+        });
+
+        rvFlashSale.addOnScrollListener(new RecyclerView.OnScrollListener() {
+            @Override
+            public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                btnLeft.setVisibility(flashSaleLM.findFirstVisibleItemPosition() > 0 ? View.VISIBLE : View.GONE);
+                btnRight.setVisibility(flashSaleLM.findLastVisibleItemPosition() < flashSaleAdapter.getItemCount() - 1 ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        // New Products (Grid)
+        rvNewProducts = view.findViewById(R.id.rvNewProducts);
+        newProductAdapter = new ProductAdapter(newProductList, this, false);
+        rvNewProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        rvNewProducts.setAdapter(newProductAdapter);
+
+        // Blogs (Horizontal)
+        rvBlogs = view.findViewById(R.id.rvBlogs);
+        blogAdapter = new BlogAdapter(blogList, this);
+        rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
+        rvBlogs.setAdapter(blogAdapter);
+
+        view.findViewById(R.id.tvViewAllNew).setOnClickListener(v -> navigateToCategory(null));
     }
 
-    private void loadBanner() {
-        Glide.with(this)
-                .load("file:///android_asset/images/banners/banner01.jpg")
-                .into(binding.ivBanner);
-    }
-
-    private void setupSearch() {
-        binding.etSearch.addTextChangedListener(new TextWatcher() {
+    private void setupSearch(View view) {
+        EditText etSearch = view.findViewById(R.id.etSearch);
+        etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String query = s.toString().trim();
-                if (query.length() > 0) {
-                    binding.mainContent.setVisibility(View.GONE);
-                    binding.rvRealtimeSearch.setVisibility(View.VISIBLE);
-                    filterProductsLocally(query);
+                String query = s.toString().trim().toLowerCase();
+                if (query.isEmpty()) {
+                    view.findViewById(R.id.mainContent).setVisibility(View.VISIBLE);
+                    view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.GONE);
                 } else {
-                    binding.mainContent.setVisibility(View.VISIBLE);
-                    binding.rvRealtimeSearch.setVisibility(View.GONE);
+                    view.findViewById(R.id.mainContent).setVisibility(View.GONE);
+                    view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.VISIBLE);
+                    
+                    List<Product> searchResults = new ArrayList<>();
+                    for (Product p : allProductsForSearch) {
+                        if (p.getName().toLowerCase().contains(query)) {
+                            searchResults.add(p);
+                        }
+                    }
+                    
+                    RecyclerView rvSearch = view.findViewById(R.id.rvRealtimeSearch);
+                    ProductAdapter searchAdapter = new ProductAdapter(searchResults, HomeFragment.this);
+                    rvSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
+                    rvSearch.setAdapter(searchAdapter);
                 }
             }
 
             @Override
             public void afterTextChanged(Editable s) {}
         });
-
-        binding.ivSearchIcon.setOnClickListener(v -> performSearch());
-
-        binding.chipGranola.setOnClickListener(v -> openProductList("category", "Granola"));
-        binding.chipHatDieu.setOnClickListener(v -> openProductList("category", "Hạt điều"));
-        binding.chipRongBien.setOnClickListener(v -> openProductList("category", "Snack rong biển"));
-        binding.chipYenMach.setOnClickListener(v -> openProductList("category", "Yến mạch"));
-
-        binding.tvViewAllNew.setOnClickListener(v -> openProductList("all", "Sản phẩm mới nhất"));
     }
 
-    private void performSearch() {
-        String query = binding.etSearch.getText().toString().trim();
-        if (!query.isEmpty()) {
-            openProductList("search", query);
-        } else {
-            Toast.makeText(getContext(), "Vui lòng nhập từ khóa tìm kiếm", Toast.LENGTH_SHORT).show();
+    private void fetchCategories() {
+        FirestoreManager.getInstance().getFirestore().collection("categories")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    categoryList.clear();
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        Category category = doc.toObject(Category.class);
+                        if (category != null) {
+                            category.setId(doc.getId());
+                            categoryList.add(category);
+                        }
+                    }
+                    if (categoryList.isEmpty()) {
+                        categoryList.addAll(Category.getDummyCategories());
+                    }
+                    categoryAdapter.notifyDataSetChanged();
+                });
+    }
+
+    private void fetchProducts() {
+        FirestoreManager.getInstance().getProductsCollection()
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    List<Product> allFetched = new ArrayList<>();
+                    List<Product> flashSales = new ArrayList<>();
+                    
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        Product product = doc.toObject(Product.class);
+                        if (product != null) {
+                            product.setId(doc.getId());
+                            allFetched.add(product);
+                            
+                            // Phân loại Flash Sale
+                            Object isFlash = doc.get("isFlashSale");
+                            if (isFlash instanceof Boolean && (Boolean)isFlash) {
+                                flashSales.add(product);
+                            }
+                        }
+                    }
+                    
+                    allProductsForSearch.clear();
+                    allProductsForSearch.addAll(allFetched);
+
+                    // Hiển thị Flash Sale (lấy tối đa 5 cái)
+                    flashSaleList.clear();
+                    if (!flashSales.isEmpty()) {
+                        Collections.shuffle(flashSales);
+                        flashSaleList.addAll(flashSales.subList(0, Math.min(flashSales.size(), 5)));
+                    } else if (!allFetched.isEmpty()) {
+                        // Nếu không có sp nào marked flash sale, lấy tạm 5 cái đầu
+                        flashSaleList.addAll(allFetched.subList(0, Math.min(allFetched.size(), 5)));
+                    }
+                    flashSaleAdapter.notifyDataSetChanged();
+
+                    // Hiển thị New Products (Random 10 cái)
+                    newProductList.clear();
+                    if (!allFetched.isEmpty()) {
+                        Collections.shuffle(allFetched);
+                        int limit = Math.min(allFetched.size(), 10);
+                        newProductList.addAll(allFetched.subList(0, limit));
+                    } else {
+                        newProductList.addAll(Product.getDummyProducts());
+                    }
+                    newProductAdapter.notifyDataSetChanged();
+                })
+                .addOnFailureListener(e -> {
+                    newProductList.clear();
+                    newProductList.addAll(Product.getDummyProducts());
+                    newProductAdapter.notifyDataSetChanged();
+                });
+    }
+
+    private void fetchBlogs() {
+        FirestoreManager.getInstance().getFirestore().collection("blogs")
+                .limit(5)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    blogList.clear();
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        Blog blog = doc.toObject(Blog.class);
+                        if (blog != null) {
+                            blog.setId(doc.getId());
+                            blogList.add(blog);
+                        }
+                    }
+                    blogAdapter.notifyDataSetChanged();
+                });
+    }
+
+    @Override
+    public void onCategoryClick(Category category) {
+        navigateToCategory(category.getName());
+    }
+
+    private void navigateToCategory(String categoryName) {
+        if (getActivity() instanceof MainActivity) {
+            MainActivity mainActivity = (MainActivity) getActivity();
+            BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
+            // Cập nhật tab đang chọn sang 'Danh mục'
+            navView.setSelectedItemId(R.id.nav_category);
+            
+            ProductListFragment fragment = new ProductListFragment();
+            Bundle args = new Bundle();
+            args.putString("category", categoryName != null ? categoryName : "Tất cả");
+            fragment.setArguments(args);
+            
+            mainActivity.getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null)
+                    .commit();
         }
     }
 
-    private void filterProductsLocally(String query) {
-        String lowerQuery = query.toLowerCase();
-        searchResults.clear();
-        for (Product p : allProductsForSearch) {
-            if (p.getName() != null && p.getName().toLowerCase().contains(lowerQuery)) {
-                searchResults.add(p);
-            }
-        }
-        searchRealtimeAdapter.notifyDataSetChanged();
+    @Override
+    public void onProductClick(Product product) {
+        Intent intent = new Intent(getContext(), ProductDetailActivity.class);
+        intent.putExtra("productId", product.getId());
+        startActivity(intent);
     }
 
-    private void openProductList(String type, String value) {
-        ProductListFragment fragment = new ProductListFragment();
-        Bundle args = new Bundle();
-        args.putString("filter_type", type);
-        args.putString("filter_value", value);
-        fragment.setArguments(args);
-
-        getParentFragmentManager().beginTransaction()
-                .replace(R.id.fragment_container, fragment)
-                .addToBackStack(null)
-                .commit();
+    @Override
+    public void onAddToCart(Product product) {
+        Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
     }
 
-    private void setupRecyclerViews() {
-        // Categories horizontal
-        categoryAdapter = new CategoryAdapter(categories, category -> {
-            openProductList("category", category.getName());
-        });
-        binding.rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        binding.rvCategories.setAdapter(categoryAdapter);
-
-        // Flash Sale horizontal
-        flashSaleAdapter = new ProductAdapter(flashSaleProducts, true);
-        binding.rvFlashSale.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        binding.rvFlashSale.setAdapter(flashSaleAdapter);
-
-        // New Products grid 2 columns
-        newProductAdapter = new ProductAdapter(newProducts, false);
-        binding.rvNewProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        binding.rvNewProducts.setAdapter(newProductAdapter);
-
-        // Blogs horizontal
-        blogAdapter = new BlogAdapter(blogs);
-        binding.rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), LinearLayoutManager.HORIZONTAL, false));
-        binding.rvBlogs.setAdapter(blogAdapter);
-
-        // Realtime Search Grid
-        searchRealtimeAdapter = new ProductAdapter(searchResults, false);
-        binding.rvRealtimeSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        binding.rvRealtimeSearch.setAdapter(searchRealtimeAdapter);
+    @Override
+    public void onFavoriteClick(Product product) {
+        product.setFavorite(!product.isFavorite());
+        newProductAdapter.notifyDataSetChanged();
+        if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
     }
 
-    private void loadData() {
-        Log.d("HomeFragment", "Starting to load data from Firestore...");
-        
-        // Fetch Categories
-        firestoreManager.getCategories(task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                Log.d("HomeFragment", "Categories fetched: " + task.getResult().size());
-                categories.clear();
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    try {
-                        Category cat = document.toObject(Category.class);
-                        cat.setId(document.getId());
-                        categories.add(cat);
-                    } catch (Exception e) {
-                        Log.e("HomeFragment", "Lỗi nạp danh mục: " + document.getId(), e);
-                    }
-                }
-                categoryAdapter.notifyDataSetChanged();
-            } else {
-                Log.e("HomeFragment", "Error fetching categories", task.getException());
-            }
-        });
-
-        // Fetch Flash Sale
-        firestoreManager.getFlashSaleProducts(task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                Log.d("HomeFragment", "Flash sale products fetched: " + task.getResult().size());
-                if (task.getResult().isEmpty()) {
-                    Log.d("HomeFragment", "Flash sale is empty. Check if collection 'products' exists and has 'isFlashSale: true'");
-                }
-                flashSaleProducts.clear();
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    try {
-                        Product prod = document.toObject(Product.class);
-                        prod.setId(document.getId());
-                        flashSaleProducts.add(prod);
-                    } catch (Exception e) {
-                        Log.e("HomeFragment", "Lỗi nạp sản phẩm Flash Sale: " + document.getId(), e);
-                    }
-                }
-                flashSaleAdapter.notifyDataSetChanged();
-            } else {
-                Log.e("HomeFragment", "Error fetching flash sale", task.getException());
-            }
-        });
-
-        // Fetch New Products
-        firestoreManager.getNewProducts(100, task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                Log.d("HomeFragment", "New products fetched: " + task.getResult().size());
-                
-                List<Product> allFetchedProducts = new ArrayList<>();
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    try {
-                        Product prod = document.toObject(Product.class);
-                        prod.setId(document.getId());
-                        allFetchedProducts.add(prod);
-                    } catch (Exception e) {
-                        Log.e("HomeFragment", "Lỗi nạp sản phẩm mới: " + document.getId(), e);
-                    }
-                }
-
-                // Lưu toàn bộ vào danh sách tìm kiếm
-                allProductsForSearch.clear();
-                allProductsForSearch.addAll(allFetchedProducts);
-
-                // Lấy ngẫu nhiên tầm 10 sản phẩm để hiện ra trang Home
-                newProducts.clear();
-                if (!allFetchedProducts.isEmpty()) {
-                    Collections.shuffle(allFetchedProducts);
-                    int limit = Math.min(allFetchedProducts.size(), 10);
-                    newProducts.addAll(allFetchedProducts.subList(0, limit));
-                }
-
-                newProductAdapter.notifyDataSetChanged();
-            } else {
-                Log.e("HomeFragment", "Error fetching new products", task.getException());
-            }
-        });
-
-        // Fetch Blogs
-        firestoreManager.getBlogs(5, task -> {
-            if (task.isSuccessful() && task.getResult() != null) {
-                Log.d("HomeFragment", "Blogs fetched: " + task.getResult().size());
-                blogs.clear();
-                for (QueryDocumentSnapshot document : task.getResult()) {
-                    try {
-                        Blog blog = document.toObject(Blog.class);
-                        blog.setId(document.getId());
-                        blogs.add(blog);
-                    } catch (Exception e) {
-                        Log.e("HomeFragment", "Lỗi nạp blog: " + document.getId(), e);
-                    }
-                }
-                blogAdapter.notifyDataSetChanged();
-            } else {
-                Log.e("HomeFragment", "Error fetching blogs", task.getException());
-            }
-        });
+    @Override
+    public void onBlogClick(Blog blog) {
+        Intent intent = new Intent(getContext(), BlogDetailActivity.class);
+        intent.putExtra("blogId", blog.getId());
+        startActivity(intent);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        binding = null;
+        timerHandler.removeCallbacks(timerRunnable);
+        timerHandler.removeCallbacks(bannerRunnable);
     }
 }

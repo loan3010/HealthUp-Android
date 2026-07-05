@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <color name="primary_green">#2E7D32</color>
+    <color name="light_green">#E8F5E9</color>
+    <color name="selected_nav_bg">#E1F2E4</color>
+    <color name="text_dark">#333333</color>
+    <color name="text_gray">#757575</color>
+    <color name="bg_light">#F8F8F8</color>
+    <color name="gray_count">#F5F5F5</color>
+    <color name="bg_light_green">#F0F7F0</color>
+    <color name="bg_chip_filter">#F5F5F5</color>
 
     <!-- Aliases for compatibility with existing code -->
     <color name="primary">#36873A</color>

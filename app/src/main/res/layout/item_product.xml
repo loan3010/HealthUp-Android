@@ -3,16 +3,16 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_margin="@dimen/spacing_s"
-    app:cardCornerRadius="@dimen/radius_l"
-    app:cardElevation="@dimen/shadow_card_elevation"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp"
     app:cardBackgroundColor="@color/neutral_white">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="@dimen/spacing_s">
+        android:padding="8dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -49,7 +49,7 @@
             style="@style/TextAppearance.HealthUp.SubContent"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="@dimen/spacing_s"
+            android:layout_marginTop="8dp"
             android:ellipsize="end"
             android:lines="2"
             android:text="Product Name"
@@ -66,36 +66,33 @@
             <ImageView
                 android:layout_width="12dp"
                 android:layout_height="12dp"
-                android:src="@drawable/ic_star_yellow" />
+                android:src="@drawable/ic_star"
+                app:tint="#FFB300"
+                android:layout_marginEnd="2dp"/>
 
             <TextView
                 android:id="@+id/tvRating"
-                style="@style/TextAppearance.HealthUp.CaptionLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="2dp"
-                android:text="4.9"
-                android:textColor="@color/neutral_black" />
-
-            <View
-                android:layout_width="1dp"
-                android:layout_height="10dp"
-                android:layout_marginHorizontal="6dp"
-                android:background="@color/neutral_grey" />
+                android:text="4.5"
+                android:textSize="11sp"
+                android:textColor="@color/neutral_black"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvSoldCount"
-                style="@style/TextAppearance.HealthUp.CaptionLabel"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Đã bán 1.1k"
+                android:layout_marginStart="6dp"
+                android:text="đã bán 100"
+                android:textSize="11sp"
                 android:textColor="@color/neutral_grey" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="4dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -120,15 +117,20 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="120.000đ"
-                    android:textColor="@color/neutral_grey"
                     android:visibility="gone" />
             </LinearLayout>
 
+            <CheckBox
+                android:id="@+id/cbSelect"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
             <ImageView
                 android:id="@+id/btnWishlist"
-                android:layout_width="@dimen/icon_circle_size_small"
-                android:layout_height="@dimen/icon_circle_size_small"
-                android:layout_marginEnd="@dimen/spacing_xs"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="4dp"
                 android:background="@drawable/bg_circle_light"
                 android:padding="6dp"
                 android:src="@drawable/ic_wishlist"
@@ -136,8 +138,8 @@
 
             <ImageView
                 android:id="@+id/btnAddToCart"
-                android:layout_width="@dimen/icon_circle_size_small"
-                android:layout_height="@dimen/icon_circle_size_small"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:background="@drawable/bg_circle_green"
                 android:padding="6dp"
                 android:src="@drawable/ic_plus"

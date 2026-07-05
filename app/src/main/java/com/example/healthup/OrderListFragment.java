@@ -99,7 +99,11 @@ public class OrderListFragment extends Fragment {
             }
 
             // Sắp xếp lại phía client (dù server đã order by, nhưng có thể cần thiết nếu logic phức tạp)
-            Collections.sort(filteredOrders, (o1, o2) -> Long.compare(o2.getUpdatedAt(), o1.getUpdatedAt()));
+            Collections.sort(filteredOrders, (o1, o2) -> {
+                long t1 = (o1.getUpdatedAt() != null) ? o1.getUpdatedAt().getSeconds() : 0;
+                long t2 = (o2.getUpdatedAt() != null) ? o2.getUpdatedAt().getSeconds() : 0;
+                return Long.compare(t2, t1);
+            });
 
             if (filteredOrders.isEmpty()) {
                 binding.rvOrders.setVisibility(View.GONE);
@@ -144,6 +148,11 @@ public class OrderListFragment extends Fragment {
             }
 
             recommendAdapter = new RecommendProductAdapter(getContext(), displayedRecommendProducts);
+            recommendAdapter.setOnProductClickListener(p -> {
+                android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
+                intent.putExtra("product", p);
+                startActivity(intent);
+            });
             binding.rvRecommend.setLayoutManager(new GridLayoutManager(getContext(), 2));
             binding.rvRecommend.setAdapter(recommendAdapter);
 

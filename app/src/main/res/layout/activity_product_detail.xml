@@ -4,52 +4,84 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/neutral_cream">
+    android:background="@color/white">
 
     <com.google.android.material.appbar.AppBarLayout
-        android:id="@+id/appBarLayout"
+        android:id="@+id/app_bar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/neutral_cream"
+        android:background="@android:color/transparent"
         app:elevation="0dp">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
-            android:layout_height="350dp"
-            app:contentScrim="@color/neutral_cream"
+            android:layout_height="wrap_content"
             app:layout_scrollFlags="scroll|exitUntilCollapsed">
 
-            <RelativeLayout
+            <androidx.viewpager2.widget.ViewPager2
+                android:id="@+id/view_pager_images"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent">
-
-                <androidx.viewpager2.widget.ViewPager2
-                    android:id="@+id/vpProductImages"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent" />
-
-                <TextView
-                    android:id="@+id/tvImageIndicator"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_marginEnd="16dp"
-                    android:layout_marginBottom="16dp"
-                    android:layout_alignParentBottom="true"
-                    android:background="@drawable/bg_circle_dark_trans"
-                    android:paddingHorizontal="10dp"
-                    android:paddingVertical="4dp"
-                    android:text="1/5"
-                    android:textColor="@color/neutral_white"
-                    android:textSize="12sp" />
-            </RelativeLayout>
+                android:layout_height="360dp"
+                android:background="#F5F5F5" />
 
             <androidx.appcompat.widget.Toolbar
-                android:id="@+id/toolbar"
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
-                app:layout_collapseMode="pin"
-                app:navigationIcon="@drawable/ic_back" />
+                app:layout_collapseMode="pin">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="16dp">
+
+                    <ImageButton
+                        android:id="@+id/btn_back"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_centerVertical="true"
+                        android:background="@drawable/bg_circle_translucent"
+                        android:src="@drawable/ic_back"
+                        app:tint="@color/text_dark" />
+
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:orientation="horizontal">
+
+                        <ImageButton
+                            android:id="@+id/btn_share"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_marginEnd="12dp"
+                            android:background="@drawable/bg_circle_translucent"
+                            android:src="@android:drawable/ic_menu_share"
+                            app:tint="@color/text_dark" />
+
+                        <ImageButton
+                            android:id="@+id/btn_wishlist"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:background="@drawable/bg_circle_translucent"
+                            android:src="@drawable/ic_heart_outline"
+                            app:tint="@color/text_dark" />
+                    </LinearLayout>
+                </RelativeLayout>
+            </androidx.appcompat.widget.Toolbar>
+
+            <TextView
+                android:id="@+id/tv_image_index"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="bottom|end"
+                android:layout_margin="16dp"
+                android:background="@drawable/bg_circle_translucent"
+                android:paddingHorizontal="10dp"
+                android:paddingVertical="2dp"
+                android:text="1/5"
+                android:textColor="@color/white"
+                android:textSize="12sp" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
@@ -57,340 +89,373 @@
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingBottom="100dp"
+        android:background="@color/white"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:paddingHorizontal="20dp"
-            android:paddingTop="16dp">
-
-            <TextView
-                android:id="@+id/tvProductName"
-                style="@style/TextAppearance.HealthUp.Title"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:text="Granola Việt Quất &amp; Hạt Chia"
-                android:textColor="@color/primary_default" />
+            android:paddingBottom="100dp">
 
             <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_star_yellow" />
-
-                <TextView
-                    android:id="@+id/tvRating"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:text="4.9"
-                    android:textStyle="bold" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="12dp"
-                    android:layout_marginHorizontal="8dp"
-                    android:background="@color/neutral_grey" />
-
-                <TextView
-                    android:id="@+id/tvReviewCount"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="110 đánh giá"
-                    android:textColor="@color/neutral_grey" />
-
-                <View
-                    android:layout_width="1dp"
-                    android:layout_height="12dp"
-                    android:layout_marginHorizontal="8dp"
-                    android:background="@color/neutral_grey" />
-
-                <TextView
-                    android:id="@+id/tvSoldCountDetail"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Đã bán 500+"
-                    android:textColor="@color/neutral_grey" />
-            </LinearLayout>
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:gravity="bottom"
-                android:orientation="horizontal">
-
-                <TextView
-                    android:id="@+id/tvProductPrice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="220.000đ"
-                    android:textColor="@color/primary_default"
-                    android:textSize="24sp"
-                    android:textStyle="bold" />
-
-                <TextView
-                    android:id="@+id/tvOriginalPrice"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:text="250.000đ"
-                    android:textColor="@color/neutral_grey" />
-
-                <TextView
-                    android:id="@+id/tvDiscount"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:background="@drawable/badge_sale"
-                    android:paddingHorizontal="6dp"
-                    android:paddingVertical="2dp"
-                    android:text="-12%"
-                    android:textColor="@color/action_error"
-                    android:textSize="12sp"
-                    android:textStyle="bold" />
-            </LinearLayout>
-
-            <TextView
-                android:id="@+id/tvSavings"
-                style="@style/TextAppearance.HealthUp.Content"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="Tiết kiệm 30.000đ"
-                android:textColor="@color/primary_default" />
-
-            <!-- Separator -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginHorizontal="-20dp"
-                android:layout_marginTop="20dp"
-                android:background="@color/neutral_light_grey"
-                android:alpha="0.3" />
-
-            <!-- Ingredients Section -->
-            <LinearLayout
-                android:id="@+id/sectionIngredients"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingVertical="16dp">
+                android:paddingHorizontal="16dp"
+                android:paddingTop="16dp">
+
+                <TextView
+                    android:id="@+id/tv_detail_name"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Granola Việt Quất \u0026 Hạt Chia"
+                    android:textColor="@color/primary_green"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:src="@drawable/ic_star"
+                        app:tint="#FFB300" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_rating"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="4dp"
+                        android:text="4.9"
+                        android:textColor="@color/text_dark"
+                        android:textSize="14sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="#E0E0E0" />
+
+                    <TextView
+                        android:id="@+id/tv_review_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="110 đánh giá"
+                        android:textColor="@color/text_gray"
+                        android:textSize="14sp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="#E0E0E0" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_sold"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Đã bán 500+"
+                        android:textColor="@color/text_gray"
+                        android:textSize="14sp" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginHorizontal="8dp"
+                        android:background="#E0E0E0" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_stock"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Kho: 100"
+                        android:textColor="@color/text_gray"
+                        android:textSize="14sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_detail_price"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="220.000đ"
+                        android:textColor="@color/primary_green"
+                        android:textSize="24sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_detail_original_price"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="250.000đ"
+                        android:textColor="@color/text_gray"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        android:id="@+id/tv_discount_tag"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:background="@drawable/bg_discount_tag"
+                        android:paddingHorizontal="6dp"
+                        android:paddingVertical="2dp"
+                        android:text="-12%"
+                        android:textColor="#E53935"
+                        android:textSize="12sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_savings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Tiết kiệm 30.000đ"
+                    android:textColor="@color/primary_green"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:layout_marginTop="24dp"
+                android:background="#F5F5F5" />
+
+            <!-- Expandable Sections -->
+            <LinearLayout
+                android:id="@+id/layout_variants"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Chọn loại"
+                    android:textColor="@color/text_dark"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+
+                <com.google.android.material.chip.ChipGroup
+                    android:id="@+id/chip_group_variants"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    app:singleSelection="true" />
+            </LinearLayout>
+
+            <View
+                android:id="@+id/divider_variants"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:background="#F5F5F5"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <include
+                android:id="@+id/section_ingredients"
+                layout="@layout/layout_detail_expandable" />
+
+            <include
+                android:id="@+id/section_nutrition"
+                layout="@layout/layout_detail_expandable" />
+
+            <include
+                android:id="@+id/section_usage"
+                layout="@layout/layout_detail_expandable" />
+
+            <include
+                android:id="@+id/section_origin"
+                layout="@layout/layout_detail_expandable" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:background="#F5F5F5" />
+
+            <!-- Reviews Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
+
                     <TextView
-                        style="@style/TextAppearance.HealthUp.SubTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Thành phần chính"
-                        android:textSize="16sp" />
-                    <ImageView
-                        android:id="@+id/ivArrowIngredients"
-                        android:layout_width="20dp"
-                        android:layout_height="20dp"
+                        android:text="Đánh giá khách hàng"
+                        android:textColor="@color/text_dark"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_view_all_reviews"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
-                        android:src="@drawable/ic_arrow_down" />
+                        android:text="Xem tất cả >"
+                        android:textColor="@color/text_gray"
+                        android:textSize="12sp" />
                 </RelativeLayout>
 
-                <TextView
-                    android:id="@+id/tvIngredients"
-                    style="@style/TextAppearance.HealthUp.Content"
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_reviews"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:text="Yến mạch nguyên cám, Việt quất sấy lạnh, Hạt chia hữu cơ..."
-                    android:textColor="@color/neutral_grey" />
+                    android:layout_marginTop="16dp"
+                    tools:listitem="@layout/item_review" />
+
+                <TextView
+                    android:id="@+id/tv_no_reviews"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:text="@string/no_reviews"
+                    android:textColor="@color/text_gray"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/neutral_light_grey" />
-
-            <!-- Nutrition Section -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="16dp">
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Thành phần dinh dưỡng"
-                    android:textSize="16sp" />
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_alignParentEnd="true"
-                    android:src="@drawable/ic_arrow_down" />
-            </RelativeLayout>
-
-            <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/neutral_light_grey" />
-
-            <!-- Usage Section -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="16dp">
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Hướng dẫn sử dụng"
-                    android:textSize="16sp" />
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:layout_alignParentEnd="true"
-                    android:src="@drawable/ic_arrow_down" />
-            </RelativeLayout>
-
-            <!-- Separator -->
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
-                android:layout_marginHorizontal="-20dp"
-                android:background="@color/neutral_light_grey"
-                android:alpha="0.3" />
+                android:background="#F5F5F5" />
 
-            <!-- Reviews Header -->
-            <RelativeLayout
+            <!-- Recommendations -->
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:paddingVertical="16dp">
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Đánh giá khách hàng"
-                    android:textSize="18sp" />
-                <TextView
-                    android:id="@+id/tvViewAllReviews"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:text="Xem tất cả >"
-                    android:textColor="@color/primary_default" />
-            </RelativeLayout>
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvReviews"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_view_review" />
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
 
-            <!-- Separator -->
-            <View
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginHorizontal="-20dp"
-                android:layout_marginTop="16dp"
-                android:background="@color/neutral_light_grey"
-                android:alpha="0.3" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Có thể bạn quan tâm"
+                        android:textColor="@color/text_dark"
+                        android:textSize="18sp"
+                        android:textStyle="bold" />
 
-            <!-- Recommended Header -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingVertical="16dp">
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubTitle"
-                    android:layout_width="wrap_content"
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:text="Xem tất cả"
+                        android:textColor="@color/text_gray"
+                        android:textSize="12sp" />
+                </RelativeLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rv_detail_recommendations"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Có thể bạn quan tâm"
-                    android:textSize="18sp" />
-                <TextView
-                    android:id="@+id/tvViewAllRecommend"
-                    style="@style/TextAppearance.HealthUp.Content"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:layout_centerVertical="true"
-                    android:text="Xem tất cả >"
-                    android:textColor="@color/primary_default" />
-            </RelativeLayout>
-
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvRecommended"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:nestedScrollingEnabled="false"
-                tools:listitem="@layout/item_product" />
+                    android:layout_marginTop="16dp"
+                    app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+                    app:spanCount="2"
+                    tools:listitem="@layout/item_product" />
+            </LinearLayout>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
+    <!-- Bottom Actions -->
     <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="80dp"
         android:layout_gravity="bottom"
-        app:cardElevation="16dp">
+        app:cardCornerRadius="0dp"
+        app:cardElevation="16dp"
+        app:cardBackgroundColor="@color/neutral_cream">
 
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            android:layout_height="match_parent"
+            android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:padding="16dp"
-            android:background="@color/neutral_white">
+            android:paddingHorizontal="16dp">
 
-            <ImageView
-                android:id="@+id/btnChat"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:background="@drawable/btn_large_outline"
-                android:padding="12dp"
-                android:src="@drawable/ic_blog"
-                app:tint="@color/neutral_grey" />
+                <LinearLayout
+                    android:id="@+id/btn_chat"
+                    android:layout_width="60dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true">
 
-            <LinearLayout
-                android:id="@+id/btnAddToCartDetail"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="12dp"
-                android:layout_weight="1"
-                android:background="@drawable/btn_large_outline"
-                android:gravity="center">
-                <ImageView
-                    android:layout_width="20dp"
-                    android:layout_height="20dp"
-                    android:src="@drawable/ic_plus"
-                    app:tint="@color/primary_default" />
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_chat"
+                        app:tint="@color/neutral_black" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Chat"
+                        android:textSize="10sp"
+                        android:textColor="@color/neutral_black"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_detail_add_cart"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_weight="1"
                     android:text="Thêm"
+                    android:textAllCaps="false"
                     android:textColor="@color/primary_default"
-                    android:textStyle="bold" />
-            </LinearLayout>
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp"
+                    app:icon="@drawable/ic_cart"
+                    app:iconGravity="textStart"
+                    app:iconSize="18dp"
+                    app:iconTint="@color/primary_default"
+                    app:strokeColor="@color/primary_default"
+                    app:backgroundTint="@color/primary_tint_5" />
 
-            <Button
-                android:id="@+id/btnBuyNow"
-                android:layout_width="0dp"
-                android:layout_height="48dp"
-                android:layout_marginStart="12dp"
-                android:layout_weight="2"
-                android:backgroundTint="@color/primary_default"
-                android:text="Mua ngay"
-                android:textColor="@color/neutral_white"
-                android:textAllCaps="false"
-                android:textStyle="bold" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_buy_now"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_weight="1.2"
+                    android:backgroundTint="@color/primary_default"
+                    android:text="Mua ngay"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
 

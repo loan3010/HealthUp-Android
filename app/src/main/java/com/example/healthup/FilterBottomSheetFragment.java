@@ -1,285 +1,286 @@
 package com.example.healthup;
 
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.EditText;
+import android.widget.RadioGroup;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.example.healthup.databinding.BottomSheetFilterBinding;
-import com.example.healthup.firebase.FirestoreManager;
-import com.example.models.Category;
-import com.example.models.Product;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
-import java.util.ArrayList;
-import java.util.HashMap;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.slider.RangeSlider;
+import com.example.healthup.firebase.FirestoreManager;
+
+import java.text.NumberFormat;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
+import java.util.Locale;
 
 public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
-    private BottomSheetFilterBinding binding;
-    private OnFilterApplyListener listener;
-    private final List<String> selectedCategories = new ArrayList<>();
-    private List<Product> allProductsForCounting = new ArrayList<>();
 
-    public interface OnFilterApplyListener {
-        void onApply(List<String> categories, String sortType, float minPrice, float maxPrice, float minRating);
+    public interface OnFilterAppliedListener {
+        void onFilterApplied(String category, String sort, double minPrice, double maxPrice, float rating);
     }
 
-    public void setOnFilterApplyListener(OnFilterApplyListener listener) {
-        this.listener = listener;
+    private OnFilterAppliedListener listener;
+    private String selectedCategory, selectedSort;
+    private double minPrice, maxPrice;
+    private float minRating;
+
+    private ChipGroup chipGroupSort;
+    private RecyclerView rvCategories;
+    private RangeSlider priceSlider;
+    private TextView tvMinPrice, tvMaxPrice;
+    private RadioGroup rgRating;
+    private CategoryAdapter categoryAdapter;
+
+    private final List<String> categories = Arrays.asList(
+            "Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc"
+    );
+
+    public static FilterBottomSheetFragment newInstance(String category, String sort, double min, double max, float rating) {
+        FilterBottomSheetFragment fragment = new FilterBottomSheetFragment();
+        Bundle args = new Bundle();
+        args.putString("category", category);
+        args.putString("sort", sort);
+        args.putDouble("min", min);
+        args.putDouble("max", max);
+        args.putFloat("rating", rating);
+        fragment.setArguments(args);
+        return fragment;
+    }
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if (getArguments() != null) {
+            selectedCategory = getArguments().getString("category");
+            selectedSort = getArguments().getString("sort");
+            minPrice = getArguments().getDouble("min");
+            maxPrice = getArguments().getDouble("max");
+            minRating = getArguments().getFloat("rating");
+        }
     }
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = BottomSheetFilterBinding.inflate(inflater, container, false);
-        return binding.getRoot();
+        return inflater.inflate(R.layout.bottom_sheet_filter, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        initViews(view);
+    }
+
+    private void initViews(View view) {
+        chipGroupSort = view.findViewById(R.id.chip_group_sort);
+        rvCategories = view.findViewById(R.id.rv_filter_categories);
+        priceSlider = view.findViewById(R.id.price_slider);
+        tvMinPrice = view.findViewById(R.id.tv_min_price);
+        tvMaxPrice = view.findViewById(R.id.tv_max_price);
+        rgRating = view.findViewById(R.id.rg_rating);
+
+        setupSortChips();
+        setupCategoryList();
+        setupPriceSlider(view);
+        setupRatingGroup();
+
+        view.findViewById(R.id.btn_close).setOnClickListener(v -> dismiss());
+        view.findViewById(R.id.btn_reset).setOnClickListener(v -> resetFilters());
         
-        binding.sliderPrice.setStepSize(5000f);
-        loadCategories();
-
-        binding.btnApply.setOnClickListener(v -> {
-            String sortType = getSelectedSortType();
-            float minRating = getSelectedMinRating();
-
-            updateSliderFromInputs();
-            List<Float> values = binding.sliderPrice.getValues();
-            if (listener != null) {
-                listener.onApply(selectedCategories, sortType, values.get(0), values.get(1), minRating);
-            }
-            dismiss();
-        });
-
-        binding.btnPriceUnder100.setOnClickListener(v -> {
-            binding.sliderPrice.setValues(0f, 100000f);
-            syncInputsFromSlider();
-            updateLiveCount();
-        });
-        binding.btnPrice100To200.setOnClickListener(v -> {
-            binding.sliderPrice.setValues(100000f, 200000f);
-            syncInputsFromSlider();
-            updateLiveCount();
-        });
-        binding.btnPriceOver200.setOnClickListener(v -> {
-            binding.sliderPrice.setValues(200000f, 1000000f);
-            syncInputsFromSlider();
-            updateLiveCount();
-        });
-
-        binding.btnResetAll.setOnClickListener(v -> {
-            binding.cgSort.clearCheck();
-            binding.cgRating.clearCheck();
-            binding.sliderPrice.setValues(0f, 1000000f);
-            binding.etMinPrice.setText("0");
-            binding.etMaxPrice.setText("1.000.000");
-            
-            for (int i = 0; i < binding.containerCategories.getChildCount(); i++) {
-                View child = binding.containerCategories.getChildAt(i);
-                if (child instanceof ViewGroup) {
-                    ViewGroup vg = (ViewGroup) child;
-                    for (int j = 0; j < vg.getChildCount(); j++) {
-                        View inner = vg.getChildAt(j);
-                        if (inner instanceof CheckBox) {
-                            ((CheckBox) inner).setChecked(false);
-                        }
-                    }
+        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+        if (btnApply != null) {
+            btnApply.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onFilterApplied(selectedCategory, selectedSort, minPrice, maxPrice, minRating);
                 }
+                dismiss();
+            });
+        }
+
+        updateApplyButton(view);
+    }
+
+    private void setupSortChips() {
+        if (chipGroupSort == null) return;
+        for (int i = 0; i < chipGroupSort.getChildCount(); i++) {
+            Chip chip = (Chip) chipGroupSort.getChildAt(i);
+            if (chip.getText().toString().equalsIgnoreCase(selectedSort)) {
+                chip.setChecked(true);
             }
-            selectedCategories.clear();
-            updateLiveCount();
+            chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                if (isChecked) {
+                    selectedSort = chip.getText().toString();
+                    updateApplyButton(getView());
+                }
+            });
+        }
+    }
+
+    private void setupCategoryList() {
+        categoryAdapter = new CategoryAdapter(categories, selectedCategory, category -> {
+            selectedCategory = category;
+            updateApplyButton(getView());
+        });
+        rvCategories.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvCategories.setAdapter(categoryAdapter);
+    }
+
+    private void setupPriceSlider(View view) {
+        priceSlider.setValues((float) minPrice, (float) maxPrice);
+        updatePriceTexts();
+
+        priceSlider.addOnChangeListener((slider, value, fromUser) -> {
+            List<Float> values = slider.getValues();
+            minPrice = values.get(0);
+            maxPrice = values.get(1);
+            updatePriceTexts();
+            updateApplyButton(getView());
         });
 
-        binding.tvReset.setOnClickListener(v -> binding.btnResetAll.performClick());
-
-        binding.sliderPrice.addOnChangeListener((slider, value, fromUser) -> {
-            if (fromUser) {
-                syncInputsFromSlider();
-                updateLiveCount();
+        View.OnClickListener priceQuickAction = v -> {
+            int id = v.getId();
+            if (id == R.id.btn_price_under_100) {
+                priceSlider.setValues(0f, 100000f);
+            } else if (id == R.id.btn_price_100_200) {
+                priceSlider.setValues(100000f, 200000f);
+            } else if (id == R.id.btn_price_above_200) {
+                priceSlider.setValues(200000f, 10000000f);
             }
-        });
-
-        binding.cgSort.setOnCheckedStateChangeListener((group, checkedIds) -> updateLiveCount());
-        binding.cgRating.setOnCheckedStateChangeListener((group, checkedIds) -> updateLiveCount());
-
-        View.OnFocusChangeListener priceFocusListener = (v, hasFocus) -> {
-            if (!hasFocus) {
-                updateSliderFromInputs();
-                updateLiveCount();
-            }
+            updateApplyButton(getView());
         };
 
-        binding.etMinPrice.setOnFocusChangeListener(priceFocusListener);
-        binding.etMaxPrice.setOnFocusChangeListener(priceFocusListener);
+        view.findViewById(R.id.btn_price_under_100).setOnClickListener(priceQuickAction);
+        view.findViewById(R.id.btn_price_100_200).setOnClickListener(priceQuickAction);
+        view.findViewById(R.id.btn_price_above_200).setOnClickListener(priceQuickAction);
     }
 
-    private String getSelectedSortType() {
-        if (binding.chipNewest.isChecked()) return "newest";
-        if (binding.chipPriceLowHigh.isChecked()) return "price_asc";
-        if (binding.chipPriceHighLow.isChecked()) return "price_desc";
-        if (binding.chipFavorite.isChecked()) return "favorite";
-        return "popular";
+    private void updatePriceTexts() {
+        NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
+        tvMinPrice.setText(String.format("%sđ", formatter.format(minPrice)));
+        tvMaxPrice.setText(String.format("%sđ", formatter.format(maxPrice)));
     }
 
-    private float getSelectedMinRating() {
-        if (binding.chipRating5.isChecked()) return 5.0f;
-        if (binding.chipRating4.isChecked()) return 4.0f;
-        return 0f;
-    }
+    private void setupRatingGroup() {
+        if (minRating >= 5) rgRating.check(R.id.rb_5_stars);
+        else if (minRating >= 4) rgRating.check(R.id.rb_4_stars);
 
-    private void updateLiveCount() {
-        if (allProductsForCounting == null || allProductsForCounting.isEmpty()) {
-            return;
-        }
-
-        float minRating = getSelectedMinRating();
-        List<Float> prices = binding.sliderPrice.getValues();
-        float minP = prices.get(0);
-        float maxP = prices.get(1);
-
-        int count = 0;
-        for (Product p : allProductsForCounting) {
-            // Hỗ trợ đa danh mục
-            boolean matchCat = selectedCategories.isEmpty();
-            if (!matchCat) {
-                List<String> productCats = p.getCategories();
-                for (String selCat : selectedCategories) {
-                    if (productCats.contains(selCat)) {
-                        matchCat = true;
-                        break;
-                    }
-                }
-            }
-
-            boolean matchPrice = p.getPrice() >= minP && p.getPrice() <= maxP;
-            boolean matchRating = p.getRating() >= minRating;
-
-            if (matchCat && matchPrice && matchRating) {
-                count++;
-            }
-        }
-        updateApplyButtonCount(count);
-    }
-
-    private void syncInputsFromSlider() {
-        List<Float> values = binding.sliderPrice.getValues();
-        binding.etMinPrice.setText(String.format("%,.0f", values.get(0)));
-        binding.etMaxPrice.setText(String.format("%,.0f", values.get(1)));
-    }
-
-    private void updateSliderFromInputs() {
-        try {
-            String minStr = binding.etMinPrice.getText().toString().replaceAll("[^0-9]", "");
-            String maxStr = binding.etMaxPrice.getText().toString().replaceAll("[^0-9]", "");
-
-            float min = minStr.isEmpty() ? 0 : Float.parseFloat(minStr);
-            float max = maxStr.isEmpty() ? 1000000 : Float.parseFloat(maxStr);
-
-            if (min < 0) min = 0;
-            if (max > 1000000) max = 1000000;
-            if (min > max) {
-                float temp = min;
-                min = max;
-                max = temp;
-            }
-
-            binding.sliderPrice.setValues(min, max);
-            syncInputsFromSlider();
-        } catch (Exception e) {
-            syncInputsFromSlider();
-        }
-    }
-
-    private void loadCategories() {
-        String[] defaultCats = {"Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"};
-        List<Category> categoryList = new ArrayList<>();
-        for (int i = 0; i < defaultCats.length; i++) {
-            categoryList.add(new Category(String.valueOf(i), defaultCats[i], ""));
-        }
-
-        FirestoreManager.getInstance().getNewProducts(500, prodTask -> {
-            Map<String, Integer> counts = new HashMap<>();
-            allProductsForCounting.clear();
-            if (prodTask.isSuccessful() && prodTask.getResult() != null) {
-                for (QueryDocumentSnapshot doc : prodTask.getResult()) {
-                    try {
-                        Product p = doc.toObject(Product.class);
-                        p.setId(doc.getId());
-                        allProductsForCounting.add(p);
-                        
-                        List<String> pCats = p.getCategories();
-                        for (String c : pCats) {
-                            counts.put(c, counts.getOrDefault(c, 0) + 1);
-                        }
-                    } catch (Exception e) {}
-                }
-            }
-            
-            updateLiveCount();
-
-            if (binding != null && binding.containerCategories != null) {
-                binding.containerCategories.removeAllViews();
-                for (Category cat : categoryList) {
-                    android.widget.RelativeLayout rl = new android.widget.RelativeLayout(getContext());
-                    rl.setLayoutParams(new android.widget.LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                    rl.setPadding(0, 8, 0, 8);
-
-                    CheckBox cb = new CheckBox(getContext());
-                    cb.setText(cat.getName());
-                    cb.setId(View.generateViewId());
-                    android.widget.RelativeLayout.LayoutParams cbParams = new android.widget.RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                    cbParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_START);
-                    cb.setLayoutParams(cbParams);
-
-                    TextView tvCount = new TextView(getContext());
-                    int count = counts.getOrDefault(cat.getName(), 0);
-                    tvCount.setText(String.valueOf(count));
-                    if (isAdded()) {
-                        tvCount.setTextColor(androidx.core.content.ContextCompat.getColor(requireContext(), android.R.color.darker_gray));
-                    }
-                    android.widget.RelativeLayout.LayoutParams tvParams = new android.widget.RelativeLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                    tvParams.addRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
-                    tvParams.addRule(android.widget.RelativeLayout.CENTER_VERTICAL);
-                    tvCount.setLayoutParams(tvParams);
-
-                    cb.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        if (isChecked) {
-                            if (!selectedCategories.contains(cat.getName()))
-                                selectedCategories.add(cat.getName());
-                        } else {
-                            selectedCategories.remove(cat.getName());
-                        }
-                        updateLiveCount();
-                    });
-
-                    rl.addView(cb);
-                    rl.addView(tvCount);
-                    binding.containerCategories.addView(rl);
-                }
-            }
+        rgRating.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.rb_5_stars) minRating = 5.0f;
+            else if (checkedId == R.id.rb_4_stars) minRating = 4.0f;
+            else minRating = 0;
+            updateApplyButton(getView());
         });
     }
 
-    private void updateApplyButtonCount(int count) {
-        if (binding != null) {
-            binding.btnApply.setText("Áp dụng (" + count + ")");
-        }
+    private void updateApplyButton(View view) {
+        if (view == null) return;
+        FirestoreManager.getInstance()
+                .getFilteredProducts(selectedCategory, selectedSort, minPrice, maxPrice, minRating)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (isAdded() && getView() != null) {
+                        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+                        if (btnApply != null) {
+                            btnApply.setText(getString(R.string.filter_apply_count, snapshots.size()));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded() && getView() != null) {
+                        Log.e("FilterBottomSheet", "Error counting results: " + e.getMessage());
+                        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+                        if (btnApply != null) btnApply.setText(getString(R.string.filter_apply));
+                    }
+                });
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    private void resetFilters() {
+        selectedCategory = "Tất cả";
+        selectedSort = "Phổ biến";
+        minPrice = 0;
+        maxPrice = 10000000;
+        minRating = 0;
+        
+        if (chipGroupSort != null) chipGroupSort.check(R.id.chip_popular);
+        priceSlider.setValues(0f, 10000000f);
+        rgRating.clearCheck();
+        categoryAdapter.setSelectedCategory(selectedCategory);
+        updatePriceTexts();
+        updateApplyButton(getView());
+    }
+
+    public void setFilterListener(OnFilterAppliedListener listener) {
+        this.listener = listener;
+    }
+
+    private static class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHolder> {
+        private final List<String> items;
+        private String selectedCategory;
+        private final OnCategorySelectedListener listener;
+
+        interface OnCategorySelectedListener {
+            void onSelected(String category);
+        }
+
+        CategoryAdapter(List<String> items, String selected, OnCategorySelectedListener listener) {
+            this.items = items;
+            this.selectedCategory = selected;
+            this.listener = listener;
+        }
+
+        void setSelectedCategory(String category) {
+            this.selectedCategory = category;
+            notifyDataSetChanged();
+        }
+
+        @NonNull
+        @Override
+        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_filter_category, parent, false);
+            return new ViewHolder(view);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+            String categoryName = items.get(position);
+            holder.tvName.setText(categoryName);
+            holder.tvCount.setVisibility(View.GONE); // Ẩn số lượng cho đơn giản
+            holder.checkBox.setChecked(categoryName.equals(selectedCategory));
+            
+            View.OnClickListener clickListener = v -> {
+                selectedCategory = categoryName;
+                listener.onSelected(selectedCategory);
+                notifyDataSetChanged();
+            };
+            holder.itemView.setOnClickListener(clickListener);
+            holder.checkBox.setOnClickListener(clickListener);
+        }
+
+        @Override
+        public int getItemCount() { return items.size(); }
+
+        static class ViewHolder extends RecyclerView.ViewHolder {
+            CheckBox checkBox;
+            TextView tvName, tvCount;
+            ViewHolder(View v) {
+                super(v);
+                checkBox = v.findViewById(R.id.cb_category);
+                tvName = v.findViewById(R.id.tv_category_name);
+                tvCount = v.findViewById(R.id.tv_product_count);
+            }
+        }
     }
 }

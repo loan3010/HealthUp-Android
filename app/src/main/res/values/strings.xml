@@ -1,12 +1,43 @@
 <resources>
     <string name="app_name">HealthUp</string>
-    <string name="welcome_back">Xin chào</string>
+    <string name="author_prefix">Bởi: %1$s</string>
+    <string name="faq_title">Câu hỏi thường gặp</string>
+    <string name="blog_title">Cẩm nang sức khỏe</string>
     <string name="search_hint">Tìm granola, snack lành mạnh...</string>
+    <string name="all_categories">Tất cả</string>
+    <string name="faq_category_title">Danh mục trợ giúp</string>
+    <string name="faq_search_result">Kết quả tìm kiếm</string>
+    <string name="faq_category_prefix">Câu hỏi về %1$s</string>
+    <string name="faq_not_found_title">Không tìm thấy câu trả lời?</string>
+    <string name="faq_not_found_desc">Đừng lo lắng! Đội ngũ hỗ trợ của HealthUp luôn sẵn sàng giúp đỡ bạn 24/7.</string>
+    <string name="contact_us">Liên hệ với chúng tôi</string>
+    <string name="order_category">Đơn hàng</string>
+    <string name="payment_category">Thanh toán</string>
+    <string name="shipping_category">Vận chuyển</string>
+    <string name="return_category">Đổi trả</string>
+    <string name="account_category">Tài khoản</string>
+    <string name="product_category">Sản phẩm</string>
+
+    <string name="choose_variant">Chọn phân loại</string>
+    <string name="quantity">Số lượng</string>
+    <string name="add_to_cart">Thêm vào giỏ hàng</string>
+    <string name="buy_now">Mua ngay</string>
+    <string name="out_of_stock">Hết hàng</string>
+    <string name="stock_prefix">Kho: %1$d</string>
+    <string name="variant_prefix">Phân loại: %1$s</string>
+    <string name="default_variant">Mặc định</string>
+    <string name="max_stock_reached">Số lượng đạt tối đa trong kho</string>
+    <string name="please_select_variant">Vui lòng chọn phân loại</string>
+    <string name="added_to_cart">Đã thêm vào giỏ hàng</string>
+    <string name="login_required_cart">Vui lòng đăng nhập để thêm vào giỏ hàng</string>
+    <string name="view_all">Xem tất cả</string>
+    <string name="customer_reviews">Đánh giá khách hàng</string>
+    <string name="may_also_like">Có thể bạn quan tâm</string>
+
+    <string name="welcome_back">Xin chào</string>
     <string name="home_question">Bạn muốn ăn gì hôm nay?</string>
     <string name="flash_sale_title">⚡ FLASH SALE</string>
     <string name="new_products_title">Sản phẩm mới nhất</string>
-    <string name="view_all">Xem tất cả</string>
-    <string name="buy_now">Mua ngay →</string>
     <string name="weekly_promo">TUẦN NÀY</string>
 
     <!-- Bottom Nav -->
@@ -15,4 +46,7 @@
     <string name="nav_cart">Giỏ hàng</string>
     <string name="nav_notifications">Thông báo</string>
     <string name="nav_profile">Tài khoản</string>
+    <string name="no_reviews">Chưa có đánh giá nào cho sản phẩm này.</string>
+    <string name="filter_apply_count">Áp dụng (%1$d)</string>
+    <string name="filter_apply">Áp dụng</string>
 </resources>

@@ -2,17 +2,22 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
 
     <!-- Base application theme. -->
-    <style name="Base.Theme.HealthUp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+    <style name="Base.Theme.HealthUp" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>
         <item name="colorAccent">@color/primary</item>
         <item name="colorSecondary">@color/primary</item>
         <item name="colorControlActivated">@color/primary</item>
+        <!-- Navbar Indicator Color (Pill) -->
+        <item name="colorContainer">@color/navbar_active_pill_light</item>
         <item name="android:windowBackground">@color/bg_cream</item>
         <item name="android:statusBarColor">@color/bg_cream</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
     </style>
 
-    <style name="Theme.HealthUp" parent="Base.Theme.HealthUp" />
+    <style name="Theme.HealthUp" parent="Base.Theme.HealthUp">
+        <item name="bottomNavigationStyle">@style/Widget.HealthUp.Navbar</item>
+    </style>
 
     <style name="Theme.PhotoPicker" parent="Theme.MaterialComponents.DayNight.NoActionBar">
         <item name="colorPrimary">@color/primary</item>

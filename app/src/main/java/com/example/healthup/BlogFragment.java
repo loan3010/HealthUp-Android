@@ -8,64 +8,89 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import com.example.healthup.databinding.FragmentBlogBinding;
+import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.Query;
+import com.example.healthup.BlogAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Blog;
-import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
 public class BlogFragment extends Fragment {
-    private FragmentBlogBinding binding;
-    private BlogAdapter adapter;
-    private final List<Blog> blogList = new ArrayList<>();
+
+    private RecyclerView rvBlogs;
+    private BlogAdapter blogAdapter;
+    private List<Blog> blogList = new ArrayList<>();
+    private List<Blog> filteredList = new ArrayList<>();
+    private ChipGroup chipGroup;
+    private String currentCategory;
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = FragmentBlogBinding.inflate(inflater, container, false);
-        return binding.getRoot();
-    }
-
-    @Override
-    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-        
+        currentCategory = getString(R.string.all_categories);
+        View view = inflater.inflate(R.layout.fragment_blog, container, false);
+        initViews(view);
         setupRecyclerView();
-        loadBlogs();
-
-        binding.btnBack.setOnClickListener(v -> getParentFragmentManager().popBackStack());
+        fetchBlogs();
+        return view;
     }
 
-    private void setupRecyclerView() {
-        adapter = new BlogAdapter(blogList);
-        binding.rvBlogs.setLayoutManager(new LinearLayoutManager(getContext()));
-        binding.rvBlogs.setAdapter(adapter);
-    }
+    private void initViews(View view) {
+        rvBlogs = view.findViewById(R.id.rv_blogs);
+        chipGroup = view.findViewById(R.id.chip_group_blog);
 
-    private void loadBlogs() {
-        binding.progressBar.setVisibility(View.VISIBLE);
-        FirestoreManager.getInstance().getBlogs(task -> {
-            binding.progressBar.setVisibility(View.GONE);
-            if (task.isSuccessful() && task.getResult() != null) {
-                blogList.clear();
-                for (QueryDocumentSnapshot doc : task.getResult()) {
-                    try {
-                        Blog blog = doc.toObject(Blog.class);
-                        blog.setId(doc.getId());
-                        blogList.add(blog);
-                    } catch (Exception e) {
-                        android.util.Log.e("BlogFragment", "Lỗi nạp blog: " + doc.getId(), e);
-                    }
-                }
-                adapter.notifyDataSetChanged();
+        view.findViewById(R.id.btn_back).setOnClickListener(v -> {
+            if (getActivity() != null) getActivity().onBackPressed();
+        });
+
+        chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            Chip chip = group.findViewById(checkedId);
+            if (chip != null) {
+                currentCategory = chip.getText().toString();
+                filterBlogs();
             }
         });
     }
 
-    @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    private void setupRecyclerView() {
+        blogAdapter = new BlogAdapter(filteredList, blog -> {
+            android.content.Intent intent = new android.content.Intent(getContext(), BlogDetailActivity.class);
+            intent.putExtra("blog", blog);
+            startActivity(intent);
+        });
+        rvBlogs.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvBlogs.setAdapter(blogAdapter);
+    }
+
+    private void fetchBlogs() {
+        FirestoreManager.getInstance().getFirestore().collection("blogs")
+                .orderBy("timestamp", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    blogList.clear();
+                    for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        Blog blog = doc.toObject(Blog.class);
+                        if (blog != null) {
+                            blog.setId(doc.getId());
+                            blogList.add(blog);
+                        }
+                    }
+                    filterBlogs();
+                });
+    }
+
+    private void filterBlogs() {
+        filteredList.clear();
+        String allCats = getString(R.string.all_categories);
+        for (Blog blog : blogList) {
+            if (currentCategory.equals(allCats) || blog.getCategory().equals(currentCategory)) {
+                filteredList.add(blog);
+            }
+        }
+        blogAdapter.notifyDataSetChanged();
     }
 }

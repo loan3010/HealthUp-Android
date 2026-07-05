@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,7 +8,6 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-
 import com.example.healthup.databinding.FragmentProfileBinding;
 
 public class ProfileFragment extends Fragment {
@@ -25,25 +25,25 @@ public class ProfileFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         binding.btnSettings.setOnClickListener(v -> {
-            getParentFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new SettingsFragment())
-                    .addToBackStack(null)
-                    .commit();
+            loadFragment(new SettingsFragment());
         });
 
         // Mở trang Quản lý đơn hàng
         binding.cardOrderHistory.setOnClickListener(v -> {
-            getParentFragmentManager().beginTransaction()
-                    .replace(R.id.fragment_container, new OrderHistoryFragment())
-                    .addToBackStack(null)
-                    .commit();
+            loadFragment(new OrderHistoryFragment());
         });
 
-        // Mở trang Đổi trả (Cần Activity nên dùng Intent)
+        // Mở trang Đổi trả
         binding.cardRefund.setOnClickListener(v -> {
-            android.content.Intent intent = new android.content.Intent(getActivity(), ReturnRefundActivity.class);
-            startActivity(intent);
+            startActivity(new Intent(getActivity(), ReturnRefundActivity.class));
         });
+    }
+
+    private void loadFragment(Fragment fragment) {
+        getParentFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit();
     }
 
     @Override
@@ -52,4 +52,3 @@ public class ProfileFragment extends Fragment {
         binding = null;
     }
 }
-

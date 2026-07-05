@@ -55,21 +55,15 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
             // Default icon from assets if no URL is provided
             Glide.with(holder.itemView.getContext())
                     .load("file:///android_asset/images/icons/fruit.png")
+                    .placeholder(R.drawable.ic_cat_fruit)
                     .into(holder.ivIcon);
         }
 
-        // Optional: Highlight first item as "Active" like in design (e.g. Granola)
-        if (position == 0) {
-            holder.ivIcon.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_default)));
-            holder.ivIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.neutral_white)));
-            holder.tvName.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_default));
-            holder.tvName.setTypeface(null, android.graphics.Typeface.BOLD);
-        } else {
-            holder.ivIcon.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_tint_5)));
-            holder.ivIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_default)));
-            holder.tvName.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.neutral_black));
-            holder.tvName.setTypeface(null, android.graphics.Typeface.NORMAL);
-        }
+        // Standard style for category items (no hardcoded highlighting)
+        holder.ivIcon.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_tint_5)));
+        holder.ivIcon.setImageTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_default)));
+        holder.tvName.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.neutral_black));
+        holder.tvName.setTypeface(null, android.graphics.Typeface.NORMAL);
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
