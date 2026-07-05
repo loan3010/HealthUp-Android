@@ -70,29 +70,28 @@ public class RecommendProductAdapter extends RecyclerView.Adapter<RecommendProdu
 
             // Sử dụng logic load ảnh thông minh từ assets/web giống ProductAdapter
             String imagePath = product.getImageUrl();
+            Object loadTarget = R.drawable.ic_launcher_background;
+
             if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                
-                if (cleanPath.startsWith("images/")) {
-                    Glide.with(context)
-                            .load("file:///android_asset/" + cleanPath)
-                            .placeholder(R.drawable.ic_launcher_background)
-                            .into(binding.imgProduct);
-                } else if (imagePath.startsWith("http")) {
-                    Glide.with(context)
-                            .load(imagePath)
-                            .placeholder(R.drawable.ic_launcher_background)
-                            .into(binding.imgProduct);
+                if (imagePath.startsWith("http") || imagePath.startsWith("file://") || imagePath.startsWith("content://")) {
+                    loadTarget = imagePath;
                 } else {
-                    // Thử tìm trong products nếu chỉ có tên file
-                    Glide.with(context)
-                            .load("file:///android_asset/images/products/" + cleanPath)
-                            .placeholder(R.drawable.ic_launcher_background)
-                            .into(binding.imgProduct);
+                    String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                    if (cleanPath.startsWith("images/products/")) {
+                        loadTarget = "file:///android_asset/" + cleanPath;
+                    } else if (cleanPath.startsWith("images/")) {
+                        loadTarget = "file:///android_asset/" + cleanPath;
+                    } else {
+                        loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                    }
                 }
-            } else {
-                binding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
             }
+
+            Glide.with(context)
+                    .load(loadTarget)
+                    .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
+                    .into(binding.imgProduct);
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) {

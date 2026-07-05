@@ -1,5 +1,6 @@
 package com.group.models;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.PropertyName;
 import java.io.Serializable;
 import java.util.List;
@@ -34,7 +35,7 @@ public class Product implements Serializable {
     private String shortDesc;
     private int stock;
     private Object reviews;
-    private long createdAt;
+    private Timestamp createdAt;
 
     private String starsDisplay;
     private int sold;
@@ -120,7 +121,7 @@ public class Product implements Serializable {
         p1.setSoldCount(1200);
         p1.setStockCount(50);
         p1.setImages(java.util.Arrays.asList("hat_mix.png"));
-        p1.setCreatedAt(System.currentTimeMillis());
+        p1.setCreatedAt(com.google.firebase.Timestamp.now());
         list.add(p1);
 
         Product p2 = new Product();
@@ -134,7 +135,7 @@ public class Product implements Serializable {
         p2.setSoldCount(850);
         p2.setStockCount(30);
         p2.setImages(java.util.Arrays.asList("granola.png"));
-        p2.setCreatedAt(System.currentTimeMillis() - 86400000);
+        p2.setCreatedAt(new com.google.firebase.Timestamp(new java.util.Date(System.currentTimeMillis() - 86400000)));
         list.add(p2);
 
         Product p3 = new Product();
@@ -148,7 +149,7 @@ public class Product implements Serializable {
         p3.setSoldCount(2000);
         p3.setStockCount(100);
         p3.setImages(java.util.Arrays.asList("xoai_say.png"));
-        p3.setCreatedAt(System.currentTimeMillis() - 172800000);
+        p3.setCreatedAt(new com.google.firebase.Timestamp(new java.util.Date(System.currentTimeMillis() - 172800000)));
         list.add(p3);
 
         return list;
@@ -255,8 +256,8 @@ public class Product implements Serializable {
     public String getBadge() { return badge; }
     public void setBadge(String badge) { this.badge = badge; }
 
-    public long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
     public boolean isHasVariants() { return hasVariants; }
     public void setHasVariants(boolean hasVariants) { this.hasVariants = hasVariants; }

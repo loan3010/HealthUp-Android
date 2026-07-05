@@ -124,15 +124,20 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
             tvSoldCount.setText("đã bán " + formatSoldCount(product.getSoldCount()));
 
             String imageUrl = product.getImageUrl();
-            Object loadTarget = imageUrl;
-            if (imageUrl != null) {
-                String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+            Object loadTarget = R.drawable.ic_launcher_background; // Default placeholder
+            
+            if (imageUrl != null && !imageUrl.isEmpty()) {
                 if (imageUrl.startsWith("http") || imageUrl.startsWith("file://") || imageUrl.startsWith("content://")) {
                     loadTarget = imageUrl;
-                } else if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
                 } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                    String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+                    if (cleanPath.startsWith("images/products/")) {
+                        loadTarget = "file:///android_asset/" + cleanPath;
+                    } else if (cleanPath.startsWith("images/")) {
+                        loadTarget = "file:///android_asset/" + cleanPath;
+                    } else {
+                        loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                    }
                 }
             }
 

@@ -198,20 +198,23 @@ public class OrderDetailActivity extends AppCompatActivity {
         }
 
         if ("confirmed".equals(status)) {
-            long shipBeforeTime = order.getCreatedAt() + 86400000L;
+            long shipBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getSeconds() * 1000 : System.currentTimeMillis()) + 86400000L;
             binding.tvOrderTime.setText("Đơn hàng sẽ được gửi đi trước " + sdf.format(new Date(shipBeforeTime)));
         } else if ("shipping".equals(status)) {
             if (order.isShopConfirmedDelivery()) {
-                binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(new Date(order.getDeliveredAt())));
+                Date deliveredDate = order.getDeliveredAt() != null ? order.getDeliveredAt().toDate() : new Date();
+                binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(deliveredDate));
             } else {
-                long deliveryBeforeTime = order.getCreatedAt() + 3 * 86400000L;
+                long deliveryBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getSeconds() * 1000 : System.currentTimeMillis()) + 3 * 86400000L;
                 binding.tvOrderTime.setText("Đơn hàng sẽ được giao đến bạn trước ngày " + sdfDate.format(new Date(deliveryBeforeTime)));
             }
         } else if ("delivered".equals(status)) {
-            long deliveryTime = order.getDeliveredAt() > 0 ? order.getDeliveredAt() : order.getCreatedAt() + 2 * 86400000L;
-            binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(new Date(deliveryTime)));
+            Date deliveryDate = order.getDeliveredAt() != null ? order.getDeliveredAt().toDate() : 
+                               (order.getCreatedAt() != null ? new Date(order.getCreatedAt().getSeconds() * 1000 + 2 * 86400000L) : new Date());
+            binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(deliveryDate));
         } else {
-            binding.tvOrderTime.setText("Thời gian đặt hàng: " + sdf.format(new Date(order.getCreatedAt())));
+            String timeStr = order.getCreatedAt() != null ? sdf.format(order.getCreatedAt().toDate()) : "N/A";
+            binding.tvOrderTime.setText("Thời gian đặt hàng: " + timeStr);
         }
 
         binding.btnCancelOrder.setVisibility(View.GONE);
@@ -253,7 +256,9 @@ public class OrderDetailActivity extends AppCompatActivity {
         } else if ("cancelled".equals(status)) {
             binding.cvCancelledInfo.setVisibility(View.VISIBLE);
             binding.btnRebuyFull.setVisibility(View.VISIBLE);
-            binding.tvCancelledTime.setText(sdf.format(new Date(order.getUpdatedAt())));
+            if (order.getUpdatedAt() != null) {
+                binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt().toDate()));
+            }
             String method = order.getPaymentMethod();
             binding.tvPaymentMethodCancelled.setText(method.contains("Thanh toán khi nhận hàng") ? "COD" : method);
 

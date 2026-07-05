@@ -1,5 +1,6 @@
 package com.group.models;
 
+import com.google.firebase.Timestamp;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
@@ -18,9 +19,9 @@ public class Order implements Serializable {
     private double shippingFee;
     private double totalPrice;
     private Address address;
-    private long createdAt;
-    private long updatedAt;
-    private long deliveredAt;
+    private Timestamp createdAt;
+    private Timestamp updatedAt;
+    private Timestamp deliveredAt;
     private boolean reviewed;
     private boolean returnExpired;
     private boolean reviewExpired;
@@ -34,7 +35,7 @@ public class Order implements Serializable {
 
     public Order() {}
 
-    public Order(String orderCode, List<OrderItem> items, String status, String paymentStatus, double totalPrice, long createdAt, String paymentMethod, Address address) {
+    public Order(String orderCode, List<OrderItem> items, String status, String paymentStatus, double totalPrice, Timestamp createdAt, String paymentMethod, Address address) {
         this.orderCode = orderCode;
         this.items = items;
         this.status = status;
@@ -85,14 +86,14 @@ public class Order implements Serializable {
     public Address getAddress() { return address; }
     public void setAddress(Address address) { this.address = address; }
 
-    public long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
 
-    public long getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
+    public Timestamp getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
 
-    public long getDeliveredAt() { return deliveredAt; }
-    public void setDeliveredAt(long deliveredAt) { this.deliveredAt = deliveredAt; }
+    public Timestamp getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(Timestamp deliveredAt) { this.deliveredAt = deliveredAt; }
 
     public boolean isReviewed() { return reviewed; }
     public void setReviewed(boolean reviewed) { this.reviewed = reviewed; }

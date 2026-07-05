@@ -59,7 +59,9 @@ public class ViewReviewsActivity extends AppCompatActivity {
                     itemBinding.tvComment.setVisibility(View.GONE);
                 }
                 
-                itemBinding.tvReviewTime.setText("Đã đánh giá vào: " + sdf.format(new Date(review.getCreatedAt())));
+                if (review.getCreatedAt() != null) {
+                    itemBinding.tvReviewTime.setText("Đã đánh giá vào: " + sdf.format(review.getCreatedAt().toDate()));
+                }
 
                 if (review.getMediaUris() != null && !review.getMediaUris().isEmpty()) {
                     List<Uri> uris = new ArrayList<>();

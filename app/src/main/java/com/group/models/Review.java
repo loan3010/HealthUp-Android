@@ -1,5 +1,6 @@
 package com.group.models;
 
+import com.google.firebase.Timestamp;
 import java.io.Serializable;
 import java.util.List;
 
@@ -11,7 +12,8 @@ public class Review implements Serializable {
     private String date;
     private String imageUrl;
     private List<String> mediaUris;
-    private long createdAt;
+    private Timestamp createdAt;
+    private String variantLabel;
 
     public Review() {}
 
@@ -21,7 +23,15 @@ public class Review implements Serializable {
         this.comment = comment;
     }
 
-    public Review(float rating, String comment, List<String> mediaUris, long createdAt) {
+    public Review(String userName, float rating, String comment, List<String> mediaUris, Timestamp createdAt) {
+        this.userName = userName;
+        this.rating = rating;
+        this.comment = comment;
+        this.mediaUris = mediaUris;
+        this.createdAt = createdAt;
+    }
+
+    public Review(float rating, String comment, List<String> mediaUris, Timestamp createdAt) {
         this.rating = rating;
         this.comment = comment;
         this.mediaUris = mediaUris;
@@ -43,6 +53,8 @@ public class Review implements Serializable {
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public List<String> getMediaUris() { return mediaUris; }
     public void setMediaUris(List<String> mediaUris) { this.mediaUris = mediaUris; }
-    public long getCreatedAt() { return createdAt; }
-    public void setCreatedAt(long createdAt) { this.createdAt = createdAt; }
+    public Timestamp getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public String getVariantLabel() { return variantLabel; }
+    public void setVariantLabel(String variantLabel) { this.variantLabel = variantLabel; }
 }

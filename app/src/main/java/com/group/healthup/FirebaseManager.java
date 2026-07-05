@@ -8,6 +8,7 @@ import com.group.models.Product;
 import com.group.models.Review;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
+import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -75,15 +76,15 @@ public class FirebaseManager {
     public Task<Void> updateOrderStatus(String orderId, String status) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", status);
-        updates.put("updatedAt", System.currentTimeMillis());
+        updates.put("updatedAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
     }
 
     public Task<Void> confirmReceived(String orderId) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "delivered");
-        updates.put("updatedAt", System.currentTimeMillis());
-        updates.put("deliveredAt", System.currentTimeMillis());
+        updates.put("updatedAt", Timestamp.now());
+        updates.put("deliveredAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
     }
 
@@ -94,7 +95,7 @@ public class FirebaseManager {
         updates.put("returnDescription", desc);
         updates.put("returnMediaUris", mediaUrls);
         updates.put("returnHandling", handling);
-        updates.put("updatedAt", System.currentTimeMillis());
+        updates.put("updatedAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
     }
 
@@ -104,7 +105,7 @@ public class FirebaseManager {
         Map<String, Object> updates = new HashMap<>();
         updates.put("items", allItems);
         updates.put("reviewed", true);
-        updates.put("updatedAt", System.currentTimeMillis());
+        updates.put("updatedAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
     }
 
@@ -128,7 +129,7 @@ public class FirebaseManager {
         Address addr2 = new Address("Trần Văn An", "0988777666", "123 Đường 3/2, Phường 12, Quận 10, TP. Hồ Chí Minh", false);
         Address addr3 = new Address("Lê Thị B", "0909123456", "Ký túc xá Khu B ĐHQG, Phường Đông Hòa, Dĩ An, Bình Dương", false);
         
-        long now = 1719810000000L; // Mốc tháng 7/2026
+        long nowMs = 1719810000000L; // Mốc tháng 7/2026
         long day = 86400000L;
         long hour = 3600000L;
 
@@ -144,26 +145,26 @@ public class FirebaseManager {
         items3.add(new OrderItem("Hạt điều vị tỏi ớt", "Hũ 300g", 69000, 1, "https://via.placeholder.com/150"));
 
         // Tạo 10 đơn hàng mẫu rải rác các trạng thái
-        list.add(createOrder("ORD001", items1, "delivered", "paid", 233000, now - day * 2, "Ví MoMo", addr1, uid));
-        list.add(createOrder("ORD002", items2, "pending", "unpaid", 52000, now - hour * 5, "Thanh toán khi nhận hàng", addr2, uid));
-        list.add(createOrder("ORD003", items3, "confirmed", "paid", 156000, now - day, "VNPAY-QR", addr3, uid));
+        list.add(createOrder("ORD001", items1, "delivered", "paid", 233000, new Timestamp(new java.util.Date(nowMs - day * 2)), "Ví MoMo", addr1, uid));
+        list.add(createOrder("ORD002", items2, "pending", "unpaid", 52000, new Timestamp(new java.util.Date(nowMs - hour * 5)), "Thanh toán khi nhận hàng", addr2, uid));
+        list.add(createOrder("ORD003", items3, "confirmed", "paid", 156000, new Timestamp(new java.util.Date(nowMs - day)), "VNPAY-QR", addr3, uid));
         
-        Order o4 = createOrder("ORD004", items1, "shipping", "paid", 233000, now - day * 1, "Ví ZaloPay", addr1, uid);
+        Order o4 = createOrder("ORD004", items1, "shipping", "paid", 233000, new Timestamp(new java.util.Date(nowMs - day * 1)), "Ví ZaloPay", addr1, uid);
         o4.setShopConfirmedDelivery(true);
-        o4.setDeliveredAt(now - hour * 2);
+        o4.setDeliveredAt(new Timestamp(new java.util.Date(nowMs - hour * 2)));
         list.add(o4);
 
-        list.add(createOrder("ORD005", items2, "shipping", "paid", 52000, now - hour * 10, "Thẻ ATM", addr2, uid));
-        list.add(createOrder("ORD006", items3, "cancelled", "unpaid", 156000, now - day * 15, "COD", addr3, uid));
-        list.add(createOrder("ORD007", items1, "pending", "paid", 233000, now - hour, "Ví MoMo", addr1, uid));
-        list.add(createOrder("ORD008", items2, "delivered", "paid", 52000, now - day * 5, "VNPAY-QR", addr2, uid));
-        list.add(createOrder("ORD009", items3, "pending", "unpaid", 156000, now - hour * 2, "COD", addr3, uid));
-        list.add(createOrder("ORD010", items1, "confirmed", "paid", 233000, now - day * 3, "Thẻ Tín dụng", addr1, uid));
+        list.add(createOrder("ORD005", items2, "shipping", "paid", 52000, new Timestamp(new java.util.Date(nowMs - hour * 10)), "Thẻ ATM", addr2, uid));
+        list.add(createOrder("ORD006", items3, "cancelled", "unpaid", 156000, new Timestamp(new java.util.Date(nowMs - day * 15)), "COD", addr3, uid));
+        list.add(createOrder("ORD007", items1, "pending", "paid", 233000, new Timestamp(new java.util.Date(nowMs - hour)), "Ví MoMo", addr1, uid));
+        list.add(createOrder("ORD008", items2, "delivered", "paid", 52000, new Timestamp(new java.util.Date(nowMs - day * 5)), "VNPAY-QR", addr2, uid));
+        list.add(createOrder("ORD009", items3, "pending", "unpaid", 156000, new Timestamp(new java.util.Date(nowMs - hour * 2)), "COD", addr3, uid));
+        list.add(createOrder("ORD010", items1, "confirmed", "paid", 233000, new Timestamp(new java.util.Date(nowMs - day * 3)), "Thẻ Tín dụng", addr1, uid));
 
         return list;
     }
 
-    private Order createOrder(String code, List<OrderItem> items, String status, String pStatus, double price, long time, String method, Address addr, String uid) {
+    private Order createOrder(String code, List<OrderItem> items, String status, String pStatus, double price, Timestamp time, String method, Address addr, String uid) {
         Order o = new Order(code, items, status, pStatus, price, time, method, addr);
         o.setUserId(uid);
         o.setUpdatedAt(time);

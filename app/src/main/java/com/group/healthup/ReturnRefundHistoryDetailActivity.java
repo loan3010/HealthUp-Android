@@ -123,19 +123,19 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
 
     private void setupTimeline(boolean isCompleted, boolean isReship) {
         binding.lnTimeline.removeAllViews();
-        long updatedAt = order.getUpdatedAt();
+        long updatedAtMs = (order.getUpdatedAt() != null) ? order.getUpdatedAt().getSeconds() * 1000 : System.currentTimeMillis();
         long day = 86400000L;
 
-        addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAt - day * 2)));
-        addTimelineStep("HealthUp đã duyệt yêu cầu", sdf.format(new Date(updatedAt - day - 3600000 * 5)));
+        addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAtMs - day * 2)));
+        addTimelineStep("HealthUp đã duyệt yêu cầu", sdf.format(new Date(updatedAtMs - day - 3600000 * 5)));
         
         if (isCompleted) {
             if (isReship) {
-                addTimelineStep("Đang chuẩn bị hàng gửi bù", sdf.format(new Date(updatedAt - 3600000 * 4)));
-                addTimelineStep("Đã gửi hàng bổ sung thành công", sdf.format(new Date(updatedAt)), true);
+                addTimelineStep("Đang chuẩn bị hàng gửi bù", sdf.format(new Date(updatedAtMs - 3600000 * 4)));
+                addTimelineStep("Đã gửi hàng bổ sung thành công", sdf.format(new Date(updatedAtMs)), true);
             } else {
-                addTimelineStep("Đã nhận lại hàng trả", sdf.format(new Date(updatedAt - 3600000 * 2)));
-                addTimelineStep("Hoàn tiền thành công", sdf.format(new Date(updatedAt)) + " – qua " + order.getPaymentMethod(), true);
+                addTimelineStep("Đã nhận lại hàng trả", sdf.format(new Date(updatedAtMs - 3600000 * 2)));
+                addTimelineStep("Hoàn tiền thành công", sdf.format(new Date(updatedAtMs)) + " – qua " + order.getPaymentMethod(), true);
             }
         } else {
             String pendingStep = isReship ? "Đang chuẩn bị hàng gửi bù" : "Đang kiểm tra hàng trả";

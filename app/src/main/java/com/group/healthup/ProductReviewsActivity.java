@@ -6,7 +6,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.group.healthup.databinding.ActivityProductReviewsBinding;
 import com.group.models.Review;
+import com.google.firebase.Timestamp;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 public class ProductReviewsActivity extends AppCompatActivity {
@@ -31,9 +33,9 @@ public class ProductReviewsActivity extends AppCompatActivity {
     private void setupList() {
         // Mocking reviews for this product
         List<Review> mockReviews = new ArrayList<>();
-        mockReviews.add(new Review(5, "Sản phẩm tuyệt vời, rất đáng mua!", null, System.currentTimeMillis() - 86400000L));
-        mockReviews.add(new Review(4, "Giao hàng nhanh, đóng gói đẹp.", null, System.currentTimeMillis() - 86400000L * 2));
-        mockReviews.add(new Review(5, "Hạt rất giòn và ngon.", null, System.currentTimeMillis() - 86400000L * 3));
+        mockReviews.add(new Review(5, "Sản phẩm tuyệt vời, rất đáng mua!", null, new Timestamp(new Date(System.currentTimeMillis() - 86400000L))));
+        mockReviews.add(new Review(4, "Giao hàng nhanh, đóng gói đẹp.", null, new Timestamp(new Date(System.currentTimeMillis() - 86400000L * 2))));
+        mockReviews.add(new Review(5, "Hạt rất giòn và ngon.", null, new Timestamp(new Date(System.currentTimeMillis() - 86400000L * 3))));
 
         binding.rvReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.rvReviews.setAdapter(new ProductReviewEntryAdapter(mockReviews));

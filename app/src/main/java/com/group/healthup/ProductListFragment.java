@@ -169,15 +169,23 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
     private void fetchProducts() {
         Query query;
-        // Nếu chọn "Tất cả" và không có lọc giá/rating đặc biệt, hãy dùng query đơn giản nhất để tránh lỗi Index
-        if (selectedCategories.contains("Tất cả") && minPrice <= 0 && maxPrice >= 10000000 && minRating <= 0 && currentSort.equals("Phổ biến")) {
-            query = FirestoreManager.getInstance().getProductsCollection();
-        } else if (selectedCategories.contains("Tất cả")) {
-            query = FirestoreManager.getInstance().getFilteredProducts("Tất cả", currentSort, minPrice, maxPrice, minRating);
+        // Kiểm tra xem có đang ở trạng thái mặc định (Tất cả & Không lọc dải) hay không
+        boolean isNoFilter = minPrice <= 0 && maxPrice >= 10000000 && minRating <= 0;
+
+        if (selectedCategories.contains("Tất cả")) {
+            if (isNoFilter && currentSort.equals("Phổ biến")) {
+                // Trường hợp mặc định: Hiện toàn bộ sản phẩm (An toàn nhất, không cần index)
+                query = FirestoreManager.getInstance().getProductsCollection();
+            } else {
+                // Sử dụng hàm lọc tập trung trong FirestoreManager
+                query = FirestoreManager.getInstance().getFilteredProducts("Tất cả", currentSort, minPrice, maxPrice, minRating);
+            }
         } else {
+            // Lọc theo nhiều danh mục cụ thể (Sử dụng whereIn)
             query = FirestoreManager.getInstance().getProductsCollection()
                     .whereIn("cat", new ArrayList<>(selectedCategories));
             
+            // Sắp xếp bổ sung dựa trên lựa chọn người dùng
             if (currentSort.equals("Giá Thấp-Cao")) query = query.orderBy("price", Query.Direction.ASCENDING);
             else if (currentSort.equals("Giá Cao-Thấp")) query = query.orderBy("price", Query.Direction.DESCENDING);
             else if (currentSort.equals("Mới nhất")) query = query.orderBy("createdAt", Query.Direction.DESCENDING);
@@ -193,7 +201,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
                         productList.add(p);
                     }
                 } catch (Exception e) {
-                    Log.e("ProductList", "Error deserializing product " + doc.getId() + ": " + e.getMessage());
+                    Log.e("ProductList", "Error parsing product: " + e.getMessage());
                 }
             }
             productAdapter.updateData(new ArrayList<>(productList));
@@ -201,14 +209,14 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }).addOnFailureListener(e -> {
             Log.e("ProductList", "Error fetching products: " + e.getMessage());
             if (e.getMessage() != null && e.getMessage().contains("FAILED_PRECONDITION")) {
-                Toast.makeText(getContext(), "Cần tạo index cho Firestore để lọc/sắp xếp này.", Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "Cần tạo index cho Firestore để sử dụng bộ lọc này.", Toast.LENGTH_LONG).show();
             } else {
-                Toast.makeText(getContext(), "Lỗi tải dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Lỗi tải sản phẩm: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
             updateEmptyState();
         });
 
-        // Recommendations
+        // Tải phần Gợi ý (Recommendations) - Tối đa 4 sản phẩm
         FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
             recommendationList.clear();
             for (DocumentSnapshot doc : snapshots) {
@@ -219,13 +227,11 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
                         recommendationList.add(p);
                     }
                 } catch (Exception e) {
-                    Log.e("ProductList", "Error deserializing recommendation " + doc.getId() + ": " + e.getMessage());
+                    Log.e("ProductList", "Error parsing recommendation: " + e.getMessage());
                 }
             }
             recommendationAdapter.updateData(new ArrayList<>(recommendationList));
-        }).addOnFailureListener(e -> {
-             Log.e("ProductList", "Error fetching recommendations: " + e.getMessage());
-        });
+        }).addOnFailureListener(e -> Log.e("ProductList", "Error fetching recommendations: " + e.getMessage()));
     }
 
     private void updateEmptyState() {
