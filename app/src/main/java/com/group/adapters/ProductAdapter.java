@@ -123,25 +123,44 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ViewHold
             tvRating.setText(String.valueOf(product.getRating()));
             tvSoldCount.setText("đã bán " + formatSoldCount(product.getSoldCount()));
 
+            String imageUrl = product.getImageUrl();
+            Object loadTarget = imageUrl;
+            if (imageUrl != null) {
+                String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+                if (imageUrl.startsWith("http") || imageUrl.startsWith("file://") || imageUrl.startsWith("content://")) {
+                    loadTarget = imageUrl;
+                } else if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+            }
+
             Glide.with(itemView.getContext())
-                    .load(product.getImageUrl())
+                    .load(loadTarget)
                     .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
                     .diskCacheStrategy(DiskCacheStrategy.ALL)
                     .centerCrop()
                     .into(imgProduct);
 
             if (selectionMode) {
                 cbSelect.setVisibility(View.VISIBLE);
-                cbSelect.setChecked(product.isSelected());
-                cbSelect.setClickable(false); // Để itemView nhận sự kiện click
                 
-                // Cập nhật background nếu được chọn
+                // Sử dụng tint cho CheckBox bằng ColorStateList
+                int color = androidx.core.content.ContextCompat.getColor(itemView.getContext(), R.color.primary_green);
+                android.content.res.ColorStateList sl = android.content.res.ColorStateList.valueOf(color);
+                androidx.core.widget.CompoundButtonCompat.setButtonTintList(cbSelect, sl);
+
+                // Cập nhật trạng thái checkbox và background
+                cbSelect.setChecked(product.isSelected());
                 if (product.isSelected()) {
                     itemView.setBackgroundResource(R.drawable.bg_product_selected);
                 } else {
                     itemView.setBackgroundResource(R.drawable.bg_product_unselected);
                 }
                 
+                cbSelect.setClickable(false); // Để itemView nhận sự kiện click
                 btnFavorite.setVisibility(View.GONE);
                 btnAdd.setVisibility(View.GONE);
             } else {

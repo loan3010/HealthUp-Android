@@ -119,9 +119,10 @@ public class CartFragment extends Fragment implements CartAdapter.OnCartItemChan
 
     @Override
     public void onItemClick(CartItem item) {
-        if (item.getProduct() != null) {
+        if (item.getProductId() != null) {
             android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
-            intent.putExtra("product", item.getProduct());
+            // CHỈ truyền productId để tránh lỗi crash do quá tải dữ liệu Intent
+            intent.putExtra("productId", item.getProductId());
             startActivity(intent);
         }
     }

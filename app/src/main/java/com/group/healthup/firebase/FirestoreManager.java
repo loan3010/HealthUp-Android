@@ -31,17 +31,24 @@ public class FirestoreManager {
     public Query getFilteredProducts(String category, String sortOrder, double minPrice, double maxPrice, float minRating) {
         Query query = db.collection("products");
 
-        // 1. Lọc theo danh mục (Sử dụng field 'cat' như trong Product model)
+        // 1. Lọc theo danh mục
         if (category != null && !category.isEmpty() && !category.equals("Tất cả")) {
             query = query.whereEqualTo("cat", category);
         }
 
-        // 2. Lọc đơn giản để tránh lỗi Index Firestore
-        if (maxPrice > 0 && maxPrice < 5000000) {
+        // 2. Lọc theo giá - CHỈ lọc nếu không phải dải mặc định để tránh yêu cầu Index phức tạp
+        if (minPrice > 0 || maxPrice < 10000000) {
             query = query.whereGreaterThanOrEqualTo("price", minPrice)
-                         .whereLessThanOrEqualTo("price", maxPrice)
-                         .orderBy("price");
-        } else if (sortOrder != null) {
+                         .whereLessThanOrEqualTo("price", maxPrice);
+        }
+
+        // 3. Lọc theo rating - CHỈ lọc nếu có chọn để tránh lỗi Index
+        if (minRating > 0) {
+            query = query.whereGreaterThanOrEqualTo("rating", minRating);
+        }
+
+        // 4. Sắp xếp
+        if (sortOrder != null) {
             switch (sortOrder) {
                 case "Giá Thấp-Cao":
                     query = query.orderBy("price", Query.Direction.ASCENDING);
@@ -51,6 +58,9 @@ public class FirestoreManager {
                     break;
                 case "Mới nhất":
                     query = query.orderBy("createdAt", Query.Direction.DESCENDING);
+                    break;
+                case "Được yêu thích":
+                    query = query.whereEqualTo("favorite", true);
                     break;
             }
         }

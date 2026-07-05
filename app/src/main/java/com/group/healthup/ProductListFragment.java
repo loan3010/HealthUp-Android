@@ -169,7 +169,10 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
     private void fetchProducts() {
         Query query;
-        if (selectedCategories.contains("Tất cả")) {
+        // Nếu chọn "Tất cả" và không có lọc giá/rating đặc biệt, hãy dùng query đơn giản nhất để tránh lỗi Index
+        if (selectedCategories.contains("Tất cả") && minPrice <= 0 && maxPrice >= 10000000 && minRating <= 0 && currentSort.equals("Phổ biến")) {
+            query = FirestoreManager.getInstance().getProductsCollection();
+        } else if (selectedCategories.contains("Tất cả")) {
             query = FirestoreManager.getInstance().getFilteredProducts("Tất cả", currentSort, minPrice, maxPrice, minRating);
         } else {
             query = FirestoreManager.getInstance().getProductsCollection()
@@ -183,16 +186,25 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         query.get().addOnSuccessListener(snapshots -> {
             productList.clear();
             for (DocumentSnapshot doc : snapshots) {
-                Product p = doc.toObject(Product.class);
-                if (p != null) {
-                    p.setId(doc.getId());
-                    productList.add(p);
+                try {
+                    Product p = doc.toObject(Product.class);
+                    if (p != null) {
+                        p.setId(doc.getId());
+                        productList.add(p);
+                    }
+                } catch (Exception e) {
+                    Log.e("ProductList", "Error deserializing product " + doc.getId() + ": " + e.getMessage());
                 }
             }
             productAdapter.updateData(new ArrayList<>(productList));
             updateEmptyState();
         }).addOnFailureListener(e -> {
-            Log.e("ProductList", "Error: " + e.getMessage());
+            Log.e("ProductList", "Error fetching products: " + e.getMessage());
+            if (e.getMessage() != null && e.getMessage().contains("FAILED_PRECONDITION")) {
+                Toast.makeText(getContext(), "Cần tạo index cho Firestore để lọc/sắp xếp này.", Toast.LENGTH_LONG).show();
+            } else {
+                Toast.makeText(getContext(), "Lỗi tải dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
             updateEmptyState();
         });
 
@@ -200,13 +212,19 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
             recommendationList.clear();
             for (DocumentSnapshot doc : snapshots) {
-                Product p = doc.toObject(Product.class);
-                if (p != null) {
-                    p.setId(doc.getId());
-                    recommendationList.add(p);
+                try {
+                    Product p = doc.toObject(Product.class);
+                    if (p != null) {
+                        p.setId(doc.getId());
+                        recommendationList.add(p);
+                    }
+                } catch (Exception e) {
+                    Log.e("ProductList", "Error deserializing recommendation " + doc.getId() + ": " + e.getMessage());
                 }
             }
             recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+        }).addOnFailureListener(e -> {
+             Log.e("ProductList", "Error fetching recommendations: " + e.getMessage());
         });
     }
 
@@ -264,11 +282,50 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     public void onProductClick(Product product) {
         if (product == null || product.getId() == null) return;
         Intent intent = new Intent(getContext(), ProductDetailActivity.class);
-        intent.putExtra("product", product);
+        // CHỈ truyền productId để tránh lỗi quá tải Intent gây văng app
         intent.putExtra("productId", product.getId());
         startActivity(intent);
     }
 
     @Override public void onAddToCart(Product product) { /* Logic đã ổn định */ }
-    @Override public void onFavoriteClick(Product product) { /* Logic đã ổn định */ }
+    @Override
+    public void onFavoriteClick(Product product) {
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(getContext(), "Vui lòng đăng nhập để yêu thích", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (product.getId() == null) return;
+
+        boolean oldState = product.isFavorite();
+        boolean newState = !oldState;
+        
+        // 1. Cập nhật UI ngay lập tức cho cả 2 adapter (đề phòng sản phẩm nằm trong cả 2 danh sách)
+        product.setFavorite(newState);
+        productAdapter.notifyDataSetChanged();
+        if (recommendationAdapter != null) {
+            recommendationAdapter.notifyDataSetChanged();
+        }
+
+        // 2. Cập nhật Firestore bằng Map duy nhất trường "favorite"
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("favorite", newState);
+
+        FirestoreManager.getInstance().getProductsCollection()
+                .document(product.getId())
+                .update(updates)
+                .addOnFailureListener(e -> {
+                    // 3. Rollback nếu lỗi server
+                    product.setFavorite(oldState);
+                    productAdapter.notifyDataSetChanged();
+                    if (recommendationAdapter != null) {
+                        recommendationAdapter.notifyDataSetChanged();
+                    }
+                    
+                    if (e.getMessage() != null && e.getMessage().contains("PERMISSION_DENIED")) {
+                        Toast.makeText(getContext(), "Lỗi quyền: Firestore Rules chặn lệnh update.", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
 }

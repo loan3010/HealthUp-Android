@@ -82,6 +82,12 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                         .placeholder(R.color.neutral_light_grey)
                         .error(R.color.neutral_light_grey)
                         .into(holder.ivProduct);
+            } else if (cleanPath.startsWith("file:///android_asset/")) {
+                Glide.with(holder.itemView.getContext())
+                        .load(cleanPath)
+                        .placeholder(R.color.neutral_light_grey)
+                        .error(R.color.neutral_light_grey)
+                        .into(holder.ivProduct);
             } else if (imagePath.startsWith("http")) {
                 // Nếu là URL web
                 Glide.with(holder.itemView.getContext())

@@ -42,22 +42,18 @@ public class ProductDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product_detail);
 
+        // Ưu tiên lấy productId để fetch dữ liệu mới nhất từ Firestore, tránh lỗi quá tải Intent
+        String productId = getIntent().getStringExtra("productId");
         product = (Product) getIntent().getSerializableExtra("product");
-        if (product == null) {
-            String productId = getIntent().getStringExtra("productId");
-            if (productId != null) {
-                fetchProductDetails(productId);
-            } else {
-                Toast.makeText(this, "Không tìm thấy thông tin sản phẩm", Toast.LENGTH_SHORT).show();
-                finish();
-            }
-            return;
-        }
 
-        initViews();
-        setupProductInfo();
-        setupExpandableSections();
-        setupRecommendations();
+        if (productId != null) {
+            fetchProductDetails(productId);
+        } else if (product != null && product.getId() != null) {
+            fetchProductDetails(product.getId());
+        } else {
+            Toast.makeText(this, "Không tìm thấy thông tin sản phẩm", Toast.LENGTH_SHORT).show();
+            finish();
+        }
     }
 
     private void fetchProductDetails(String productId) {
@@ -254,7 +250,7 @@ public class ProductDetailActivity extends AppCompatActivity {
             public void onProductClick(Product p) {
                 if (p == null || p.getId() == null) return;
                 android.content.Intent intent = new android.content.Intent(ProductDetailActivity.this, ProductDetailActivity.class);
-                intent.putExtra("product", p);
+                // CHỈ truyền productId để tránh lỗi crash do quá tải Intent hoặc Serialization
                 intent.putExtra("productId", p.getId());
                 startActivity(intent);
                 finish();
@@ -269,7 +265,7 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
             @Override
             public void onFavoriteClick(Product p) {
-                toggleFavorite();
+                toggleFavoriteForProduct(p);
             }
         });
 
@@ -283,7 +279,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                     recommendations.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         Product p = doc.toObject(Product.class);
-                        if (p != null && !p.getId().equals(product.getId())) {
+                        if (p != null && !doc.getId().equals(product.getId())) {
                             p.setId(doc.getId());
                             recommendations.add(p);
                         }
@@ -321,20 +317,54 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
     private void toggleFavorite() {
-        boolean newFavoriteState = !product.isFavorite();
-        product.setFavorite(newFavoriteState);
-        updateWishlistIcon();
+        toggleFavoriteForProduct(product);
+    }
+
+    private void toggleFavoriteForProduct(Product p) {
+        if (p == null || p.getId() == null) return;
+
+        boolean oldFavoriteState = p.isFavorite();
+        boolean newFavoriteState = !oldFavoriteState;
         
+        // 1. Cập nhật UI ngay lập tức
+        p.setFavorite(newFavoriteState);
+        
+        // Nếu sản phẩm được click trùng với sản phẩm chính đang xem
+        if (p.getId().equals(product.getId())) {
+            product.setFavorite(newFavoriteState);
+            updateWishlistIcon();
+        }
+        
+        // Cập nhật adapter gợi ý nếu cần
+        if (recommendationAdapter != null) {
+            recommendationAdapter.notifyDataSetChanged();
+        }
+        
+        // 2. Gửi lệnh lên Firestore bằng Map
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("favorite", newFavoriteState);
+
         FirestoreManager.getInstance().getProductsCollection()
-                .document(product.getId())
-                .update("favorite", newFavoriteState)
+                .document(p.getId())
+                .update(updates)
                 .addOnSuccessListener(aVoid -> {
                     Toast.makeText(this, newFavoriteState ? "Đã thêm vào yêu thích" : "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
-                    product.setFavorite(!newFavoriteState);
-                    updateWishlistIcon();
-                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    // 3. Rollback nếu lỗi
+                    p.setFavorite(oldFavoriteState);
+                    if (p.getId().equals(product.getId())) {
+                        product.setFavorite(oldFavoriteState);
+                        updateWishlistIcon();
+                    }
+                    if (recommendationAdapter != null) {
+                        recommendationAdapter.notifyDataSetChanged();
+                    }
+                    
+                    String errorMsg = e.getMessage();
+                    if (errorMsg != null && errorMsg.contains("PERMISSION_DENIED")) {
+                        Toast.makeText(this, "Lỗi quyền Firestore: Bạn chỉ có quyền sửa trường 'favorite'", Toast.LENGTH_LONG).show();
+                    }
                 });
     }
 

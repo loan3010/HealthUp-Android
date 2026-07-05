@@ -1,23 +1,27 @@
 package com.group.healthup;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.slider.RangeSlider;
+import com.group.healthup.firebase.FirestoreManager;
+
 import java.text.NumberFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -40,7 +44,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     private RadioGroup rgRating;
     private CategoryAdapter categoryAdapter;
 
-    private List<CategoryItem> categories = Arrays.asList(
+    private final List<CategoryItem> categories = Arrays.asList(
             new CategoryItem("Hạt dinh dưỡng", 24),
             new CategoryItem("Granola", 18),
             new CategoryItem("Trái cây sấy", 32),
@@ -95,40 +99,51 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
 
         setupSortChips();
         setupCategoryList();
-        setupPriceSlider();
+        setupPriceSlider(view);
         setupRatingGroup();
 
         view.findViewById(R.id.btn_close).setOnClickListener(v -> dismiss());
         view.findViewById(R.id.btn_reset).setOnClickListener(v -> resetFilters());
-        view.findViewById(R.id.btn_clear_all).setOnClickListener(v -> resetFilters());
+        
+        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+        if (btnApply != null) {
+            btnApply.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onFilterApplied(selectedCategory, selectedSort, minPrice, maxPrice, minRating);
+                }
+                dismiss();
+            });
+        }
 
-        view.findViewById(R.id.btn_apply).setOnClickListener(v -> {
-            if (listener != null) {
-                listener.onFilterApplied(selectedCategory, selectedSort, minPrice, maxPrice, minRating);
-            }
-            dismiss();
-        });
+        updateApplyButton(view);
     }
 
     private void setupSortChips() {
+        if (chipGroupSort == null) return;
         for (int i = 0; i < chipGroupSort.getChildCount(); i++) {
             Chip chip = (Chip) chipGroupSort.getChildAt(i);
             if (chip.getText().toString().equalsIgnoreCase(selectedSort)) {
                 chip.setChecked(true);
             }
             chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                if (isChecked) selectedSort = chip.getText().toString();
+                if (isChecked) {
+                    selectedSort = chip.getText().toString();
+                    updateApplyButton(getView());
+                }
             });
         }
     }
 
     private void setupCategoryList() {
-        categoryAdapter = new CategoryAdapter(categories, selectedCategory, category -> selectedCategory = category);
+        categoryAdapter = new CategoryAdapter(categories, selectedCategory, category -> {
+            selectedCategory = category;
+            updateApplyButton(getView());
+        });
         rvCategories.setLayoutManager(new LinearLayoutManager(getContext()));
         rvCategories.setAdapter(categoryAdapter);
     }
 
-    private void setupPriceSlider() {
+    private void setupPriceSlider(View view) {
         priceSlider.setValues((float) minPrice, (float) maxPrice);
         updatePriceTexts();
 
@@ -137,6 +152,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             minPrice = values.get(0);
             maxPrice = values.get(1);
             updatePriceTexts();
+            updateApplyButton(getView());
         });
 
         View.OnClickListener priceQuickAction = v -> {
@@ -146,19 +162,20 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             } else if (id == R.id.btn_price_100_200) {
                 priceSlider.setValues(100000f, 200000f);
             } else if (id == R.id.btn_price_above_200) {
-                priceSlider.setValues(200000f, 1000000f);
+                priceSlider.setValues(200000f, 10000000f);
             }
+            updateApplyButton(getView());
         };
 
-        getView().findViewById(R.id.btn_price_under_100).setOnClickListener(priceQuickAction);
-        getView().findViewById(R.id.btn_price_100_200).setOnClickListener(priceQuickAction);
-        getView().findViewById(R.id.btn_price_above_200).setOnClickListener(priceQuickAction);
+        view.findViewById(R.id.btn_price_under_100).setOnClickListener(priceQuickAction);
+        view.findViewById(R.id.btn_price_100_200).setOnClickListener(priceQuickAction);
+        view.findViewById(R.id.btn_price_above_200).setOnClickListener(priceQuickAction);
     }
 
     private void updatePriceTexts() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
-        tvMinPrice.setText(formatter.format(minPrice) + "đ");
-        tvMaxPrice.setText(formatter.format(maxPrice) + "đ");
+        tvMinPrice.setText(String.format("%sđ", formatter.format(minPrice)));
+        tvMaxPrice.setText(String.format("%sđ", formatter.format(maxPrice)));
     }
 
     private void setupRatingGroup() {
@@ -168,27 +185,52 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         rgRating.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_5_stars) minRating = 5.0f;
             else if (checkedId == R.id.rb_4_stars) minRating = 4.0f;
+            else minRating = 0;
+            updateApplyButton(getView());
         });
     }
 
+    private void updateApplyButton(View view) {
+        if (view == null) return;
+        FirestoreManager.getInstance()
+                .getFilteredProducts(selectedCategory, selectedSort, minPrice, maxPrice, minRating)
+                .get()
+                .addOnSuccessListener(snapshots -> {
+                    if (isAdded() && getView() != null) {
+                        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+                        if (btnApply != null) {
+                            btnApply.setText(getString(R.string.filter_apply_count, snapshots.size()));
+                        }
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded() && getView() != null) {
+                        Log.e("FilterBottomSheet", "Error counting results: " + e.getMessage());
+                        MaterialButton btnApply = view.findViewById(R.id.btn_apply);
+                        if (btnApply != null) btnApply.setText(getString(R.string.filter_apply));
+                    }
+                });
+    }
+
     private void resetFilters() {
-        selectedCategory = "Hạt dinh dưỡng";
+        selectedCategory = "Tất cả";
         selectedSort = "Phổ biến";
         minPrice = 0;
-        maxPrice = 1000000;
+        maxPrice = 10000000;
         minRating = 0;
         
-        chipGroupSort.check(R.id.chip_popular);
-        priceSlider.setValues(0f, 1000000f);
+        if (chipGroupSort != null) chipGroupSort.check(R.id.chip_popular);
+        priceSlider.setValues(0f, 10000000f);
         rgRating.clearCheck();
         categoryAdapter.setSelectedCategory(selectedCategory);
+        updatePriceTexts();
+        updateApplyButton(getView());
     }
 
     public void setFilterListener(OnFilterAppliedListener listener) {
         this.listener = listener;
     }
 
-    // Static inner classes for Adapter
     private static class CategoryItem {
         String name;
         int count;
@@ -199,9 +241,9 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private static class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHolder> {
-        private List<CategoryItem> items;
+        private final List<CategoryItem> items;
         private String selectedCategory;
-        private OnCategorySelectedListener listener;
+        private final OnCategorySelectedListener listener;
 
         interface OnCategorySelectedListener {
             void onSelected(String category);
@@ -232,16 +274,13 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             holder.tvCount.setText(String.valueOf(item.count));
             holder.checkBox.setChecked(item.name.equals(selectedCategory));
             
-            holder.itemView.setOnClickListener(v -> {
+            View.OnClickListener clickListener = v -> {
                 selectedCategory = item.name;
                 listener.onSelected(selectedCategory);
                 notifyDataSetChanged();
-            });
-            holder.checkBox.setOnClickListener(v -> {
-                selectedCategory = item.name;
-                listener.onSelected(selectedCategory);
-                notifyDataSetChanged();
-            });
+            };
+            holder.itemView.setOnClickListener(clickListener);
+            holder.checkBox.setOnClickListener(clickListener);
         }
 
         @Override

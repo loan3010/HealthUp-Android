@@ -127,7 +127,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             return;
         }
         android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
-        intent.putExtra("product", product);
+        // CHỈ truyền productId để tránh lỗi TransactionTooLargeException (văng app)
         intent.putExtra("productId", product.getId());
         startActivity(intent);
     }
@@ -192,17 +192,40 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     @Override
     public void onFavoriteClick(Product product) {
-        boolean newFavoriteState = !product.isFavorite();
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            Toast.makeText(getContext(), "Vui lòng đăng nhập để yêu thích sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        boolean oldFavoriteState = product.isFavorite();
+        boolean newFavoriteState = !oldFavoriteState;
+        
+        // 1. Cập nhật UI ngay lập tức
         product.setFavorite(newFavoriteState);
         productAdapter.notifyDataSetChanged();
 
+        // 2. Gửi lệnh update duy nhất trường "favorite" bằng Map để vượt qua Rules
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("favorite", newFavoriteState);
+
         FirestoreManager.getInstance().getProductsCollection()
                 .document(product.getId())
-                .update("favorite", newFavoriteState)
+                .update(updates)
+                .addOnSuccessListener(aVoid -> {
+                    // Thành công
+                })
                 .addOnFailureListener(e -> {
-                    product.setFavorite(!newFavoriteState);
+                    // 3. Rollback nếu lỗi (đặc biệt là lỗi Permission Denied)
+                    product.setFavorite(oldFavoriteState);
                     productAdapter.notifyDataSetChanged();
-                    Toast.makeText(getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    
+                    String errorMsg = e.getMessage();
+                    if (errorMsg != null && errorMsg.contains("PERMISSION_DENIED")) {
+                        Toast.makeText(getContext(), "Lỗi quyền: Rules của bạn chỉ cho phép sửa field 'favorite'. Hãy kiểm tra tên field trong DB.", Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(getContext(), "Lỗi: " + errorMsg, Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
 }

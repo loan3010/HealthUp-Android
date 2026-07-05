@@ -124,8 +124,9 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     private void fetchWishlist() {
         FirestoreManager.getInstance().getProductsCollection()
                 .whereEqualTo("favorite", true)
-                .addSnapshotListener((value, error) -> {
-                    if (error != null || value == null) return;
+                .get() // Chuyển sang get() thay vì addSnapshotListener để tránh auto-revert khi lỗi
+                .addOnSuccessListener(value -> {
+                    if (value == null) return;
                     
                     wishlist.clear();
                     for (DocumentSnapshot doc : value.getDocuments()) {
@@ -137,6 +138,9 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     }
                     updateUI();
                     applyFilters();
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getContext(), "Không thể tải danh sách yêu thích", Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -244,29 +248,53 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             return;
         }
 
-        int count = selectedProducts.size();
-        
-        // Loop through selectedProducts and update Firestore
-        for (Product p : selectedProducts) {
-             FirestoreManager.getInstance().getProductsCollection().document(p.getId())
-                     .update("favorite", false);
-             
-             // Xóa khỏi list local
-             for (int i = 0; i < wishlist.size(); i++) {
-                 if (wishlist.get(i).getId().equals(p.getId())) {
-                     wishlist.remove(i);
-                     break;
-                 }
-             }
+        // Tạo bản sao danh sách cần xóa
+        List<Product> toRemove = new ArrayList<>(selectedProducts);
+        int total = toRemove.size();
+        final int[] successCount = {0};
+        final int[] failCount = {0};
+
+        for (Product p : toRemove) {
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("favorite", false);
+
+            FirestoreManager.getInstance().getProductsCollection().document(p.getId())
+                    .update(updates)
+                    .addOnSuccessListener(aVoid -> {
+                        successCount[0]++;
+                        if (successCount[0] + failCount[0] == total) {
+                            handleDeleteResult(successCount[0], failCount[0]);
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        failCount[0]++;
+                        // Nếu lỗi (do Rules), chúng ta nên nạp lại dữ liệu để đảm bảo UI đồng bộ với Server
+                        if (successCount[0] + failCount[0] == total) {
+                            handleDeleteResult(successCount[0], failCount[0]);
+                        }
+                    });
+            
+            // Tạm thời xóa khỏi danh sách local để tạo cảm giác mượt mà (Optimistic UI)
+            wishlist.remove(p);
         }
         
-        Toast.makeText(getContext(), "Đã xóa " + count + " sản phẩm", Toast.LENGTH_SHORT).show();
-        
+        // Reset trạng thái chỉnh sửa ngay lập tức
         selectedProducts.clear();
         isEditMode = false;
         wishlistAdapter.setSelectionMode(false);
         applyFilters();
         updateUI();
+    }
+
+    private void handleDeleteResult(int success, int fail) {
+        if (getContext() == null) return;
+        if (fail > 0) {
+            Toast.makeText(getContext(), "Đã xóa " + success + " sản phẩm. Lỗi " + fail + " sản phẩm (có thể do quyền truy cập)", Toast.LENGTH_LONG).show();
+            // Nạp lại dữ liệu từ Server để hiện lại những sản phẩm xóa lỗi
+            fetchWishlist();
+        } else {
+            Toast.makeText(getContext(), "Đã xóa thành công " + success + " sản phẩm", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void updateDeleteButtonText() {
@@ -291,11 +319,12 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     }
                 }
             }
-            wishlistAdapter.updateData(new ArrayList<>(filteredWishlist));
+            wishlistAdapter.notifyDataSetChanged(); // Dùng notifyDataSetChanged để ép CheckBox vẽ lại màu
             updateDeleteButtonText();
         } else {
             android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
-            intent.putExtra("product", product);
+            // CHỈ truyền productId để tránh lỗi TransactionTooLargeException
+            intent.putExtra("productId", product.getId());
             startActivity(intent);
         }
     }
@@ -359,14 +388,39 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     @Override
     public void onFavoriteClick(Product product) {
         if (!isEditMode) {
+            boolean currentFavorite = product.isFavorite();
+            
+            // 1. Cập nhật UI ngay lập tức để người dùng thấy sản phẩm biến mất
+            product.setFavorite(false);
+            wishlist.remove(product);
+            applyFilters();
+            updateUI();
+
+            // 2. Gửi yêu cầu lên Firestore bằng Map
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("favorite", false);
+
             FirestoreManager.getInstance().getProductsCollection()
                     .document(product.getId())
-                    .update("favorite", false)
+                    .update(updates)
                     .addOnSuccessListener(aVoid -> {
-                        wishlist.remove(product);
+                        Toast.makeText(getContext(), "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                    })
+                    .addOnFailureListener(e -> {
+                        // 3. Chỉ khi thất bại hoàn toàn mới hiện lại sản phẩm (Rollback)
+                        product.setFavorite(true);
+                        if (!wishlist.contains(product)) {
+                            wishlist.add(product);
+                        }
                         applyFilters();
                         updateUI();
-                        Toast.makeText(getContext(), "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                        
+                        String errorMsg = e.getMessage();
+                        if (errorMsg != null && errorMsg.contains("PERMISSION_DENIED")) {
+                            Toast.makeText(getContext(), "Lỗi quyền truy cập: Bạn cần cập nhật Firestore Rules để cho phép sửa sản phẩm.", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(getContext(), "Không thể cập nhật: " + errorMsg, Toast.LENGTH_SHORT).show();
+                        }
                     });
         }
     }

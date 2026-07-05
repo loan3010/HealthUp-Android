@@ -27,8 +27,14 @@ public class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.
 
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
+        String imageUrl = imageUrls.get(position);
+        Object loadTarget = imageUrl;
+        if (imageUrl != null && !imageUrl.startsWith("http") && !imageUrl.startsWith("file://") && !imageUrl.startsWith("content://")) {
+            loadTarget = "file:///android_asset/images/products/" + imageUrl;
+        }
+
         Glide.with(holder.itemView.getContext())
-                .load(imageUrls.get(position))
+                .load(loadTarget)
                 .placeholder(R.drawable.ic_launcher_background)
                 .into(holder.imageView);
     }

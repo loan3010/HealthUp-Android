@@ -47,4 +47,6 @@
     <string name="nav_notifications">Thông báo</string>
     <string name="nav_profile">Tài khoản</string>
     <string name="no_reviews">Chưa có đánh giá nào cho sản phẩm này.</string>
+    <string name="filter_apply_count">Áp dụng (%1$d)</string>
+    <string name="filter_apply">Áp dụng</string>
 </resources>

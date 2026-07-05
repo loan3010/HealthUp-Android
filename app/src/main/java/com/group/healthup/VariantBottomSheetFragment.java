@@ -71,7 +71,12 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     private void setupUI() {
         if (product == null) return;
 
-        Glide.with(this).load(product.getImageUrl()).into(ivProduct);
+        String imageUrl = product.getImageUrl();
+        Object loadTarget = imageUrl;
+        if (imageUrl != null && !imageUrl.startsWith("http") && !imageUrl.startsWith("file://") && !imageUrl.startsWith("content://")) {
+            loadTarget = "file:///android_asset/images/products/" + imageUrl;
+        }
+        Glide.with(this).load(loadTarget).into(ivProduct);
         updateDisplay();
 
         if (product.getVariants() != null) {
