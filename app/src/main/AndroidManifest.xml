@@ -18,7 +18,7 @@
         android:theme="@style/Theme.HealthUp">
 
         <activity
-            android:name="com.example.healthup.SplashActivity"
+            android:name="com.example.healthup.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -30,7 +30,7 @@
         <activity android:name="com.example.healthup.RegisterActivity" />
         <activity android:name="com.example.healthup.OTPActivity" />
         <activity android:name="com.example.healthup.ForgotPasswordActivity" />
-        <activity android:name="com.example.healthup.MainActivity" />
+        <activity android:name="com.example.healthup.SplashActivity" />
         <activity android:name="com.example.healthup.ProductDetailActivity" />
         <activity android:name="com.example.healthup.OrderDetailActivity" />
         <activity android:name="com.example.healthup.AddressFormActivity" />

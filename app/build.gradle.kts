@@ -5,12 +5,12 @@ plugins {
 
 android {
     namespace = "com.example.healthup"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.healthup"
-        minSdk = 24
-        targetSdk = 34
+        minSdk = 26
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -55,6 +55,9 @@ dependencies {
     // Navigation
     implementation("androidx.navigation:navigation-fragment:2.7.6")
     implementation("androidx.navigation:navigation-ui:2.7.6")
+
+    // Flexbox
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
