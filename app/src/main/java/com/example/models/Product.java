@@ -28,8 +28,26 @@ public class Product implements Serializable {
     private List<Object> packagingTypes;
     private Object nutrition;
     private List<Review> reviews;
+    private double saving;
+    private String sale;
+    private String badge;
 
     public Product() {}
+
+    public double getSaving() { return saving; }
+    public void setSaving(double saving) { this.saving = saving; }
+    public String getSale() { return sale; }
+    public void setSale(String sale) { this.sale = sale; }
+    public String getBadge() { return badge; }
+    public void setBadge(String badge) { this.badge = badge; }
+
+    public void setReviews(Object reviews) {
+        if (reviews instanceof List) {
+            this.reviews = (List<Review>) reviews;
+        } else {
+            this.reviews = new ArrayList<>();
+        }
+    }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -81,7 +99,6 @@ public class Product implements Serializable {
     public void setNutrition(Object nutrition) { this.nutrition = nutrition; }
 
     public List<Review> getReviews() { return reviews; }
-    public void setReviews(List<Review> reviews) { this.reviews = reviews; }
 
     public String getImageUrl() {
         if (images != null && !images.isEmpty()) {
