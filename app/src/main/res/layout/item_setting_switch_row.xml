@@ -17,15 +17,13 @@
         android:textColor="@color/neutral_black"
         android:textSize="14sp" />
 
-    <androidx.appcompat.widget.SwitchCompat
+    <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switchItem"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        app:thumbTint="@null"
-        app:trackTint="@null"
-        android:track="@drawable/custom_switch_track"
-        android:thumb="@drawable/custom_switch_thumb"
-        android:switchMinWidth="44dp"
+        app:useMaterialThemeColors="false"
+        app:thumbTint="@color/white"
+        app:trackTint="@color/primary_default"
         android:checked="true" />
 
 </LinearLayout>

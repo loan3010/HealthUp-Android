@@ -82,12 +82,21 @@
         <item name="android:textColor">@color/neutral_grey</item>
     </style>
 
-    <!-- Dùng riêng cho label nav bar: Medium 10sp -->
+    <!-- Dùng riêng cho label nav bar: 12sp rõ nét -->
     <style name="TextAppearance.HealthUp.NavLabel" parent="TextAppearance.AppCompat">
         <item name="fontFamily">@font/be_vietnam_pro</item>
         <item name="android:fontFamily">@font/be_vietnam_pro</item>
-        <item name="android:textFontWeight" tools:targetApi="p">500</item>
-        <item name="android:textSize">10sp</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:lineSpacingMultiplier">1.0</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.NavLabel.Active" parent="TextAppearance.HealthUp.NavLabel">
+        <item name="android:textColor">@color/primary_shade_3</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.NavLabel.Inactive" parent="TextAppearance.HealthUp.NavLabel">
+        <item name="android:textColor">@color/neutral_dark_grey</item>
     </style>
 
 </resources>

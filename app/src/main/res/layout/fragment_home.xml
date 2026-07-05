@@ -207,6 +207,7 @@
                     android:orientation="horizontal">
 
                     <TextView
+                        android:id="@+id/tvTimerHour"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_circle_green"
@@ -225,6 +226,7 @@
                         android:textColor="@color/neutral_white" />
 
                     <TextView
+                        android:id="@+id/tvTimerMinute"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_circle_green"
@@ -243,6 +245,7 @@
                         android:textColor="@color/neutral_white" />
 
                     <TextView
+                        android:id="@+id/tvTimerSecond"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_circle_green"
@@ -255,16 +258,54 @@
                 </LinearLayout>
             </RelativeLayout>
 
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvFlashSale"
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_m"
-                android:clipToPadding="false"
-                android:orientation="horizontal"
-                android:paddingHorizontal="@dimen/spacing_m"
-                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
-                tools:listitem="@layout/item_product" />
+                android:layout_marginTop="@dimen/spacing_m">
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvFlashSale"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:orientation="horizontal"
+                    android:paddingHorizontal="@dimen/spacing_m"
+                    android:scrollbars="horizontal"
+                    android:fadeScrollbars="false"
+                    android:scrollbarSize="2dp"
+                    android:scrollbarThumbHorizontal="@color/primary_tint_3"
+                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                    tools:listitem="@layout/item_product" />
+
+                <ImageView
+                    android:id="@+id/btnFlashSaleLeft"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginStart="4dp"
+                    android:background="@drawable/bg_circle_green"
+                    android:backgroundTint="#80FFFFFF"
+                    android:elevation="4dp"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_back"
+                    android:visibility="gone"
+                    app:tint="@color/primary_default" />
+
+                <ImageView
+                    android:id="@+id/btnFlashSaleRight"
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:layout_marginEnd="4dp"
+                    android:background="@drawable/bg_circle_green"
+                    android:backgroundTint="#80FFFFFF"
+                    android:elevation="4dp"
+                    android:padding="6dp"
+                    android:src="@drawable/ic_arrow_right"
+                    app:tint="@color/primary_default" />
+            </RelativeLayout>
         </LinearLayout>
 
         <!-- Sub-categories Chips -->

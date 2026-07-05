@@ -384,12 +384,13 @@
     </androidx.core.widget.NestedScrollView>
 
     <!-- Bottom Actions -->
-    <com.google.android.material.card.MaterialCardView
+    <androidx.cardview.widget.CardView
         android:layout_width="match_parent"
         android:layout_height="80dp"
         android:layout_gravity="bottom"
         app:cardCornerRadius="0dp"
-        app:cardElevation="16dp">
+        app:cardElevation="16dp"
+        app:cardBackgroundColor="@color/neutral_cream">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -398,50 +399,64 @@
             android:orientation="horizontal"
             android:paddingHorizontal="16dp">
 
-            <LinearLayout
-                android:id="@+id/btn_chat"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical">
+                <LinearLayout
+                    android:id="@+id/btn_chat"
+                    android:layout_width="60dp"
+                    android:layout_height="match_parent"
+                    android:gravity="center"
+                    android:orientation="vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true">
 
-                <ImageView
-                    android:layout_width="24dp"
-                    android:layout_height="24dp"
-                    android:src="@drawable/ic_notifications" />
+                    <ImageView
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:src="@drawable/ic_chat"
+                        app:tint="@color/neutral_black" />
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Chat"
-                    android:textSize="10sp" />
-            </LinearLayout>
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:text="Chat"
+                        android:textSize="10sp"
+                        android:textColor="@color/neutral_black"
+                        android:textStyle="bold" />
+                </LinearLayout>
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_detail_add_cart"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_marginHorizontal="12dp"
-                android:layout_weight="1"
-                android:text="Thêm"
-                android:textAllCaps="false"
-                android:textColor="@color/primary_green"
-                app:cornerRadius="12dp"
-                app:icon="@drawable/ic_cart_plus"
-                app:iconGravity="textStart"
-                app:strokeColor="@color/primary_green" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_detail_add_cart"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_marginHorizontal="12dp"
+                    android:layout_weight="1"
+                    android:text="Thêm"
+                    android:textAllCaps="false"
+                    android:textColor="@color/primary_default"
+                    android:textSize="14sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp"
+                    app:icon="@drawable/ic_cart"
+                    app:iconGravity="textStart"
+                    app:iconSize="18dp"
+                    app:iconTint="@color/primary_default"
+                    app:strokeColor="@color/primary_default"
+                    app:backgroundTint="@color/primary_tint_5" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_buy_now"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="1.5"
-                android:backgroundTint="@color/primary_green"
-                android:text="Mua ngay"
-                android:textAllCaps="false"
-                app:cornerRadius="12dp" />
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_buy_now"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_weight="1.2"
+                    android:backgroundTint="@color/primary_default"
+                    android:text="Mua ngay"
+                    android:textAllCaps="false"
+                    android:textSize="15sp"
+                    android:textStyle="bold"
+                    app:cornerRadius="14dp" />
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+    </androidx.cardview.widget.CardView>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

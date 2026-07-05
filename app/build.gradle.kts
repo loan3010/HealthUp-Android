@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.group.healthup"
+    namespace = "com.example.healthup"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.group.healthup"
+        applicationId = "com.example.healthup"
         minSdk = 24
         targetSdk = 35
         versionCode = 1

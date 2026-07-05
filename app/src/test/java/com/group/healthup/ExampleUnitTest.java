@@ -1,4 +1,4 @@
-package com.group.healthup;
+package com.example.healthup;
 
 import org.junit.Test;
 
