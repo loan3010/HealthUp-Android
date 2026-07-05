@@ -35,21 +35,38 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
 
         binding.btnAddToCartDetail.setOnClickListener(v -> {
-            Toast.makeText(this, "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+            if (currentProduct != null) {
+                showProductOptions("add");
+            }
         });
 
         binding.btnBuyNow.setOnClickListener(v -> {
-            Toast.makeText(this, "Mua ngay", Toast.LENGTH_SHORT).show();
+            if (currentProduct != null) {
+                showProductOptions("buy");
+            }
         });
+        
+        binding.btnChat.setOnClickListener(v -> {
+            Toast.makeText(this, "Tính năng Chat đang được phát triển", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private Product currentProduct;
+
+    private void showProductOptions(String actionType) {
+        ProductOptionsBottomSheetFragment bottomSheet = ProductOptionsBottomSheetFragment.newInstance(currentProduct, actionType);
+        bottomSheet.show(getSupportFragmentManager(), "ProductOptions");
     }
 
     private void loadProductDetail() {
         firestoreManager.getProductDetail(productId, task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 try {
-                    Product product = task.getResult().toObject(Product.class);
-                    if (product != null) {
-                        displayProduct(product);
+                    currentProduct = task.getResult().toObject(Product.class);
+                    if (currentProduct != null) {
+                        currentProduct.setId(task.getResult().getId());
+                        checkWishlistStatus();
+                        displayProduct(currentProduct);
                     }
                 } catch (Exception e) {
                     android.util.Log.e("ProductDetail", "Lỗi nạp chi tiết sản phẩm: " + productId, e);
@@ -57,6 +74,17 @@ public class ProductDetailActivity extends AppCompatActivity {
                 }
             } else {
                 Toast.makeText(this, "Không thể tải thông tin sản phẩm", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void checkWishlistStatus() {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) return;
+        
+        firestoreManager.checkWishlistStatus(productId, task -> {
+            if (task.isSuccessful() && task.getResult() != null && task.getResult().exists()) {
+                currentProduct.setFavorite(true);
+                // Update UI if there's a favorite button in layout
             }
         });
     }
@@ -113,7 +141,10 @@ public class ProductDetailActivity extends AppCompatActivity {
                     try {
                         Product p = doc.toObject(Product.class);
                         p.setId(doc.getId());
-                        recommended.add(p);
+                        // Lọc bỏ sản phẩm hiện tại
+                        if (p.getId() != null && !p.getId().equals(productId)) {
+                            recommended.add(p);
+                        }
                     } catch (Exception e) {
                         android.util.Log.e("ProductDetail", "Lỗi nạp sản phẩm gợi ý: " + doc.getId(), e);
                     }

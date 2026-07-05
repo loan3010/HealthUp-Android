@@ -34,7 +34,7 @@ public class FirestoreManager {
     }
 
     private String getUserId() {
-        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : "test_user";
+        return auth.getCurrentUser() != null ? auth.getCurrentUser().getUid() : null;
     }
 
     public void getCategories(OnCompleteListener<QuerySnapshot> listener) {
@@ -61,30 +61,41 @@ public class FirestoreManager {
 
     // --- Wishlist ---
     public void getWishlist(OnCompleteListener<QuerySnapshot> listener) {
+        String uid = getUserId();
+        if (uid == null) {
+            return;
+        }
         db.collection("wishlist")
-                .whereEqualTo("userId", getUserId())
+                .whereEqualTo("userId", uid)
                 .get()
                 .addOnCompleteListener(listener);
     }
 
     public Task<Void> addToWishlist(Product product) {
+        String uid = getUserId();
+        if (uid == null) return null;
+        
         Map<String, Object> item = new HashMap<>();
-        item.put("userId", getUserId());
+        item.put("userId", uid);
         item.put("productId", product.getId());
         item.put("timestamp", FieldValue.serverTimestamp());
         item.put("productName", product.getName());
         item.put("productPrice", product.getPrice());
         item.put("productImage", product.getImageUrl());
         
-        return db.collection("wishlist").document(getUserId() + "_" + product.getId()).set(item);
+        return db.collection("wishlist").document(uid + "_" + product.getId()).set(item);
     }
 
     public Task<Void> removeFromWishlist(String productId) {
-        return db.collection("wishlist").document(getUserId() + "_" + productId).delete();
+        String uid = getUserId();
+        if (uid == null) return null;
+        return db.collection("wishlist").document(uid + "_" + productId).delete();
     }
 
     public void checkWishlistStatus(String productId, OnCompleteListener<DocumentSnapshot> listener) {
-        db.collection("wishlist").document(getUserId() + "_" + productId).get().addOnCompleteListener(listener);
+        String uid = getUserId();
+        if (uid == null) return;
+        db.collection("wishlist").document(uid + "_" + productId).get().addOnCompleteListener(listener);
     }
 
     public void getFlashSaleProducts(OnCompleteListener<QuerySnapshot> listener) {
@@ -102,7 +113,6 @@ public class FirestoreManager {
     // --- Blogs ---
     public void getBlogs(int limit, OnCompleteListener<QuerySnapshot> listener) {
         db.collection("blogs")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .limit(limit)
                 .get()
                 .addOnCompleteListener(listener);
@@ -110,7 +120,6 @@ public class FirestoreManager {
 
     public void getBlogs(OnCompleteListener<QuerySnapshot> listener) {
         db.collection("blogs")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnCompleteListener(listener);
     }

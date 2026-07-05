@@ -48,6 +48,17 @@ public class ProductListFragment extends Fragment {
 
         binding.btnBack.setOnClickListener(v -> getParentFragmentManager().popBackStack());
         binding.btnFilter.setOnClickListener(v -> showFilterBottomSheet());
+
+        binding.etSearch.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                String query = binding.etSearch.getText().toString().trim();
+                if (!query.isEmpty()) {
+                    searchProducts(query);
+                }
+                return true;
+            }
+            return false;
+        });
     }
 
     private void showFilterBottomSheet() {
@@ -61,7 +72,18 @@ public class ProductListFragment extends Fragment {
     private void applyFilters(List<String> categories, String sortType, float minPrice, float maxPrice, float minRating) {
         List<Product> filtered = new ArrayList<>();
         for (Product p : allProducts) {
-            boolean matchCat = categories.isEmpty() || categories.contains(p.getCat());
+            // Support multi-category matching
+            boolean matchCat = categories.isEmpty();
+            if (!matchCat) {
+                List<String> productCats = p.getCategories();
+                for (String selCat : categories) {
+                    if (productCats.contains(selCat)) {
+                        matchCat = true;
+                        break;
+                    }
+                }
+            }
+            
             boolean matchPrice = p.getPrice() >= minPrice && p.getPrice() <= maxPrice;
             boolean matchRating = p.getRating() >= minRating;
             
@@ -79,6 +101,8 @@ public class ProductListFragment extends Fragment {
             Collections.sort(filtered, (p1, p2) -> Boolean.compare(p2.isNew(), p1.isNew()));
         } else if ("popular".equals(sortType)) {
             Collections.sort(filtered, (p1, p2) -> Integer.compare(p2.getSold(), p1.getSold()));
+        } else if ("favorite".equals(sortType)) {
+            Collections.sort(filtered, (p1, p2) -> Boolean.compare(p2.isFavorite(), p1.isFavorite()));
         }
 
         displayList.clear();
@@ -102,29 +126,14 @@ public class ProductListFragment extends Fragment {
         }
         
         final String selectedCat = currentCat;
+        binding.chipGroupCategories.removeAllViews();
         
-        firestoreManager.getCategories(task -> {
-            binding.chipGroupCategories.removeAllViews();
-            // Add "All" chip
-            addCategoryChip("Tất cả", selectedCat.equals("Tất cả"));
-
-            if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
-                for (QueryDocumentSnapshot doc : task.getResult()) {
-                    try {
-                        Category cat = doc.toObject(Category.class);
-                        addCategoryChip(cat.getName(), selectedCat.equals(cat.getName()));
-                    } catch (Exception e) {
-                        android.util.Log.e("ProductListFragment", "Lỗi nạp danh mục: " + doc.getId(), e);
-                    }
-                }
-            } else {
-                // Fallback categories
-                String[] defaultCats = {"Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"};
-                for (String catName : defaultCats) {
-                    addCategoryChip(catName, selectedCat.equals(catName));
-                }
-            }
-        });
+        // Use the fixed 6 HealthUp categories
+        String[] healthUpCategories = {"Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"};
+        
+        for (String catName : healthUpCategories) {
+            addCategoryChip(catName, selectedCat.equals(catName));
+        }
     }
 
     private void addCategoryChip(String categoryName, boolean isSelected) {
@@ -134,7 +143,19 @@ public class ProductListFragment extends Fragment {
         chip.setChecked(isSelected);
         chip.setClickable(true);
         
+        // Thiết kế màu sắc theo yêu cầu: màu xanh HealthUp khi được chọn
+        chip.setChipBackgroundColorResource(isSelected ? R.color.primary_default : R.color.neutral_light_grey);
+        chip.setTextColor(getResources().getColor(isSelected ? R.color.neutral_white : R.color.neutral_black));
+
         chip.setOnClickListener(v -> {
+            // Cập nhật lại giao diện các chip khác
+            for (int i = 0; i < binding.chipGroupCategories.getChildCount(); i++) {
+                Chip c = (Chip) binding.chipGroupCategories.getChildAt(i);
+                boolean isCurrent = c.getText().toString().equals(categoryName);
+                c.setChipBackgroundColorResource(isCurrent ? R.color.primary_default : R.color.neutral_light_grey);
+                c.setTextColor(getResources().getColor(isCurrent ? R.color.neutral_white : R.color.neutral_black));
+            }
+
             if (categoryName.equals("Tất cả")) {
                 fetchAllProducts();
             } else {
@@ -168,9 +189,8 @@ public class ProductListFragment extends Fragment {
     private void fetchAllProducts() {
         binding.progressBar.setVisibility(View.VISIBLE);
         firestoreManager.getNewProducts(100, task -> {
-            binding.progressBar.setVisibility(View.GONE);
-            allProducts.clear();
-            if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+            if (task.isSuccessful() && task.getResult() != null) {
+                allProducts.clear();
                 for (QueryDocumentSnapshot doc : task.getResult()) {
                     try {
                         Product p = doc.toObject(Product.class);
@@ -180,20 +200,18 @@ public class ProductListFragment extends Fragment {
                         android.util.Log.e("ProductListFragment", "Lỗi nạp sản phẩm: " + doc.getId(), e);
                     }
                 }
+                syncWishlistAndDisplay();
+            } else {
+                binding.progressBar.setVisibility(View.GONE);
             }
-            displayList.clear();
-            displayList.addAll(allProducts);
-            adapter.notifyDataSetChanged();
-            binding.tvEmpty.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
         });
     }
 
     private void fetchByCategory(String categoryName) {
         binding.progressBar.setVisibility(View.VISIBLE);
         firestoreManager.getProductsByCategory(categoryName, task -> {
-            binding.progressBar.setVisibility(View.GONE);
-            allProducts.clear();
-            if (task.isSuccessful() && task.getResult() != null && !task.getResult().isEmpty()) {
+            if (task.isSuccessful() && task.getResult() != null) {
+                allProducts.clear();
                 for (QueryDocumentSnapshot doc : task.getResult()) {
                     try {
                         Product p = doc.toObject(Product.class);
@@ -202,6 +220,33 @@ public class ProductListFragment extends Fragment {
                     } catch (Exception e) {
                         android.util.Log.e("ProductListFragment", "Lỗi nạp sản phẩm: " + doc.getId(), e);
                     }
+                }
+                syncWishlistAndDisplay();
+            } else {
+                binding.progressBar.setVisibility(View.GONE);
+            }
+        });
+    }
+
+    private void syncWishlistAndDisplay() {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+            binding.progressBar.setVisibility(View.GONE);
+            displayList.clear();
+            displayList.addAll(allProducts);
+            adapter.notifyDataSetChanged();
+            binding.tvEmpty.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
+            return;
+        }
+
+        firestoreManager.getWishlist(wishTask -> {
+            binding.progressBar.setVisibility(View.GONE);
+            if (wishTask.isSuccessful() && wishTask.getResult() != null) {
+                List<String> wishlistIds = new ArrayList<>();
+                for (QueryDocumentSnapshot doc : wishTask.getResult()) {
+                    wishlistIds.add(doc.getString("productId"));
+                }
+                for (Product p : allProducts) {
+                    p.setFavorite(wishlistIds.contains(p.getId()));
                 }
             }
             displayList.clear();
@@ -220,7 +265,6 @@ public class ProductListFragment extends Fragment {
     private void searchProducts(String query) {
         binding.progressBar.setVisibility(View.VISIBLE);
         firestoreManager.getNewProducts(100, task -> {
-            binding.progressBar.setVisibility(View.GONE);
             if (task.isSuccessful() && task.getResult() != null) {
                 allProducts.clear();
                 String normalizedQuery = removeAccents(query);
@@ -238,10 +282,9 @@ public class ProductListFragment extends Fragment {
                         android.util.Log.e("ProductListFragment", "Lỗi tìm kiếm sản phẩm: " + doc.getId(), e);
                     }
                 }
-                displayList.clear();
-                displayList.addAll(allProducts);
-                adapter.notifyDataSetChanged();
-                binding.tvEmpty.setVisibility(displayList.isEmpty() ? View.VISIBLE : View.GONE);
+                syncWishlistAndDisplay();
+            } else {
+                binding.progressBar.setVisibility(View.GONE);
             }
         });
     }

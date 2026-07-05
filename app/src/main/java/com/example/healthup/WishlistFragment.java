@@ -49,6 +49,12 @@ public class WishlistFragment extends Fragment {
     }
 
     private void loadWishlist() {
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+            binding.rvWishlist.setVisibility(View.GONE);
+            binding.layoutEmpty.setVisibility(View.VISIBLE);
+            return;
+        }
+
         firestoreManager.getWishlist(task -> {
             if (task.isSuccessful() && task.getResult() != null) {
                 wishlistProducts.clear();
@@ -63,6 +69,7 @@ public class WishlistFragment extends Fragment {
                     List<String> imgs = new ArrayList<>();
                     imgs.add(doc.getString("productImage"));
                     p.setImages(imgs);
+                    p.setFavorite(true);
                     
                     wishlistProducts.add(p);
                 }

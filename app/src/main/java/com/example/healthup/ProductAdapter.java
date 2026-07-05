@@ -91,14 +91,52 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             v.getContext().startActivity(intent);
         });
 
+        // Wishlist logic
+        updateWishlistIcon(holder.btnWishlist, product.isFavorite());
+
         holder.btnWishlist.setOnClickListener(v -> {
-            // Wishlist logic will be handled here or via callback
-            Toast.makeText(holder.itemView.getContext(), "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+            com.example.healthup.firebase.FirestoreManager firestore = com.example.healthup.firebase.FirestoreManager.getInstance();
+            if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+                Toast.makeText(v.getContext(), "Vui lòng đăng nhập để sử dụng tính năng này", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            boolean newState = !product.isFavorite();
+            product.setFavorite(newState);
+            updateWishlistIcon(holder.btnWishlist, newState);
+            
+            com.google.android.gms.tasks.Task<Void> task;
+            if (newState) {
+                task = firestore.addToWishlist(product);
+            } else {
+                task = firestore.removeFromWishlist(product.getId());
+            }
+
+            if (task != null) {
+                task.addOnFailureListener(e -> {
+                    product.setFavorite(!newState);
+                    updateWishlistIcon(holder.btnWishlist, !newState);
+                    Toast.makeText(v.getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+            }
+
+            String msg = newState ? "Đã thêm vào yêu thích" : "Đã xóa khỏi yêu thích";
+            Toast.makeText(holder.itemView.getContext(), msg, Toast.LENGTH_SHORT).show();
         });
 
         holder.btnAdd.setOnClickListener(v -> {
             Toast.makeText(holder.itemView.getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
         });
+    }
+
+    private void updateWishlistIcon(ImageView btn, boolean isFavorite) {
+        if (isFavorite) {
+            btn.setImageResource(R.drawable.ic_heart_filled);
+            btn.setColorFilter(btn.getContext().getResources().getColor(R.color.action_error));
+        } else {
+            btn.setImageResource(R.drawable.ic_heart_outline);
+            btn.setColorFilter(btn.getContext().getResources().getColor(R.color.neutral_dark_grey));
+        }
     }
 
     @Override

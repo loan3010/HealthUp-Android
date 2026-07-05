@@ -68,14 +68,21 @@
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Giá Thấp - Cao" />
+                android:text="Giá Thấp-Cao" />
 
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipPriceHighLow"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Giá Cao - Thấp" />
+                android:text="Giá Cao-Thấp" />
+
+            <com.google.android.material.chip.Chip
+                android:id="@+id/chipFavorite"
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Được yêu thích" />
         </com.google.android.material.chip.ChipGroup>
 
         <TextView
@@ -103,6 +110,62 @@
             android:text="Khoảng giá"
             android:textStyle="bold" />
 
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GIÁ THẤP NHẤT"
+                    android:textSize="10sp"
+                    android:textColor="@color/neutral_grey" />
+
+                <EditText
+                    android:id="@+id/etMinPrice"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:inputType="number"
+                    android:text="0"
+                    android:textStyle="bold"
+                    android:textSize="16sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="end"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GIÁ CAO NHẤT"
+                    android:textSize="10sp"
+                    android:textColor="@color/neutral_grey" />
+
+                <EditText
+                    android:id="@+id/etMaxPrice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:inputType="number"
+                    android:text="1.000.000"
+                    android:textStyle="bold"
+                    android:textSize="16sp" />
+            </LinearLayout>
+        </LinearLayout>
+
         <com.google.android.material.slider.RangeSlider
             android:id="@+id/sliderPrice"
             android:layout_width="match_parent"
@@ -115,20 +178,39 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
-            <TextView
-                android:id="@+id/tvMinPrice"
+            <Button
+                android:id="@+id/btnPriceUnder100"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="0đ" />
+                android:text="Dưới 100K"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
 
-            <TextView
-                android:id="@+id/tvMaxPrice"
-                android:layout_width="wrap_content"
+            <Button
+                android:id="@+id/btnPrice100To200"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="1.000.000đ" />
+                android:layout_marginHorizontal="8dp"
+                android:layout_weight="1"
+                android:text="100K - 200K"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
+
+            <Button
+                android:id="@+id/btnPriceOver200"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Trên 200K"
+                android:textAllCaps="false"
+                android:textSize="12sp" />
         </LinearLayout>
 
         <TextView
@@ -149,23 +231,16 @@
             <com.google.android.material.chip.Chip
                 android:id="@+id/chipRating5"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="5.0 ★" />
-
-                <com.google.android.material.chip.Chip
-                android:id="@+id/chipRating4Plus"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="4.0+ ★" />
+                android:text="★ ★ ★ ★ ★ (5.0)" />
 
             <com.google.android.material.chip.Chip
-                android:id="@+id/chipRating3Plus"
+                android:id="@+id/chipRating4"
                 style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="3.0+ ★" />
+                android:text="★ ★ ★ ★ ☆ trở lên" />
         </com.google.android.material.chip.ChipGroup>
 
         <LinearLayout
