@@ -13,6 +13,12 @@ public class NotificationItem implements Serializable {
     private Timestamp createdAt;
     private boolean read;
     private String userId;
+    /** Firestore field: ORDER_SHIPPING, PROMO, PAYMENT, etc. */
+    private String type;
+    /** Related entity id (orderId, productId, promo code, …). */
+    private String refId;
+    /** True for sample/preview items not stored in Firestore. */
+    private boolean mock;
 
     public NotificationItem() {
     }
@@ -79,6 +85,34 @@ public class NotificationItem implements Serializable {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public String getRefId() {
+        return refId;
+    }
+
+    public void setRefId(String refId) {
+        this.refId = refId;
+    }
+
+    public boolean isMock() {
+        return mock;
+    }
+
+    public void setMock(boolean mock) {
+        this.mock = mock;
+    }
+
+    public NotificationType getNotificationType() {
+        return NotificationType.fromString(type);
     }
 
     public String getDisplayBody() {

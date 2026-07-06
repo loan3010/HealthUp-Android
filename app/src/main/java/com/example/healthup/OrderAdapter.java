@@ -304,7 +304,9 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         } else {
             pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
         }
-        
+
+        pBinding.btnAskProduct.setVisibility(View.GONE);
+
         binding.lnItemsContainer.addView(pBinding.getRoot());
     }
 

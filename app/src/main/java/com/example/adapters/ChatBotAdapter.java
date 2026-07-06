@@ -15,8 +15,11 @@ import com.example.healthup.chat.SuggestionProvider;
 import com.example.models.ChatMessage;
 
 import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 
 /**
  * Reusable single-thread chat adapter with multiple view types:
@@ -107,7 +110,9 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         ChatMessage m = items.get(position);
         if (holder instanceof UserVH) {
-            ((UserVH) holder).text.setText(m.getText());
+            UserVH userHolder = (UserVH) holder;
+            userHolder.text.setText(m.getText());
+            userHolder.time.setText(formatMessageTime(m));
         } else if (holder instanceof SystemVH) {
             ((SystemVH) holder).text.setText(m.getText());
         } else if (holder instanceof BotVH) {
@@ -128,10 +133,12 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     static class UserVH extends RecyclerView.ViewHolder {
         final TextView text;
+        final TextView time;
 
         UserVH(@NonNull View v) {
             super(v);
             text = v.findViewById(R.id.chatUserText);
+            time = v.findViewById(R.id.chatUserTime);
         }
     }
 
@@ -147,15 +154,18 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     static class BotVH extends RecyclerView.ViewHolder {
         final TextView name;
         final TextView text;
+        final TextView time;
 
         BotVH(@NonNull View v) {
             super(v);
             name = v.findViewById(R.id.chatSenderName);
             text = v.findViewById(R.id.chatBotText);
+            time = v.findViewById(R.id.chatBotTime);
         }
 
         void bind(ChatMessage m) {
             text.setText(m.getText());
+            time.setText(formatMessageTime(m));
             if (ChatMessage.SENDER_SELLER.equals(m.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
                 name.setText(m.getSenderName() != null ? m.getSenderName() : "Người bán");
@@ -283,5 +293,16 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 });
             }
         }
+    }
+
+    private static String formatMessageTime(@NonNull ChatMessage message) {
+        long millis = message.getSortTime();
+        if (millis <= 10L && message.getCreatedAt() != null) {
+            millis = message.getCreatedAt().getTime();
+        }
+        if (millis <= 10L) {
+            return "";
+        }
+        return new SimpleDateFormat("HH:mm", Locale.getDefault()).format(new Date(millis));
     }
 }

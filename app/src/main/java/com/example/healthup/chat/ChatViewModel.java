@@ -9,6 +9,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.healthup.data.repository.ChatRepository;
 import com.example.healthup.data.repository.OrderRepository;
 import com.example.healthup.util.Event;
+import com.example.healthup.util.StaffRoleHelper;
 import com.example.models.ChatMessage;
 import com.example.models.Conversation;
 import com.example.models.Order;
@@ -63,6 +64,11 @@ public class ChatViewModel extends ViewModel {
     private String buyerId;
     private long localSortCursor = 1000L;
 
+    private boolean pendingInquiry;
+    private String pendingOrderCode;
+    private String pendingProductName;
+    private String pendingProductVariant;
+
     public ChatViewModel() {
         this(new ChatRepository(), new OrderRepository(), new ChatBotEngine());
     }
@@ -99,6 +105,47 @@ public class ChatViewModel extends ViewModel {
         return sellerMode;
     }
 
+    /** Context from order detail: auto-send a product or order inquiry when chat opens. */
+    public void setInquiryContext(@Nullable String orderCode,
+                                  @Nullable String productName,
+                                  @Nullable String productVariant) {
+        pendingProductName = productName != null ? productName.trim() : null;
+        pendingProductVariant = productVariant != null ? productVariant.trim() : null;
+        if (orderCode == null || orderCode.trim().isEmpty()) {
+            pendingInquiry = pendingProductName != null && !pendingProductName.isEmpty();
+            pendingOrderCode = null;
+            return;
+        }
+        pendingOrderCode = orderCode.trim();
+        pendingInquiry = true;
+    }
+
+    public void dispatchPendingInquiry() {
+        if (!pendingInquiry || !initialized || sellerMode) {
+            return;
+        }
+        pendingInquiry = false;
+        String message = buildInquiryMessage();
+        if (message != null) {
+            sendUserText(message);
+        }
+    }
+
+    @Nullable
+    private String buildInquiryMessage() {
+        if (pendingProductName != null && !pendingProductName.isEmpty()) {
+            String variantPart = (pendingProductVariant != null && !pendingProductVariant.isEmpty())
+                    ? " (" + pendingProductVariant + ")" : "";
+            String orderPart = (pendingOrderCode != null && !pendingOrderCode.isEmpty())
+                    ? " trong đơn " + pendingOrderCode : "";
+            return "Tôi muốn hỏi về sản phẩm " + pendingProductName + variantPart + orderPart;
+        }
+        if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
+            return "Tôi cần hỗ trợ về đơn hàng " + pendingOrderCode;
+        }
+        return null;
+    }
+
     public boolean isHumanMode() {
         Conversation c = conversation.getValue();
         return c != null && c.isHumanMode();
@@ -119,10 +166,8 @@ public class ChatViewModel extends ViewModel {
         this.uid = chatRepository.currentUid();
 
         if (uid != null) {
-            chatRepository.fetchUserRole(uid, role -> {
-                boolean allowed = "seller".equals(role) || "admin".equals(role);
-                sellerAccess.setValue(allowed);
-            });
+            chatRepository.fetchUserRoleFromServer(uid, role ->
+                    sellerAccess.setValue(StaffRoleHelper.isStaff(role)));
         }
 
         if (sellerMode) {
@@ -200,12 +245,9 @@ public class ChatViewModel extends ViewModel {
         }
 
         persistUserMessage(text);
-
-        if (isHumanMode()) {
-            // A human is handling the thread; the bot stays silent.
-            return;
+        if (!isHumanMode()) {
+            runBot(text);
         }
-        runBot(text);
     }
 
     public void onSuggestedQuestionTapped(@NonNull String question) {
@@ -220,11 +262,50 @@ public class ChatViewModel extends ViewModel {
 
     /** Buyer taps "Chat với người bán" -> switch the same thread to a human. */
     public void requestHumanHandoff() {
-        if (sellerMode || conversationId == null || uid == null) {
+        if (sellerMode) {
+            return;
+        }
+        if (uid == null) {
+            uid = chatRepository.currentUid();
+        }
+        if (uid == null) {
+            toast.setValue(new Event<>("Vui lòng đăng nhập để chat với người bán."));
+            return;
+        }
+        if (conversationId == null) {
+            toast.setValue(new Event<>("Đang kết nối hội thoại, vui lòng thử lại sau vài giây."));
+            ensureConversationThenHandoff();
             return;
         }
         if (isHumanMode()) {
             toast.setValue(new Event<>("Bạn đang được kết nối với người bán."));
+            return;
+        }
+        performHumanHandoff();
+    }
+
+    private void ensureConversationThenHandoff() {
+        chatRepository.fetchUserName(uid, name ->
+                chatRepository.getOrCreateConversation(uid, name, null,
+                        new ChatRepository.ConversationIdCallback() {
+                            @Override
+                            public void onReady(@NonNull String id) {
+                                conversationId = id;
+                                startListening(id);
+                                if (!isHumanMode()) {
+                                    performHumanHandoff();
+                                }
+                            }
+
+                            @Override
+                            public void onError(@NonNull Exception e) {
+                                toast.setValue(new Event<>("Không thể kết nối. Vui lòng thử lại."));
+                            }
+                        }));
+    }
+
+    private void performHumanHandoff() {
+        if (conversationId == null || uid == null) {
             return;
         }
         chatRepository.setMode(conversationId, Conversation.MODE_HUMAN, success -> {

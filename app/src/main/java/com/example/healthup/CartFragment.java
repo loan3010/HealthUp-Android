@@ -111,64 +111,44 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private void loadCartFromFirestore() {
         cartItems.clear();
-
-        CartItem item1 = new CartItem();
-        item1.setProductId("p1");
-        item1.setName("Hạt Granola siêu ngon");
-        item1.setWeight("500g");
-        item1.setPackageType("Vị Socola");
-        item1.setPrice(150000);
-        item1.setOriginalPrice(200000);
-        item1.setQuantity(2);
-        item1.setSelected(true);
-        item1.setImageUrl("images/products/granola-hat.png");
-        cartItems.add(item1);
-
-        CartItem item2 = new CartItem();
-        item2.setProductId("p2");
-        item2.setName("Sữa hạt điều nguyên chất");
-        item2.setWeight("1000ml");
-        item2.setImageUrl("images/products/granola-trai-cay.jpg");
-        item2.setPrice(85000);
-        item2.setOriginalPrice(85000);
-        item2.setQuantity(1);
-        item2.setSelected(true);
-        cartItems.add(item2);
-
         renderList();
         updateFooter();
 
-        if (userId == null) return;
-        db.collection("users").document(userId).collection("cart")
-                .get()
-                .addOnSuccessListener(snapshot -> applyFirestoreCart(snapshot))
-                .addOnFailureListener(e -> { /* keep mock data visible */ });
-    }
-
-    private void applyFirestoreCart(com.google.firebase.firestore.QuerySnapshot snapshot) {
-        if (!isAdded() || snapshot.isEmpty()) {
+        if (userId == null) {
             return;
         }
 
-        List<CartItem> loaded = new ArrayList<>();
-        for (QueryDocumentSnapshot doc : snapshot) {
-            CartItem item = parseCartItem(doc);
-            if (item != null) {
-                item.setSelected(true);
-                loaded.add(item);
-            }
-        }
-        if (loaded.isEmpty()) {
+        db.collection("users").document(userId).collection("cart")
+                .get()
+                .addOnSuccessListener(this::applyFirestoreCart)
+                .addOnFailureListener(e -> {
+                    if (isAdded()) {
+                        Toast.makeText(getContext(), "Không thể tải giỏ hàng", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        userId = FirebaseAuth.getInstance().getUid();
+        loadCartFromFirestore();
+    }
+
+    private void applyFirestoreCart(com.google.firebase.firestore.QuerySnapshot snapshot) {
+        if (!isAdded()) {
             return;
         }
 
         cartItems.clear();
-        cartItems.addAll(loaded);
-        if (rvCartItems != null) {
-            rvCartItems.post(this::refreshCartUi);
-        } else {
-            refreshCartUi();
+        for (QueryDocumentSnapshot doc : snapshot) {
+            CartItem item = parseCartItem(doc);
+            if (item != null) {
+                item.setSelected(true);
+                cartItems.add(item);
+            }
         }
+        refreshCartUi();
     }
 
     private CartItem parseCartItem(QueryDocumentSnapshot doc) {

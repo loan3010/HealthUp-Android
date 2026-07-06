@@ -20,6 +20,7 @@ service cloud.firestore {
     function currentRole() {
       // users/{uid}.role is one of "buyer" | "seller" | "admin".
       return isSignedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
         ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
         : null;
     }
@@ -29,49 +30,180 @@ service cloud.firestore {
       return currentRole() in ['seller', 'admin'];
     }
 
+    function linkedProfileDocId() {
+      return isSignedIn()
+        && exists(/databases/$(database)/documents/user_sessions/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId
+        : null;
+    }
+
+    function ownsConversationBuyerId(buyerId) {
+      return isSignedIn()
+        && (request.auth.uid == buyerId
+            || (linkedProfileDocId() != null && linkedProfileDocId() == buyerId));
+    }
+
     function isParticipant(convData) {
       return isSignedIn()
-        && (request.auth.uid == convData.buyerId
+        && (ownsConversationBuyerId(convData.buyerId)
             || (convData.participantIds is list
                 && request.auth.uid in convData.participantIds));
     }
 
+    function isPasswordResetEmailRotation(userId) {
+      let userPhone = get(/databases/$(database)/documents/users/$(userId)).data.phone;
+      let localPhone = userPhone is string ? userPhone : '';
+      // password_reset doc id is normalized local VN phone (09xxxxxxxx)
+      return localPhone.matches('^0[0-9]{9}$')
+        && exists(/databases/$(database)/documents/password_reset/$(localPhone))
+        && get(/databases/$(database)/documents/password_reset/$(localPhone)).data.verified == true
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email'])
+        && request.resource.data.email is string;
+    }
+
     // --- Users ------------------------------------------------------------
-    // A user can read/update only their own profile. "role" should be changed
-    // from a trusted place (console/admin), not by the buyer themselves.
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff())
+                  || resource.data.phone is string;
       allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+      allow update: if (isSignedIn() && request.auth.uid == userId)
+                    || isPasswordResetEmailRotation(userId);
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+
+      match /cart/{cartItemId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /wishlist/{productId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /notifications/{notificationId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
+
+    // --- Pre-auth OTP (registration + password reset, Spark / no Cloud Functions) ---
+    match /registration_otp/{phone} {
+      allow read, write: if phone.matches('^0[0-9]{9}$');
+    }
+
+    match /password_reset/{phone} {
+      allow read, write: if phone.matches('^0[0-9]{9}$');
+    }
+
+    // --- Catalog / demo content (student project) -------------------------
+    match /products/{productId} {
+      allow read: if true;
+      allow create, delete: if isStaff();
+      allow update: if isStaff()
+                    || (isSignedIn()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['favorite']));
+
+      match /reviews/{reviewId} {
+        allow read: if true;
+        allow create: if isSignedIn();
+        allow update, delete: if isSignedIn()
+                              && resource.data.userId == request.auth.uid;
+      }
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /blogs/{blogId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /banners/{bannerId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    match /faqs/{faqId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    // "policies" là nội dung hiển thị cho user xem (đăng nhập hoặc chưa),
+    // nên read mở công khai. Việc tạo/sửa nội dung do admin/seller quản lý
+    // qua Firebase Console hoặc Admin SDK (bypass rules) — KHÔNG mở write
+    // cho client để tránh ai đó chỉnh sửa/xoá nội dung chính sách.
+    match /policies/{policyId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
+    function isOrderOwner() {
+      return isSignedIn()
+        && (resource.data.buyerId == request.auth.uid
+            || resource.data.userId == request.auth.uid
+            || linkedProfileOwnsOrder());
+    }
+
+    function linkedProfileOwnsOrder() {
+      return exists(/databases/$(database)/documents/user_sessions/$(request.auth.uid))
+        && (resource.data.buyerId
+              == get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId
+            || resource.data.userId
+              == get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId);
+    }
+
+    // --- User sessions ------------------------------------------------------
+    match /user_sessions/{authUid} {
+      allow read, write: if isSignedIn() && request.auth.uid == authUid;
+    }
+
+    match /cart/{cartItemId} {
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+                    && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn()
+                            && resource.data.userId == request.auth.uid;
+    }
+
+    // --- Addresses (subcollection dưới users/{userId}) ---------------------
+    // ⚠️ TESTING ONLY: "guest_user" nhánh bên dưới KHÔNG yêu cầu đăng nhập,
+    // nghĩa là bất kỳ ai (kể cả ngoài app) cũng đọc/ghi được đường dẫn
+    // /users/guest_user/addresses/*. Nếu nhiều khách cùng dùng chung
+    // "guest_user", địa chỉ của họ sẽ lẫn vào nhau. TUYỆT ĐỐI không để
+    // nguyên rule này khi lên production — hãy thay bằng Firebase
+    // Anonymous Auth trước khi phát hành app.
+    match /users/{userId}/addresses/{addressId} {
+      // Cho phép nếu:
+      // 1. Đã đăng nhập và là chính chủ
+      // 2. HOẶC là tài khoản khách (guest_user) để demo tính năng
+      allow read, write: if (isSignedIn() && request.auth.uid == userId) || userId == "guest_user";
     }
 
     // --- Orders -----------------------------------------------------------
-    // The chatbot looks up orders where buyerId == uid. Buyers see their own
-    // orders; staff can see all (to help from the inbox).
     match /orders/{orderId} {
-      allow read: if isSignedIn()
-                  && (resource.data.buyerId == request.auth.uid || isStaff());
-      // Order writes are expected to come from the checkout flow / staff.
-      allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
-      allow update, delete: if isStaff();
+      allow read: if isOrderOwner() || isStaff();
+      allow create: if isSignedIn()
+                    && (request.resource.data.buyerId == request.auth.uid
+                        || request.resource.data.userId == request.auth.uid);
+      // Cho phép chủ đơn hàng HOẶC nhân viên được cập nhật (để hủy đơn, xác nhận đã nhận...)
+      allow update: if isOrderOwner() || isStaff();
+      // Chỉ nhân viên mới được xóa đơn hàng khỏi database
+      allow delete: if isStaff();
     }
 
     // --- Conversations ----------------------------------------------------
     match /conversations/{conversationId} {
-      // Buyer (owner/participant) or staff may read the thread.
-      allow read: if isParticipant(resource.data) || isStaff();
+      allow read: if isStaff()
+                  || (resource == null && isSignedIn())
+                  || (resource != null && isParticipant(resource.data));
 
-      // A buyer may create their own support thread.
       allow create: if isSignedIn()
-                    && request.resource.data.buyerId == request.auth.uid;
+                    && ownsConversationBuyerId(request.resource.data.buyerId);
 
-      // Buyer participant or staff may update conversation metadata
-      // (mode switch, sellerId assignment, lastMessage, ...).
       allow update: if isParticipant(resource.data) || isStaff();
 
       allow delete: if isStaff();
 
-      // --- Messages -------------------------------------------------------
       match /messages/{messageId} {
         function convData() {
           return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
@@ -79,12 +211,10 @@ service cloud.firestore {
 
         allow read: if isParticipant(convData()) || isStaff();
 
-        // Sender must be the signed-in user; staff may post seller/system msgs.
         allow create: if isSignedIn()
                       && (isParticipant(convData()) || isStaff())
                       && request.resource.data.senderId == request.auth.uid;
 
-        // Allow marking messages as read; no edits/deletes of history.
         allow update: if (isParticipant(convData()) || isStaff());
         allow delete: if false;
       }

@@ -203,6 +203,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             productList.clear();
             productList.addAll(result);
             productAdapter.updateData(new ArrayList<>(productList));
+            applyWishlistState();
             updateEmptyState();
         }).addOnFailureListener(e -> {
             Log.e("ProductList", "Error fetching products: " + e.getMessage());
@@ -225,6 +226,20 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         });
     }
 
+
+    private void applyWishlistState() {
+        String uid = WishlistManager.currentUserId();
+        if (uid == null) {
+            return;
+        }
+        WishlistManager.loadFavoriteIds(uid, ids -> {
+            if (!isAdded()) {
+                return;
+            }
+            WishlistManager.applyFavoriteState(productList, ids);
+            productAdapter.updateData(new ArrayList<>(productList));
+        });
+    }
 
     private void updateEmptyState() {
         if (productList.isEmpty()) {
@@ -348,7 +363,10 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
     @Override
     public void onFavoriteClick(Product product) {
-        product.setFavorite(!product.isFavorite());
-        productAdapter.notifyDataSetChanged();
+        WishlistManager.toggle(requireContext(), product, success -> {
+            if (success && isAdded()) {
+                productAdapter.notifyDataSetChanged();
+            }
+        });
     }
 }

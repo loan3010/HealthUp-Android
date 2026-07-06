@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -64,15 +66,34 @@ public class ProductDetailActivity extends AppCompatActivity {
                     product = documentSnapshot.toObject(Product.class);
                     if (product != null) {
                         product.setId(documentSnapshot.getId());
-                        initViews();
-                        setupProductInfo();
-                        setupExpandableSections();
-                        setupRecommendations();
+                        showProductUi();
                     } else {
                         finish();
                     }
                 })
                 .addOnFailureListener(e -> finish());
+    }
+
+    private void showProductUi() {
+        initViews();
+        String uid = WishlistManager.currentUserId();
+        if (uid != null && product.getId() != null) {
+            WishlistManager.loadFavoriteIds(uid, ids -> {
+                product.setFavorite(ids.contains(product.getId()));
+                runOnUiThread(() -> {
+                    if (!isFinishing()) {
+                        setupProductInfo();
+                        setupExpandableSections();
+                        setupRecommendations();
+                    }
+                });
+            });
+        } else {
+            product.setFavorite(false);
+            setupProductInfo();
+            setupExpandableSections();
+            setupRecommendations();
+        }
     }
 
     private void initViews() {
@@ -96,6 +117,7 @@ public class ProductDetailActivity extends AppCompatActivity {
         btnWishlist = findViewById(R.id.btn_wishlist);
         btnAddCart = findViewById(R.id.btn_detail_add_cart);
         btnBuyNow = findViewById(R.id.btn_buy_now);
+        View btnChat = findViewById(R.id.btn_chat);
 
         rvRecommendations = findViewById(R.id.rv_detail_recommendations);
         rvReviews = findViewById(R.id.rv_reviews);
@@ -105,6 +127,9 @@ public class ProductDetailActivity extends AppCompatActivity {
         btnWishlist.setOnClickListener(v -> toggleFavorite());
         btnAddCart.setOnClickListener(v -> showVariantSelection(false));
         btnBuyNow.setOnClickListener(v -> showVariantSelection(true));
+        if (btnChat != null) {
+            btnChat.setOnClickListener(v -> openProductChat());
+        }
 
         if (tvViewAllReviews != null) {
             tvViewAllReviews.setOnClickListener(v -> openAllReviews());
@@ -119,6 +144,16 @@ public class ProductDetailActivity extends AppCompatActivity {
         intent.putExtra("avgRating", product.getRating());
         intent.putExtra("reviewCount", product.getReviewCount());
         startActivity(intent);
+    }
+
+    private void openProductChat() {
+        if (product == null || product.getName() == null) {
+            Toast.makeText(this, "Đang tải thông tin sản phẩm...", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        String variant = selectedVariant != null ? selectedVariant.getName() : null;
+        startActivity(ChatActivity.buyerIntentForProductBrowse(
+                this, product.getName(), variant, product.getId()));
     }
 
     private void setupProductInfo() {
@@ -405,52 +440,25 @@ public class ProductDetailActivity extends AppCompatActivity {
     private void toggleFavoriteForProduct(Product p) {
         if (p == null || p.getId() == null) return;
 
-        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(this, "Vui lòng đăng nhập để sử dụng chức năng yêu thích", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        boolean oldFavoriteState = p.isFavorite();
-        boolean newFavoriteState = !oldFavoriteState;
-
-        p.setFavorite(newFavoriteState);
-
-        if (p.getId().equals(product.getId())) {
-            product.setFavorite(newFavoriteState);
-            updateWishlistIcon();
-        }
-
-        if (recommendationAdapter != null) {
-            recommendationAdapter.notifyDataSetChanged();
-        }
-
-        java.util.Map<String, Object> updates = new java.util.HashMap<>();
-        updates.put("favorite", newFavoriteState);
-
-        FirestoreManager.getInstance().getProductsCollection()
-                .document(p.getId())
-                .update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(this, newFavoriteState ? "Đã thêm vào yêu thích" : "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    p.setFavorite(oldFavoriteState);
-                    if (p.getId().equals(product.getId())) {
-                        product.setFavorite(oldFavoriteState);
-                        updateWishlistIcon();
-                    }
-                    if (recommendationAdapter != null) {
-                        recommendationAdapter.notifyDataSetChanged();
-                    }
-
-                    android.util.Log.e("ProductDetail", "Favorite update failed: " + e.getMessage(), e);
-                    Toast.makeText(this, "Không thể cập nhật yêu thích: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+        WishlistManager.toggle(this, p, success -> {
+            if (!success) {
+                return;
+            }
+            if (p.getId().equals(product.getId())) {
+                product.setFavorite(p.isFavorite());
+                updateWishlistIcon();
+            }
+            if (recommendationAdapter != null) {
+                recommendationAdapter.notifyDataSetChanged();
+            }
+        });
     }
 
     private void updateWishlistIcon() {
-        btnWishlist.setImageResource(product.isFavorite() ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+        boolean isFavorite = product.isFavorite();
+        btnWishlist.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+        int tintColor = ContextCompat.getColor(this, isFavorite ? R.color.error : R.color.text_dark);
+        btnWishlist.setImageTintList(ColorStateList.valueOf(tintColor));
     }
 
     private void showVariantSelection(boolean isBuyNow) {

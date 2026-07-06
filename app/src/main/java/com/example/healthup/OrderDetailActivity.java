@@ -9,6 +9,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -49,27 +50,19 @@ public class OrderDetailActivity extends AppCompatActivity {
         currentOrder = (Order) getIntent().getSerializableExtra("order");
         String orderIdFallback = getIntent().getStringExtra(EXTRA_ORDER_ID);
 
-        if (currentOrder != null && currentOrder.getCreatedAt() != null) {
-            setupOrder(currentOrder);
-        } else {
-            String orderId = (currentOrder != null) ? currentOrder.getId() : orderIdFallback;
-            if (orderId != null && !orderId.isEmpty()) {
-                FirebaseFirestore.getInstance()
-                        .collection("orders")
-                        .document(orderId)
-                        .get()
-                        .addOnSuccessListener(doc -> {
-                            if (doc.exists()) {
-                                Order order = doc.toObject(Order.class);
-                                if (order != null) {
-                                    order.setId(doc.getId());
-                                    setupOrder(order);
-                                }
-                            }
-                        })
-                        .addOnFailureListener(e ->
-                                Toast.makeText(this, "Không thể tải đơn hàng", Toast.LENGTH_SHORT).show());
+        if (currentOrder != null) {
+            if (currentOrder.getId() == null || currentOrder.getId().isEmpty()) {
+                currentOrder.setId(orderIdFallback);
             }
+            setupOrder(currentOrder);
+        }
+
+        String fetchId = orderIdFallback;
+        if ((fetchId == null || fetchId.isEmpty()) && currentOrder != null) {
+            fetchId = currentOrder.getId();
+        }
+        if (fetchId != null && !fetchId.isEmpty()) {
+            loadOrderFromFirestore(fetchId);
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
@@ -88,8 +81,7 @@ public class OrderDetailActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        binding.rowChat.setOnClickListener(v ->
-                startActivity(ChatActivity.buyerIntent(this)));
+        binding.rowChat.setOnClickListener(v -> openOrderChat());
 
         binding.rowContactPhone.setOnClickListener(v -> {
             String phone = binding.tvPhone.getText().toString();
@@ -105,6 +97,24 @@ public class OrderDetailActivity extends AppCompatActivity {
             intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ đơn hàng: " + binding.tvOrderCode.getText().toString());
             startActivity(Intent.createChooser(intent, "Gửi email cho HealthUp"));
         });
+    }
+
+    private void loadOrderFromFirestore(String orderId) {
+        FirebaseFirestore.getInstance()
+                .collection("orders")
+                .document(orderId)
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        Order order = doc.toObject(Order.class);
+                        if (order != null) {
+                            order.setId(doc.getId());
+                            setupOrder(order);
+                        }
+                    }
+                })
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Không thể tải đơn hàng", Toast.LENGTH_SHORT).show());
     }
 
     private void setupOrder(Order order) {
@@ -297,6 +307,8 @@ public class OrderDetailActivity extends AppCompatActivity {
                 pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
             }
 
+            pBinding.btnAskProduct.setOnClickListener(v -> openProductChat(item));
+
             binding.lnItemsContainer.addView(pBinding.getRoot());
         }
 
@@ -378,5 +390,22 @@ public class OrderDetailActivity extends AppCompatActivity {
                 binding.tvRefundCancelledInfo.setVisibility(View.GONE);
             }
         }
+    }
+
+    private void openOrderChat() {
+        OrderChatHelper.openOrderChat(this, currentOrder, getDisplayedOrderCode());
+    }
+
+    private void openProductChat(OrderItem item) {
+        if (item == null) {
+            return;
+        }
+        OrderChatHelper.openProductChat(this, currentOrder, getDisplayedOrderCode(), item);
+    }
+
+    @Nullable
+    private String getDisplayedOrderCode() {
+        CharSequence label = binding.tvOrderCode.getText();
+        return label != null ? label.toString() : null;
     }
 }

@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 
+import android.content.res.ColorStateList;
 import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +10,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
@@ -232,7 +234,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 cbSelect.setVisibility(View.GONE);
                 btnWishlist.setVisibility(View.VISIBLE);
                 btnAdd.setVisibility(View.VISIBLE);
-                btnWishlist.setImageResource(product.isFavorite() ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+                updateWishlistIcon(btnWishlist, product);
             }
 
 
@@ -243,10 +245,18 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             } else {
                 btnWishlist.setOnClickListener(v -> {
                     product.setFavorite(!product.isFavorite());
-                    btnWishlist.setImageResource(product.isFavorite() ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+                    updateWishlistIcon(btnWishlist, product);
                     Toast.makeText(itemView.getContext(), "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
                 });
             }
+        }
+
+        private void updateWishlistIcon(ImageView btnWishlist, Product product) {
+            boolean isFavorite = product.isFavorite();
+            btnWishlist.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+            int tintColor = ContextCompat.getColor(itemView.getContext(),
+                    isFavorite ? R.color.error : R.color.primary_default);
+            btnWishlist.setImageTintList(ColorStateList.valueOf(tintColor));
         }
     }
 }

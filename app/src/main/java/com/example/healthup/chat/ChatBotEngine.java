@@ -61,16 +61,7 @@ public class ChatBotEngine {
         String text = TextNormalizer.normalize(rawText);
         List<ChatMessage> out = new ArrayList<>();
 
-        // 1) Order status lookup
-        if (TextNormalizer.containsAny(text,
-                "kiem tra don", "tinh trang don", "trang thai don", "don hang cua toi",
-                "don hang", "theo doi don", "don da giao", "giao chua", "toi don", "van don",
-                "dang o dau", "don dang o", "order status", "my order")) {
-            out.add(bot("Để mình kiểm tra giúp bạn nhé. Đây là các đơn hàng gần đây của bạn:"));
-            return new BotResponse(Intent.ORDER_STATUS, out, true, false);
-        }
-
-        // 2) Cancel order
+        // 1) Cancel order (before generic "don hang" so "huy don hang" matches here)
         if (TextNormalizer.containsAny(text,
                 "huy don", "huy dat hang", "khong muon mua", "huy mua", "muon huy",
                 "cancel order", "huy")) {
@@ -81,7 +72,26 @@ public class ChatBotEngine {
             return new BotResponse(Intent.CANCEL_ORDER, out, false, true);
         }
 
-        // 3) Product & nutrition advice
+        // 2) Order status lookup
+        if (TextNormalizer.containsAny(text,
+                "kiem tra don", "tinh trang don", "trang thai don", "don hang cua toi",
+                "theo doi don", "don da giao", "giao chua", "toi don", "van don",
+                "dang o dau", "don dang o", "order status", "my order")
+                || (TextNormalizer.containsAny(text, "don hang", "ho tro ve don")
+                && !TextNormalizer.containsAny(text, "san pham"))) {
+            out.add(bot("Để mình kiểm tra giúp bạn nhé. Đây là các đơn hàng gần đây của bạn:"));
+            return new BotResponse(Intent.ORDER_STATUS, out, true, false);
+        }
+
+        // 3) Product inquiry (from product detail or order detail)
+        if (TextNormalizer.containsAny(text,
+                "toi muon hoi ve san pham", "hoi ve san pham", "can hoi ve san pham",
+                "tu van san pham")) {
+            out.add(bot(buildProductInquiryReply(rawText)));
+            return new BotResponse(Intent.PRODUCT_ADVICE, out, false, true);
+        }
+
+        // 4) Product & nutrition advice
         if (TextNormalizer.containsAny(text,
                 "tu van", "san pham", "dinh duong", "vitamin", "protein", "whey", "thuc pham",
                 "bo sung", "goi y", "nen mua", "uong gi", "an gi", "suc khoe", "giam can", "tang can",
@@ -131,5 +141,36 @@ public class ChatBotEngine {
         return bot("Xin chào! Mình là trợ lý HealthUp \uD83C\uDF3F\n"
                 + "Mình có thể giúp bạn kiểm tra đơn hàng, hủy đơn, tư vấn sản phẩm & dinh dưỡng "
                 + "và trả lời các câu hỏi thường gặp.");
+    }
+
+    private static String buildProductInquiryReply(String rawText) {
+        String productLabel = extractProductLabel(rawText);
+        return "Mình đã nhận câu hỏi của bạn về sản phẩm"
+                + (productLabel.isEmpty() ? "" : " \"" + productLabel + "\"")
+                + " trong đơn hàng.\n\n"
+                + "Bạn có thể hỏi cụ thể về:\n"
+                + "• Thành phần & hạn sử dụng\n"
+                + "• Cách bảo quản & liều dùng\n"
+                + "• Đổi/trả nếu sản phẩm có vấn đề\n\n"
+                + "Hãy gõ câu hỏi của bạn, hoặc chọn \"Chat với người bán\" để được tư vấn trực tiếp nhé.";
+    }
+
+    /** Pulls product name from "…sản phẩm X trong đơn…" when present. */
+    private static String extractProductLabel(String rawText) {
+        if (rawText == null) {
+            return "";
+        }
+        String normalized = TextNormalizer.normalize(rawText);
+        int start = normalized.indexOf("san pham ");
+        if (start < 0) {
+            return "";
+        }
+        start += "san pham ".length();
+        int end = normalized.indexOf(" trong don", start);
+        if (end < 0) {
+            end = normalized.length();
+        }
+        String label = normalized.substring(start, end).trim();
+        return label.isEmpty() ? "" : label;
     }
 }

@@ -43,11 +43,20 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
     private RecyclerView recyclerView;
     private EditText input;
+    private TextView title;
     private TextView subtitle;
     private View quickChipsRow;
 
     public static ChatBotFragment newBuyerInstance() {
         return new ChatBotFragment();
+    }
+
+    public static ChatBotFragment newBuyerInstance(@Nullable Bundle extras) {
+        ChatBotFragment fragment = new ChatBotFragment();
+        if (extras != null) {
+            fragment.setArguments(extras);
+        }
+        return fragment;
     }
 
     public static ChatBotFragment newSellerInstance(String conversationId, String buyerId) {
@@ -75,6 +84,7 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         recyclerView = view.findViewById(R.id.chatRecyclerView);
         input = view.findViewById(R.id.chatInput);
+        title = view.findViewById(R.id.chatTitle);
         subtitle = view.findViewById(R.id.chatSubtitle);
         quickChipsRow = view.findViewById(R.id.chatQuickChipsRow);
 
@@ -96,20 +106,29 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
                 ? getArguments().getString(ARG_CONVERSATION_ID) : null;
         String buyerId = getArguments() != null
                 ? getArguments().getString(ARG_BUYER_ID) : null;
+
+        if (!sellerMode && getArguments() != null
+                && getArguments().getBoolean(ChatActivity.EXTRA_AUTO_SEND_INQUIRY, false)) {
+            viewModel.setInquiryContext(
+                    getArguments().getString(ChatActivity.EXTRA_ORDER_CODE),
+                    getArguments().getString(ChatActivity.EXTRA_PRODUCT_NAME),
+                    getArguments().getString(ChatActivity.EXTRA_PRODUCT_VARIANT));
+        }
+
         viewModel.init(sellerMode, conversationId, buyerId);
         viewModel.resumeListening();
+        view.post(() -> viewModel.dispatchPendingInquiry());
     }
 
     private void setupHeader(@NonNull View view, boolean sellerMode) {
         ImageView back = view.findViewById(R.id.chatBack);
         ImageView more = view.findViewById(R.id.chatMore);
-        TextView title = view.findViewById(R.id.chatTitle);
 
         back.setOnClickListener(v -> requireActivity().finish());
 
         if (sellerMode) {
-            title.setText(R.string.seller_inbox_title);
             subtitle.setText(R.string.chat_status_human);
+            input.setHint(R.string.seller_reply_hint);
             more.setVisibility(View.GONE);
         } else {
             more.setOnClickListener(v -> onMoreClicked());
@@ -182,6 +201,14 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         viewModel.getConversation().observe(getViewLifecycleOwner(), conversation -> {
             if (viewModel.isSellerMode()) {
+                if (conversation != null) {
+                    String buyerName = conversation.getBuyerName();
+                    if (buyerName != null && !buyerName.trim().isEmpty()) {
+                        title.setText(buyerName);
+                    } else {
+                        title.setText(R.string.conversation_buyer_fallback);
+                    }
+                }
                 return;
             }
             if (conversation != null && conversation.isHumanMode()) {

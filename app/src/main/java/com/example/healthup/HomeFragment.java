@@ -327,12 +327,33 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                         newProductList.addAll(Product.getDummyProducts());
                     }
                     newProductAdapter.updateData(new ArrayList<>(newProductList));
+                    applyWishlistToHomeLists();
                 })
                 .addOnFailureListener(e -> {
                     newProductList.clear();
                     newProductList.addAll(Product.getDummyProducts());
                     newProductAdapter.notifyDataSetChanged();
                 });
+    }
+
+    private void applyWishlistToHomeLists() {
+        String uid = WishlistManager.currentUserId();
+        if (uid == null) {
+            return;
+        }
+        WishlistManager.loadFavoriteIds(uid, ids -> {
+            if (!isAdded()) {
+                return;
+            }
+            WishlistManager.applyFavoriteState(flashSaleList, ids);
+            WishlistManager.applyFavoriteState(newProductList, ids);
+            if (flashSaleAdapter != null) {
+                flashSaleAdapter.updateData(new ArrayList<>(flashSaleList));
+            }
+            if (newProductAdapter != null) {
+                newProductAdapter.updateData(new ArrayList<>(newProductList));
+            }
+        });
     }
 
     private void fetchBlogs() {
@@ -441,9 +462,14 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     @Override
     public void onFavoriteClick(Product product) {
-        product.setFavorite(!product.isFavorite());
-        newProductAdapter.notifyDataSetChanged();
-        if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
+        WishlistManager.toggle(requireContext(), product, success -> {
+            if (success && isAdded()) {
+                newProductAdapter.notifyDataSetChanged();
+                if (flashSaleAdapter != null) {
+                    flashSaleAdapter.notifyDataSetChanged();
+                }
+            }
+        });
     }
 
     @Override

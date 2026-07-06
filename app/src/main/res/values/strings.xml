@@ -162,10 +162,17 @@
 
     <string name="order_detail_placeholder">Chi tiết đơn hàng</string>
     <string name="order_detail_with_id">Chi tiết đơn hàng\nMã đơn: %1$s</string>
+    <string name="order_ask_product">Hỏi về SP</string>
+    <string name="chat_product_inquiry_message">Tôi muốn hỏi về sản phẩm %1$s%2$s trong đơn %3$s</string>
+    <string name="chat_product_inquiry_variant"> (%1$s)</string>
+    <string name="chat_order_inquiry_message">Tôi cần hỗ trợ về đơn hàng %1$s</string>
 
-    <string name="seller_inbox_title">Hộp thư người bán</string>
-    <string name="seller_inbox_empty">Chưa có cuộc trò chuyện nào cần hỗ trợ.</string>
+    <string name="seller_inbox_title">Hộp thư hỗ trợ khách</string>
+    <string name="seller_inbox_empty">Chưa có cuộc trò chuyện nào cần hỗ trợ.\nKhách cần bấm \"Chat với người bán\" trong màn chat trước.</string>
     <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
+    <string name="profile_seller_inbox">Hộp thư hỗ trợ khách</string>
+    <string name="profile_staff_inbox_card_title">Hộp thư hỗ trợ khách</string>
+    <string name="profile_staff_inbox_card_subtitle">Xem và trả lời tin nhắn từ khách hàng</string>
     <string name="seller_reply_hint">Nhập tin nhắn trả lời…</string>
     <string name="conversation_buyer_fallback">Khách hàng</string>
 
@@ -218,8 +225,15 @@
     <string name="nav_cart">Giỏ hàng</string>
     <string name="nav_notifications">Thông báo</string>
     <string name="notifications_empty">Chưa có thông báo nào</string>
+    <string name="notifications_empty_title">Không có thông báo</string>
     <string name="notifications_login_required">Đăng nhập để xem thông báo</string>
     <string name="notifications_load_error">Không thể tải thông báo</string>
+    <string name="notifications_mark_all_read">Đánh dấu tất cả đã đọc</string>
+    <string name="notifications_all_read_toast">Đã đánh dấu tất cả là đã đọc</string>
+    <string name="notifications_deleted">Đã xóa thông báo</string>
+    <string name="notifications_group_today">Hôm nay</string>
+    <string name="notifications_group_yesterday">Hôm qua</string>
+    <string name="notifications_group_earlier">Trước đó</string>
     <string name="notification_title_order">Đơn hàng đang được xử lý</string>
     <string name="notification_body_order">Đơn hàng #HU1024 của bạn đã được xác nhận và đang chuẩn bị giao.</string>
     <string name="notification_title_promo">Ưu đãi tuần này</string>

@@ -86,6 +86,7 @@
         <activity android:name="com.example.healthup.OrderDetailActivity" />
         <activity
             android:name="com.example.healthup.ChatActivity"
+            android:theme="@style/Theme.HealthUp"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.SellerChatListActivity" />
         <activity android:name="com.example.healthup.AddressFormActivity" />

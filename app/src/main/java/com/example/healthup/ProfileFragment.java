@@ -19,8 +19,10 @@ import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.healthup.util.StaffRoleHelper;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.Source;
 
 import java.text.NumberFormat;
 import java.util.Locale;
@@ -39,6 +41,8 @@ public class ProfileFragment extends Fragment {
 
     private ImageView imgAvatar;
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
+    private View rowSellerInbox;
+    private View cardStaffInbox;
     private TextView tvName, tvTier, tvSpent, tvProgressHint;
     private ProgressBar progressTichLuy;
 
@@ -52,6 +56,8 @@ public class ProfileFragment extends Fragment {
         groupLoggedOut = view.findViewById(R.id.group_logged_out);
         groupLoggedIn = view.findViewById(R.id.group_logged_in);
         cardTichLuy = view.findViewById(R.id.card_tich_luy);
+        rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
+        cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
         tvName = view.findViewById(R.id.tv_name);
         tvTier = view.findViewById(R.id.tv_tier);
         tvSpent = view.findViewById(R.id.tv_spent);
@@ -94,7 +100,7 @@ public class ProfileFragment extends Fragment {
         View view = getView();
         if (view != null) {
             updateAuthUi(view);
-            loadUserData();
+            loadUserData(true);
         }
     }
 
@@ -134,8 +140,8 @@ public class ProfileFragment extends Fragment {
             btnLogout.setOnClickListener(v -> {
                 mAuth.signOut();
                 Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show();
-                startActivity(new Intent(requireContext(), LoginActivity.class));
-                requireActivity().finish();
+                updateAuthUi(view);
+                loadUserData();
             });
         }
 
@@ -170,6 +176,17 @@ public class ProfileFragment extends Fragment {
             chatRow.setOnClickListener(v ->
                     startActivity(ChatActivity.buyerIntent(requireContext())));
         }
+
+        if (rowSellerInbox != null) {
+            rowSellerInbox.setOnClickListener(v -> openSellerInbox());
+        }
+        if (cardStaffInbox != null) {
+            cardStaffInbox.setOnClickListener(v -> openSellerInbox());
+        }
+    }
+
+    private void openSellerInbox() {
+        startActivity(new Intent(requireContext(), SellerChatListActivity.class));
     }
 
     private View findRowByText(View root, String text) {
@@ -203,35 +220,34 @@ public class ProfileFragment extends Fragment {
     }
 
     private void loadUserData() {
+        loadUserData(false);
+    }
+
+    private void loadUserData(boolean preferServer) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         View view = getView();
         if (view == null) return;
 
-        // Bật hiển thị các nhóm UI (mặc định cho demo nếu chưa login)
         groupLoggedOut.setVisibility(currentUser == null ? View.VISIBLE : View.GONE);
         groupLoggedIn.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
         cardTichLuy.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
-        
+
         View btnLogout = view.findViewById(R.id.btn_logout);
         if (btnLogout != null) {
             btnLogout.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
         }
 
         if (currentUser == null) {
-            // Demo mode: Hiển thị tên giả định nếu chưa login để test giao diện
-            tvName.setText("lexuanmai96");
-            tvTier.setText("Thành viên");
-            groupLoggedIn.setVisibility(View.VISIBLE);
-            groupLoggedOut.setVisibility(View.GONE);
-            cardTichLuy.setVisibility(View.VISIBLE);
+            updateStaffInboxVisibility(false);
             return;
         }
 
         db.collection(COLLECTION_USERS)
                 .document(currentUser.getUid())
-                .get()
+                .get(preferServer ? Source.SERVER : Source.DEFAULT)
                 .addOnSuccessListener(this::bindUserToUi)
                 .addOnFailureListener(e -> {
+                    updateStaffInboxVisibility(false);
                     if (isAdded()) {
                         Toast.makeText(requireContext(),
                                 "Lỗi tải dữ liệu: " + e.getMessage(),
@@ -242,6 +258,7 @@ public class ProfileFragment extends Fragment {
 
     private void bindUserToUi(DocumentSnapshot document) {
         if (!document.exists()) {
+            updateStaffInboxVisibility(false);
             return;
         }
 
@@ -279,6 +296,18 @@ public class ProfileFragment extends Fragment {
                     .placeholder(R.drawable.ic_account_default)
                     .circleCrop()
                     .into(imgAvatar);
+        }
+
+        updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
+    }
+
+    private void updateStaffInboxVisibility(boolean visible) {
+        int visibility = visible ? View.VISIBLE : View.GONE;
+        if (rowSellerInbox != null) {
+            rowSellerInbox.setVisibility(visibility);
+        }
+        if (cardStaffInbox != null) {
+            cardStaffInbox.setVisibility(visibility);
         }
     }
 

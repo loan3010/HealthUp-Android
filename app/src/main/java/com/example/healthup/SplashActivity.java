@@ -8,8 +8,6 @@ import android.os.Looper;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.splashscreen.SplashScreen;
 
-import com.google.firebase.auth.FirebaseAuth;
-
 public class SplashActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -20,10 +18,7 @@ public class SplashActivity extends AppCompatActivity {
         FirebaseManager.getInstance().seedProductsIfEmpty();
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Class<?> destination = FirebaseAuth.getInstance().getCurrentUser() == null
-                    ? LoginActivity.class
-                    : MainActivity.class;
-            startActivity(new Intent(SplashActivity.this, destination));
+            startActivity(new Intent(SplashActivity.this, MainActivity.class));
             finish();
         }, 1500);
     }

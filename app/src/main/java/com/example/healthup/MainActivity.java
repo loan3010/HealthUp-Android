@@ -5,11 +5,15 @@ import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
@@ -32,6 +36,7 @@ public class MainActivity extends AppCompatActivity {
             );
 
     private BottomNavigationView navView;
+    private FloatingActionButton fabChat;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
 
@@ -42,28 +47,35 @@ public class MainActivity extends AppCompatActivity {
 
         navView = findViewById(R.id.bottom_navigation);
 
-        FloatingActionButton fabChat = findViewById(R.id.fabChat);
+        fabChat = findViewById(R.id.fabChat);
         if (fabChat != null) {
             fabChat.setOnClickListener(v ->
                     startActivity(ChatActivity.buyerIntent(MainActivity.this)));
         }
 
+        applySystemBarInsets();
+
         navView.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 loadFragment(new HomeFragment());
+                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_category) {
                 loadFragment(new ProductListFragment());
+                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_cart) {
                 loadFragment(new CartFragment());
+                updateFabVisibility(true);
                 return true;
             } else if (id == R.id.nav_notifications) {
                 loadFragment(new NotificationsFragment());
+                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_profile) {
                 loadFragment(new ProfileFragment());
+                updateFabVisibility(false);
                 return true;
             }
             return false;
@@ -141,14 +153,44 @@ public class MainActivity extends AppCompatActivity {
                 args.putInt("initial_tab", 1);
             } else if ("faq".equals(target)) {
                 loadFragment(new FAQFragment());
+                updateFabVisibility(false);
+                return;
+            } else if ("policy".equals(target)) {
+                loadFragment(new PolicyFragment());
+                updateFabVisibility(false);
                 return;
             }
 
             fragment.setArguments(args);
             loadFragment(fragment);
+            updateFabVisibility(false);
         } else {
             loadFragment(new HomeFragment());
+            updateFabVisibility(false);
         }
+    }
+
+    private void applySystemBarInsets() {
+        View root = findViewById(R.id.main_root);
+        ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            navView.setPadding(0, 0, 0, systemBars.bottom);
+            if (fabChat != null) {
+                ViewGroup.MarginLayoutParams params =
+                        (ViewGroup.MarginLayoutParams) fabChat.getLayoutParams();
+                params.bottomMargin = 16 + systemBars.bottom;
+                fabChat.setLayoutParams(params);
+            }
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(root);
+    }
+
+    private void updateFabVisibility(boolean hideOnCart) {
+        if (fabChat == null) {
+            return;
+        }
+        fabChat.setVisibility(hideOnCart ? View.GONE : View.VISIBLE);
     }
 
     private void loadFragment(Fragment fragment) {

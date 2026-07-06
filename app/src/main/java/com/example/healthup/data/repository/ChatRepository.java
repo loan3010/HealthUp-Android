@@ -14,6 +14,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.SetOptions;
+import com.google.firebase.firestore.Source;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -103,15 +104,46 @@ public class ChatRepository {
 
     public void fetchUserName(@NonNull String uid, @NonNull NameCallback callback) {
         firestore.collection("users").document(uid).get()
-                .addOnSuccessListener(doc ->
-                        callback.onName(doc.exists() ? doc.getString("fullName") : null))
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) {
+                        callback.onName(null);
+                        return;
+                    }
+                    String name = doc.getString("fullName");
+                    if (name == null || name.trim().isEmpty()) {
+                        name = doc.getString("name");
+                    }
+                    if (name == null || name.trim().isEmpty()) {
+                        name = doc.getString("displayName");
+                    }
+                    callback.onName(name);
+                })
                 .addOnFailureListener(e -> callback.onName(null));
     }
 
     public void fetchUserRole(@NonNull String uid, @NonNull RoleCallback callback) {
-        firestore.collection("users").document(uid).get()
-                .addOnSuccessListener(doc ->
-                        callback.onRole(doc.exists() ? doc.getString("role") : null))
+        fetchUserRole(uid, Source.DEFAULT, callback);
+    }
+
+    /** Prefer server when gating staff-only screens so role changes apply immediately. */
+    public void fetchUserRoleFromServer(@NonNull String uid, @NonNull RoleCallback callback) {
+        fetchUserRole(uid, Source.SERVER, callback);
+    }
+
+    private void fetchUserRole(@NonNull String uid, @NonNull Source source,
+                               @NonNull RoleCallback callback) {
+        firestore.collection("users").document(uid).get(source)
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) {
+                        callback.onRole(null);
+                        return;
+                    }
+                    String role = doc.getString("role");
+                    if (role == null || role.trim().isEmpty()) {
+                        role = doc.getString("userRole");
+                    }
+                    callback.onRole(role);
+                })
                 .addOnFailureListener(e -> callback.onRole(null));
     }
 

@@ -58,6 +58,8 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
+        binding.rowChat.setOnClickListener(v ->
+                OrderChatHelper.openOrderChat(this, order, binding.tvOrderCode.getText().toString()));
     }
 
     private void populateUI() {
@@ -166,6 +168,10 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             } else {
                 pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
             }
+
+            pBinding.btnAskProduct.setOnClickListener(v ->
+                    OrderChatHelper.openProductChat(
+                            this, order, binding.tvOrderCode.getText().toString(), item));
 
             binding.lnItemsContainer.addView(pBinding.getRoot());
         }

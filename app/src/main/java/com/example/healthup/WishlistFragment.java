@@ -125,26 +125,23 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
     private void fetchWishlist() {
-        FirestoreManager.getInstance().getProductsCollection()
-                .whereEqualTo("favorite", true)
-                .get() // Chuyển sang get() thay vì addSnapshotListener để tránh auto-revert khi lỗi
-                .addOnSuccessListener(value -> {
-                    if (value == null) return;
+        String uid = WishlistManager.currentUserId();
+        if (uid == null) {
+            wishlist.clear();
+            updateUI();
+            applyFilters();
+            return;
+        }
 
-                    wishlist.clear();
-                    for (DocumentSnapshot doc : value.getDocuments()) {
-                        Product product = doc.toObject(Product.class);
-                        if (product != null) {
-                            product.setId(doc.getId());
-                            wishlist.add(product);
-                        }
-                    }
-                    updateUI();
-                    applyFilters();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(getContext(), "Không thể tải danh sách yêu thích", Toast.LENGTH_SHORT).show();
-                });
+        WishlistManager.loadWishlistProducts(uid, products -> {
+            if (!isAdded()) {
+                return;
+            }
+            wishlist.clear();
+            wishlist.addAll(products);
+            updateUI();
+            applyFilters();
+        });
     }
 
 
@@ -259,12 +256,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
         for (Product p : toRemove) {
-            java.util.Map<String, Object> updates = new java.util.HashMap<>();
-            updates.put("favorite", false);
-
-
-            FirestoreManager.getInstance().getProductsCollection().document(p.getId())
-                    .update(updates)
+            String uid = WishlistManager.currentUserId();
+            if (uid == null) {
+                continue;
+            }
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users").document(uid)
+                    .collection("wishlist").document(p.getId())
+                    .delete()
                     .addOnSuccessListener(aVoid -> {
                         successCount[0]++;
                         if (successCount[0] + failCount[0] == total) {
@@ -273,13 +272,11 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     })
                     .addOnFailureListener(e -> {
                         failCount[0]++;
-                        // Nếu lỗi (do Rules), chúng ta nên nạp lại dữ liệu để đảm bảo UI đồng bộ với Server
                         if (successCount[0] + failCount[0] == total) {
                             handleDeleteResult(successCount[0], failCount[0]);
                         }
                     });
 
-            // Tạm thời xóa khỏi danh sách local để tạo cảm giác mượt mà (Optimistic UI)
             wishlist.remove(p);
         }
 
@@ -405,52 +402,13 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     public void onFavoriteClick(Product product) {
         if (isEditMode) return;
 
-
-        // FIX: thêm kiểm tra đăng nhập TRƯỚC khi gọi Firestore, tránh gửi request chắc chắn
-        // bị PERMISSION_DENIED (theo Rules, chỉ user đã đăng nhập mới được sửa field "favorite")
-        // và tránh hiện thông báo lỗi Firestore khó hiểu cho người dùng.
-        com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (currentUser == null) {
-            Toast.makeText(getContext(), "Vui lòng đăng nhập để sử dụng chức năng yêu thích", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-
-        boolean currentFavorite = product.isFavorite();
-
-        // 1. Cập nhật UI ngay lập tức để người dùng thấy sản phẩm biến mất
-        product.setFavorite(false);
-        wishlist.remove(product);
-        applyFilters();
-        updateUI();
-
-
-        // 2. Gửi yêu cầu lên Firestore bằng Map
-        java.util.Map<String, Object> updates = new java.util.HashMap<>();
-        updates.put("favorite", false);
-
-
-        FirestoreManager.getInstance().getProductsCollection()
-                .document(product.getId())
-                .update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    Toast.makeText(getContext(), "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    // 3. Chỉ khi thất bại hoàn toàn mới hiện lại sản phẩm (Rollback)
-                    product.setFavorite(true);
-                    if (!wishlist.contains(product)) {
-                        wishlist.add(product);
-                    }
-                    applyFilters();
-                    updateUI();
-
-                    String errorMsg = e.getMessage();
-                    if (errorMsg != null && errorMsg.contains("PERMISSION_DENIED")) {
-                        Toast.makeText(getContext(), "Lỗi quyền truy cập: Bạn cần cập nhật Firestore Rules để cho phép sửa sản phẩm.", Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(getContext(), "Không thể cập nhật: " + errorMsg, Toast.LENGTH_SHORT).show();
-                    }
-                });
+        WishlistManager.toggle(requireContext(), product, success -> {
+            if (!isAdded() || !success || product.isFavorite()) {
+                return;
+            }
+            wishlist.remove(product);
+            applyFilters();
+            updateUI();
+        });
     }
 }

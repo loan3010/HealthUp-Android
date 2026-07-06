@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -28,6 +29,7 @@ public class ChatStaffFragment extends Fragment implements ChatStaffAdapter.List
     private SellerChatListViewModel viewModel;
     private ChatStaffAdapter adapter;
     private View emptyView;
+    private View loadingView;
 
     @Nullable
     @Override
@@ -44,6 +46,7 @@ public class ChatStaffFragment extends Fragment implements ChatStaffAdapter.List
 
         RecyclerView recyclerView = view.findViewById(R.id.sellerInboxRecyclerView);
         emptyView = view.findViewById(R.id.sellerInboxEmpty);
+        loadingView = view.findViewById(R.id.sellerInboxLoading);
 
         recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new ChatStaffAdapter(this);
@@ -51,10 +54,39 @@ public class ChatStaffFragment extends Fragment implements ChatStaffAdapter.List
 
         view.findViewById(R.id.sellerInboxBack).setOnClickListener(v -> requireActivity().finish());
 
+        viewModel.getLoading().observe(getViewLifecycleOwner(), loading -> {
+            if (loadingView != null) {
+                loadingView.setVisibility(Boolean.TRUE.equals(loading) ? View.VISIBLE : View.GONE);
+            }
+        });
+
         viewModel.getConversations().observe(getViewLifecycleOwner(), conversations -> {
             adapter.submit(conversations);
             boolean empty = conversations == null || conversations.isEmpty();
-            emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+            if (emptyView != null && !Boolean.TRUE.equals(viewModel.getLoading().getValue())) {
+                emptyView.setVisibility(empty ? View.VISIBLE : View.GONE);
+            }
+        });
+
+        viewModel.getLoadError().observe(getViewLifecycleOwner(), event -> {
+            if (event == null) {
+                return;
+            }
+            String message = event.getContentIfNotHandled();
+            if (message != null) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        viewModel.getAccessDenied().observe(getViewLifecycleOwner(), event -> {
+            if (event == null) {
+                return;
+            }
+            String message = event.getContentIfNotHandled();
+            if (message != null) {
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                requireActivity().finish();
+            }
         });
 
         viewModel.start();

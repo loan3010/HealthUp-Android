@@ -77,7 +77,7 @@ public class LoginActivity extends AppCompatActivity {
         setupSocialAuth();
         setupInputBehavior();
         setupActions();
-        setupDebugEntryPoints();
+        setupLegalLinks();
         updateLoginButtonState();
     }
 
@@ -135,18 +135,20 @@ public class LoginActivity extends AppCompatActivity {
         facebookButton.setOnClickListener(v -> socialAuthHelper.signInWithFacebook());
     }
 
-    private void setupDebugEntryPoints() {
-        if (!BuildConfig.DEBUG) {
-            return;
+    private void setupLegalLinks() {
+        View.OnClickListener openPolicy = v -> {
+            Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+            intent.putExtra("navigate_to", "policy");
+            startActivity(intent);
+        };
+        TextView termsLink = findViewById(R.id.termsLink);
+        TextView privacyLink = findViewById(R.id.privacyLink);
+        if (termsLink != null) {
+            termsLink.setOnClickListener(openPolicy);
         }
-        View debugTestLinks = findViewById(R.id.debugTestLinks);
-        TextView debugAboutLink = findViewById(R.id.debugAboutLink);
-        TextView debugChatLink = findViewById(R.id.debugChatLink);
-        debugTestLinks.setVisibility(View.VISIBLE);
-        debugAboutLink.setOnClickListener(v ->
-                startActivity(new Intent(LoginActivity.this, AboutActivity.class)));
-        debugChatLink.setOnClickListener(v ->
-                startActivity(ChatActivity.buyerIntent(LoginActivity.this)));
+        if (privacyLink != null) {
+            privacyLink.setOnClickListener(openPolicy);
+        }
     }
 
     private void setupInputBehavior() {
