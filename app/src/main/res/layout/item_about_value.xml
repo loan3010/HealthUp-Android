@@ -1,46 +1,46 @@
-<?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:layout_margin="6dp"
-    android:background="@drawable/bg_about_card_white"
-    android:orientation="vertical"
-    android:padding="16dp">
-
-    <FrameLayout
-        android:layout_width="40dp"
-        android:layout_height="40dp"
-        android:background="@drawable/bg_about_icon_circle">
-
-        <ImageView
-            android:id="@+id/valueIcon"
-            android:layout_width="22dp"
-            android:layout_height="22dp"
-            android:layout_gravity="center"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_leaf" />
-
-    </FrameLayout>
-
-    <TextView
-        android:id="@+id/valueTitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:textColor="@color/text_primary"
-        android:textSize="15sp"
-        android:textStyle="bold"
-        tools:text="Tự nhiên" />
-
-    <TextView
-        android:id="@+id/valueDescription"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
-        android:lineSpacingExtra="2dp"
-        android:textColor="@color/text_secondary"
-        android:textSize="13sp"
-        tools:text="Thành phần 100% từ nguồn gốc thực vật sạch." />
-
-</LinearLayout>
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="6dp"
+    android:background="@drawable/bg_about_card_white"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <FrameLayout
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_about_icon_circle">
+
+        <ImageView
+            android:id="@+id/valueIcon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:layout_gravity="center"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_leaf" />
+
+    </FrameLayout>
+
+    <TextView
+        android:id="@+id/valueTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:textColor="@color/text_primary"
+        android:textSize="15sp"
+        android:textStyle="bold"
+        tools:text="Tự nhiên" />
+
+    <TextView
+        android:id="@+id/valueDescription"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:lineSpacingExtra="2dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp"
+        tools:text="Thành phần 100% từ nguồn gốc thực vật sạch." />
+
+</LinearLayout>
