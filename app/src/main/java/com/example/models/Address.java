@@ -1,5 +1,7 @@
 package com.example.models;
 
+import com.google.firebase.firestore.PropertyName;
+
 import java.io.Serializable;
 
 public class Address implements Serializable {
@@ -56,7 +58,10 @@ public class Address implements Serializable {
     public void setDetailAddress(String detailAddress) { this.detailAddress = detailAddress; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+    @PropertyName("default")
     public boolean isDefault() { return isDefault; }
+
+    @PropertyName("default")
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
 
     /** Backward-compatible alias used by order/history screens from tngan. */

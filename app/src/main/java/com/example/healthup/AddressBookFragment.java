@@ -101,17 +101,21 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
         db.collection("users").document(userId).collection("addresses")
                 .get()
                 .addOnSuccessListener(snapshot -> {
+                    if (!isAdded()) return;
                     addressList.clear();
                     if (!snapshot.isEmpty()) {
                         for (QueryDocumentSnapshot doc : snapshot) {
                             Address a = doc.toObject(Address.class);
-                            a.setId(doc.getId());
-                            addressList.add(a);
+                            if (a != null) {
+                                a.setId(doc.getId());
+                                addressList.add(a);
+                            }
                         }
                     }
                     renderList();
                 })
                 .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
                     Toast.makeText(getContext(), "Lỗi tải địa chỉ: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                     renderList();
                 });
@@ -139,7 +143,7 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
     private void openAddressForm(@Nullable Address address) {
         AddressFormFragment fragment = AddressFormFragment.newInstance(address);
-        requireActivity().getSupportFragmentManager()
+        getParentFragmentManager()
                 .beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)

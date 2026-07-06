@@ -7,6 +7,8 @@
         <item name="colorAccent">@color/primary</item>
         <item name="colorSecondary">@color/primary</item>
         <item name="colorControlActivated">@color/primary</item>
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/white</item>
         <item name="colorContainer">@color/navbar_active_pill_light</item>
         <item name="android:windowBackground">@color/bg_cream</item>
         <item name="android:statusBarColor">@color/bg_cream</item>

@@ -371,15 +371,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         String variantId = (variant != null) ? variant.getId() : null;
 
 
-        FirestoreManager.getInstance().getFirestore().collection("cart")
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("productId", productId)
+        com.google.firebase.firestore.CollectionReference cartRef =
+                FirestoreManager.getInstance().getFirestore()
+                        .collection("users").document(userId).collection("cart");
+
+        cartRef.whereEqualTo("productId", productId)
                 .whereEqualTo("variantId", variantId)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
                         DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        long currentQty = doc.getLong("quantity");
+                        Long currentQtyLong = doc.getLong("quantity");
+                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
                         doc.getReference().update("quantity", currentQty + quantity);
                     } else {
                         com.example.models.CartItem newItem = new com.example.models.CartItem(
@@ -391,8 +394,7 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                         } else {
                             newItem.setPrice(product.getPrice());
                         }
-                        FirestoreManager.getInstance().getFirestore().collection("cart")
-                                .add(newItem);
+                        cartRef.add(newItem);
                     }
                     Toast.makeText(getContext(), getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
                 });

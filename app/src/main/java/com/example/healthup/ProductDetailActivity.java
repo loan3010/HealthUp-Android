@@ -481,9 +481,11 @@ public class ProductDetailActivity extends AppCompatActivity {
         String productId = product.getId();
         String variantId = (selectedVariant != null) ? selectedVariant.getId() : null;
 
-        FirestoreManager.getInstance().getFirestore().collection("cart")
-                .whereEqualTo("userId", userId)
-                .whereEqualTo("productId", productId)
+        com.google.firebase.firestore.CollectionReference cartRef =
+                FirestoreManager.getInstance().getFirestore()
+                        .collection("users").document(userId).collection("cart");
+
+        cartRef.whereEqualTo("productId", productId)
                 .whereEqualTo("variantId", variantId)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
@@ -502,8 +504,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                         } else {
                             newItem.setPrice(product.getPrice());
                         }
-                        FirestoreManager.getInstance().getFirestore().collection("cart")
-                                .add(newItem);
+                        cartRef.add(newItem);
                     }
                     Toast.makeText(this, getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
                 })

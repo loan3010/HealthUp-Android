@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
                 loadFragment(new CartFragment());
                 return true;
             } else if (id == R.id.nav_notifications) {
+                loadFragment(new NotificationsFragment());
                 return true;
             } else if (id == R.id.nav_profile) {
                 loadFragment(new ProfileFragment());

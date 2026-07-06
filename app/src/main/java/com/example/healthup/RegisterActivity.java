@@ -184,9 +184,8 @@ public class RegisterActivity extends AppCompatActivity {
             field.editText.addTextChangedListener(new SimpleTextWatcher() {
                 @Override
                 public void afterTextChanged(Editable s) {
-                    if (field.hasError) {
-                        clearFieldError(field, field.editText.hasFocus());
-                        field.hasError = false;
+                    if (field.touched) {
+                        validateField(type, true);
                     }
                     updateRegisterButtonState();
                 }
@@ -197,9 +196,11 @@ public class RegisterActivity extends AppCompatActivity {
     private void setupField(FieldType type, FieldViews field) {
         field.editText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
-                field.hasError = false;
-                field.errorLayout.setVisibility(View.GONE);
-                applyInputState(field, hasFocus ? InputState.FOCUSED : InputState.DEFAULT);
+                if (field.touched) {
+                    validateField(type, true);
+                } else {
+                    applyInputState(field, InputState.FOCUSED);
+                }
                 return;
             }
 

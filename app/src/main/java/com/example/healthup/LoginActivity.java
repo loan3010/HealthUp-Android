@@ -168,15 +168,8 @@ public class LoginActivity extends AppCompatActivity {
         identifierEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
-                if (identifierHasError) {
-                    clearFieldError(
-                            identifierInputContainer,
-                            identifierLabel,
-                            identifierErrorLayout,
-                            identifierEditText.hasFocus(),
-                            true
-                    );
-                    identifierHasError = false;
+                if (identifierTouched) {
+                    validateIdentifierField(true);
                 }
                 updateLoginButtonState();
             }
@@ -185,15 +178,8 @@ public class LoginActivity extends AppCompatActivity {
         passwordEditText.addTextChangedListener(new SimpleTextWatcher() {
             @Override
             public void afterTextChanged(Editable s) {
-                if (passwordHasError) {
-                    clearFieldError(
-                            passwordInputContainer,
-                            passwordLabel,
-                            passwordErrorLayout,
-                            passwordEditText.hasFocus(),
-                            false
-                    );
-                    passwordHasError = false;
+                if (passwordTouched) {
+                    validatePasswordField(true);
                 }
                 updateLoginButtonState();
             }
@@ -210,12 +196,18 @@ public class LoginActivity extends AppCompatActivity {
         editText.setOnFocusChangeListener((v, hasFocus) -> {
             if (hasFocus) {
                 if (isIdentifier) {
-                    identifierHasError = false;
+                    if (identifierTouched) {
+                        validateIdentifierField(true);
+                    } else {
+                        applyInputState(container, label, InputState.FOCUSED, true);
+                    }
                 } else {
-                    passwordHasError = false;
+                    if (passwordTouched) {
+                        validatePasswordField(true);
+                    } else {
+                        applyInputState(container, label, InputState.FOCUSED, false);
+                    }
                 }
-                errorLayout.setVisibility(View.GONE);
-                applyInputState(container, label, InputState.FOCUSED, isIdentifier);
                 return;
             }
 

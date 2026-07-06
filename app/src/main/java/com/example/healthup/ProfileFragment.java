@@ -64,10 +64,20 @@ public class ProfileFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
 
         setupNavigation(view);
-        updateAuthUi();
+        updateAuthUi(view);
         loadUserData();
 
         return view;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        View view = getView();
+        if (view != null) {
+            updateAuthUi(view);
+            loadUserData();
+        }
     }
 
     private void setupNavigation(View view) {
@@ -153,13 +163,13 @@ public class ProfileFragment extends Fragment {
         return null;
     }
 
-    private void updateAuthUi() {
+    private void updateAuthUi(View view) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         boolean loggedIn = currentUser != null;
         groupLoggedOut.setVisibility(loggedIn ? View.GONE : View.VISIBLE);
         groupLoggedIn.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
         cardTichLuy.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
-        View btnLogout = requireView().findViewById(R.id.btn_logout);
+        View btnLogout = view.findViewById(R.id.btn_logout);
         if (btnLogout != null) {
             btnLogout.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
         }
