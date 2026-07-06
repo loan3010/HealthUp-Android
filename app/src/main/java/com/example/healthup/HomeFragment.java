@@ -176,6 +176,27 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvBlogs.setAdapter(blogAdapter);
 
         view.findViewById(R.id.tvViewAllNew).setOnClickListener(v -> navigateToCategory(null));
+
+        setupChipListeners(view);
+    }
+
+    private void setupChipListeners(View view) {
+        int[] chipIds = {
+                R.id.chipHatDinhDuong, R.id.chipGranola, R.id.chipTraiCaySay,
+                R.id.chipDoAnVat, R.id.chipTraThaoMoc, R.id.chipCombo
+        };
+        String[] categoryNames = {
+                "Hạt dinh dưỡng", "Granola", "Trái cây sấy",
+                "Đồ ăn vặt", "Trà thảo mộc", "Combo"
+        };
+
+        for (int i = 0; i < chipIds.length; i++) {
+            final String categoryName = categoryNames[i];
+            View chip = view.findViewById(chipIds[i]);
+            if (chip != null) {
+                chip.setOnClickListener(v -> navigateToCategory(categoryName));
+            }
+        }
     }
 
     private void setupSearch(View view) {
@@ -214,21 +235,34 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     }
 
     private void fetchCategories() {
+        // Ưu tiên tính nhất quán của thương hiệu HealthUp với 6 danh mục chính
+        List<String> brandCategories = Arrays.asList("Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo");
+        categoryList.clear();
+        for (int i = 0; i < brandCategories.size(); i++) {
+            categoryList.add(new Category(String.valueOf(i + 1), brandCategories.get(i), "fruit.png"));
+        }
+        categoryAdapter.notifyDataSetChanged();
+
+        // Cập nhật icon từ Firestore nếu có dữ liệu phù hợp
         FirestoreManager.getInstance().getFirestore().collection("categories")
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    categoryList.clear();
+                    boolean hasChanges = false;
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                        Category category = doc.toObject(Category.class);
-                        if (category != null) {
-                            category.setId(doc.getId());
-                            categoryList.add(category);
+                        String name = doc.getString("name");
+                        String iconUrl = doc.getString("iconUrl");
+                        if (name != null && iconUrl != null) {
+                            for (Category cat : categoryList) {
+                                if (cat.getName().equalsIgnoreCase(name)) {
+                                    cat.setIconUrl(iconUrl);
+                                    hasChanges = true;
+                                }
+                            }
                         }
                     }
-                    if (categoryList.isEmpty()) {
-                        categoryList.addAll(Category.getDummyCategories());
+                    if (hasChanges) {
+                        categoryAdapter.notifyDataSetChanged();
                     }
-                    categoryAdapter.notifyDataSetChanged();
                 });
     }
 

@@ -323,40 +323,60 @@
                 android:orientation="horizontal">
 
                 <TextView
+                    android:id="@+id/chipHatDinhDuong"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Hạt dinh dưỡng"
+                    android:backgroundTint="@color/primary_tint_5" />
+
+                <TextView
                     android:id="@+id/chipGranola"
                     style="@style/Widget.HealthUp.Badge.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
                     android:text="Granola"
-                    android:backgroundTint="@color/primary_tint_5" />
-
-                <TextView
-                    android:id="@+id/chipHatDieu"
-                    style="@style/Widget.HealthUp.Badge.Chip"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="@dimen/spacing_s"
-                    android:text="Hạt điều"
                     android:backgroundTint="@color/neutral_white"
                     android:textColor="@color/neutral_black" />
 
                 <TextView
-                    android:id="@+id/chipRongBien"
+                    android:id="@+id/chipTraiCaySay"
                     style="@style/Widget.HealthUp.Badge.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/spacing_s"
-                    android:text="Snack rong biển"
+                    android:text="Trái cây sấy"
                     android:backgroundTint="@color/neutral_white"
                     android:textColor="@color/neutral_black" />
 
                 <TextView
-                    android:id="@+id/chipYenMach"
+                    android:id="@+id/chipDoAnVat"
                     style="@style/Widget.HealthUp.Badge.Chip"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="@dimen/spacing_s"
-                    android:text="Yến mạch"
+                    android:text="Đồ ăn vặt"
+                    android:backgroundTint="@color/neutral_white"
+                    android:textColor="@color/neutral_black" />
+
+                <TextView
+                    android:id="@+id/chipTraThaoMoc"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:text="Trà thảo mộc"
+                    android:backgroundTint="@color/neutral_white"
+                    android:textColor="@color/neutral_black" />
+
+                <TextView
+                    android:id="@+id/chipCombo"
+                    style="@style/Widget.HealthUp.Badge.Chip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="@dimen/spacing_s"
+                    android:text="Combo"
                     android:backgroundTint="@color/neutral_white"
                     android:textColor="@color/neutral_black" />
             </LinearLayout>
