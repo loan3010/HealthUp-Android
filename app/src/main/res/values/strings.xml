@@ -1,3 +1,236 @@
 <resources>
     <string name="app_name">HealthUp</string>
+    <string name="login_title">Chào mừng trở lại</string>
+    <string name="login_subtitle">Vui lòng đăng nhập để tiếp tục HealthUp</string>
+    <string name="login_identifier_label">Số điện thoại hoặc Email</string>
+    <string name="login_identifier_hint">Nhập số điện thoại hoặc email</string>
+    <string name="passwork_hint">Nhập mật khẩu</string>
+    <string name="password_label">Mật khẩu</string>
+    <string name="forgot_password">Quên mật khẩu?</string>
+    <string name="login_button">Đăng nhập</string>
+    <string name="login_or_continue">HOẶC TIẾP TỤC VỚI</string>
+    <string name="google_label">Google</string>
+    <string name="facebook_label">Facebook</string>
+    <string name="login_no_account">Bạn chưa có tài khoản?</string>
+    <string name="register_now">Đăng ký ngay</string>
+    <string name="terms_of_use">Điều khoản sử dụng</string>
+    <string name="privacy_policy">Chính sách bảo mật</string>
+    <string name="copyright_text">© 2026 HealthUp. All rights reserved.</string>
+    <string name="login_identifier_required">Vui lòng nhập email hoặc số điện thoại</string>
+    <string name="login_phone_length_error">Số điện thoại phải có 10 chữ số</string>
+    <string name="login_phone_invalid_error">Số điện thoại chỉ được chứa chữ số</string>
+    <string name="login_email_invalid_error">Email không hợp lệ</string>
+    <string name="login_identifier_invalid">Email hoặc số điện thoại không hợp lệ</string>
+    <string name="login_password_required">Vui lòng nhập mật khẩu</string>
+    <string name="login_password_short">Mật khẩu phải có ít nhất 8 ký tự</string>
+    <string name="login_credentials_wrong">Số điện thoại hoặc mật khẩu không đúng. Vui lòng nhập lại!</string>
+    <string name="login_success">Đăng nhập thành công</string>
+    <string name="login_phone_not_registered">Số điện thoại chưa được đăng ký</string>
+    <string name="login_failed_generic">Đăng nhập thất bại, vui lòng thử lại</string>
+    <string name="splash_tagline">Your health, your daily companion.</string>
+
+    <string name="register_title">Tạo tài khoản</string>
+    <string name="register_subtitle">Đăng ký để bắt đầu hành trình sức khỏe cùng HealthUp</string>
+    <string name="register_full_name_label">Họ và tên</string>
+    <string name="register_full_name_hint">Nhập họ và tên</string>
+    <string name="register_phone_label">Số điện thoại</string>
+    <string name="register_phone_hint">Nhập số điện thoại</string>
+    <string name="register_email_label">Email (Tùy chọn)</string>
+    <string name="register_email_hint">Nhập email</string>
+    <string name="register_confirm_password_label">Xác nhận mật khẩu</string>
+    <string name="register_confirm_password_hint">Nhập lại mật khẩu</string>
+    <string name="register_button">Đăng ký</string>
+    <string name="register_has_account">Đã có tài khoản?</string>
+    <string name="register_login_link">Đăng nhập</string>
+    <string name="register_success">Đăng ký thành công</string>
+
+    <string name="register_full_name_required">Vui lòng nhập họ và tên</string>
+    <string name="register_phone_required">Vui lòng nhập số điện thoại</string>
+    <string name="register_phone_length_error">Số điện thoại phải có 10 chữ số</string>
+    <string name="register_phone_invalid_error">Số điện thoại chỉ được chứa chữ số</string>
+    <string name="register_email_invalid_error">Email không đúng định dạng</string>
+    <string name="register_password_required">Vui lòng nhập mật khẩu</string>
+    <string name="register_password_short">Mật khẩu phải có ít nhất 8 ký tự</string>
+    <string name="register_password_lowercase">Mật khẩu phải có ít nhất một chữ thường</string>
+    <string name="register_password_uppercase">Mật khẩu phải có ít nhất một chữ hoa</string>
+    <string name="register_password_number">Mật khẩu phải có ít nhất một chữ số</string>
+    <string name="register_confirm_password_required">Vui lòng xác nhận mật khẩu</string>
+    <string name="register_confirm_password_mismatch">Mật khẩu chưa trùng khớp</string>
+
+    <string name="register_phone_exists">Số điện thoại đã tồn tại</string>
+    <string name="register_email_exists">Email đã được sử dụng</string>
+    <string name="register_account_exists">Tài khoản đã tồn tại</string>
+    <string name="register_error_generic">Có lỗi xảy ra. Vui lòng thử lại.</string>
+    <string name="register_error_network">Không thể kết nối máy chủ</string>
+    <string name="register_error_timeout">Kết nối quá lâu. Vui lòng thử lại.</string>
+
+    <string name="otp_back">← Quay lại</string>
+    <string name="otp_title">Xác minh OTP</string>
+    <string name="otp_subtitle">Mã xác minh đã gửi đến %1$s</string>
+    <string name="otp_code_label">Mã OTP</string>
+    <string name="otp_code_hint">Nhập 6 chữ số</string>
+    <string name="otp_verify_button">Xác nhận</string>
+    <string name="otp_resend">Gửi lại mã</string>
+    <string name="otp_resend_countdown">Gửi lại sau %1$d giây</string>
+    <string name="otp_sent">Mã OTP đã được gửi</string>
+    <string name="otp_send_failed">Không thể gửi mã OTP. Vui lòng thử lại.</string>
+    <string name="otp_invalid_length">Mã OTP phải có 6 chữ số</string>
+    <string name="otp_invalid_code">Mã OTP không đúng. Vui lòng thử lại.</string>
+    <string name="otp_forgot_wrong">Mã OTP chưa đúng. Vui lòng nhập lại</string>
+    <string name="otp_forgot_expired">Mã OTP đã hết hạn</string>
+    <string name="otp_debug_label">Mã OTP: %1$s</string>
+
+    <string name="forgot_password_title">Quên mật khẩu</string>
+    <string name="forgot_password_subtitle">Nhập số điện thoại đã đăng ký để nhận mã OTP đặt lại mật khẩu</string>
+    <string name="forgot_password_send_otp">Gửi mã OTP ></string>
+    <string name="forgot_password_support_prefix">Bạn gặp sự cố?</string>
+    <string name="forgot_password_support_link">Liên hệ hỗ trợ</string>
+    <string name="forgot_password_phone_not_registered">Số điện thoại chưa được đăng ký</string>
+    <string name="forgot_password_error_generic">Có lỗi xảy ra. Vui lòng thử lại.</string>
+
+    <string name="reset_password_title">Đặt lại mật khẩu</string>
+    <string name="reset_password_subtitle">Tạo mật khẩu mới cho tài khoản của bạn</string>
+    <string name="reset_password_new_label">Mật khẩu mới</string>
+    <string name="reset_password_button">Cập nhật mật khẩu</string>
+    <string name="reset_password_success">Đặt lại mật khẩu thành công</string>
+    <string name="reset_password_session_invalid">Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thử lại.</string>
+    <string name="reset_password_error_generic">Không thể cập nhật mật khẩu. Vui lòng thử lại.</string>
+    <string name="reset_password_provider_disabled">Không thể đổi mật khẩu. Vui lòng bật đăng nhập Email/Password trong Firebase Console.</string>
+    <string name="reset_password_function_not_deployed">Chức năng đặt lại mật khẩu chưa được triển khai. Vui lòng chạy \"firebase deploy --only functions\" trong thư mục functions.</string>
+    <string name="reset_password_recent_auth_required">Phiên xác thực đã hết hạn. Vui lòng thực hiện lại quy trình quên mật khẩu.</string>
+    <string name="reset_password_error_network">Lỗi kết nối. Vui lòng kiểm tra mạng và thử lại.</string>
+
+    <string name="notify_permission_title">Bật thông báo</string>
+    <string name="notify_permission_message">Nhận cập nhật đơn hàng, khuyến mãi và nhắc nhở sức khỏe từ HealthUp ngay trên thiết bị của bạn.</string>
+    <string name="notify_permission_allow">Cho phép thông báo</string>
+    <string name="notify_permission_later">Để sau</string>
+    <string name="notify_permission_icon_desc">Biểu tượng thông báo</string>
+    <string name="notify_permission_granted">Đã bật thông báo</string>
+
+    <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="facebook_app_id" translatable="false">YOUR_FACEBOOK_APP_ID</string>
+    <string name="facebook_client_token" translatable="false">YOUR_FACEBOOK_CLIENT_TOKEN</string>
+    <string name="fb_login_protocol_scheme" translatable="false">fbYOUR_FACEBOOK_APP_ID</string>
+
+    <string name="social_auth_failed">Đăng nhập mạng xã hội thất bại. Vui lòng thử lại.</string>
+    <string name="social_auth_google_failed">Đăng nhập Google thất bại. Vui lòng thử lại.</string>
+    <string name="social_auth_google_cancelled">Đã hủy đăng nhập Google.</string>
+    <string name="social_auth_google_not_configured">Google Sign-In chưa được cấu hình. Thêm SHA-1 vào Firebase Console, bật Google provider, tải lại google-services.json và build lại app.</string>
+    <string name="social_auth_google_no_id_token">Google không trả về idToken. Kiểm tra Web client ID và SHA-1 trong Firebase Console.</string>
+    <string name="social_auth_facebook_failed">Đăng nhập Facebook thất bại. Vui lòng thử lại.</string>
+    <string name="social_auth_profile_check_failed">Không thể kiểm tra hồ sơ. Vui lòng thử lại.</string>
+
+    <string name="social_complete_profile_title">Hoàn tất hồ sơ</string>
+    <string name="social_complete_profile_subtitle">Vui lòng bổ sung thông tin để tiếp tục sử dụng HealthUp</string>
+    <string name="social_complete_profile_continue">Tiếp tục</string>
+
+    <string name="about_title">Về HealthUp</string>
+    <string name="about_back_desc">Quay lại</string>
+    <string name="about_values_section">Những điều HealthUp theo đuổi</string>
+    <string name="about_qualities_section">Chất lượng tạo nên niềm tin</string>
+    <string name="about_gallery_section">Khoảnh khắc HealthUp</string>
+    <string name="about_banner_placeholder">Banner Placeholder</string>
+    <string name="about_image_placeholder">Placeholder</string>
+    <string name="about_image_desc">Hình ảnh HealthUp</string>
+
+    <string name="chat_open">Trợ lý HealthUp</string>
+    <string name="chat_title">HealthUp Assistant</string>
+    <string name="chat_status_online">Đang online</string>
+    <string name="chat_status_human">Đang chat với người bán</string>
+    <string name="chat_input_hint">Xin chào, HealthUp có thể giúp…</string>
+    <string name="chat_send">Gửi</string>
+    <string name="chat_attach">Đính kèm</string>
+    <string name="chat_menu">Tùy chọn</string>
+    <string name="chat_back">Quay lại</string>
+    <string name="chat_avatar_desc">Ảnh đại diện</string>
+    <string name="chat_suggestion_title">Bạn muốn hỏi về:</string>
+    <string name="chat_suggestion_change">Đổi câu hỏi</string>
+    <string name="chat_q_order_status">Kiểm tra đơn hàng</string>
+    <string name="chat_q_cancel_order">Hủy đơn hàng</string>
+    <string name="chat_q_product_advice">Tư vấn sản phẩm &amp; Dinh dưỡng</string>
+    <string name="chat_q_faq">Câu hỏi thường gặp</string>
+    <string name="chat_quick_seller">Chat với người bán</string>
+    <string name="chat_attach_unavailable">Tính năng đính kèm sẽ sớm ra mắt</string>
+    <string name="chat_order_card_items">%1$d sản phẩm</string>
+    <string name="chat_order_card_view_detail">Xem chi tiết</string>
+    <string name="chat_order_status_pending">Chờ xác nhận</string>
+    <string name="chat_order_status_confirmed">Đã xác nhận</string>
+    <string name="chat_order_status_shipping">Đang giao</string>
+    <string name="chat_order_status_delivered">Đã giao</string>
+    <string name="chat_order_status_cancelled">Đã hủy</string>
+    <string name="chat_order_status_unknown">Đang xử lý</string>
+
+    <string name="order_detail_placeholder">Chi tiết đơn hàng</string>
+    <string name="order_detail_with_id">Chi tiết đơn hàng\nMã đơn: %1$s</string>
+
+    <string name="seller_inbox_title">Hộp thư người bán</string>
+    <string name="seller_inbox_empty">Chưa có cuộc trò chuyện nào cần hỗ trợ.</string>
+    <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
+    <string name="seller_reply_hint">Nhập tin nhắn trả lời…</string>
+    <string name="conversation_buyer_fallback">Khách hàng</string>
+
+    <string name="debug_test_section">Kiểm thử (debug)</string>
+    <string name="debug_about_link">Về HealthUp</string>
+    <string name="debug_chat_link">Chat Assistant</string>
+
+    <string name="author_prefix">Bởi: %1$s</string>
+    <string name="faq_title">Câu hỏi thường gặp</string>
+    <string name="blog_title">Cẩm nang sức khỏe</string>
+    <string name="search_hint">Tìm granola, snack lành mạnh...</string>
+    <string name="all_categories">Tất cả</string>
+    <string name="faq_category_title">Danh mục trợ giúp</string>
+    <string name="faq_search_result">Kết quả tìm kiếm</string>
+    <string name="faq_category_prefix">Câu hỏi về %1$s</string>
+    <string name="faq_not_found_title">Không tìm thấy câu trả lời?</string>
+    <string name="faq_not_found_desc">Đừng lo lắng! Đội ngũ hỗ trợ của HealthUp luôn sẵn sàng giúp đỡ bạn 24/7.</string>
+    <string name="contact_us">Liên hệ với chúng tôi</string>
+    <string name="order_category">Đơn hàng</string>
+    <string name="payment_category">Thanh toán</string>
+    <string name="shipping_category">Vận chuyển</string>
+    <string name="return_category">Đổi trả</string>
+    <string name="account_category">Tài khoản</string>
+    <string name="product_category">Sản phẩm</string>
+
+    <string name="choose_variant">Chọn phân loại</string>
+    <string name="quantity">Số lượng</string>
+    <string name="add_to_cart">Thêm vào giỏ hàng</string>
+    <string name="buy_now">Mua ngay</string>
+    <string name="out_of_stock">Hết hàng</string>
+    <string name="stock_prefix">Kho: %1$d</string>
+    <string name="variant_prefix">Phân loại: %1$s</string>
+    <string name="default_variant">Mặc định</string>
+    <string name="max_stock_reached">Số lượng đạt tối đa trong kho</string>
+    <string name="please_select_variant">Vui lòng chọn phân loại</string>
+    <string name="added_to_cart">Đã thêm vào giỏ hàng</string>
+    <string name="login_required_cart">Vui lòng đăng nhập để thêm vào giỏ hàng</string>
+    <string name="view_all">Xem tất cả</string>
+    <string name="customer_reviews">Đánh giá khách hàng</string>
+    <string name="may_also_like">Có thể bạn quan tâm</string>
+
+    <string name="welcome_back">Xin chào</string>
+    <string name="home_question">Bạn muốn ăn gì hôm nay?</string>
+    <string name="flash_sale_title">⚡ FLASH SALE</string>
+    <string name="new_products_title">Sản phẩm mới nhất</string>
+    <string name="weekly_promo">TUẦN NÀY</string>
+
+    <string name="nav_home">Trang chủ</string>
+    <string name="nav_categories">Danh mục</string>
+    <string name="nav_cart">Giỏ hàng</string>
+    <string name="nav_notifications">Thông báo</string>
+    <string name="notifications_empty">Chưa có thông báo nào</string>
+    <string name="notifications_login_required">Đăng nhập để xem thông báo</string>
+    <string name="notifications_load_error">Không thể tải thông báo</string>
+    <string name="notification_title_order">Đơn hàng đang được xử lý</string>
+    <string name="notification_body_order">Đơn hàng #HU1024 của bạn đã được xác nhận và đang chuẩn bị giao.</string>
+    <string name="notification_title_promo">Ưu đãi tuần này</string>
+    <string name="notification_body_promo">Giảm 15% cho các sản phẩm Granola. Áp dụng đến Chủ nhật.</string>
+    <string name="notification_title_loyalty">Điểm tích lũy mới</string>
+    <string name="notification_body_loyalty">Bạn vừa nhận thêm 120 điểm từ đơn hàng gần nhất.</string>
+    <string name="notification_time_1">5 phút trước</string>
+    <string name="notification_time_2">Hôm qua</string>
+    <string name="notification_time_3">2 ngày trước</string>
+    <string name="nav_profile">Tài khoản</string>
+    <string name="no_reviews">Chưa có đánh giá nào cho sản phẩm này.</string>
+    <string name="filter_apply_count">Áp dụng (%1$d)</string>
+    <string name="filter_apply">Áp dụng</string>
 </resources>

@@ -15,7 +15,7 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.healthup.adapters.CartAdapter;
+import com.example.adapters.CartAdapter;
 import com.example.models.CartItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -75,35 +75,43 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     }
 
     private void setupListeners() {
-        cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (CartItem item : cartItems) item.setSelected(isChecked);
-            if (adapter != null) adapter.notifyDataSetChanged();
-            updateFooter();
-        });
+        if (cbSelectAll != null) {
+            cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                for (CartItem item : cartItems) item.setSelected(isChecked);
+                if (adapter != null) adapter.notifyDataSetChanged();
+                updateFooter();
+            });
+        }
 
-        btnDeleteSelected.setOnClickListener(v -> deleteSelectedItems());
-        btnCheckout.setOnClickListener(v -> goToCheckout());
-        btnBackFooter.setOnClickListener(v -> {
-            if (getActivity() != null) {
-                getActivity().onBackPressed();
-            }
-        });
-        rowVoucher.setOnClickListener(v -> openVoucherList());
+        if (btnDeleteSelected != null) {
+            btnDeleteSelected.setOnClickListener(v -> deleteSelectedItems());
+        }
+        if (btnCheckout != null) {
+            btnCheckout.setOnClickListener(v -> goToCheckout());
+        }
+        if (btnBackFooter != null) {
+            btnBackFooter.setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().onBackPressed();
+                }
+            });
+        }
+        if (rowVoucher != null) {
+            rowVoucher.setOnClickListener(v -> openVoucherList());
+        }
     }
 
     private void openVoucherList() {
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.main_container, new PromoCouponFragment())
+                .replace(R.id.fragment_container, new PromoCouponFragment())
                 .addToBackStack(null)
                 .commit();
     }
 
-    // ================== LẤY DỮ LIỆU TỪ FIRESTORE ==================
     private void loadCartFromFirestore() {
-        // Dữ liệu mẫu để test giao diện
         cartItems.clear();
-        
+
         CartItem item1 = new CartItem();
         item1.setProductId("p1");
         item1.setName("Hạt Granola siêu ngon");
@@ -113,12 +121,14 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         item1.setOriginalPrice(200000);
         item1.setQuantity(2);
         item1.setSelected(true);
+        item1.setImageUrl("images/products/granola-hat.png");
         cartItems.add(item1);
 
         CartItem item2 = new CartItem();
         item2.setProductId("p2");
         item2.setName("Sữa hạt điều nguyên chất");
         item2.setWeight("1000ml");
+        item2.setImageUrl("images/products/granola-trai-cay.jpg");
         item2.setPrice(85000);
         item2.setOriginalPrice(85000);
         item2.setQuantity(1);
@@ -129,26 +139,156 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         updateFooter();
 
         if (userId == null) return;
-        // Tiếp tục load từ Firestore nếu có user
         db.collection("users").document(userId).collection("cart")
                 .get()
-                .addOnSuccessListener(snapshot -> {
-                    if (!snapshot.isEmpty()) {
-                        cartItems.clear();
-                        for (QueryDocumentSnapshot doc : snapshot) {
-                            CartItem item = doc.toObject(CartItem.class);
-                            item.setId(doc.getId());
-                            item.setSelected(true);
-                            cartItems.add(item);
-                        }
-                        renderList();
-                        updateFooter();
-                    }
-                });
+                .addOnSuccessListener(snapshot -> applyFirestoreCart(snapshot))
+                .addOnFailureListener(e -> { /* keep mock data visible */ });
     }
 
-    // ================== HIỂN THỊ DANH SÁCH ==================
+    private void applyFirestoreCart(com.google.firebase.firestore.QuerySnapshot snapshot) {
+        if (!isAdded() || snapshot.isEmpty()) {
+            return;
+        }
+
+        List<CartItem> loaded = new ArrayList<>();
+        for (QueryDocumentSnapshot doc : snapshot) {
+            CartItem item = parseCartItem(doc);
+            if (item != null) {
+                item.setSelected(true);
+                loaded.add(item);
+            }
+        }
+        if (loaded.isEmpty()) {
+            return;
+        }
+
+        cartItems.clear();
+        cartItems.addAll(loaded);
+        if (rvCartItems != null) {
+            rvCartItems.post(this::refreshCartUi);
+        } else {
+            refreshCartUi();
+        }
+    }
+
+    private CartItem parseCartItem(QueryDocumentSnapshot doc) {
+        CartItem item = null;
+        try {
+            item = doc.toObject(CartItem.class);
+        } catch (RuntimeException ignored) {
+            // Nested product maps from add-to-cart can fail CustomClassMapper deserialization.
+        }
+
+        if (item == null) {
+            item = new CartItem();
+        }
+        item.setId(doc.getId());
+
+        if (item.getProductId() == null) {
+            item.setProductId(doc.getString("productId"));
+        }
+        if (item.getName() == null || item.getName().isEmpty()) {
+            String name = doc.getString("name");
+            if (name == null || name.isEmpty()) {
+                Object productObj = doc.get("product");
+                if (productObj instanceof java.util.Map) {
+                    Object productName = ((java.util.Map<?, ?>) productObj).get("name");
+                    if (productName instanceof String) {
+                        name = (String) productName;
+                    }
+                }
+            }
+            item.setName(name);
+        }
+        if (item.getVariantName() == null) {
+            item.setVariantName(doc.getString("variantName"));
+        }
+        if (item.getWeight() == null) {
+            item.setWeight(doc.getString("weight"));
+        }
+        if (item.getFlavor() == null) {
+            item.setFlavor(doc.getString("flavor"));
+        }
+        if (item.getPackageType() == null) {
+            item.setPackageType(doc.getString("packageType"));
+        }
+        if (item.getQuantity() <= 0) {
+            Long quantity = doc.getLong("quantity");
+            item.setQuantity(quantity != null ? quantity.intValue() : 1);
+        }
+        if (item.getPrice() <= 0) {
+            item.setPrice(readDouble(doc, "price"));
+        }
+        if (item.getOriginalPrice() <= 0) {
+            double original = readDouble(doc, "originalPrice");
+            item.setOriginalPrice(original > 0 ? original : item.getPrice());
+        }
+        Long stock = doc.getLong("stock");
+        if (stock != null) {
+            item.setStock(stock.intValue());
+        }
+
+        hydrateImageUrl(item, doc);
+        return item;
+    }
+
+    private double readDouble(QueryDocumentSnapshot doc, String field) {
+        Double value = doc.getDouble(field);
+        if (value != null) {
+            return value;
+        }
+        Long longValue = doc.getLong(field);
+        return longValue != null ? longValue.doubleValue() : 0d;
+    }
+
+    private void hydrateImageUrl(CartItem item, QueryDocumentSnapshot doc) {
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            return;
+        }
+        String image = doc.getString("imageUrl");
+        if (image == null || image.isEmpty()) {
+            image = doc.getString("image");
+        }
+        if (image != null && !image.isEmpty()) {
+            item.setImageUrl(image);
+            return;
+        }
+        if (item.getProduct() != null && item.getProduct().getImageUrl() != null) {
+            item.setImageUrl(item.getProduct().getImageUrl());
+            return;
+        }
+        Object imagesObj = doc.get("images");
+        if (imagesObj instanceof String) {
+            String imagePath = (String) imagesObj;
+            if (!imagePath.isEmpty()) {
+                item.setImageUrl(imagePath);
+                return;
+            }
+        }
+        if (imagesObj instanceof List) {
+            List<?> images = (List<?>) imagesObj;
+            if (!images.isEmpty()) {
+                Object first = images.get(0);
+                if (first instanceof String) {
+                    item.setImageUrl((String) first);
+                }
+            }
+        }
+    }
+
+    private void refreshCartUi() {
+        if (!isAdded()) {
+            return;
+        }
+        renderList();
+        updateFooter();
+    }
+
     private void renderList() {
+        if (!isAdded() || emptyState == null || rvCartItems == null || footer == null) {
+            return;
+        }
+
         if (cartItems.isEmpty()) {
             emptyState.setVisibility(View.VISIBLE);
             rvCartItems.setVisibility(View.GONE);
@@ -160,11 +300,14 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         rvCartItems.setVisibility(View.VISIBLE);
         footer.setVisibility(View.VISIBLE);
 
-        adapter = new CartAdapter(cartItems, this);
-        rvCartItems.setAdapter(adapter);
+        if (adapter == null) {
+            adapter = new CartAdapter(cartItems, this);
+            rvCartItems.setAdapter(adapter);
+        } else {
+            adapter.notifyDataSetChanged();
+        }
     }
 
-    // ================== CALLBACK TỪ ADAPTER ==================
     @Override
     public void onSelectChanged(CartItem item, boolean selected) {
         updateFooter();
@@ -173,20 +316,21 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         for (CartItem i : cartItems) {
             if (!i.isSelected()) { allSelected = false; break; }
         }
-        cbSelectAll.setOnCheckedChangeListener(null);
-        cbSelectAll.setChecked(allSelected);
-        cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (CartItem i : cartItems) i.setSelected(isChecked);
-            adapter.notifyDataSetChanged();
-            updateFooter();
-        });
+        if (cbSelectAll != null) {
+            cbSelectAll.setOnCheckedChangeListener(null);
+            cbSelectAll.setChecked(allSelected);
+            cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                for (CartItem i : cartItems) i.setSelected(isChecked);
+                if (adapter != null) adapter.notifyDataSetChanged();
+                updateFooter();
+            });
+        }
     }
 
     @Override
     public void onQuantityChanged(CartItem item, int newQuantity) {
         updateFooter();
 
-        // Cập nhật xuống Firestore
         if (userId != null && item.getId() != null) {
             db.collection("users").document(userId).collection("cart")
                     .document(item.getId())
@@ -205,7 +349,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     renderList();
                     updateFooter();
 
-                    // Xóa khỏi Firestore
                     if (userId != null && item.getId() != null) {
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
@@ -224,10 +367,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     item.setFlavor(flavor);
                     item.setPackageType(packageType);
                     item.setQuantity(quantity);
-                    adapter.notifyDataSetChanged();
+                    if (adapter != null) {
+                        adapter.notifyDataSetChanged();
+                    }
                     updateFooter();
 
-                    // Cập nhật xuống Firestore
                     if (userId != null && item.getId() != null) {
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
@@ -238,8 +382,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         sheet.show(getChildFragmentManager(), "edit_cart_item");
     }
 
-    // ================== TÍNH TOÁN FOOTER ==================
     private void updateFooter() {
+        if (!isAdded() || tvTotalPrice == null || btnCheckout == null) {
+            return;
+        }
+
         double total = 0;
         int selectedCount = 0;
 
@@ -252,7 +399,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         tvTotalPrice.setText(currencyFormat.format(total) + "đ");
         btnCheckout.setText("Tiếp tục (" + selectedCount + ")");
-        
+
         if (tvCartTitle != null) {
             tvCartTitle.setText("Giỏ hàng (" + cartItems.size() + ")");
         }
@@ -272,7 +419,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .setTitle("Xóa các mục đã chọn")
                 .setMessage("Bạn có chắc chắn muốn xóa " + toRemove.size() + " sản phẩm đã chọn?")
                 .setPositiveButton("Xóa", (dialog, which) -> {
-                    // Xóa hàng loạt trên Firestore bằng Batch
                     if (userId != null) {
                         com.google.firebase.firestore.WriteBatch batch = db.batch();
                         for (CartItem item : toRemove) {
@@ -293,7 +439,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .show();
     }
 
-    // ================== CHUYỂN SANG CHECKOUT ==================
     private void goToCheckout() {
         List<CartItem> selectedItems = new ArrayList<>();
         for (CartItem item : cartItems) {
@@ -313,7 +458,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.main_container, fragment)
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
     }

@@ -3,9 +3,25 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.healthup">
 
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+
+
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
 
     <application
         android:allowBackup="true"
@@ -15,27 +31,101 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.HealthUp">
+        android:theme="@style/Theme.HealthUp"
+        android:enableOnBackInvokedCallback="true">
+
+
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+        <meta-data
+            android:name="com.facebook.sdk.ClientToken"
+            android:value="@string/facebook_client_token" />
 
         <activity
-            android:name="com.example.healthup.MainActivity"
+            android:name="com.facebook.FacebookActivity"
+            android:configChanges="keyboard|keyboardHidden|screenLayout|screenSize|orientation"
+            android:label="@string/app_name" />
+        <activity
+            android:name="com.facebook.CustomTabActivity"
             android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="@string/fb_login_protocol_scheme" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.example.healthup.SplashActivity"
+            android:exported="true"
+            android:theme="@style/Theme.App.Starting">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
 
+
         <activity android:name="com.example.healthup.LoginActivity" />
         <activity android:name="com.example.healthup.RegisterActivity" />
+        <activity android:name="com.example.healthup.auth.SocialCompleteProfileActivity" />
         <activity android:name="com.example.healthup.OTPActivity" />
         <activity android:name="com.example.healthup.ForgotPasswordActivity" />
-        <activity android:name="com.example.healthup.SplashActivity" />
+        <activity
+            android:name="com.example.healthup.forgotpassword.ForgotPasswordOtpActivity"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|screenLayout|keyboard|keyboardHidden|uiMode|fontScale|locale|density"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.example.healthup.forgotpassword.ResetPasswordActivity" />
+        <activity
+            android:name="com.example.healthup.MainActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.ProductDetailActivity" />
         <activity android:name="com.example.healthup.OrderDetailActivity" />
+        <activity
+            android:name="com.example.healthup.ChatActivity"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.example.healthup.SellerChatListActivity" />
         <activity android:name="com.example.healthup.AddressFormActivity" />
         <activity android:name="com.example.healthup.AboutActivity" />
+        <activity android:name="com.example.healthup.BlogDetailActivity" />
+
+
+        <activity android:name="com.example.healthup.AccountInfoActivity" />
+        <activity android:name="com.example.healthup.PaymentInfoActivity" />
+        <activity android:name="com.example.healthup.ChangeUsernameActivity" />
+        <activity android:name="com.example.healthup.ChangePasswordActivity" />
+        <activity android:name="com.example.healthup.ChangeEmailActivity" />
+        <activity android:name="com.example.healthup.ChangePhoneActivity" />
+        <activity android:name="com.example.healthup.NotificationSettingsActivity" />
+        <activity android:name="com.example.healthup.LanguageSettingsActivity" />
+        <activity android:name="com.example.healthup.AccessSettingsActivity" />
+
+
+        <activity android:name="com.example.healthup.ReturnRefundActivity" />
+        <activity
+            android:name="com.example.healthup.ReturnRefundDetailActivity"
+            android:theme="@style/Theme.PhotoPicker" />
+        <activity android:name="com.example.healthup.ReturnRefundHistoryDetailActivity" />
+        <activity android:name="com.example.healthup.WriteReviewActivity" />
+        <activity android:name="com.example.healthup.ViewReviewsActivity" />
+        <activity android:name="com.example.healthup.ProductReviewsActivity" />
+
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
 
     </application>
+
 
 </manifest>

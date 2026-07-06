@@ -63,51 +63,60 @@
     </LinearLayout>
 
     <TextView
+        android:id="@+id/tvLabelWeight"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:text="KHỐI LƯỢNG"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray" />
+        android:textColor="@color/text_gray"
+        android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/groupWeight"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:visibility="gone"
         app:flexWrap="wrap" />
 
     <TextView
+        android:id="@+id/tvLabelFlavor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="HƯƠNG VỊ"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray" />
+        android:textColor="@color/text_gray"
+        android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/groupFlavor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:visibility="gone"
         app:flexWrap="wrap" />
 
     <TextView
+        android:id="@+id/tvLabelPackage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="LOẠI ĐÓNG GÓI"
         android:textSize="12sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray" />
+        android:textColor="@color/text_gray"
+        android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
         android:id="@+id/groupPackage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
+        android:visibility="gone"
         app:flexWrap="wrap" />
 
     <TextView

@@ -205,7 +205,7 @@ public class CheckoutFragment extends Fragment {
         bundle.putBoolean("has_visited", true); // Đánh dấu là đã vào rồi để tránh auto-reset
         fragment.setArguments(bundle);
 
-        requireActivity().getSupportFragmentManager().beginTransaction().replace(R.id.main_container, fragment).addToBackStack(null).commit();
+        requireActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null).commit();
     }
 
     private void renderVouchers() {
@@ -273,7 +273,7 @@ public class CheckoutFragment extends Fragment {
 
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.main_container, fragment)
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
     }
@@ -302,16 +302,92 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
-        // Check đăng nhập
-        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
             // Chưa đăng nhập -> Chuyển sang màn hình Xác minh số điện thoại
             requireActivity().getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.main_container, new PhoneVerificationFragment())
+                    .replace(R.id.fragment_container, new PhoneVerificationFragment())
                     .addToBackStack(null)
                     .commit();
-        } else {
-            // Đã đăng nhập -> Cho phép đặt hàng
-            Toast.makeText(getContext(), "Đặt hàng thành công! (demo)", Toast.LENGTH_SHORT).show();
+            return;
         }
+
+        // --- BẮT ĐẦU QUY TRÌNH LƯU ĐƠN HÀNG VÀ CẬP NHẬT TÍCH LŨY ---
+        btnPlaceOrder.setEnabled(false);
+        btnPlaceOrder.setText("Đang xử lý...");
+
+        String userId = user.getUid();
+        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+
+        // 1. Tính tổng tiền cuối cùng
+        double itemsTotal = getItemsTotal();
+        double totalDiscount = 0;
+        double currentShippingDiscount = 0;
+        for (Voucher v : selectedVouchers) {
+            if (v.getType() == Voucher.Type.SHIPPING) {
+                currentShippingDiscount = Math.min(v.getDiscountAmount(), shippingFee);
+            } else {
+                totalDiscount += v.getDiscountAmount();
+            }
+        }
+        double finalAmount = Math.max(0, itemsTotal + shippingFee - currentShippingDiscount - totalDiscount);
+
+        // 2. Chuyển đổi CartItem sang OrderItem
+        List<com.example.models.OrderItem> orderItems = new ArrayList<>();
+        for (CartItem ci : selectedItems) {
+            orderItems.add(new com.example.models.OrderItem(
+                    ci.getName(),
+                    ci.getVariantLabel(),
+                    ci.getPrice(),
+                    ci.getQuantity(),
+                    ci.getImageUrl()
+            ));
+        }
+
+        // 3. Tạo đối tượng Đơn hàng
+        com.example.models.Order order = new com.example.models.Order();
+        order.setOrderCode("ORD" + System.currentTimeMillis());
+        order.setUserId(userId);
+        order.setItems(orderItems);
+        order.setAddress(selectedAddress);
+        order.setSubtotal(itemsTotal);
+        order.setShippingFee(shippingFee - currentShippingDiscount);
+        order.setDiscountAmount(totalDiscount);
+        order.setTotalPrice(finalAmount);
+        order.setPaymentMethod(selectedPaymentMethod);
+        order.setStatus(com.example.models.Order.STATUS_PENDING);
+        order.setCreatedAt(com.google.firebase.Timestamp.now());
+
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+        // 4. Batch job: Lưu Order và Cập nhật SpentAmount của User
+        com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
+        batch.set(orderRef, order);
+
+        com.google.firebase.firestore.DocumentReference userRef = db.collection("users").document(userId);
+        batch.update(userRef, "spentAmount", com.google.firebase.firestore.FieldValue.increment(finalAmount));
+
+        // 5. Xóa các sản phẩm đã mua khỏi giỏ hàng
+        for (CartItem ci : selectedItems) {
+            if (ci.getId() != null) {
+                batch.delete(db.collection("users").document(userId).collection("cart").document(ci.getId()));
+            }
+        }
+
+        // 6. Thực thi Batch
+        batch.commit().addOnSuccessListener(aVoid -> {
+            if (isAdded()) {
+                Toast.makeText(getContext(), "Đặt hàng thành công!", Toast.LENGTH_LONG).show();
+                // Xóa backstack để quay về Home hoặc thông báo thành công
+                requireActivity().getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+                // Bạn có thể chuyển sang fragment Home ở đây
+            }
+        }).addOnFailureListener(e -> {
+            if (isAdded()) {
+                btnPlaceOrder.setEnabled(true);
+                btnPlaceOrder.setText("Đặt hàng");
+                Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 }

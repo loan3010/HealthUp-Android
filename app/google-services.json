@@ -1,6 +1,7 @@
 {
   "project_info": {
     "project_number": "328151190093",
+    "firebase_url": "https://healthup-f6eff-default-rtdb.asia-southeast1.firebasedatabase.app",
     "project_id": "healthup-f6eff",
     "storage_bucket": "healthup-f6eff.firebasestorage.app"
   },
@@ -12,7 +13,20 @@
           "package_name": "com.example.healthup"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "328151190093-ab0dv25brs03s7nd73tdpvldmmtormo1.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.healthup",
+            "certificate_hash": "4a76123069adbaf56f9e571af257250585a9d136"
+          }
+        },
+        {
+          "client_id": "328151190093-ooblb5f7ip4g1p1jpq9js3glgbrmfho6.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAnUMJMYFmICT8724k3Zsr98ezGaAeT-3A"
@@ -20,7 +34,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "328151190093-ooblb5f7ip4g1p1jpq9js3glgbrmfho6.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

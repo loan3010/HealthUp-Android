@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// ---------------------------------------------------------------------------
+// HealthUp – suggested Firestore security rules for the chat feature.
+//
+// These rules are DOCUMENTATION / a starting point. Review and deploy them from
+// the Firebase Console (Firestore Database -> Rules) or via the Firebase CLI:
+//     firebase deploy --only firestore:rules
+// No Cloud Functions are required; everything here runs on the free Spark plan.
+// ---------------------------------------------------------------------------
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --- Helpers ----------------------------------------------------------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function currentRole() {
+      // users/{uid}.role is one of "buyer" | "seller" | "admin".
+      return isSignedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        : null;
+    }
+
+    function isStaff() {
+      // Sellers and admins can read/reply in any conversation.
+      return currentRole() in ['seller', 'admin'];
+    }
+
+    function isParticipant(convData) {
+      return isSignedIn()
+        && (request.auth.uid == convData.buyerId
+            || (convData.participantIds is list
+                && request.auth.uid in convData.participantIds));
+    }
+
+    // --- Users ------------------------------------------------------------
+    // A user can read/update only their own profile. "role" should be changed
+    // from a trusted place (console/admin), not by the buyer themselves.
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff());
+      allow create: if isSignedIn() && request.auth.uid == userId;
+      allow update, delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    // --- Orders -----------------------------------------------------------
+    // The chatbot looks up orders where buyerId == uid. Buyers see their own
+    // orders; staff can see all (to help from the inbox).
+    match /orders/{orderId} {
+      allow read: if isSignedIn()
+                  && (resource.data.buyerId == request.auth.uid || isStaff());
+      // Order writes are expected to come from the checkout flow / staff.
+      allow create: if isSignedIn() && request.resource.data.buyerId == request.auth.uid;
+      allow update, delete: if isStaff();
+    }
+
+    // --- Conversations ----------------------------------------------------
+    match /conversations/{conversationId} {
+      // Buyer (owner/participant) or staff may read the thread.
+      allow read: if isParticipant(resource.data) || isStaff();
+
+      // A buyer may create their own support thread.
+      allow create: if isSignedIn()
+                    && request.resource.data.buyerId == request.auth.uid;
+
+      // Buyer participant or staff may update conversation metadata
+      // (mode switch, sellerId assignment, lastMessage, ...).
+      allow update: if isParticipant(resource.data) || isStaff();
+
+      allow delete: if isStaff();
+
+      // --- Messages -------------------------------------------------------
+      match /messages/{messageId} {
+        function convData() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data;
+        }
+
+        allow read: if isParticipant(convData()) || isStaff();
+
+        // Sender must be the signed-in user; staff may post seller/system msgs.
+        allow create: if isSignedIn()
+                      && (isParticipant(convData()) || isStaff())
+                      && request.resource.data.senderId == request.auth.uid;
+
+        // Allow marking messages as read; no edits/deletes of history.
+        allow update: if (isParticipant(convData()) || isStaff());
+        allow delete: if false;
+      }
+    }
+  }
+}

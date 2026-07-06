@@ -144,59 +144,65 @@
         </RelativeLayout>
 
         <!-- ===== CARD TÍCH LŨY (Hiện khi đã đăng nhập) ===== -->
-        <LinearLayout
+        <androidx.cardview.widget.CardView
             android:id="@+id/card_tich_luy"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="16dp"
             android:layout_marginBottom="16dp"
-            android:background="@drawable/bg_card_white"
-            app:backgroundTint="@color/green_primary"
-            android:orientation="vertical"
-            android:padding="20dp"
-            android:elevation="4dp"
-            android:visibility="gone">
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/green_button"
+            android:visibility="visible">
 
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Tích lũy"
-                    android:textColor="@color/white"
-                    android:textSize="18sp"
-                    android:textStyle="bold" />
-                <TextView
-                    android:id="@+id/tv_spent"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_alignParentEnd="true"
-                    android:text="Đã chi: 2.500.000 VND"
-                    android:textColor="@color/white"
-                    android:textSize="12sp" />
-            </RelativeLayout>
-
-            <ProgressBar
-                android:id="@+id/progress_tich_luy"
-                style="?android:attr/progressBarStyleHorizontal"
-                android:layout_width="match_parent"
-                android:layout_height="8dp"
-                android:layout_marginTop="12dp"
-                android:progress="50"
-                android:progressDrawable="@drawable/progress_tich_luy" />
-
-            <TextView
-                android:id="@+id/tv_progress_hint"
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:gravity="center"
-                android:text="Mua thêm 2.500.000 VND nhận ưu đãi VIP!"
-                android:textColor="@color/white"
-                android:textSize="12sp" />
-        </LinearLayout>
+                android:orientation="vertical"
+                android:padding="20dp">
+
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Tích lũy"
+                        android:textColor="@color/white"
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+                    <TextView
+                        android:id="@+id/tv_spent"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:text="Đã chi: 2.500.000 VND"
+                        android:textColor="@color/white"
+                        android:textSize="13sp" />
+                </RelativeLayout>
+
+                <ProgressBar
+                    android:id="@+id/progress_tich_luy"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="16dp"
+                    android:progress="50"
+                    android:progressDrawable="@drawable/progress_tich_luy" />
+
+                <TextView
+                    android:id="@+id/tv_progress_hint"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:text="Mua thêm 2.500.000 VND nhận ưu đãi VIP!"
+                    android:textColor="@color/white"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </androidx.cardview.widget.CardView>
 
         <!-- ===== ĐƠN MUA (LUÔN HIỆN) ===== -->
         <LinearLayout
@@ -277,33 +283,87 @@
             android:textStyle="bold" />
         <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_margin="16dp"
+            android:layout_height="120dp"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginVertical="8dp"
             android:orientation="horizontal">
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="8dp" android:background="@drawable/bg_card_white" android:gravity="center" android:orientation="vertical" android:paddingTop="20dp" android:paddingBottom="20dp" android:elevation="1dp">
-                <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_loyalty" app:tint="@color/green_button" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Khách hàng\nthân thiết" android:textSize="12sp" android:gravity="center" android:textColor="@color/text_dark"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_card_white"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:elevation="1dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_loyalty"
+                    app:tint="@color/green_button" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Khách hàng\nthân thiết"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:textColor="@color/text_dark"/>
             </LinearLayout>
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginEnd="8dp" android:background="@drawable/bg_card_white" android:gravity="center" android:orientation="vertical" android:paddingTop="20dp" android:paddingBottom="20dp" android:elevation="1dp">
-                <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_favorite" app:tint="@color/green_button" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Sản phẩm\nyêu thích" android:textSize="12sp" android:gravity="center" android:textColor="@color/text_dark"/>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:layout_marginEnd="8dp"
+                android:background="@drawable/bg_card_white"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:elevation="1dp">
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_favorite"
+                    app:tint="@color/green_button" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Sản phẩm\nyêu thích"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:textColor="@color/text_dark"/>
             </LinearLayout>
+
             <LinearLayout
                 android:id="@+id/row_address_book"
                 android:layout_width="0dp"
-                android:layout_height="wrap_content"
+                android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:background="@drawable/bg_card_white"
                 android:gravity="center"
                 android:orientation="vertical"
-                android:paddingTop="20dp"
-                android:paddingBottom="20dp"
+                android:padding="12dp"
                 android:elevation="1dp"
                 android:clickable="true"
                 android:focusable="true"
                 android:foreground="?attr/selectableItemBackground">
-                <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_address_book" app:tint="@color/green_button" />
-                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Sổ địa chỉ" android:textSize="12sp" android:gravity="center" android:textColor="@color/text_dark"/>
+                <ImageView
+                    android:layout_width="28dp"
+                    android:layout_height="28dp"
+                    android:src="@drawable/ic_address_book"
+                    app:tint="@color/green_button" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="Sổ địa chỉ"
+                    android:textSize="12sp"
+                    android:gravity="center"
+                    android:textColor="@color/text_dark"/>
             </LinearLayout>
         </LinearLayout>
 

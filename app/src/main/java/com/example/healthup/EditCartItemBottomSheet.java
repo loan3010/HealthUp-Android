@@ -6,15 +6,20 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.models.CartItem;
+import com.example.models.Product;
 import com.google.android.flexbox.FlexboxLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.chip.Chip;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
@@ -33,6 +38,11 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private String selectedPackage;
     private int quantity;
 
+    private FirebaseFirestore db;
+    private View rootView;
+    private FlexboxLayout groupWeight, groupFlavor, groupPackage;
+    private TextView tvLabelWeight, tvLabelFlavor, tvLabelPackage;
+
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
 
     public EditCartItemBottomSheet(CartItem item, OnConfirmListener listener) {
@@ -48,47 +58,43 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.bottom_sheet_edit_cart_item, container, false);
+        rootView = inflater.inflate(R.layout.bottom_sheet_edit_cart_item, container, false);
 
-        ImageView imgProduct = view.findViewById(R.id.imgProduct);
-        TextView tvName = view.findViewById(R.id.tvName);
-        TextView tvPrice = view.findViewById(R.id.tvPrice);
-        TextView tvStockWarning = view.findViewById(R.id.tvStockWarning);
-        TextView tvQuantity = view.findViewById(R.id.tvQuantity);
-        View btnDecrease = view.findViewById(R.id.btnDecrease);
-        View btnIncrease = view.findViewById(R.id.btnIncrease);
-        View btnConfirm = view.findViewById(R.id.btnConfirm);
+        db = FirebaseFirestore.getInstance();
 
-        FlexboxLayout groupWeight = view.findViewById(R.id.groupWeight);
-        FlexboxLayout groupFlavor = view.findViewById(R.id.groupFlavor);
-        FlexboxLayout groupPackage = view.findViewById(R.id.groupPackage);
+        ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
+        TextView tvName = rootView.findViewById(R.id.tvName);
+        TextView tvPrice = rootView.findViewById(R.id.tvPrice);
+        TextView tvStockWarning = rootView.findViewById(R.id.tvStockWarning);
+        TextView tvQuantity = rootView.findViewById(R.id.tvQuantity);
+        View btnDecrease = rootView.findViewById(R.id.btnDecrease);
+        View btnIncrease = rootView.findViewById(R.id.btnIncrease);
+        View btnConfirm = rootView.findViewById(R.id.btnConfirm);
+
+        groupWeight = rootView.findViewById(R.id.groupWeight);
+        groupFlavor = rootView.findViewById(R.id.groupFlavor);
+        groupPackage = rootView.findViewById(R.id.groupPackage);
+
+        tvLabelWeight = rootView.findViewById(R.id.tvLabelWeight);
+        tvLabelFlavor = rootView.findViewById(R.id.tvLabelFlavor);
+        tvLabelPackage = rootView.findViewById(R.id.tvLabelPackage);
 
         tvName.setText(item.getName());
         tvPrice.setText("đ " + currencyFormat.format(item.getPrice()));
-        if (item.getStock() > 0 && item.getStock() <= 3) {
-            tvStockWarning.setVisibility(View.VISIBLE);
-            tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
-        }
         tvQuantity.setText(String.valueOf(quantity));
 
-        // TODO: thay bằng danh sách biến thể thật lấy từ Firestore (product.variants)
-        buildOptionGroup(groupWeight, Arrays.asList("250g", "400g", "1kg"), selectedWeight,
-                value -> selectedWeight = value);
-        buildOptionGroup(groupFlavor, Arrays.asList("Nguyên bản", "Socola", "Mật ong"), selectedFlavor,
-                value -> selectedFlavor = value);
-        buildOptionGroup(groupPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage,
-                value -> selectedPackage = value);
+        loadProductOptions();
 
         btnIncrease.setOnClickListener(v -> {
-            if (item.getStock() > 0 && quantity + 1 > item.getStock()) return;
             quantity++;
             tvQuantity.setText(String.valueOf(quantity));
         });
 
         btnDecrease.setOnClickListener(v -> {
-            if (quantity <= 1) return;
-            quantity--;
-            tvQuantity.setText(String.valueOf(quantity));
+            if (quantity > 1) {
+                quantity--;
+                tvQuantity.setText(String.valueOf(quantity));
+            }
         });
 
         btnConfirm.setOnClickListener(v -> {
@@ -100,39 +106,100 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
             com.bumptech.glide.Glide.with(this).load(item.getImageUrl()).into(imgProduct);
         }
 
-        return view;
+        return rootView;
+    }
+
+    private void loadProductOptions() {
+        if (item.getProductId() == null) {
+            showFallbackOptions();
+            return;
+        }
+
+        db.collection("products").document(item.getProductId())
+                .get()
+                .addOnSuccessListener(doc -> {
+                    if (doc.exists()) {
+                        Product p = doc.toObject(Product.class);
+                        if (p != null) updateOptionsUI(p);
+                    } else {
+                        showFallbackOptions();
+                    }
+                })
+                .addOnFailureListener(e -> showFallbackOptions());
+    }
+
+    private void showFallbackOptions() {
+        if ("p1".equals(item.getProductId())) {
+            updateUISection(tvLabelWeight, groupWeight, Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> selectedWeight = v);
+            updateUISection(tvLabelFlavor, groupFlavor, Arrays.asList("Vị Socola", "Vị Mật Ong", "Nguyên Bản"), selectedFlavor, v -> selectedFlavor = v);
+            updateUISection(tvLabelPackage, groupPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> selectedPackage = v);
+        } else if ("p2".equals(item.getProductId())) {
+            updateUISection(tvLabelWeight, groupWeight, Arrays.asList("500ml", "1000ml"), selectedWeight, v -> selectedWeight = v);
+        }
+    }
+
+    private void updateOptionsUI(Product product) {
+        updateUISection(tvLabelWeight, groupWeight, convertToStringList(product.getWeights()), selectedWeight, v -> selectedWeight = v);
+        updateUISection(tvLabelFlavor, groupFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> selectedFlavor = v);
+        updateUISection(tvLabelPackage, groupPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> selectedPackage = v);
+    }
+
+    private void updateUISection(TextView label, FlexboxLayout group, List<String> options, String current, OnOptionSelected callback) {
+        if (options == null || options.isEmpty()) {
+            label.setVisibility(View.GONE);
+            group.setVisibility(View.GONE);
+            return;
+        }
+        label.setVisibility(View.VISIBLE);
+        group.setVisibility(View.VISIBLE);
+        buildOptionGroup(group, options, current, callback);
+    }
+
+    private List<String> convertToStringList(Object input) {
+        List<String> result = new ArrayList<>();
+        if (input instanceof List) {
+            for (Object obj : (List<?>) input) result.add(String.valueOf(obj));
+        }
+        return result;
     }
 
     private interface OnOptionSelected {
         void onSelected(String value);
     }
 
-    private void buildOptionGroup(FlexboxLayout container, List<String> options,
-                                  String currentValue, OnOptionSelected callback) {
+    private void buildOptionGroup(FlexboxLayout container, List<String> options, String currentValue, OnOptionSelected callback) {
         container.removeAllViews();
         for (String option : options) {
-            TextView chip = new TextView(getContext());
+            Chip chip = new Chip(requireContext());
             chip.setText(option);
-            chip.setTextSize(13);
-            chip.setPadding(dp(16), dp(8), dp(16), dp(8));
-            chip.setBackgroundResource(R.drawable.bg_option_chip);
-            chip.setSelected(option.equals(currentValue));
-            chip.setTextColor(getResources().getColor(
-                    option.equals(currentValue) ? R.color.green_button : R.color.text_dark));
+            chip.setCheckable(true);
+            boolean isSelected = option.equals(currentValue);
+            chip.setChecked(isSelected);
+            
+            // Cập nhật style
+            if (isSelected) {
+                chip.setChipBackgroundColorResource(R.color.green_button);
+                chip.setTextColor(getResources().getColor(R.color.white));
+            } else {
+                chip.setChipBackgroundColorResource(R.color.track_gray);
+                chip.setTextColor(getResources().getColor(R.color.text_dark));
+            }
 
             FlexboxLayout.LayoutParams params = new FlexboxLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            params.setMargins(0, 0, dp(8), dp(8));
+            params.setMargins(0, 0, dp(8), 0);
             chip.setLayoutParams(params);
 
             chip.setOnClickListener(v -> {
                 for (int i = 0; i < container.getChildCount(); i++) {
-                    View child = container.getChildAt(i);
-                    child.setSelected(false);
-                    ((TextView) child).setTextColor(getResources().getColor(R.color.text_dark));
+                    Chip child = (Chip) container.getChildAt(i);
+                    child.setChecked(false);
+                    child.setChipBackgroundColorResource(R.color.track_gray);
+                    child.setTextColor(getResources().getColor(R.color.text_dark));
                 }
-                chip.setSelected(true);
-                chip.setTextColor(getResources().getColor(R.color.green_button));
+                chip.setChecked(true);
+                chip.setChipBackgroundColorResource(R.color.green_button);
+                chip.setTextColor(getResources().getColor(R.color.white));
                 callback.onSelected(option);
             });
 

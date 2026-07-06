@@ -1,4 +1,4 @@
-package com.example.healthup.adapters;
+package com.example.adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,8 +10,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.bumptech.glide.Glide;
 import com.example.healthup.R;
+import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.CartItem;
 
 import java.text.NumberFormat;
@@ -48,56 +48,94 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CartItem item = items.get(position);
 
-        holder.cbSelect.setOnCheckedChangeListener(null);
-        holder.cbSelect.setChecked(item.isSelected());
-        holder.cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            item.setSelected(isChecked);
-            listener.onSelectChanged(item, isChecked);
-        });
-
-        holder.tvName.setText(item.getName());
-        holder.tvVariant.setText(item.getVariantLabel());
-        holder.tvPrice.setText("đ " + currencyFormat.format(item.getPrice()));
-        holder.tvQuantity.setText(String.valueOf(item.getQuantity()));
-
-        if (item.getOriginalPrice() > item.getPrice()) {
-            holder.tvOriginalPrice.setVisibility(View.VISIBLE);
-            holder.tvOriginalPrice.setText("đ " + currencyFormat.format(item.getOriginalPrice()));
-            holder.tvOriginalPrice.setPaintFlags(
-                    holder.tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-        } else {
-            holder.tvOriginalPrice.setVisibility(View.GONE);
+        if (holder.cbSelect != null) {
+            holder.cbSelect.setOnCheckedChangeListener(null);
+            holder.cbSelect.setChecked(item.isSelected());
+            holder.cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                item.setSelected(isChecked);
+                listener.onSelectChanged(item, isChecked);
+            });
         }
 
-        if (item.getStock() > 0 && item.getStock() <= 3) {
-            holder.tvStockWarning.setVisibility(View.VISIBLE);
-            holder.tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
-        } else {
-            holder.tvStockWarning.setVisibility(View.GONE);
+        if (holder.tvName != null) {
+            String name = item.getName();
+            holder.tvName.setText(name != null ? name : "");
         }
 
-        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            Glide.with(holder.itemView.getContext()).load(item.getImageUrl()).into(holder.imgProduct);
+        if (holder.tvVariant != null) {
+            String variantLabel = item.getVariantLabel();
+            holder.tvVariant.setText(variantLabel != null ? variantLabel : "");
         }
 
-        holder.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
-        holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
+        if (holder.tvPrice != null) {
+            double price = item.getPrice();
+            holder.tvPrice.setText("đ " + currencyFormat.format(price));
+        }
 
-        holder.btnIncrease.setOnClickListener(v -> {
-            int newQty = item.getQuantity() + 1;
-            if (item.getStock() > 0 && newQty > item.getStock()) return;
-            item.setQuantity(newQty);
-            holder.tvQuantity.setText(String.valueOf(newQty));
-            listener.onQuantityChanged(item, newQty);
-        });
+        if (holder.tvQuantity != null) {
+            int quantity = Math.max(item.getQuantity(), 1);
+            holder.tvQuantity.setText(String.valueOf(quantity));
+        }
 
-        holder.btnDecrease.setOnClickListener(v -> {
-            int newQty = item.getQuantity() - 1;
-            if (newQty < 1) return;
-            item.setQuantity(newQty);
-            holder.tvQuantity.setText(String.valueOf(newQty));
-            listener.onQuantityChanged(item, newQty);
-        });
+        if (holder.tvOriginalPrice != null) {
+            if (item.getOriginalPrice() > item.getPrice()) {
+                holder.tvOriginalPrice.setVisibility(View.VISIBLE);
+                holder.tvOriginalPrice.setText("đ " + currencyFormat.format(item.getOriginalPrice()));
+                holder.tvOriginalPrice.setPaintFlags(
+                        holder.tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            } else {
+                holder.tvOriginalPrice.setVisibility(View.GONE);
+            }
+        }
+
+        if (holder.tvStockWarning != null) {
+            if (item.getStock() > 0 && item.getStock() <= 3) {
+                holder.tvStockWarning.setVisibility(View.VISIBLE);
+                holder.tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
+            } else {
+                holder.tvStockWarning.setVisibility(View.GONE);
+            }
+        }
+
+        if (holder.imgProduct != null) {
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                ImageLoadHelper.loadInto(holder.imgProduct, imagePath);
+            } else {
+                holder.imgProduct.setImageResource(R.color.neutral_light_grey);
+            }
+        }
+
+        if (holder.tvVariant != null) {
+            holder.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
+        }
+        if (holder.btnRemove != null) {
+            holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
+        }
+
+        if (holder.btnIncrease != null) {
+            holder.btnIncrease.setOnClickListener(v -> {
+                int newQty = item.getQuantity() + 1;
+                if (item.getStock() > 0 && newQty > item.getStock()) return;
+                item.setQuantity(newQty);
+                if (holder.tvQuantity != null) {
+                    holder.tvQuantity.setText(String.valueOf(newQty));
+                }
+                listener.onQuantityChanged(item, newQty);
+            });
+        }
+
+        if (holder.btnDecrease != null) {
+            holder.btnDecrease.setOnClickListener(v -> {
+                int newQty = item.getQuantity() - 1;
+                if (newQty < 1) return;
+                item.setQuantity(newQty);
+                if (holder.tvQuantity != null) {
+                    holder.tvQuantity.setText(String.valueOf(newQty));
+                }
+                listener.onQuantityChanged(item, newQty);
+            });
+        }
     }
 
     @Override

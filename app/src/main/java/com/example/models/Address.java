@@ -1,5 +1,7 @@
 package com.example.models;
 
+import com.google.firebase.firestore.PropertyName;
+
 import java.io.Serializable;
 
 public class Address implements Serializable {
@@ -10,11 +12,11 @@ public class Address implements Serializable {
     private String id;
     private String recipientName;
     private String phone;
-    private String province;       // Tỉnh/Thành phố
-    private String district;       // Quận/Huyện
-    private String ward;           // Phường/Xã
-    private String detailAddress;  // Số nhà, tên đường...
-    private String type;           // TYPE_HOME hoặc TYPE_OFFICE
+    private String province;
+    private String district;
+    private String ward;
+    private String detailAddress;
+    private String type;
     private boolean isDefault;
 
     public Address() {
@@ -30,6 +32,13 @@ public class Address implements Serializable {
         this.ward = ward;
         this.detailAddress = detailAddress;
         this.type = type;
+        this.isDefault = isDefault;
+    }
+
+    public Address(String recipientName, String phone, String addressDetail, boolean isDefault) {
+        this.recipientName = recipientName;
+        this.phone = phone;
+        this.detailAddress = addressDetail;
         this.isDefault = isDefault;
     }
 
@@ -49,8 +58,21 @@ public class Address implements Serializable {
     public void setDetailAddress(String detailAddress) { this.detailAddress = detailAddress; }
     public String getType() { return type; }
     public void setType(String type) { this.type = type; }
+    @PropertyName("default")
     public boolean isDefault() { return isDefault; }
+
+    @PropertyName("default")
     public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
+
+    /** Backward-compatible alias used by order/history screens from tngan. */
+    public String getAddressDetail() {
+        String full = getFullAddress();
+        return full != null && !full.isEmpty() ? full : detailAddress;
+    }
+
+    public void setAddressDetail(String addressDetail) {
+        this.detailAddress = addressDetail;
+    }
 
     public String getFullAddress() {
         StringBuilder sb = new StringBuilder();

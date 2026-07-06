@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal">
+
+    <ImageButton
+        android:id="@+id/btn_fb"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_circle_translucent"
+        android:src="@drawable/ic_notifications"
+        app:tint="@color/primary_green" />
+
+    <ImageButton
+        android:id="@+id/btn_zalo"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_circle_translucent"
+        android:src="@drawable/ic_notifications"
+        app:tint="@color/primary_green" />
+
+    <ImageButton
+        android:id="@+id/btn_ig"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginEnd="12dp"
+        android:background="@drawable/bg_circle_translucent"
+        android:src="@drawable/ic_notifications"
+        app:tint="@color/primary_green" />
+
+    <ImageButton
+        android:id="@+id/btn_messenger"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:background="@drawable/bg_circle_translucent"
+        android:src="@drawable/ic_notifications"
+        app:tint="@color/primary_green" />
+</LinearLayout>

@@ -106,7 +106,7 @@ public class AddressManagementFragment extends Fragment implements AddressAdapte
         AddressFormFragment fragment = AddressFormFragment.newInstance(address);
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.main_container, fragment)
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
     }

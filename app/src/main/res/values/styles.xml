@@ -1,0 +1,35 @@
+<resources>
+    <style name="RoundedImage">
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="Widget.HealthUp.BottomNavigationView" parent="Widget.MaterialComponents.BottomNavigationView.Colored">
+        <item name="enforceTextAppearance">true</item>
+        <item name="itemTextAppearanceActive">@style/TextAppearance.HealthUp.BottomNav.Active</item>
+        <item name="itemTextAppearanceInactive">@style/TextAppearance.HealthUp.BottomNav.Inactive</item>
+        <item name="itemActiveIndicatorStyle">@style/Widget.HealthUp.BottomNav.Indicator</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.BottomNav.Active" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">#2E7D32</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:fontFamily">@font/be_vietnam</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.BottomNav.Inactive" parent="TextAppearance.MaterialComponents.Caption">
+        <item name="android:textColor">#757575</item>
+        <item name="android:textSize">11sp</item>
+        <item name="android:fontFamily">@font/be_vietnam</item>
+    </style>
+
+    <style name="Widget.HealthUp.BottomNav.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">#E1F2E4</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.HealthUp.Indicator</item>
+    </style>
+
+    <style name="ShapeAppearance.HealthUp.Indicator" parent="ShapeAppearance.MaterialComponents.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+</resources>
