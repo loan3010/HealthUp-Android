@@ -1,12 +1,107 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardContainer"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="2dp"
+    app:cardBackgroundColor="@color/white">
 
-    <TextView
-        android:layout_width="wrap_content"
+    <RelativeLayout
+        android:id="@+id/layoutContent"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="item_address Item" />
+        android:padding="16dp">
 
-</LinearLayout>
+        <RadioButton
+            android:id="@+id/rbSelect"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentStart="true"
+            android:layout_centerVertical="true"
+            android:buttonTint="@color/green_button"
+            android:clickable="false"
+            android:focusable="false" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_toEndOf="@id/rbSelect"
+            android:layout_toStartOf="@+id/btnEdit"
+            android:layout_marginStart="12dp"
+            android:layout_marginEnd="8dp"
+            android:orientation="vertical">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <TextView
+                    android:id="@+id/tvName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="TheHoenNgo"
+                    android:textColor="#36873A"
+                    android:textStyle="bold"
+                    android:textSize="15sp"
+                    android:fontFamily="@font/be_vietnam_pro" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="12dp"
+                    android:layout_marginHorizontal="8dp"
+                    android:background="#CCCCCC" />
+
+                <TextView
+                    android:id="@+id/tvPhone"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="(+84) 399 229 172"
+                    android:textColor="@color/text_gray"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/be_vietnam_pro" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvDetail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Trụ sở Khu vực Nhơn Thuận, Phường Nhơn Thành, Thị xã An Nhơn, Bình Định."
+                android:textColor="@color/text_gray"
+                android:textSize="13sp"
+                android:fontFamily="@font/be_vietnam_pro" />
+
+            <TextView
+                android:id="@+id/tvDefaultBadge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:background="@drawable/bg_badge_default"
+                android:paddingHorizontal="6dp"
+                android:paddingVertical="1dp"
+                android:text="MẶC ĐỊNH"
+                android:textColor="#B71C1C"
+                android:textSize="10sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/be_vietnam_pro"
+                android:visibility="visible" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/btnEdit"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:padding="4dp"
+            android:text="Sửa"
+            android:textColor="#36873A"
+            android:textSize="14sp"
+            android:fontFamily="@font/be_vietnam_pro" />
+
+    </RelativeLayout>
+</androidx.cardview.widget.CardView>

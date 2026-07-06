@@ -107,6 +107,9 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("com.facebook.android:facebook-login:17.0.2")
 
+    // Flexbox (checkout UI from TH)
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

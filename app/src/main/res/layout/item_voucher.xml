@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    android:orientation="horizontal">
+
+    <!-- Icon Area (The Left Part) -->
+    <LinearLayout
+        android:id="@+id/layoutIcon"
+        android:layout_width="100dp"
+        android:layout_height="100dp"
+        android:background="@drawable/bg_card_white"
+        android:gravity="center"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/imgType"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_order_shipping" />
+
+        <TextView
+            android:id="@+id/tvTypeText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="FREESHIP"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <!-- Separator Line (Dash Effect) -->
+    <View
+        android:layout_width="1dp"
+        android:layout_height="100dp"
+        android:background="#DDDDDD" />
+
+    <!-- Info Area (The Right Part) -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="100dp"
+        android:background="@drawable/bg_card_white"
+        android:padding="12dp">
+
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Miễn phí vận chuyển"
+            android:textColor="@color/text_dark"
+            android:textSize="15sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvDescription"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvTitle"
+            android:layout_marginTop="4dp"
+            android:text="Đơn tối thiểu 100k"
+            android:textColor="@color/text_gray"
+            android:textSize="12sp" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:gravity="center_vertical">
+            <ImageView
+                android:layout_width="14dp"
+                android:layout_height="14dp"
+                android:src="@drawable/ic_order_pending"
+                app:tint="@color/text_gray_muted"
+                android:contentDescription="Time" />
+            <TextView
+                android:id="@+id/tvExpiry"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
+                android:text="HSD: 30.06.2024"
+                android:textColor="@color/text_gray_muted"
+                android:textSize="11sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentBottom="true"
+            android:text="CHI TIẾT"
+            android:textColor="#36873A"
+            android:textSize="11sp"
+            android:textStyle="bold" />
+
+        <RadioButton
+            android:id="@+id/rbSelected"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:clickable="false"
+            android:focusable="false" />
+    </RelativeLayout>
+</LinearLayout>

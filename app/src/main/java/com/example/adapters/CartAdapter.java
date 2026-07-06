@@ -3,108 +3,124 @@ package com.example.adapters;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageButton;
+import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.healthup.R;
 import com.example.models.CartItem;
+
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
 public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
-    private List<CartItem> cartItems;
-    private OnCartItemChangeListener listener;
 
-    public interface OnCartItemChangeListener {
-        void onQuantityChange(CartItem item, int newQuantity);
-        void onDeleteItem(CartItem item);
-        void onItemClick(CartItem item);
+    public interface Listener {
+        void onSelectChanged(CartItem item, boolean selected);
+        void onQuantityChanged(CartItem item, int newQuantity);
+        void onRemove(CartItem item);
+        void onEditVariant(CartItem item);
     }
 
-    public CartAdapter(List<CartItem> cartItems, OnCartItemChangeListener listener) {
-        this.cartItems = cartItems;
+    private final List<CartItem> items;
+    private final Listener listener;
+    private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+
+    public CartAdapter(List<CartItem> items, Listener listener) {
+        this.items = items;
         this.listener = listener;
-    }
-
-    public void updateData(List<CartItem> newList) {
-        this.cartItems = newList;
-        notifyDataSetChanged();
     }
 
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-        View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_cart, parent, false);
-        return new ViewHolder(view);
+        View v = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.item_cart, parent, false);
+        return new ViewHolder(v);
     }
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        CartItem item = cartItems.get(position);
-        holder.bind(item, listener);
+        CartItem item = items.get(position);
+
+        holder.cbSelect.setOnCheckedChangeListener(null);
+        holder.cbSelect.setChecked(item.isSelected());
+        holder.cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            item.setSelected(isChecked);
+            listener.onSelectChanged(item, isChecked);
+        });
+
+        holder.tvName.setText(item.getName());
+        holder.tvVariant.setText(item.getVariantLabel());
+        holder.tvPrice.setText("đ " + currencyFormat.format(item.getPrice()));
+        holder.tvQuantity.setText(String.valueOf(item.getQuantity()));
+
+        if (item.getOriginalPrice() > item.getPrice()) {
+            holder.tvOriginalPrice.setVisibility(View.VISIBLE);
+            holder.tvOriginalPrice.setText("đ " + currencyFormat.format(item.getOriginalPrice()));
+            holder.tvOriginalPrice.setPaintFlags(
+                    holder.tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+        } else {
+            holder.tvOriginalPrice.setVisibility(View.GONE);
+        }
+
+        if (item.getStock() > 0 && item.getStock() <= 3) {
+            holder.tvStockWarning.setVisibility(View.VISIBLE);
+            holder.tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
+        } else {
+            holder.tvStockWarning.setVisibility(View.GONE);
+        }
+
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            Glide.with(holder.itemView.getContext()).load(item.getImageUrl()).into(holder.imgProduct);
+        }
+
+        holder.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
+        holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
+
+        holder.btnIncrease.setOnClickListener(v -> {
+            int newQty = item.getQuantity() + 1;
+            if (item.getStock() > 0 && newQty > item.getStock()) return;
+            item.setQuantity(newQty);
+            holder.tvQuantity.setText(String.valueOf(newQty));
+            listener.onQuantityChanged(item, newQty);
+        });
+
+        holder.btnDecrease.setOnClickListener(v -> {
+            int newQty = item.getQuantity() - 1;
+            if (newQty < 1) return;
+            item.setQuantity(newQty);
+            holder.tvQuantity.setText(String.valueOf(newQty));
+            listener.onQuantityChanged(item, newQty);
+        });
     }
 
     @Override
-    public int getItemCount() {
-        return cartItems != null ? cartItems.size() : 0;
-    }
+    public int getItemCount() { return items.size(); }
 
-    public static class ViewHolder extends RecyclerView.ViewHolder {
-        ImageView imgProduct;
-        TextView tvName, tvVariant, tvPrice, tvQuantity;
-        ImageButton btnMinus, btnPlus, btnDelete;
+    static class ViewHolder extends RecyclerView.ViewHolder {
+        CheckBox cbSelect;
+        ImageView imgProduct, btnRemove;
+        TextView tvName, tvVariant, tvStockWarning, tvPrice, tvOriginalPrice, tvQuantity, btnDecrease, btnIncrease;
 
-        public ViewHolder(@NonNull View itemView) {
+        ViewHolder(@NonNull View itemView) {
             super(itemView);
-            imgProduct = itemView.findViewById(R.id.iv_cart_item_image);
-            tvName = itemView.findViewById(R.id.tv_cart_item_name);
-            tvVariant = itemView.findViewById(R.id.tv_cart_item_variant);
-            tvPrice = itemView.findViewById(R.id.tv_cart_item_price);
-            tvQuantity = itemView.findViewById(R.id.tv_cart_item_quantity);
-            btnMinus = itemView.findViewById(R.id.btn_minus);
-            btnPlus = itemView.findViewById(R.id.btn_plus);
-            btnDelete = itemView.findViewById(R.id.btn_delete_cart_item);
-        }
-
-        public void bind(CartItem item, OnCartItemChangeListener listener) {
-            if (item.getProduct() != null) {
-                tvName.setText(item.getProduct().getName());
-                
-                if (item.getVariantName() != null && !item.getVariantName().isEmpty()) {
-                    tvVariant.setText(item.getVariantName());
-                    tvVariant.setVisibility(View.VISIBLE);
-                } else {
-                    tvVariant.setVisibility(View.GONE);
-                }
-
-                NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
-                double displayPrice = item.getPrice() > 0 ? item.getPrice() : item.getProduct().getPrice();
-                tvPrice.setText(formatter.format(displayPrice) + "đ");
-                
-                Glide.with(itemView.getContext())
-                        .load(item.getProduct().getImageUrl())
-                        .placeholder(R.drawable.ic_launcher_background)
-                        .into(imgProduct);
-            }
-
-            tvQuantity.setText(String.valueOf(item.getQuantity()));
-
-            btnMinus.setOnClickListener(v -> {
-                if (item.getQuantity() > 1) {
-                    listener.onQuantityChange(item, item.getQuantity() - 1);
-                }
-            });
-
-            btnPlus.setOnClickListener(v -> {
-                listener.onQuantityChange(item, item.getQuantity() + 1);
-            });
-
-            btnDelete.setOnClickListener(v -> listener.onDeleteItem(item));
-            itemView.setOnClickListener(v -> listener.onItemClick(item));
+            cbSelect = itemView.findViewById(R.id.cbSelect);
+            imgProduct = itemView.findViewById(R.id.imgProduct);
+            btnRemove = itemView.findViewById(R.id.btnRemove);
+            tvName = itemView.findViewById(R.id.tvName);
+            tvVariant = itemView.findViewById(R.id.tvVariant);
+            tvStockWarning = itemView.findViewById(R.id.tvStockWarning);
+            tvPrice = itemView.findViewById(R.id.tvPrice);
+            tvOriginalPrice = itemView.findViewById(R.id.tvOriginalPrice);
+            tvQuantity = itemView.findViewById(R.id.tvQuantity);
+            btnDecrease = itemView.findViewById(R.id.btnDecrease);
+            btnIncrease = itemView.findViewById(R.id.btnIncrease);
         }
     }
 }
