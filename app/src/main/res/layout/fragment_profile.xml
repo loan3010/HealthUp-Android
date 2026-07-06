@@ -288,7 +288,20 @@
                 <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_favorite" app:tint="@color/green_button" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Sản phẩm\nyêu thích" android:textSize="12sp" android:gravity="center" android:textColor="@color/text_dark"/>
             </LinearLayout>
-            <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:background="@drawable/bg_card_white" android:gravity="center" android:orientation="vertical" android:paddingTop="20dp" android:paddingBottom="20dp" android:elevation="1dp">
+            <LinearLayout
+                android:id="@+id/row_address_book"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:background="@drawable/bg_card_white"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:paddingTop="20dp"
+                android:paddingBottom="20dp"
+                android:elevation="1dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <ImageView android:layout_width="28dp" android:layout_height="28dp" android:src="@drawable/ic_address_book" app:tint="@color/green_button" />
                 <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:text="Sổ địa chỉ" android:textSize="12sp" android:gravity="center" android:textColor="@color/text_dark"/>
             </LinearLayout>
@@ -323,7 +336,15 @@
                 <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_chevron_right" app:tint="@color/text_gray_muted"/>
             </LinearLayout>
             <View android:layout_width="match_parent" android:layout_height="1dp" android:background="@color/divider" android:layout_marginStart="50dp"/>
-            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical" android:padding="16dp">
+            <LinearLayout
+                android:id="@+id/row_policy"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:padding="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:foreground="?attr/selectableItemBackground">
                 <ImageView android:layout_width="22dp" android:layout_height="22dp" android:src="@drawable/ic_policy" app:tint="@color/green_button" />
                 <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:layout_marginStart="16dp" android:text="Chính sách &amp; Điều khoản" android:textSize="15sp" android:textColor="@color/text_dark"/>
                 <ImageView android:layout_width="16dp" android:layout_height="16dp" android:src="@drawable/ic_chevron_right" app:tint="@color/text_gray_muted"/>

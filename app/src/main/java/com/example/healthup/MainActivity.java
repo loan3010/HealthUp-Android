@@ -12,7 +12,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         FragmentTransaction transaction = getSupportFragmentManager().beginTransaction();
-        transaction.replace(R.id.main_container, new CartFragment()); // 👈 đổi chỗ này
+        transaction.replace(R.id.main_container, new ProfileFragment()); // 👈 đổi chỗ này
         transaction.commit();
     }
 }

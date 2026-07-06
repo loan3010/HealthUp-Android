@@ -65,6 +65,20 @@ public class ProfileFragment extends Fragment {
 
         loadUserData();
 
+        view.findViewById(R.id.row_address_book).setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.main_container, new AddressManagementFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
+        view.findViewById(R.id.row_policy).setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.main_container, new PolicyFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
+
         view.findViewById(R.id.btn_logout).setOnClickListener(v -> {
             mAuth.signOut();
             Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show();
@@ -76,11 +90,21 @@ public class ProfileFragment extends Fragment {
 
     private void loadUserData() {
         FirebaseUser currentUser = mAuth.getCurrentUser();
+        View view = getView();
+        if (view == null) return;
 
         if (currentUser == null) {
-            Toast.makeText(requireContext(), "Chưa đăng nhập", Toast.LENGTH_SHORT).show();
+            view.findViewById(R.id.group_logged_out).setVisibility(View.VISIBLE);
+            view.findViewById(R.id.group_logged_in).setVisibility(View.GONE);
+            view.findViewById(R.id.card_tich_luy).setVisibility(View.GONE);
+            view.findViewById(R.id.btn_logout).setVisibility(View.GONE);
             return;
         }
+
+        view.findViewById(R.id.group_logged_out).setVisibility(View.GONE);
+        view.findViewById(R.id.group_logged_in).setVisibility(View.VISIBLE);
+        view.findViewById(R.id.card_tich_luy).setVisibility(View.VISIBLE);
+        view.findViewById(R.id.btn_logout).setVisibility(View.VISIBLE);
 
         String uid = currentUser.getUid();
 
@@ -88,10 +112,13 @@ public class ProfileFragment extends Fragment {
                 .document(uid)
                 .get()
                 .addOnSuccessListener(this::bindUserToUi)
-                .addOnFailureListener(e ->
+                .addOnFailureListener(e -> {
+                    if (isAdded()) {
                         Toast.makeText(requireContext(),
                                 "Lỗi tải dữ liệu: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show());
+                                Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
     private void bindUserToUi(DocumentSnapshot document) {

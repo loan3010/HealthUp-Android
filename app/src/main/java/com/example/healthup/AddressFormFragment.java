@@ -8,10 +8,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -26,8 +25,8 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.regex.Pattern;
 
 public class AddressFormFragment extends Fragment {
@@ -35,15 +34,14 @@ public class AddressFormFragment extends Fragment {
     private static final Pattern PHONE_PATTERN = Pattern.compile("^(0|\\+84)\\d{9,10}$");
 
     private EditText etFullName, etPhone, etDetailAddress;
-    private TextView tvErrorName, tvErrorPhone, tvErrorProvince, tvErrorDistrict, tvErrorWard, tvErrorDetailAddress;
-    private Spinner spinnerProvince, spinnerDistrict, spinnerWard;
+    private TextView tvErrorName, tvErrorPhone, tvErrorProvince, tvErrorWard, tvErrorDetailAddress;
+    private AutoCompleteTextView autoProvince, autoWard;
     private TextView btnTypeHome, btnTypeOffice, tvTitle;
     private SwitchCompat switchDefault;
-    private Button btnSubmit;
+    private Button btnSubmit, btnDelete;
 
     private Address editingAddress;
     private String selectedType = Address.TYPE_HOME;
-    private boolean submitAttempted = false;
 
     private FirebaseFirestore db;
     private String userId;
@@ -74,17 +72,18 @@ public class AddressFormFragment extends Fragment {
         LocationLoader.load(requireContext());
 
         bindViews(view);
-        initSpinnerAdapters();
-        setupSpinnerListeners();
+        setupLocationAdapters();
         setupListeners();
 
         if (editingAddress != null) {
             tvTitle.setText("Chỉnh sửa thông tin");
             btnSubmit.setText("Lưu những thay đổi");
+            btnDelete.setVisibility(View.VISIBLE);
             prefillFromAddress(editingAddress);
         } else {
             tvTitle.setText("Thêm địa chỉ mới");
-            btnSubmit.setText("Hoàn thành");
+            btnSubmit.setText("Thêm địa chỉ mới");
+            btnDelete.setVisibility(View.GONE);
             selectType(Address.TYPE_HOME);
         }
 
@@ -102,111 +101,81 @@ public class AddressFormFragment extends Fragment {
         tvErrorName = view.findViewById(R.id.tvErrorName);
         tvErrorPhone = view.findViewById(R.id.tvErrorPhone);
         tvErrorProvince = view.findViewById(R.id.tvErrorProvince);
-        tvErrorDistrict = view.findViewById(R.id.tvErrorDistrict);
         tvErrorWard = view.findViewById(R.id.tvErrorWard);
         tvErrorDetailAddress = view.findViewById(R.id.tvErrorDetailAddress);
         
-        spinnerProvince = view.findViewById(R.id.spinnerProvince);
-        spinnerDistrict = view.findViewById(R.id.spinnerDistrict);
-        spinnerWard = view.findViewById(R.id.spinnerWard);
+        autoProvince = view.findViewById(R.id.spinnerProvince);
+        autoWard = view.findViewById(R.id.spinnerWard);
         
         btnTypeHome = view.findViewById(R.id.btnTypeHome);
         btnTypeOffice = view.findViewById(R.id.btnTypeOffice);
         switchDefault = view.findViewById(R.id.switchDefault);
         btnSubmit = view.findViewById(R.id.btnSubmit);
+        btnDelete = view.findViewById(R.id.btnDelete);
     }
 
-    private void initSpinnerAdapters() {
-        // Province
+    private void setupLocationAdapters() {
+        List<String> provinceNames = new ArrayList<>(LocationLoader.getProvinceNames());
+        if (!provinceNames.isEmpty() && provinceNames.get(0).startsWith("Chọn")) {
+            provinceNames.remove(0);
+        }
+        
         ArrayAdapter<String> provinceAdapter = new ArrayAdapter<>(requireContext(),
-                R.layout.spinner_item, LocationLoader.getProvinceNames());
-        provinceAdapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        spinnerProvince.setAdapter(provinceAdapter);
+                android.R.layout.simple_dropdown_item_1line, provinceNames);
+        autoProvince.setAdapter(provinceAdapter);
 
-        // Initial empty adapters for District and Ward
-        updateDistrictSpinner(null);
-        updateWardSpinner(null);
-    }
-
-    private void setupSpinnerListeners() {
-        spinnerProvince.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
-                String province = position > 0 ? (String) parent.getItemAtPosition(position) : null;
-                updateDistrictSpinner(province);
-                updateSubmitButtonState();
-                if (position > 0) tvErrorProvince.setVisibility(View.GONE);
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
+        autoProvince.setOnItemClickListener((parent, view, position, id) -> {
+            String province = (String) parent.getItemAtPosition(position);
+            updateWardAdapter(province);
+            autoWard.setText("");
+            updateSubmitButtonState();
+            tvErrorProvince.setVisibility(View.GONE);
         });
 
-        spinnerDistrict.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
-                String district = position > 0 ? (String) parent.getItemAtPosition(position) : null;
-                updateWardSpinner(district);
-                updateSubmitButtonState();
-                if (position > 0) tvErrorDistrict.setVisibility(View.GONE);
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-        });
-
-        spinnerWard.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
-                updateSubmitButtonState();
-                if (position > 0) tvErrorWard.setVisibility(View.GONE);
-            }
-            @Override public void onNothingSelected(AdapterView<?> parent) {}
-        });
+        autoProvince.setOnClickListener(v -> autoProvince.showDropDown());
+        autoWard.setOnClickListener(v -> autoWard.showDropDown());
     }
 
-    private void updateDistrictSpinner(@Nullable String province) {
-        List<String> districts = LocationLoader.getDistricts(province);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), R.layout.spinner_item, districts);
-        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        spinnerDistrict.setAdapter(adapter);
-        updateWardSpinner(null);
-    }
-
-    private void updateWardSpinner(@Nullable String district) {
-        List<String> wards = LocationLoader.getWards(district);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), R.layout.spinner_item, wards);
-        adapter.setDropDownViewResource(R.layout.spinner_dropdown_item);
-        spinnerWard.setAdapter(adapter);
+    private void updateWardAdapter(@Nullable String province) {
+        List<String> wards = new ArrayList<>(LocationLoader.getWards(province));
+        if (!wards.isEmpty() && wards.get(0).startsWith("Chọn")) {
+            wards.remove(0);
+        }
+        
+        ArrayAdapter<String> wardAdapter = new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_dropdown_item_1line, wards);
+        autoWard.setAdapter(wardAdapter);
+        
+        autoWard.setOnItemClickListener((parent, view, position, id) -> {
+            updateSubmitButtonState();
+            tvErrorWard.setVisibility(View.GONE);
+        });
     }
 
     private void setupListeners() {
         TextWatcher watcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                // Gọi ngay khi đang gõ
                 updateSubmitButtonState();
             }
             @Override public void afterTextChanged(Editable s) {
-                if (etFullName.hasFocus()) {
-                    tvErrorName.setVisibility(View.GONE);
-                    etFullName.setBackgroundResource(R.drawable.bg_input_normal);
-                }
-                if (etPhone.hasFocus()) {
-                    tvErrorPhone.setVisibility(View.GONE);
-                    etPhone.setBackgroundResource(R.drawable.bg_input_normal);
-                }
-                if (etDetailAddress.hasFocus()) {
-                    tvErrorDetailAddress.setVisibility(View.GONE);
-                    etDetailAddress.setBackgroundResource(R.drawable.bg_input_normal);
-                }
+                if (etFullName.hasFocus()) clearError(etFullName, tvErrorName);
+                if (etPhone.hasFocus()) clearError(etPhone, tvErrorPhone);
+                if (etDetailAddress.hasFocus()) clearError(etDetailAddress, tvErrorDetailAddress);
             }
         };
         etFullName.addTextChangedListener(watcher);
         etPhone.addTextChangedListener(watcher);
         etDetailAddress.addTextChangedListener(watcher);
+        autoProvince.addTextChangedListener(watcher);
+        autoWard.addTextChangedListener(watcher);
 
         btnTypeHome.setOnClickListener(v -> selectType(Address.TYPE_HOME));
         btnTypeOffice.setOnClickListener(v -> selectType(Address.TYPE_OFFICE));
 
+        btnDelete.setOnClickListener(v -> deleteAddress());
+
         btnSubmit.setOnClickListener(v -> {
-            submitAttempted = true;
             if (validate()) {
                 saveAndReturn();
             }
@@ -229,69 +198,27 @@ public class AddressFormFragment extends Fragment {
         switchDefault.setChecked(address.isDefault());
         selectType(address.getType());
 
-        // Gỡ listener để tránh reset tự động khi setSelection
-        spinnerProvince.setOnItemSelectedListener(null);
-        spinnerDistrict.setOnItemSelectedListener(null);
-        spinnerWard.setOnItemSelectedListener(null);
+        autoProvince.setText(address.getProvince(), false);
+        updateWardAdapter(address.getProvince());
+        autoWard.setText(address.getWard(), false);
 
-        // 1. Set Province
-        List<String> provinces = LocationLoader.getProvinceNames();
-        int pIndex = provinces.indexOf(address.getProvince());
-        if (pIndex >= 0) {
-            spinnerProvince.setSelection(pIndex);
-
-            // 2. Load và Set District (làm ngay lập tức thay vì dùng post để đồng bộ)
-            updateDistrictSpinner(address.getProvince());
-            List<String> districts = LocationLoader.getDistricts(address.getProvince());
-            int dIndex = districts.indexOf(address.getDistrict());
-            if (dIndex >= 0) {
-                spinnerDistrict.setSelection(dIndex);
-
-                // 3. Load và Set Ward
-                updateWardSpinner(address.getDistrict());
-                List<String> wards = LocationLoader.getWards(address.getDistrict());
-                int wIndex = wards.indexOf(address.getWard());
-                if (wIndex >= 0) {
-                    spinnerWard.setSelection(wIndex);
-                }
-            }
-        }
-
-        // Cập nhật trạng thái nút bấm ngay sau khi prefill
         updateSubmitButtonState();
-
-        // Cần dùng post để đảm bảo các Spinner đã dựng UI xong trước khi gán lại Listener
-        // Điều này tránh việc sự kiện "auto selection" của Android làm loạn dữ liệu
-        if (getView() != null) {
-            getView().post(() -> {
-                if (isAdded()) {
-                    setupSpinnerListeners();
-                }
-            });
-        }
     }
 
     private void updateSubmitButtonState() {
         String name = etFullName.getText().toString().trim();
         String phone = etPhone.getText().toString().trim();
+        String province = autoProvince.getText().toString().trim();
+        String ward = autoWard.getText().toString().trim();
         String detail = etDetailAddress.getText().toString().trim();
         
-        boolean nameOk = !name.isEmpty();
-        boolean phoneOk = PHONE_PATTERN.matcher(phone).matches();
-        boolean provinceOk = spinnerProvince.getSelectedItemPosition() > 0;
-        boolean districtOk = spinnerDistrict.getSelectedItemPosition() > 0;
-        boolean wardOk = spinnerWard.getSelectedItemPosition() > 0;
-        boolean detailOk = !detail.isEmpty();
-        
-        boolean isValid = nameOk && phoneOk && provinceOk && districtOk && wardOk && detailOk;
+        boolean isValid = !name.isEmpty() 
+                && PHONE_PATTERN.matcher(phone).matches()
+                && !province.isEmpty()
+                && !ward.isEmpty()
+                && !detail.isEmpty();
                 
         btnSubmit.setEnabled(isValid);
-        
-        // Log để debug (có thể xem trong Logcat)
-        android.util.Log.d("AddressForm", "nameOk: " + nameOk + 
-            ", phoneOk: " + phoneOk + ", provinceOk: " + provinceOk + 
-            ", districtOk: " + districtOk + ", wardOk: " + wardOk + 
-            ", detailOk: " + detailOk);
     }
 
     private boolean validate() {
@@ -299,36 +226,28 @@ public class AddressFormFragment extends Fragment {
         if (etFullName.getText().toString().trim().isEmpty()) {
             showError(etFullName, tvErrorName, "Vui lòng nhập họ và tên");
             valid = false;
-        } else clearError(etFullName, tvErrorName);
-
+        }
+        
         String phone = etPhone.getText().toString().trim();
-        if (phone.isEmpty()) {
-            showError(etPhone, tvErrorPhone, "Vui lòng nhập số điện thoại");
-            valid = false;
-        } else if (!PHONE_PATTERN.matcher(phone).matches()) {
+        if (phone.isEmpty() || !PHONE_PATTERN.matcher(phone).matches()) {
             showError(etPhone, tvErrorPhone, "Số điện thoại không hợp lệ");
             valid = false;
-        } else clearError(etPhone, tvErrorPhone);
+        }
 
-        if (spinnerProvince.getSelectedItemPosition() <= 0) {
+        if (autoProvince.getText().toString().trim().isEmpty()) {
             tvErrorProvince.setVisibility(View.VISIBLE);
             valid = false;
-        } else tvErrorProvince.setVisibility(View.GONE);
+        }
 
-        if (spinnerDistrict.getSelectedItemPosition() <= 0) {
-            tvErrorDistrict.setVisibility(View.VISIBLE);
-            valid = false;
-        } else tvErrorDistrict.setVisibility(View.GONE);
-
-        if (spinnerWard.getSelectedItemPosition() <= 0) {
+        if (autoWard.getText().toString().trim().isEmpty()) {
             tvErrorWard.setVisibility(View.VISIBLE);
             valid = false;
-        } else tvErrorWard.setVisibility(View.GONE);
+        }
 
         if (etDetailAddress.getText().toString().trim().isEmpty()) {
             showError(etDetailAddress, tvErrorDetailAddress, "Vui lòng nhập địa chỉ cụ thể");
             valid = false;
-        } else clearError(etDetailAddress, tvErrorDetailAddress);
+        }
 
         return valid;
     }
@@ -345,29 +264,25 @@ public class AddressFormFragment extends Fragment {
     }
 
     private void saveAndReturn() {
-        // Nếu không có userId (chưa đăng nhập), dùng ID tạm là "guest_user" để vẫn cho phép lưu và chọn địa chỉ
         final String effectiveUserId = (userId != null) ? userId : "guest_user";
-
         String addressId = editingAddress != null ? editingAddress.getId() : db.collection("users").document(effectiveUserId).collection("addresses").document().getId();
 
         Address address = new Address(
                 addressId,
                 etFullName.getText().toString().trim(),
                 etPhone.getText().toString().trim(),
-                (String) spinnerProvince.getSelectedItem(),
-                (String) spinnerDistrict.getSelectedItem(),
-                (String) spinnerWard.getSelectedItem(),
+                autoProvince.getText().toString().trim(),
+                "", // District gộp chung
+                autoWard.getText().toString().trim(),
                 etDetailAddress.getText().toString().trim(),
                 selectedType,
                 switchDefault.isChecked()
         );
 
-        btnSubmit.setEnabled(false); // Ngăn bấm nhiều lần
+        btnSubmit.setEnabled(false);
         btnSubmit.setText("Đang lưu...");
 
         WriteBatch batch = db.batch();
-
-        // Nếu đặt làm mặc định, phải bỏ mặc định của tất cả địa chỉ khác
         if (address.isDefault()) {
             db.collection("users").document(effectiveUserId).collection("addresses")
                     .whereEqualTo("default", true)
@@ -380,10 +295,7 @@ public class AddressFormFragment extends Fragment {
                         }
                         performSave(batch, address, effectiveUserId);
                     })
-                    .addOnFailureListener(e -> {
-                        android.util.Log.e("AddressForm", "Error checking default: ", e);
-                        performSave(batch, address, effectiveUserId);
-                    }); 
+                    .addOnFailureListener(e -> performSave(batch, address, effectiveUserId)); 
         } else {
             performSave(batch, address, effectiveUserId);
         }
@@ -403,9 +315,34 @@ public class AddressFormFragment extends Fragment {
             if (isAdded()) {
                 btnSubmit.setEnabled(true);
                 btnSubmit.setText("Hoàn thành");
-                Toast.makeText(getContext(), "Lỗi khi lưu lên Firebase: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                android.util.Log.e("AddressForm", "Firestore save error", e);
+                Toast.makeText(getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void deleteAddress() {
+        if (editingAddress == null) return;
+        
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Xác nhận xóa")
+                .setMessage("Bạn có chắc chắn muốn xóa địa chỉ này?")
+                .setPositiveButton("Xóa", (dialog, which) -> {
+                    String effectiveUserId = (userId != null) ? userId : "guest_user";
+                    db.collection("users").document(effectiveUserId)
+                            .collection("addresses").document(editingAddress.getId())
+                            .delete()
+                            .addOnSuccessListener(aVoid -> {
+                                Toast.makeText(getContext(), "Đã xóa địa chỉ", Toast.LENGTH_SHORT).show();
+                                getParentFragmentManager().setFragmentResult("address_form_result", new Bundle());
+                                getParentFragmentManager().popBackStack();
+                            })
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) {
+                                    Toast.makeText(getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                })
+                .setNegativeButton("Hủy", null)
+                .show();
     }
 }

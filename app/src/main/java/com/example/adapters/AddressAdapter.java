@@ -24,16 +24,20 @@ public class AddressAdapter extends RecyclerView.Adapter<AddressAdapter.ViewHold
 
     private final List<Address> items;
     private final Listener listener;
+    private final boolean isSelectionMode;
     private int selectedPosition = -1;
 
-    public AddressAdapter(List<Address> items, Listener listener) {
+    public AddressAdapter(List<Address> items, boolean isSelectionMode, Listener listener) {
         this.items = items;
+        this.isSelectionMode = isSelectionMode;
         this.listener = listener;
-        // Khởi tạo vị trí được chọn dựa trên địa chỉ mặc định
-        for (int i = 0; i < items.size(); i++) {
-            if (items.get(i).isDefault()) {
-                selectedPosition = i;
-                break;
+        if (isSelectionMode) {
+            // Khởi tạo vị trí được chọn dựa trên địa chỉ mặc định
+            for (int i = 0; i < items.size(); i++) {
+                if (items.get(i).isDefault()) {
+                    selectedPosition = i;
+                    break;
+                }
             }
         }
     }
@@ -56,26 +60,32 @@ public class AddressAdapter extends RecyclerView.Adapter<AddressAdapter.ViewHold
         
         holder.tvDefaultBadge.setVisibility(address.isDefault() ? View.VISIBLE : View.GONE);
         
-        boolean isSelected = position == selectedPosition;
-        holder.rbSelect.setChecked(isSelected);
-        
-        // Cập nhật viền cho CardView nếu được chọn
-        if (isSelected) {
-            holder.cardContainer.setBackgroundResource(R.drawable.bg_address_card_selected);
+        if (isSelectionMode) {
+            holder.rbSelect.setVisibility(View.VISIBLE);
+            boolean isSelected = position == selectedPosition;
+            holder.rbSelect.setChecked(isSelected);
+            
+            // Cập nhật viền cho CardView nếu được chọn
+            if (isSelected) {
+                holder.cardContainer.setBackgroundResource(R.drawable.bg_address_card_selected);
+            } else {
+                holder.cardContainer.setBackgroundResource(android.R.color.white);
+            }
+
+            View.OnClickListener clickSelect = v -> {
+                int oldPos = selectedPosition;
+                selectedPosition = holder.getAdapterPosition();
+                notifyItemChanged(oldPos);
+                notifyItemChanged(selectedPosition);
+                listener.onSelect(address);
+            };
+
+            holder.itemView.setOnClickListener(clickSelect);
         } else {
+            holder.rbSelect.setVisibility(View.GONE);
             holder.cardContainer.setBackgroundResource(android.R.color.white);
+            holder.itemView.setOnClickListener(null);
         }
-
-        View.OnClickListener clickSelect = v -> {
-            int oldPos = selectedPosition;
-            selectedPosition = holder.getAdapterPosition();
-            notifyItemChanged(oldPos);
-            notifyItemChanged(selectedPosition);
-            listener.onSelect(address);
-        };
-
-        holder.itemView.setOnClickListener(clickSelect);
-        holder.rbSelect.setOnClickListener(clickSelect);
         
         holder.btnEdit.setOnClickListener(v -> listener.onEdit(address));
     }
