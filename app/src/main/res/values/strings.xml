@@ -107,10 +107,7 @@
     <string name="notify_permission_icon_desc">Biểu tượng thông báo</string>
     <string name="notify_permission_granted">Đã bật thông báo</string>
 
-    <!-- Google Sign-In: lấy Web client ID từ Firebase Console sau khi bật Google provider -->
     <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
-
-    <!-- Facebook Login: thay bằng App ID và Client Token từ Facebook Developer Console -->
     <string name="facebook_app_id" translatable="false">YOUR_FACEBOOK_APP_ID</string>
     <string name="facebook_client_token" translatable="false">YOUR_FACEBOOK_CLIENT_TOKEN</string>
     <string name="fb_login_protocol_scheme" translatable="false">fbYOUR_FACEBOOK_APP_ID</string>
@@ -127,7 +124,6 @@
     <string name="social_complete_profile_subtitle">Vui lòng bổ sung thông tin để tiếp tục sử dụng HealthUp</string>
     <string name="social_complete_profile_continue">Tiếp tục</string>
 
-    <!-- About HealthUp screen (static UI labels; content comes from assets/about_healthup.json) -->
     <string name="about_title">Về HealthUp</string>
     <string name="about_back_desc">Quay lại</string>
     <string name="about_values_section">Những điều HealthUp theo đuổi</string>
@@ -137,7 +133,6 @@
     <string name="about_image_placeholder">Placeholder</string>
     <string name="about_image_desc">Hình ảnh HealthUp</string>
 
-    <!-- Chat -->
     <string name="chat_open">Trợ lý HealthUp</string>
     <string name="chat_title">HealthUp Assistant</string>
     <string name="chat_status_online">Đang online</string>
@@ -168,14 +163,12 @@
     <string name="order_detail_placeholder">Chi tiết đơn hàng</string>
     <string name="order_detail_with_id">Chi tiết đơn hàng\nMã đơn: %1$s</string>
 
-    <!-- Seller inbox -->
     <string name="seller_inbox_title">Hộp thư người bán</string>
     <string name="seller_inbox_empty">Chưa có cuộc trò chuyện nào cần hỗ trợ.</string>
     <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
     <string name="seller_reply_hint">Nhập tin nhắn trả lời…</string>
     <string name="conversation_buyer_fallback">Khách hàng</string>
 
-    <!-- DEBUG-only shortcuts on Login (hidden in release) -->
     <string name="debug_test_section">Kiểm thử (debug)</string>
     <string name="debug_about_link">Về HealthUp</string>
     <string name="debug_chat_link">Chat Assistant</string>
