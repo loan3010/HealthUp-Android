@@ -26,6 +26,8 @@ public class Category {
         list.add(new Category("2", "Granola", "fruit.png"));
         list.add(new Category("3", "Trái cây sấy", "fruit.png"));
         list.add(new Category("4", "Đồ ăn vặt", "fruit.png"));
+        list.add(new Category("5", "Trà thảo mộc", "fruit.png"));
+        list.add(new Category("6", "Combo", "fruit.png"));
         return list;
     }
 }

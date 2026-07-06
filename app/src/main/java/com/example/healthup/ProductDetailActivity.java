@@ -1,7 +1,7 @@
 package com.example.healthup;
 
-
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.widget.ImageButton;
 import android.widget.ImageView;
@@ -15,6 +15,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.viewpager2.widget.ViewPager2;
 import com.google.android.material.button.MaterialButton;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.example.healthup.R;
 import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
@@ -26,7 +27,6 @@ import java.util.Locale;
 
 
 public class ProductDetailActivity extends AppCompatActivity {
-
 
     private Product product;
     private ViewPager2 viewPagerImages;
@@ -40,17 +40,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     private View layoutVariants, dividerVariants;
     private Product.ProductVariant selectedVariant;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product_detail);
 
-
-        // Ưu tiên lấy productId để fetch dữ liệu mới nhất từ Firestore, tránh lỗi quá tải Intent
         String productId = getIntent().getStringExtra("productId");
         product = (Product) getIntent().getSerializableExtra("product");
-
 
         if (productId != null) {
             fetchProductDetails(productId);
@@ -61,7 +57,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             finish();
         }
     }
-
 
     private void fetchProductDetails(String productId) {
         FirestoreManager.getInstance().getProductsCollection().document(productId).get()
@@ -80,7 +75,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> finish());
     }
 
-
     private void initViews() {
         btnBack = findViewById(R.id.btn_back);
         viewPagerImages = findViewById(R.id.view_pager_images);
@@ -95,7 +89,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvSavings = findViewById(R.id.tv_savings);
         tvStock = findViewById(R.id.tv_detail_stock);
 
-
         layoutVariants = findViewById(R.id.layout_variants);
         dividerVariants = findViewById(R.id.divider_variants);
         chipGroupVariants = findViewById(R.id.chip_group_variants);
@@ -104,61 +97,49 @@ public class ProductDetailActivity extends AppCompatActivity {
         btnAddCart = findViewById(R.id.btn_detail_add_cart);
         btnBuyNow = findViewById(R.id.btn_buy_now);
 
-
         rvRecommendations = findViewById(R.id.rv_detail_recommendations);
         rvReviews = findViewById(R.id.rv_reviews);
         tvViewAllReviews = findViewById(R.id.tv_view_all_reviews);
-
 
         btnBack.setOnClickListener(v -> finish());
         btnWishlist.setOnClickListener(v -> toggleFavorite());
         btnAddCart.setOnClickListener(v -> showVariantSelection(false));
         btnBuyNow.setOnClickListener(v -> showVariantSelection(true));
 
-
-        // FIX: nút "Xem tất cả" đánh giá trước đây không có sự kiện click nào cả
         if (tvViewAllReviews != null) {
             tvViewAllReviews.setOnClickListener(v -> openAllReviews());
         }
     }
 
-
-    // FIX: mở màn hình xem tất cả đánh giá thật của sản phẩm đang xem (truyền productId
-    // để ProductReviewsActivity query đúng sub-collection "reviews" của sản phẩm này)
     private void openAllReviews() {
         if (product == null || product.getId() == null) return;
         android.content.Intent intent = new android.content.Intent(this, ProductReviewsActivity.class);
         intent.putExtra("productId", product.getId());
         intent.putExtra("product_name", product.getName());
+        intent.putExtra("avgRating", product.getRating());
+        intent.putExtra("reviewCount", product.getReviewCount());
         startActivity(intent);
     }
-
 
     private void setupProductInfo() {
         tvName.setText(product.getName());
         updatePriceDisplay();
 
-
         tvRating.setText(String.valueOf(product.getRating()));
         tvReviewCount.setText(product.getReviewCount() + " đánh giá");
         tvSold.setText("Đã bán " + product.getSoldCount() + "+");
 
-
         updateWishlistIcon();
         setupVariants();
 
-
-        // Image Slider setup
         List<String> images = product.getImages();
         if (images == null || images.isEmpty()) {
             images = new ArrayList<>();
             images.add(product.getImageUrl());
         }
 
-
         final List<String> finalImages = images;
         viewPagerImages.setAdapter(new ImageSliderAdapter(finalImages));
-
 
         tvImageIndex.setText("1/" + finalImages.size());
         viewPagerImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -169,13 +150,11 @@ public class ProductDetailActivity extends AppCompatActivity {
         });
     }
 
-
     private void setupVariants() {
         if (product.isHasVariants() && product.getVariants() != null && !product.getVariants().isEmpty()) {
             layoutVariants.setVisibility(View.VISIBLE);
             dividerVariants.setVisibility(View.VISIBLE);
             chipGroupVariants.removeAllViews();
-
 
             for (Product.ProductVariant variant : product.getVariants()) {
                 com.google.android.material.chip.Chip chip = (com.google.android.material.chip.Chip) getLayoutInflater()
@@ -189,7 +168,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                 });
                 chipGroupVariants.addView(chip);
             }
-            // Select first variant by default
             if (chipGroupVariants.getChildCount() > 0) {
                 ((com.google.android.material.chip.Chip) chipGroupVariants.getChildAt(0)).setChecked(true);
             }
@@ -201,25 +179,20 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
     private void updatePriceDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
         double displayPrice = (selectedVariant != null) ? selectedVariant.getPrice() : product.getPrice();
         int stock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
 
-
         tvPrice.setText(formatter.format(displayPrice) + "đ");
-
 
         if (product.getOriginalPrice() > displayPrice) {
             tvOriginalPrice.setVisibility(View.VISIBLE);
             tvDiscount.setVisibility(View.VISIBLE);
             tvSavings.setVisibility(View.VISIBLE);
 
-
             tvOriginalPrice.setText(formatter.format(product.getOriginalPrice()) + "đ");
             tvOriginalPrice.setPaintFlags(tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-
 
             int discountPercent = (int) (((product.getOriginalPrice() - displayPrice) / product.getOriginalPrice()) * 100);
             tvDiscount.setText("-" + discountPercent + "%");
@@ -230,7 +203,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             tvSavings.setVisibility(View.GONE);
         }
 
-
         if (tvStock != null) {
             tvStock.setText(getString(R.string.stock_prefix, stock));
             btnAddCart.setEnabled(stock > 0);
@@ -238,12 +210,9 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
     private void setupExpandableSections() {
         setupSection(findViewById(R.id.section_ingredients), "Thành phần chính", product.getIngredients());
 
-
-        // Format Nutrition List
         StringBuilder nutritionText = new StringBuilder();
         if (product.getNutrition() != null) {
             for (Product.NutritionItem item : product.getNutrition()) {
@@ -258,25 +227,20 @@ public class ProductDetailActivity extends AppCompatActivity {
         setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng",
                 nutritionText.length() > 0 ? nutritionText.toString().trim() : null);
 
-
         setupSection(findViewById(R.id.section_usage), "Hướng dẫn sử dụng", product.getUsage());
         setupSection(findViewById(R.id.section_origin), "Nguồn gốc xuất xứ", product.getOrigin());
     }
 
-
     private void setupSection(View sectionView, String title, String content) {
         if (sectionView == null) return;
-
 
         TextView tvTitle = sectionView.findViewById(R.id.tv_section_title);
         TextView tvContent = sectionView.findViewById(R.id.tv_section_content);
         View btnExpand = sectionView.findViewById(R.id.btn_expand);
         ImageView ivArrow = sectionView.findViewById(R.id.iv_expand_arrow);
 
-
         if (tvTitle != null) tvTitle.setText(title);
         if (tvContent != null) tvContent.setText(content != null ? content : "Thông tin đang được cập nhật...");
-
 
         if (btnExpand != null) {
             btnExpand.setOnClickListener(v -> {
@@ -293,7 +257,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
     private void setupRecommendations() {
         List<Product> recommendations = new ArrayList<>();
         recommendationAdapter = new ProductAdapter(recommendations, new ProductAdapter.OnProductClickListener() {
@@ -301,7 +264,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             public void onProductClick(Product p) {
                 if (p == null || p.getId() == null) return;
                 android.content.Intent intent = new android.content.Intent(ProductDetailActivity.this, ProductDetailActivity.class);
-                // CHỈ truyền productId để tránh lỗi crash do quá tải Intent hoặc Serialization
                 intent.putExtra("productId", p.getId());
                 startActivity(intent);
                 finish();
@@ -320,14 +282,81 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         });
 
-
         rvRecommendations.setLayoutManager(new GridLayoutManager(this, 2));
         rvRecommendations.setAdapter(recommendationAdapter);
 
+        fetchRecommendationsByCategory(recommendations);
+        fetchReviews();
+    }
+
+    // FIX ROOT CAUSE: Product.java xác nhận field "cat" trên Firestore CÓ THỂ là String
+    // hoặc List<String> (tùy sản phẩm). Code cũ chỉ dùng whereEqualTo("cat", category),
+    // nếu "cat" trên Firestore là kiểu array thì so sánh với String KHÔNG BAO GIỜ khớp
+    // -> query trả 0 kết quả -> "Có thể bạn quan tâm" trống trơn.
+    // Cách fix: thử whereEqualTo trước (khớp trường hợp cat là String),
+    // nếu rỗng thì thử whereArrayContains (khớp trường hợp cat là array),
+    // nếu vẫn rỗng mới rơi về fallback (lấy tạm sản phẩm khác để luôn có gợi ý).
+    private void fetchRecommendationsByCategory(List<Product> recommendations) {
+        String category = product.getCategory();
+        if (category == null || category.isEmpty()) {
+            fetchFallbackRecommendations(recommendations);
+            return;
+        }
 
         FirestoreManager.getInstance().getProductsCollection()
-                .whereEqualTo("cat", product.getCategory())
-                .limit(4).get()
+                .whereEqualTo("cat", category)
+                .limit(8).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.isEmpty()) {
+                        fillRecommendations(recommendations, snapshot);
+                    } else {
+                        tryArrayContainsCategory(recommendations, category);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("ProductDetail", "Lỗi whereEqualTo cat: " + e.getMessage());
+                    tryArrayContainsCategory(recommendations, category);
+                });
+    }
+
+    private void tryArrayContainsCategory(List<Product> recommendations, String category) {
+        FirestoreManager.getInstance().getProductsCollection()
+                .whereArrayContains("cat", category)
+                .limit(8).get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.isEmpty()) {
+                        fillRecommendations(recommendations, snapshot);
+                    } else {
+                        fetchFallbackRecommendations(recommendations);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("ProductDetail", "Lỗi whereArrayContains cat: " + e.getMessage());
+                    fetchFallbackRecommendations(recommendations);
+                });
+    }
+
+    private void fillRecommendations(List<Product> recommendations, QuerySnapshot snapshot) {
+        recommendations.clear();
+        for (DocumentSnapshot doc : snapshot) {
+            Product p = doc.toObject(Product.class);
+            if (p != null && !doc.getId().equals(product.getId())) {
+                p.setId(doc.getId());
+                recommendations.add(p);
+                if (recommendations.size() >= 6) break;
+            }
+        }
+        if (recommendations.isEmpty()) {
+            fetchFallbackRecommendations(recommendations);
+        } else {
+            recommendationAdapter.notifyDataSetChanged();
+        }
+    }
+
+    // Fallback cuối cùng: không lọc điều kiện gì, đảm bảo luôn có dữ liệu Firestore thật hiển thị
+    private void fetchFallbackRecommendations(List<Product> recommendations) {
+        FirestoreManager.getInstance().getProductsCollection()
+                .limit(8).get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     recommendations.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
@@ -335,15 +364,14 @@ public class ProductDetailActivity extends AppCompatActivity {
                         if (p != null && !doc.getId().equals(product.getId())) {
                             p.setId(doc.getId());
                             recommendations.add(p);
+                            if (recommendations.size() >= 6) break;
                         }
                     }
                     recommendationAdapter.notifyDataSetChanged();
-                });
-
-
-        fetchReviews();
+                })
+                .addOnFailureListener(e ->
+                        Log.e("ProductDetail", "Lỗi fallback recommendations: " + e.getMessage()));
     }
-
 
     private void fetchReviews() {
         List<com.example.models.Review> reviews = new ArrayList<>();
@@ -351,8 +379,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         rvReviews.setLayoutManager(new LinearLayoutManager(this));
         rvReviews.setAdapter(reviewAdapter);
 
-
-        // Giả sử review được lưu trong sub-collection 'reviews' của mỗi product
         FirestoreManager.getInstance().getProductsCollection()
                 .document(product.getId())
                 .collection("reviews")
@@ -372,15 +398,12 @@ public class ProductDetailActivity extends AppCompatActivity {
                 });
     }
 
-
     private void toggleFavorite() {
         toggleFavoriteForProduct(product);
     }
 
-
     private void toggleFavoriteForProduct(Product p) {
         if (p == null || p.getId() == null) return;
-
 
         com.google.firebase.auth.FirebaseUser currentUser = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (currentUser == null) {
@@ -388,28 +411,22 @@ public class ProductDetailActivity extends AppCompatActivity {
             return;
         }
 
-
         boolean oldFavoriteState = p.isFavorite();
         boolean newFavoriteState = !oldFavoriteState;
 
-
         p.setFavorite(newFavoriteState);
-
 
         if (p.getId().equals(product.getId())) {
             product.setFavorite(newFavoriteState);
             updateWishlistIcon();
         }
 
-
         if (recommendationAdapter != null) {
             recommendationAdapter.notifyDataSetChanged();
         }
 
-
         java.util.Map<String, Object> updates = new java.util.HashMap<>();
         updates.put("favorite", newFavoriteState);
-
 
         FirestoreManager.getInstance().getProductsCollection()
                 .document(p.getId())
@@ -427,17 +444,14 @@ public class ProductDetailActivity extends AppCompatActivity {
                         recommendationAdapter.notifyDataSetChanged();
                     }
 
-
                     android.util.Log.e("ProductDetail", "Favorite update failed: " + e.getMessage(), e);
                     Toast.makeText(this, "Không thể cập nhật yêu thích: " + e.getMessage(), Toast.LENGTH_LONG).show();
                 });
     }
 
-
     private void updateWishlistIcon() {
         btnWishlist.setImageResource(product.isFavorite() ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
     }
-
 
     private void showVariantSelection(boolean isBuyNow) {
         VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) -> {
@@ -451,12 +465,10 @@ public class ProductDetailActivity extends AppCompatActivity {
         bottomSheet.show(getSupportFragmentManager(), "VariantSelection");
     }
 
-
     private void performBuyNow(int quantity) {
         addToCart(quantity);
         // TODO: Redirect to CheckoutActivity
     }
-
 
     private void addToCart(int quantity) {
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
@@ -466,10 +478,8 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
         String userId = user.getUid();
 
-
         String productId = product.getId();
         String variantId = (selectedVariant != null) ? selectedVariant.getId() : null;
-
 
         FirestoreManager.getInstance().getFirestore().collection("cart")
                 .whereEqualTo("userId", userId)

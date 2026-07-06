@@ -1,6 +1,5 @@
 package com.example.healthup;
 
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -34,21 +33,26 @@ public class ProfileFragment extends Fragment {
         });
 
 
-        // FIX: Mở trang Sản phẩm yêu thích
         binding.cardWishlist.setOnClickListener(v -> {
             loadFragment(new WishlistFragment());
         });
 
 
-        // Mở trang Quản lý đơn hàng
         binding.cardOrderHistory.setOnClickListener(v -> {
             loadFragment(new OrderHistoryFragment());
         });
 
 
-        // Mở trang Đổi trả
         binding.cardRefund.setOnClickListener(v -> {
             startActivity(new Intent(getActivity(), ReturnRefundActivity.class));
+        });
+
+
+        // FIX: gắn điều hướng cho card "Câu hỏi thường gặp" -> mở FAQFragment
+        // (FAQFragment đã code sẵn đầy đủ: fetch Firestore collection "faqs",
+        // search, filter theo category — chỉ cần nối vào đây)
+        binding.cardFAQ.setOnClickListener(v -> {
+            loadFragment(new FAQFragment());
         });
     }
 

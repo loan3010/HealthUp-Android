@@ -42,7 +42,6 @@
         app:layout_constraintTop_toBottomOf="@id/tvProfileTitle">
 
 
-        <!-- Nút xem Sản phẩm yêu thích (đã bỏ icon trái tim, chỉ giữ chữ) -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardWishlist"
             android:layout_width="match_parent"
@@ -71,7 +70,6 @@
         </androidx.cardview.widget.CardView>
 
 
-        <!-- Nút xem Lịch sử đơn hàng -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardOrderHistory"
             android:layout_width="match_parent"
@@ -100,7 +98,6 @@
         </androidx.cardview.widget.CardView>
 
 
-        <!-- Nút xem Đổi trả / Hoàn tiền -->
         <androidx.cardview.widget.CardView
             android:id="@+id/cardRefund"
             android:layout_width="match_parent"
@@ -119,6 +116,35 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Đổi trả &amp; Hoàn tiền"
+                    android:textSize="16sp" />
+                <ImageView
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
+                    android:layout_alignParentEnd="true"
+                    android:src="@drawable/ic_arrow_right" />
+            </RelativeLayout>
+        </androidx.cardview.widget.CardView>
+
+
+        <!-- FIX: card mới cho FAQ, nối vào FAQFragment đã có sẵn -->
+        <androidx.cardview.widget.CardView
+            android:id="@+id/cardFAQ"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
+
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp">
+                <TextView
+                    style="@style/TextAppearance.HealthUp.SubContent.Bold"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Câu hỏi thường gặp"
                     android:textSize="16sp" />
                 <ImageView
                     android:layout_width="20dp"

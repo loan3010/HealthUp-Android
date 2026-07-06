@@ -51,7 +51,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     private CategoryAdapter categoryAdapter;
 
     private final List<String> categories = Arrays.asList(
-            "Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc"
+            "Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"
     );
 
     public static FilterBottomSheetFragment newInstance(String category, String sort, double min, double max, float rating) {

@@ -126,17 +126,18 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
 
     private void fetchCategoriesFromFirestore() {
+        // Cố định 7 danh mục theo yêu cầu của HealthUp để đảm bảo tính nhất quán với thương hiệu
+        categoryNames.clear();
+        categoryNames.addAll(Arrays.asList("Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"));
+        setupCategoryChips();
+        
+        // Vẫn giữ fetch từ Firestore nếu sau này muốn đồng bộ icon hoặc metadata, 
+        // nhưng hiện tại ưu tiên hiển thị đúng 7 tab yêu cầu.
         FirestoreManager.getInstance().getFirestore().collection("categories").get().addOnSuccessListener(snapshots -> {
-            categoryNames.clear();
-            categoryNames.add("Tất cả");
-            for (DocumentSnapshot doc : snapshots) {
-                String name = doc.getString("name");
-                if (name != null) categoryNames.add(name);
+            if (!snapshots.isEmpty()) {
+                // Nếu muốn đồng bộ tên từ server thì xử lý ở đây, 
+                // nhưng hiện tại đã fix cứng list theo yêu cầu user.
             }
-            if (categoryNames.size() == 1) { // Chỉ có "Tất cả"
-                categoryNames.addAll(Arrays.asList("Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc"));
-            }
-            setupCategoryChips();
         });
     }
 
