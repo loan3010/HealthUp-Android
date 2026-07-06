@@ -36,7 +36,29 @@ public class ReturnRefundActivity extends AppCompatActivity {
             binding.tvVariant.setText(firstItem.getVariantLabel());
             binding.tvPrice.setText(df.format(firstItem.getPrice()));
             binding.tvQuantity.setText("x" + firstItem.getQuantity());
-            Glide.with(this).load(firstItem.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(binding.imgProduct);
+            
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = firstItem.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(this)
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(binding.imgProduct);
+            } else {
+                binding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
         }
 
         binding.btnBack.setOnClickListener(v -> finish());

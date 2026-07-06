@@ -51,22 +51,40 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="40dp"
-            android:orientation="vertical"
-            android:paddingHorizontal="@dimen/spacing_l">
+            android:orientation="vertical">
 
-            <TextView
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:text="Có thể bạn quan tâm"
-                android:textColor="@color/text_main"
-                android:textSize="18sp"
-                android:textStyle="bold" />
+                android:paddingHorizontal="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Gợi ý cho bạn"
+                    android:textColor="@color/text_dark"
+                    android:textSize="18sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvViewAllRecommend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:text="Xem tất cả"
+                    android:textColor="@color/text_gray"
+                    android:textSize="12sp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvRecommend"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:paddingHorizontal="10dp"
                 android:nestedScrollingEnabled="false" />
 
             <com.google.android.material.button.MaterialButton

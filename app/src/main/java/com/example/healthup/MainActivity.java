@@ -133,6 +133,15 @@ public class MainActivity extends AppCompatActivity {
                 args.putInt("initial_tab", 6);
             } else if ("delivered_tab".equals(target)) {
                 args.putInt("initial_tab", 4);
+            } else if ("shipping_tab".equals(target)) {
+                args.putInt("initial_tab", 3);
+            } else if ("confirmed_tab".equals(target)) {
+                args.putInt("initial_tab", 2);
+            } else if ("pending_tab".equals(target)) {
+                args.putInt("initial_tab", 1);
+            } else if ("faq".equals(target)) {
+                loadFragment(new FAQFragment());
+                return;
             }
 
             fragment.setArguments(args);

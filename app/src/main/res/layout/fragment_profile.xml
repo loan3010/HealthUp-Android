@@ -224,6 +224,7 @@
                     android:textSize="18sp"
                     android:textStyle="bold" />
                 <TextView
+                    android:id="@+id/btn_view_all_orders"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
@@ -231,7 +232,9 @@
                     android:text="Xem tất cả →"
                     android:textColor="@color/green_button"
                     android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
             </RelativeLayout>
 
             <LinearLayout
@@ -243,30 +246,84 @@
                 android:paddingTop="20dp"
                 android:paddingBottom="20dp"
                 android:elevation="1dp">
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                    <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon_circle_white" android:backgroundTint="#F8F8F8" />
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_pending" app:tint="@color/text_gray" android:layout_marginTop="-32dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="15dp" android:text="Chờ xác\nnhận" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/order_pending"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#F8F8F8"
+                        android:foreground="?attr/selectableItemBackgroundBorderless">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_pending" app:tint="@color/text_gray" android:layout_gravity="center"/>
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Chờ xác\nnhận" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                    <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon_circle_white" android:backgroundTint="#F8F8F8" />
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_pickup" app:tint="@color/text_gray" android:layout_marginTop="-32dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="15dp" android:text="Chờ lấy\nhàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/order_pickup"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#F8F8F8"
+                        android:foreground="?attr/selectableItemBackgroundBorderless">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_pickup" app:tint="@color/text_gray" android:layout_gravity="center"/>
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Chờ lấy\nhàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                    <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon_circle_white" android:backgroundTint="#F8F8F8" />
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_shipping" app:tint="@color/text_gray" android:layout_marginTop="-32dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="15dp" android:text="Chờ giao\nhàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/order_shipping"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#F8F8F8"
+                        android:foreground="?attr/selectableItemBackgroundBorderless">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_shipping" app:tint="@color/text_gray" android:layout_gravity="center"/>
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Chờ giao\nhàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                    <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon_circle_white" android:backgroundTint="#F8F8F8" />
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_delivered" app:tint="@color/text_gray" android:layout_marginTop="-32dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="15dp" android:text="Đã giao" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/order_delivered"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#F8F8F8"
+                        android:foreground="?attr/selectableItemBackgroundBorderless">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_delivered" app:tint="@color/text_gray" android:layout_gravity="center"/>
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Đã giao" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
                 </LinearLayout>
-                <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
-                    <View android:layout_width="40dp" android:layout_height="40dp" android:background="@drawable/bg_icon_circle_white" android:backgroundTint="#F8F8F8" />
-                    <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_return" app:tint="@color/text_gray" android:layout_marginTop="-32dp"/>
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="15dp" android:text="Trả hàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
+
+                <LinearLayout
+                    android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:gravity="center" android:orientation="vertical">
+                    <FrameLayout
+                        android:id="@+id/order_returned"
+                        android:layout_width="44dp"
+                        android:layout_height="44dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:background="@drawable/bg_avatar_circle"
+                        android:backgroundTint="#F8F8F8"
+                        android:foreground="?attr/selectableItemBackgroundBorderless">
+                        <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_order_return" app:tint="@color/text_gray" android:layout_gravity="center"/>
+                    </FrameLayout>
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="Trả hàng" android:textSize="11sp" android:gravity="center" android:textColor="@color/text_gray"/>
                 </LinearLayout>
             </LinearLayout>
         </LinearLayout>

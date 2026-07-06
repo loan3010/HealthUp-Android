@@ -34,8 +34,27 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         order = (Order) getIntent().getSerializableExtra("order");
-        if (order != null) {
+        String orderIdFallback = getIntent().getStringExtra("extra_order_id");
+
+        if (order != null && order.getUpdatedAt() != null) {
             populateUI();
+        } else {
+            String orderId = (order != null) ? order.getId() : orderIdFallback;
+            if (orderId != null) {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("orders")
+                        .document(orderId)
+                        .get()
+                        .addOnSuccessListener(doc -> {
+                            if (doc.exists()) {
+                                order = doc.toObject(Order.class);
+                                if (order != null) {
+                                    order.setId(doc.getId());
+                                    populateUI();
+                                }
+                            }
+                        });
+            }
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
@@ -116,7 +135,38 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             pBinding.tvVariant.setText(item.getVariantLabel());
             pBinding.tvPrice.setText(df.format(item.getPrice()));
             pBinding.tvQuantity.setText("x" + item.getQuantity());
-            Glide.with(this).load(item.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(pBinding.imgProduct);
+
+            if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
+                pBinding.tvPriceOld.setVisibility(View.VISIBLE);
+                pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
+                pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            } else {
+                pBinding.tvPriceOld.setVisibility(View.GONE);
+            }
+
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(this)
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(pBinding.imgProduct);
+            } else {
+                pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
+
             binding.lnItemsContainer.addView(pBinding.getRoot());
         }
     }

@@ -18,7 +18,6 @@ public class SplashActivity extends AppCompatActivity {
         setContentView(R.layout.activity_splash);
 
         FirebaseManager.getInstance().seedProductsIfEmpty();
-        FirebaseManager.getInstance().seedOrdersIfEmpty();
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             Class<?> destination = FirebaseAuth.getInstance().getCurrentUser() == null

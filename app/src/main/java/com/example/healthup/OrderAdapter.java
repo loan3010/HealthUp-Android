@@ -80,24 +80,41 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
 
         dialogBinding.btnBack.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.btnConfirmCancel.setOnClickListener(v -> {
-            if (adapter.getSelectedReason() == null) {
+            ReturnReason selected = adapter.getSelectedReason();
+            if (selected == null) {
                 android.widget.Toast.makeText(context, "Vui lòng chọn lý do hủy đơn", android.widget.Toast.LENGTH_SHORT).show();
                 return;
             }
+            
+            String orderId = order.getId();
+            if (orderId == null || orderId.isEmpty()) {
+                android.widget.Toast.makeText(context, "Lỗi: Không tìm thấy ID đơn hàng", android.widget.Toast.LENGTH_SHORT).show();
+                return;
+            }
+
             dialog.dismiss();
             
             AlertDialog loadingDialog = showLoadingDialog();
-            FirebaseManager.getInstance().updateOrderStatus(order.getId(), "cancelled")
+            FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle())
                 .addOnSuccessListener(aVoid -> {
-                    loadingDialog.dismiss();
-                    Intent intent = new Intent(context, MainActivity.class);
-                    intent.putExtra("navigate_to", "cancelled_tab");
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                    context.startActivity(intent);
+                    // Chờ 1.5s cho cảm giác đang xử lý như yêu cầu
+                    new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                        loadingDialog.dismiss();
+                        // Chuyển thẳng về tab đã hủy trong MainActivity
+                        Intent intent = new Intent(context, MainActivity.class);
+                        intent.putExtra("navigate_to", "cancelled_tab");
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                        context.startActivity(intent);
+                        android.widget.Toast.makeText(context, "Đã hủy đơn hàng thành công", android.widget.Toast.LENGTH_SHORT).show();
+                    }, 1500);
                 })
                 .addOnFailureListener(e -> {
                     loadingDialog.dismiss();
-                    android.widget.Toast.makeText(context, "Lỗi hủy đơn: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                    String errorMsg = e.getMessage();
+                    if (errorMsg != null && errorMsg.contains("permission")) {
+                        errorMsg = "Bạn không có quyền hủy đơn hàng này hoặc chưa đăng nhập.";
+                    }
+                    android.widget.Toast.makeText(context, "Lỗi hủy đơn: " + errorMsg, android.widget.Toast.LENGTH_LONG).show();
                 });
         });
 
@@ -117,28 +134,6 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         return loadingDialog;
     }
 
-    private void showSuccessDialog(String message, String targetTab) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        DialogSuccessBinding dialogBinding = DialogSuccessBinding.inflate(LayoutInflater.from(context));
-        builder.setView(dialogBinding.getRoot());
-        dialogBinding.tvMessage.setText(message);
-
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-
-        dialogBinding.btnConfirm.setOnClickListener(v -> {
-            dialog.dismiss();
-            Intent intent = new Intent(context, MainActivity.class);
-            intent.putExtra("navigate_to", targetTab);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-            context.startActivity(intent);
-        });
-
-        dialog.setCancelable(false);
-        dialog.show();
-    }
 
     class OrderViewHolder extends RecyclerView.ViewHolder {
         private ItemOrderBinding binding;
@@ -149,17 +144,75 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         }
 
         public void bind(Order order) {
-            itemView.setOnClickListener(v -> {
-                String status = order.getStatus().toLowerCase();
-                if ("returned".equals(status) || "refunded".equals(status)) {
-                    android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
-                    intent.putExtra("order", order);
-                    context.startActivity(intent);
-                } else {
-                    android.content.Intent intent = new android.content.Intent(context, OrderDetailActivity.class);
-                    intent.putExtra("order", order);
-                    context.startActivity(intent);
+            // Demo logic: Click on status text to advance status (Admin simulation)
+            binding.tvStatus.setOnClickListener(v -> {
+                String currentStatus = order.getStatus().toLowerCase();
+                String orderId = order.getId();
+                
+                if ("shipping".equals(currentStatus)) {
+                    // Demo: Shop confirm delivery -> Activate "Received" button
+                    AlertDialog loading = showLoadingDialog();
+                    FirebaseManager.getInstance().simulateShopConfirmedDelivery(orderId)
+                        .addOnSuccessListener(aVoid -> {
+                            loading.dismiss();
+                            // Update local data to reflect change immediately
+                            order.setShopConfirmedDelivery(true);
+                            order.setDeliveredAt(com.google.firebase.Timestamp.now());
+                            notifyItemChanged(getAdapterPosition());
+                        })
+                        .addOnFailureListener(e -> {
+                            loading.dismiss();
+                            android.widget.Toast.makeText(context, "Lỗi: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                        });
+                    return;
                 }
+
+                String nextStatus = null;
+                String targetTab = null;
+
+                switch (currentStatus) {
+                    case "pending":
+                        nextStatus = "confirmed";
+                        targetTab = "confirmed_tab"; 
+                        break;
+                    case "confirmed":
+                        nextStatus = "shipping";
+                        targetTab = "shipping_tab";
+                        break;
+                }
+
+                if (nextStatus != null) {
+                    AlertDialog loading = showLoadingDialog();
+                    String finalTargetTab = targetTab;
+                    FirebaseManager.getInstance().updateOrderStatus(orderId, nextStatus)
+                        .addOnSuccessListener(aVoid -> {
+                            loading.dismiss();
+                            Intent intent = new Intent(context, MainActivity.class);
+                            intent.putExtra("navigate_to", finalTargetTab);
+                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                            context.startActivity(intent);
+                        })
+                        .addOnFailureListener(e -> {
+                            loading.dismiss();
+                            android.widget.Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                        });
+                }
+            });
+
+            itemView.setOnClickListener(v -> {
+                String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
+                String orderId = order.getId();
+                
+                android.content.Intent intent;
+                if ("returned".equals(status) || "refunded".equals(status)) {
+                    intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
+                } else {
+                    intent = new android.content.Intent(context, OrderDetailActivity.class);
+                }
+                
+                intent.putExtra("order", order);
+                intent.putExtra("extra_order_id", orderId); // Backup ID if serialization fails
+                context.startActivity(intent);
             });
 
             setStatusUI(order);
@@ -198,18 +251,62 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             }
 
             setButtonsUI(order);
+
+            // Handle delivery info display for shipping state demo
+            if ("shipping".equalsIgnoreCase(order.getStatus()) && order.isShopConfirmedDelivery()) {
+                binding.tvDeliveryInfo.setVisibility(View.VISIBLE);
+                String time = "vừa xong";
+                if (order.getDeliveredAt() != null) {
+                    java.text.SimpleDateFormat timeSdf = new java.text.SimpleDateFormat("HH:mm dd-MM", java.util.Locale.getDefault());
+                    time = timeSdf.format(order.getDeliveredAt().toDate());
+                }
+                binding.tvDeliveryInfo.setText("Đơn hàng đã giao thành công vào " + time);
+            } else {
+                binding.tvDeliveryInfo.setVisibility(View.GONE);
+            }
         }
 
-        private void addProductView(OrderItem item) {
-            ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
-                    LayoutInflater.from(context), binding.lnItemsContainer, false);
-            pBinding.tvProductName.setText(item.getName());
-            pBinding.tvVariant.setText(item.getVariantLabel());
-            pBinding.tvPrice.setText(df.format(item.getPrice()));
-            pBinding.tvQuantity.setText("x" + item.getQuantity());
-            Glide.with(context).load(item.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(pBinding.imgProduct);
-            binding.lnItemsContainer.addView(pBinding.getRoot());
+    private void addProductView(OrderItem item) {
+        ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
+                LayoutInflater.from(context), binding.lnItemsContainer, false);
+        pBinding.tvProductName.setText(item.getName());
+        pBinding.tvVariant.setText(item.getVariantLabel());
+        pBinding.tvPrice.setText(df.format(item.getPrice()));
+        pBinding.tvQuantity.setText("x" + item.getQuantity());
+
+        if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
+            pBinding.tvPriceOld.setVisibility(View.VISIBLE);
+            pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
+            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+        } else {
+            pBinding.tvPriceOld.setVisibility(View.GONE);
         }
+
+        // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+        String imagePath = item.getImageUrl();
+        if (imagePath != null && !imagePath.isEmpty()) {
+            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+            Object loadTarget;
+
+            if (cleanPath.startsWith("images/")) {
+                loadTarget = "file:///android_asset/" + cleanPath;
+            } else if (imagePath.startsWith("http")) {
+                loadTarget = imagePath;
+            } else {
+                loadTarget = "file:///android_asset/images/products/" + cleanPath;
+            }
+
+            Glide.with(context)
+                    .load(loadTarget)
+                    .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
+                    .into(pBinding.imgProduct);
+        } else {
+            pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+        }
+        
+        binding.lnItemsContainer.addView(pBinding.getRoot());
+    }
 
         private void setStatusUI(Order order) {
             String status = order.getStatus();

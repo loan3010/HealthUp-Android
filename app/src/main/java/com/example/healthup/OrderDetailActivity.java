@@ -47,10 +47,12 @@ public class OrderDetailActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         currentOrder = (Order) getIntent().getSerializableExtra("order");
-        if (currentOrder != null) {
+        String orderIdFallback = getIntent().getStringExtra(EXTRA_ORDER_ID);
+
+        if (currentOrder != null && currentOrder.getCreatedAt() != null) {
             setupOrder(currentOrder);
         } else {
-            String orderId = getIntent().getStringExtra(EXTRA_ORDER_ID);
+            String orderId = (currentOrder != null) ? currentOrder.getId() : orderIdFallback;
             if (orderId != null && !orderId.isEmpty()) {
                 FirebaseFirestore.getInstance()
                         .collection("orders")
@@ -73,6 +75,36 @@ public class OrderDetailActivity extends AppCompatActivity {
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnCancelOrder.setOnClickListener(v -> showCancelOrderBottomSheet());
         binding.btnConfirmReceived.setOnClickListener(v -> handleConfirmReceived());
+
+        setupSupportAndContactListeners();
+    }
+
+    private void setupSupportAndContactListeners() {
+        binding.rowFAQ.setOnClickListener(v -> {
+            // FAQ thường là Fragment trong MainActivity, nên quay về và điều hướng
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.putExtra("navigate_to", "faq");
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+        });
+
+        binding.rowChat.setOnClickListener(v ->
+                startActivity(ChatActivity.buyerIntent(this)));
+
+        binding.rowContactPhone.setOnClickListener(v -> {
+            String phone = binding.tvPhone.getText().toString();
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(android.net.Uri.parse("tel:" + phone));
+            startActivity(intent);
+        });
+
+        binding.rowContactEmail.setOnClickListener(v -> {
+            String email = binding.tvEmail.getText().toString();
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(android.net.Uri.parse("mailto:" + email));
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ đơn hàng: " + binding.tvOrderCode.getText().toString());
+            startActivity(Intent.createChooser(intent, "Gửi email cho HealthUp"));
+        });
     }
 
     private void setupOrder(Order order) {
@@ -90,7 +122,7 @@ public class OrderDetailActivity extends AppCompatActivity {
     }
 
     private void handleConfirmReceived() {
-        showLoadingAndThenUpdateFirebase("delivered");
+        showLoadingAndThenUpdateFirebase("delivered", null);
     }
 
     private void showCancelOrderBottomSheet() {
@@ -113,18 +145,19 @@ public class OrderDetailActivity extends AppCompatActivity {
 
         dialogBinding.btnBack.setOnClickListener(v -> dialog.dismiss());
         dialogBinding.btnConfirmCancel.setOnClickListener(v -> {
-            if (adapter.getSelectedReason() == null) {
+            ReturnReason selected = adapter.getSelectedReason();
+            if (selected == null) {
                 Toast.makeText(this, "Vui lòng chọn lý do hủy đơn", Toast.LENGTH_SHORT).show();
                 return;
             }
             dialog.dismiss();
-            showLoadingAndThenUpdateFirebase("cancelled");
+            showLoadingAndThenUpdateFirebase("cancelled", selected.getTitle());
         });
 
         dialog.show();
     }
 
-    private void showLoadingAndThenUpdateFirebase(String targetStatus) {
+    private void showLoadingAndThenUpdateFirebase(String targetStatus, String reason) {
         AlertDialog.Builder loadingBuilder = new AlertDialog.Builder(this);
         DialogLoadingBinding loadingBinding = DialogLoadingBinding.inflate(getLayoutInflater());
         loadingBuilder.setView(loadingBinding.getRoot());
@@ -137,11 +170,19 @@ public class OrderDetailActivity extends AppCompatActivity {
 
         com.google.android.gms.tasks.Task<Void> updateTask;
         String targetTab;
+        String orderId = currentOrder.getId();
+
+        if (orderId == null || orderId.isEmpty()) {
+            loadingDialog.dismiss();
+            Toast.makeText(this, "Lỗi: Không tìm thấy ID đơn hàng", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if ("cancelled".equals(targetStatus)) {
-            updateTask = FirebaseManager.getInstance().updateOrderStatus(currentOrder.getId(), "cancelled");
+            updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason);
             targetTab = "cancelled_tab";
         } else {
-            updateTask = FirebaseManager.getInstance().confirmReceived(currentOrder.getId());
+            updateTask = FirebaseManager.getInstance().confirmReceived(orderId);
             targetTab = "delivered_tab";
         }
 
@@ -153,10 +194,14 @@ public class OrderDetailActivity extends AppCompatActivity {
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 startActivity(intent);
                 finish();
-            }, 3000);
+            }, 1500); // Tăng lên 1.5s cho mượt
         }).addOnFailureListener(e -> {
             loadingDialog.dismiss();
-            Toast.makeText(this, "Lỗi cập nhật: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            String errorMsg = e.getMessage();
+            if (errorMsg != null && errorMsg.contains("permission")) {
+                errorMsg = "Bạn không có quyền cập nhật đơn hàng này.";
+            }
+            Toast.makeText(this, "Lỗi cập nhật: " + errorMsg, Toast.LENGTH_LONG).show();
         });
     }
 
@@ -220,7 +265,38 @@ public class OrderDetailActivity extends AppCompatActivity {
             pBinding.tvVariant.setText(item.getVariantLabel());
             pBinding.tvPrice.setText(df.format(item.getPrice()));
             pBinding.tvQuantity.setText("x" + item.getQuantity());
-            Glide.with(this).load(item.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(pBinding.imgProduct);
+
+            if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
+                pBinding.tvPriceOld.setVisibility(View.VISIBLE);
+                pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
+                pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            } else {
+                pBinding.tvPriceOld.setVisibility(View.GONE);
+            }
+
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(this)
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(pBinding.imgProduct);
+            } else {
+                pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
+
             binding.lnItemsContainer.addView(pBinding.getRoot());
         }
 

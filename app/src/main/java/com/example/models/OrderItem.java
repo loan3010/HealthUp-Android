@@ -6,6 +6,7 @@ public class OrderItem implements Serializable {
     private String name;
     private String variantLabel;
     private double price;
+    private double originalPrice;
     private int quantity;
     private String imageUrl;
     private Review review;
@@ -15,9 +16,14 @@ public class OrderItem implements Serializable {
     }
 
     public OrderItem(String name, String variantLabel, double price, int quantity, String imageUrl) {
+        this(name, variantLabel, price, 0, quantity, imageUrl);
+    }
+
+    public OrderItem(String name, String variantLabel, double price, double originalPrice, int quantity, String imageUrl) {
         this.name = name;
         this.variantLabel = variantLabel;
         this.price = price;
+        this.originalPrice = originalPrice;
         this.quantity = quantity;
         this.imageUrl = imageUrl;
     }
@@ -52,6 +58,14 @@ public class OrderItem implements Serializable {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public double getOriginalPrice() {
+        return originalPrice;
+    }
+
+    public void setOriginalPrice(double originalPrice) {
+        this.originalPrice = originalPrice;
     }
 
     public int getQuantity() {

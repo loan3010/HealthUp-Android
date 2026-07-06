@@ -46,7 +46,31 @@ public class ViewReviewsActivity extends AppCompatActivity {
             ItemViewReviewBinding itemBinding = ItemViewReviewBinding.inflate(getLayoutInflater(), binding.lnReviewContainer, false);
             itemBinding.tvProductName.setText(item.getName());
             itemBinding.tvVariant.setText(item.getVariantLabel());
-            Glide.with(this).load(item.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(itemBinding.imgProduct);
+
+            // Add strikethrough for original price if available in item_view_review.xml (checking layout)
+            
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(this)
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(itemBinding.imgProduct);
+            } else {
+                itemBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
 
             Review review = item.getReview();
             if (review != null) {

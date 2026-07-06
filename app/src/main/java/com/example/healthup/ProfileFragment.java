@@ -111,8 +111,23 @@ public class ProfileFragment extends Fragment {
         view.findViewById(R.id.btn_dang_nhap).setOnClickListener(v ->
                 startActivity(new Intent(requireContext(), LoginActivity.class)));
 
-        view.findViewById(R.id.section_don_mua).setOnClickListener(v ->
-                loadFragment(new OrderHistoryFragment()));
+        view.findViewById(R.id.btn_view_all_orders).setOnClickListener(v ->
+                openOrderHistoryWithTab(0));
+
+        view.findViewById(R.id.order_pending).setOnClickListener(v ->
+                openOrderHistoryWithTab(1));
+
+        view.findViewById(R.id.order_pickup).setOnClickListener(v ->
+                openOrderHistoryWithTab(2));
+
+        view.findViewById(R.id.order_shipping).setOnClickListener(v ->
+                openOrderHistoryWithTab(3));
+
+        view.findViewById(R.id.order_delivered).setOnClickListener(v ->
+                openOrderHistoryWithTab(4));
+
+        view.findViewById(R.id.order_returned).setOnClickListener(v ->
+                openOrderHistoryWithTab(5));
 
         View btnLogout = view.findViewById(R.id.btn_logout);
         if (btnLogout != null) {
@@ -132,12 +147,6 @@ public class ProfileFragment extends Fragment {
         View addressBookCard = findRowByText(view, "Sổ địa chỉ");
         if (addressBookCard != null) {
             addressBookCard.setOnClickListener(v -> loadFragment(new AddressBookFragment()));
-        }
-
-        View returnCard = findRowByText(view, "Trả hàng");
-        if (returnCard != null) {
-            returnCard.setOnClickListener(v ->
-                    startActivity(new Intent(requireContext(), ReturnRefundActivity.class)));
         }
 
         View aboutRow = findRowByText(view, "Về HealthUp");
@@ -271,6 +280,14 @@ public class ProfileFragment extends Fragment {
                     .circleCrop()
                     .into(imgAvatar);
         }
+    }
+
+    private void openOrderHistoryWithTab(int tabIndex) {
+        OrderHistoryFragment fragment = new OrderHistoryFragment();
+        Bundle args = new Bundle();
+        args.putInt("initial_tab", tabIndex);
+        fragment.setArguments(args);
+        loadFragment(fragment);
     }
 
     private void loadFragment(Fragment fragment) {

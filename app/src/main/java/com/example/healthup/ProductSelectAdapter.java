@@ -58,10 +58,28 @@ public class ProductSelectAdapter extends RecyclerView.Adapter<ProductSelectAdap
             binding.tvProductName.setText(item.getName());
             binding.tvOrderInfo.setText("Đã đặt: " + item.getQuantity() + " · " + df.format(item.getPrice()));
             
-            Glide.with(itemView.getContext())
-                    .load(item.getImageUrl())
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .into(binding.imgProduct);
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(itemView.getContext())
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(binding.imgProduct);
+            } else {
+                binding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
 
             boolean isSelected = selectedItems.containsKey(item);
             binding.cbSelect.setChecked(isSelected);

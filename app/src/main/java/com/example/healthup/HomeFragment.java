@@ -428,8 +428,10 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                             newItem.setVariantId(variant.getId());
                             newItem.setVariantName(variant.getName());
                             newItem.setPrice(variant.getPrice());
+                            newItem.setOriginalPrice(variant.getPrice());
                         } else {
                             newItem.setPrice(product.getPrice());
+                            newItem.setOriginalPrice(product.getOriginalPrice());
                         }
                         cartRef.add(newItem);
                     }

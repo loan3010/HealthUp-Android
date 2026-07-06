@@ -12,7 +12,7 @@ public class Review implements Serializable {
     private String date;
     private String imageUrl;
     private List<String> mediaUris;
-    private Timestamp createdAt;
+    private transient com.google.firebase.Timestamp createdAt;
     private String variantLabel;
 
     public Review() {}

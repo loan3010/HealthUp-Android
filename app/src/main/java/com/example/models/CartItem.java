@@ -36,7 +36,7 @@ public class CartItem implements Serializable {
             this.name = product.getName();
             this.imageUrl = product.getImageUrl();
             this.price = product.getPrice();
-            this.originalPrice = product.getPrice();
+            this.originalPrice = product.getOriginalPrice();
         }
     }
 

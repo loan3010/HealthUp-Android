@@ -25,9 +25,9 @@ public class Order implements Serializable {
     private double shippingFee;
     private double totalPrice;
     private Address address;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
-    private Timestamp deliveredAt;
+    private transient com.google.firebase.Timestamp createdAt;
+    private transient com.google.firebase.Timestamp updatedAt;
+    private transient com.google.firebase.Timestamp deliveredAt;
     private boolean reviewed;
     private boolean returnExpired;
     private boolean reviewExpired;

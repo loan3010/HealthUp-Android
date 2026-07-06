@@ -10,7 +10,9 @@
     <androidx.appcompat.widget.Toolbar
         android:id="@+id/toolbar"
         android:layout_width="match_parent"
-        android:layout_height="?attr/actionBarSize"
+        android:layout_height="wrap_content"
+        android:minHeight="?attr/actionBarSize"
+        android:paddingTop="24dp"
         android:background="@color/bg_cream"
         app:contentInsetStart="0dp"
         app:layout_constraintTop_toTopOf="parent">
@@ -69,6 +71,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -113,6 +116,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -264,6 +268,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -403,6 +408,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -452,6 +458,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -463,11 +470,15 @@
                     android:orientation="vertical">
 
                     <LinearLayout
+                        android:id="@+id/rowFAQ"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <FrameLayout
                             android:layout_width="40dp"
@@ -481,12 +492,19 @@
                         </FrameLayout>
 
                         <TextView
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:layout_marginStart="16dp"
                             android:text="Trung tâm trợ giúp - FAQs"
                             android:textColor="@color/text_main"
                             android:textSize="14sp" />
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/text_gray_muted"/>
                     </LinearLayout>
 
                     <View
@@ -496,11 +514,15 @@
                         android:backgroundTint="#F0F0F0" />
 
                     <LinearLayout
+                        android:id="@+id/rowChat"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <FrameLayout
                             android:layout_width="40dp"
@@ -515,12 +537,19 @@
                         </FrameLayout>
 
                         <TextView
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:layout_marginStart="16dp"
                             android:text="Trò chuyện cùng HealthUp"
                             android:textColor="@color/text_main"
                             android:textSize="14sp" />
+
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/text_gray_muted"/>
                     </LinearLayout>
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -539,6 +568,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
+                app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
                 app:strokeColor="@color/border_color"
@@ -550,11 +580,15 @@
                     android:orientation="vertical">
 
                     <LinearLayout
+                        android:id="@+id/rowContactPhone"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <FrameLayout
                             android:layout_width="40dp"
@@ -568,6 +602,7 @@
                         </FrameLayout>
 
                         <TextView
+                            android:id="@+id/tvPhone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
@@ -583,11 +618,15 @@
                         android:backgroundTint="#F0F0F0" />
 
                     <LinearLayout
+                        android:id="@+id/rowContactEmail"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingHorizontal="16dp">
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
 
                         <FrameLayout
                             android:layout_width="40dp"
@@ -601,6 +640,7 @@
                         </FrameLayout>
 
                         <TextView
+                            android:id="@+id/tvEmail"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"

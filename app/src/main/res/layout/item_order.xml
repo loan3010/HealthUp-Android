@@ -77,6 +77,18 @@
             android:textColor="@color/text_main"
             android:textSize="14sp" />
 
+        <TextView
+            android:id="@+id/tvDeliveryInfo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="end"
+            android:paddingHorizontal="@dimen/spacing_xl"
+            android:paddingBottom="@dimen/spacing_s"
+            android:text="Đơn hàng đã giao thành công vào 21:00 12-06"
+            android:textColor="@color/primary"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
         <LinearLayout
             android:id="@+id/lnActionButtons"
             android:layout_width="match_parent"

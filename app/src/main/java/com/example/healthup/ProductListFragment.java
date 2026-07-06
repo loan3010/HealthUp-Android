@@ -334,8 +334,10 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
                             newItem.setVariantId(variant.getId());
                             newItem.setVariantName(variant.getName());
                             newItem.setPrice(variant.getPrice());
+                            newItem.setOriginalPrice(variant.getPrice());
                         } else {
                             newItem.setPrice(product.getPrice());
+                            newItem.setOriginalPrice(product.getOriginalPrice());
                         }
                         cartRef.add(newItem);
                     }

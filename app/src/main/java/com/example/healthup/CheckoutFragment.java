@@ -339,6 +339,7 @@ public class CheckoutFragment extends Fragment {
                     ci.getName(),
                     ci.getVariantLabel(),
                     ci.getPrice(),
+                    ci.getOriginalPrice(),
                     ci.getQuantity(),
                     ci.getImageUrl()
             ));
@@ -362,6 +363,7 @@ public class CheckoutFragment extends Fragment {
 
         // 4. Batch job: Lưu Order và Cập nhật SpentAmount của User
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
+        order.setId(orderRef.getId()); // Cập nhật ID Firestore vào object Order trước khi lưu
         batch.set(orderRef, order);
 
         com.google.firebase.firestore.DocumentReference userRef = db.collection("users").document(userId);

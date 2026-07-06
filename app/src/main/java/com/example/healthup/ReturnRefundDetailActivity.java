@@ -457,7 +457,30 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
             itemBinding.tvMaxQtyInfo.setText("(trên tổng " + item.getQuantity() + " đã đặt)");
             itemBinding.tvQtyHeader.setText(isMissingItemsRequest ? "Số lượng bị thiếu" : "Số lượng bị lỗi");
             itemBinding.icCheck.setOnClickListener(v -> { selectedItemsMap.remove(item); updateSelectedProductsUI(); });
-            Glide.with(this).load(item.getImageUrl()).placeholder(R.drawable.ic_launcher_background).into(itemBinding.imgProduct);
+            
+            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
+            String imagePath = item.getImageUrl();
+            if (imagePath != null && !imagePath.isEmpty()) {
+                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+                Object loadTarget;
+
+                if (cleanPath.startsWith("images/")) {
+                    loadTarget = "file:///android_asset/" + cleanPath;
+                } else if (imagePath.startsWith("http")) {
+                    loadTarget = imagePath;
+                } else {
+                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                }
+
+                Glide.with(this)
+                        .load(loadTarget)
+                        .placeholder(R.drawable.ic_launcher_background)
+                        .error(R.drawable.ic_launcher_background)
+                        .into(itemBinding.imgProduct);
+            } else {
+                itemBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+            }
+
             itemBinding.btnPlus.setOnClickListener(v -> {
                 if (selectedItemsMap.get(item) < item.getQuantity()) {
                     selectedItemsMap.put(item, selectedItemsMap.get(item) + 1);

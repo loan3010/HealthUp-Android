@@ -23,7 +23,7 @@ public class OrderListFragment extends Fragment {
     private String tabFilter = "all";
     private List<Product> allRecommendProducts;
     private List<Product> displayedRecommendProducts;
-    private RecommendProductAdapter recommendAdapter;
+    private ProductAdapter recommendAdapter;
 
     public static OrderListFragment newInstance(String status) {
         OrderListFragment fragment = new OrderListFragment();
@@ -147,11 +147,25 @@ public class OrderListFragment extends Fragment {
                 displayedRecommendProducts.add(allRecommendProducts.get(i));
             }
 
-            recommendAdapter = new RecommendProductAdapter(getContext(), displayedRecommendProducts);
-            recommendAdapter.setOnProductClickListener(p -> {
-                android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
-                intent.putExtra("product", p);
-                startActivity(intent);
+            recommendAdapter = new ProductAdapter(displayedRecommendProducts, new ProductAdapter.OnProductClickListener() {
+                @Override
+                public void onProductClick(Product p) {
+                    android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
+                    intent.putExtra("productId", p.getId());
+                    startActivity(intent);
+                }
+
+                @Override
+                public void onAddToCart(Product p) {
+                    // Reuse existing logic from HomeFragment if needed, or simple toast for demo
+                    Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onFavoriteClick(Product p) {
+                    p.setFavorite(!p.isFavorite());
+                    recommendAdapter.notifyDataSetChanged();
+                }
             });
             binding.rvRecommend.setLayoutManager(new GridLayoutManager(getContext(), 2));
             binding.rvRecommend.setAdapter(recommendAdapter);
@@ -168,7 +182,25 @@ public class OrderListFragment extends Fragment {
                 for (int i = currentSize; i < allRecommendProducts.size(); i++) {
                     displayedRecommendProducts.add(allRecommendProducts.get(i));
                 }
-                recommendAdapter.notifyDataSetChanged();
+                recommendAdapter.updateData(new ArrayList<>(displayedRecommendProducts));
+            });
+
+            binding.tvViewAllRecommend.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    MainActivity mainActivity = (MainActivity) getActivity();
+                    com.google.android.material.bottomnavigation.BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
+                    navView.setSelectedItemId(R.id.nav_category);
+
+                    ProductListFragment fragment = new ProductListFragment();
+                    Bundle args = new Bundle();
+                    args.putString("category", "Tất cả");
+                    fragment.setArguments(args);
+
+                    mainActivity.getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragment_container, fragment)
+                            .addToBackStack(null)
+                            .commit();
+                }
             });
         });
     }
