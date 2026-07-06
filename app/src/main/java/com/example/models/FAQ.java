@@ -4,10 +4,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * A frequently-asked-question entry used by the local chatbot.
- *
- * <p>{@link #keywords} are normalized (diacritic-insensitive) tokens the bot
- * uses to match a free-text question to this FAQ answer.</p>
+ * FAQ entry used by both the in-app FAQ screen and the local chatbot matcher.
  */
 public class FAQ {
 
@@ -15,15 +12,25 @@ public class FAQ {
     private String question;
     private String answer;
     private List<String> keywords;
+    private String category;
+    private boolean expanded;
 
     public FAQ() {
     }
 
+    /** Chatbot FAQ with keyword matching. */
     public FAQ(String id, String question, String answer, String... keywords) {
         this.id = id;
         this.question = question;
         this.answer = answer;
         this.keywords = Arrays.asList(keywords);
+    }
+
+    /** UI FAQ loaded from Firestore or static lists. */
+    public FAQ(String question, String answer, String category) {
+        this.question = question;
+        this.answer = answer;
+        this.category = category;
     }
 
     public String getId() {
@@ -56,5 +63,21 @@ public class FAQ {
 
     public void setKeywords(List<String> keywords) {
         this.keywords = keywords;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public boolean isExpanded() {
+        return expanded;
+    }
+
+    public void setExpanded(boolean expanded) {
+        this.expanded = expanded;
     }
 }

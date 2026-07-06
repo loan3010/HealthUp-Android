@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Màu khi được chọn: Xanh đậm Forest Green -->
+    <item android:color="@color/primary_shade_3" android:state_checked="true" />
+    <!-- Màu mặc định: Xám đậm -->
+    <item android:color="@color/neutral_dark_grey" />
+</selector>

@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <style name="Widget.HealthUp" parent="android:Widget" />
+    <style name="Widget.HealthUp.Badge" parent="Widget.HealthUp" />
+
+    <!-- =====================================================
+         6. BUTTONS
+         ===================================================== -->
+
+    <style name="Widget.HealthUp.Button.LargeFilled" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_large_filled</item>
+        <item name="android:textAppearance">@style/TextAppearance.HealthUp.ButtonLarge</item>
+        <item name="android:textColor">@color/neutral_cream</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:paddingStart">@dimen/spacing_xl</item>
+        <item name="android:paddingEnd">@dimen/spacing_xl</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="Widget.HealthUp.Button.LargeOutline" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_large_outline</item>
+        <item name="android:textAppearance">@style/TextAppearance.HealthUp.ButtonLarge</item>
+        <item name="android:textColor">@color/primary_default</item>
+        <item name="android:minHeight">48dp</item>
+        <item name="android:paddingStart">@dimen/spacing_xl</item>
+        <item name="android:paddingEnd">@dimen/spacing_xl</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="Widget.HealthUp.Button.SmallFilled" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_small_filled</item>
+        <item name="android:textAppearance">@style/TextAppearance.HealthUp.ButtonSmall</item>
+        <item name="android:textColor">@color/neutral_cream</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:paddingStart">@dimen/spacing_l</item>
+        <item name="android:paddingEnd">@dimen/spacing_l</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="Widget.HealthUp.Button.SmallOutline" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_small_outline</item>
+        <item name="android:textAppearance">@style/TextAppearance.HealthUp.ButtonSmall</item>
+        <item name="android:textColor">@color/primary_default</item>
+        <item name="android:minHeight">36dp</item>
+        <item name="android:paddingStart">@dimen/spacing_l</item>
+        <item name="android:paddingEnd">@dimen/spacing_l</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <style name="Widget.HealthUp.Button.PillCta" parent="Widget.AppCompat.Button">
+        <item name="android:background">@drawable/btn_pill_cta</item>
+        <item name="android:textColor">@color/neutral_black</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textFontWeight" tools:targetApi="p">700</item>
+        <item name="android:paddingStart">@dimen/spacing_m</item>
+        <item name="android:paddingEnd">@dimen/spacing_m</item>
+        <item name="android:paddingTop">@dimen/spacing_xs</item>
+        <item name="android:paddingBottom">@dimen/spacing_xs</item>
+        <item name="android:stateListAnimator">@null</item>
+    </style>
+
+    <!-- =====================================================
+         7. INPUT / EDIT TEXT
+         ===================================================== -->
+
+    <style name="Widget.HealthUp.EditText" parent="Widget.AppCompat.EditText">
+        <item name="android:background">@drawable/input_default</item>
+        <item name="android:textAppearance">@style/TextAppearance.HealthUp.EditText</item>
+        <item name="android:textColorHint">@color/neutral_grey</item>
+        <item name="android:textSize">@dimen/text_size_edit_text</item>
+        <item name="android:minHeight">44dp</item>
+        <item name="android:paddingStart">12dp</item>
+        <item name="android:paddingEnd">12dp</item>
+    </style>
+
+    <style name="Widget.HealthUp.EditText.Search">
+        <item name="android:background">@drawable/input_search</item>
+    </style>
+
+    <!-- =====================================================
+         8. BADGES & TAGS (áp cho TextView)
+         ===================================================== -->
+
+    <style name="Widget.HealthUp.Badge.Sale">
+        <item name="android:background">@drawable/badge_sale</item>
+        <item name="android:textColor">@color/neutral_white</item>
+        <item name="android:textSize">9sp</item>
+        <item name="android:textFontWeight" tools:targetApi="p">700</item>
+        <item name="android:paddingStart">@dimen/spacing_s</item>
+        <item name="android:paddingEnd">@dimen/spacing_s</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+    </style>
+
+    <style name="Widget.HealthUp.Badge.New" parent="Widget.HealthUp.Badge.Sale">
+        <item name="android:background">@drawable/badge_new</item>
+    </style>
+
+    <style name="Widget.HealthUp.Badge.Hot" parent="Widget.HealthUp.Badge.Sale">
+        <item name="android:background">@drawable/badge_hot</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="Widget.HealthUp.Badge.Outline">
+        <item name="android:background">@drawable/badge_outline</item>
+        <item name="android:textColor">@color/primary_default</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textFontWeight" tools:targetApi="p">600</item>
+        <item name="android:paddingStart">@dimen/spacing_s</item>
+        <item name="android:paddingEnd">@dimen/spacing_s</item>
+        <item name="android:paddingTop">2dp</item>
+        <item name="android:paddingBottom">2dp</item>
+    </style>
+
+    <style name="Widget.HealthUp.Badge.Chip">
+        <item name="android:background">@drawable/badge_chip</item>
+        <item name="android:textColor">@color/primary_default</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:textFontWeight" tools:targetApi="p">500</item>
+        <item name="android:paddingStart">@dimen/spacing_m</item>
+        <item name="android:paddingEnd">@dimen/spacing_m</item>
+        <item name="android:paddingTop">@dimen/spacing_xs</item>
+        <item name="android:paddingBottom">@dimen/spacing_xs</item>
+    </style>
+
+    <style name="Widget.HealthUp.Badge.Accent" parent="Widget.HealthUp.Badge.Outline">
+        <item name="android:background">@drawable/badge_accent</item>
+        <item name="android:textColor">@color/neutral_black</item>
+        <item name="android:textSize">10sp</item>
+        <item name="android:textFontWeight" tools:targetApi="p">700</item>
+    </style>
+
+    <!-- =====================================================
+         9. NAVBAR
+         ===================================================== -->
+
+    <style name="Widget.HealthUp.Navbar" parent="Widget.Material3.BottomNavigationView">
+        <item name="itemActiveIndicatorStyle">@style/Widget.HealthUp.Navbar.Indicator</item>
+    </style>
+
+    <style name="Widget.HealthUp.Navbar.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/navbar_active_pill_light</item>
+        <item name="android:width">44dp</item>
+        <item name="android:height">32dp</item>
+        <item name="marginHorizontal">12dp</item>
+        <item name="shapeAppearance">@style/ShapeAppearance.HealthUp.NavbarIndicator</item>
+    </style>
+
+    <style name="ShapeAppearance.HealthUp.NavbarIndicator" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+</resources>

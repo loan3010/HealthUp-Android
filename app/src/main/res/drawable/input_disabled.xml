@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Disabled: nền #F5F0EB, opacity tổng thể nên set android:alpha="0.6" trên view -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#F5F0EB" />
+    <stroke android:width="@dimen/border_width_default" android:color="@color/neutral_light_grey" />
+    <corners android:radius="@dimen/radius_m" />
+</shape>

@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.models.Order;
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -11,7 +12,6 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
 
 /**
@@ -54,15 +54,12 @@ public class OrderRepository {
                     for (QueryDocumentSnapshot doc : snapshot) {
                         orders.add(mapOrder(doc));
                     }
-                    Collections.sort(orders, new Comparator<Order>() {
-                        @Override
-                        public int compare(Order a, Order b) {
-                            Date da = a.getCreatedAt();
-                            Date db = b.getCreatedAt();
-                            long ta = da != null ? da.getTime() : 0L;
-                            long tb = db != null ? db.getTime() : 0L;
-                            return Long.compare(tb, ta);
-                        }
+                    Collections.sort(orders, (a, b) -> {
+                        Timestamp ta = a.getCreatedAt();
+                        Timestamp tb = b.getCreatedAt();
+                        long aMillis = ta != null ? ta.toDate().getTime() : 0L;
+                        long bMillis = tb != null ? tb.toDate().getTime() : 0L;
+                        return Long.compare(bMillis, aMillis);
                     });
                     callback.onResult(orders);
                 })
@@ -72,21 +69,32 @@ public class OrderRepository {
     private Order mapOrder(DocumentSnapshot doc) {
         Order order = new Order();
         order.setId(doc.getId());
-        order.setBuyerId(doc.getString("buyerId"));
+        order.setBuyerId(doc.getString("buyerId") != null
+                ? doc.getString("buyerId")
+                : doc.getString("userId"));
         String code = doc.getString("orderCode");
         order.setOrderCode(code != null ? code : doc.getId());
         order.setStatus(doc.getString("status"));
 
         Double total = doc.getDouble("totalAmount");
         if (total == null) {
+            total = doc.getDouble("totalPrice");
+        }
+        if (total == null) {
             total = doc.getDouble("total");
         }
         order.setTotalAmount(total != null ? total : 0d);
 
         Long itemCount = doc.getLong("itemCount");
+        if (itemCount == null && order.getItems() != null) {
+            itemCount = (long) order.getItems().size();
+        }
         order.setItemCount(itemCount != null ? itemCount.intValue() : 0);
 
-        Date createdAt = doc.getDate("createdAt");
+        Timestamp createdAt = doc.getTimestamp("createdAt");
+        if (createdAt == null && doc.getDate("createdAt") != null) {
+            createdAt = new Timestamp(doc.getDate("createdAt"));
+        }
         order.setCreatedAt(createdAt);
         return order;
     }

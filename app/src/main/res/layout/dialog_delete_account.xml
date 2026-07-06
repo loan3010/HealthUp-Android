@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="320dp"
+    android:layout_height="wrap_content"
+    android:layout_gravity="center"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="8dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            style="@style/TextAppearance.HealthUp.SubTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:text="Bạn có chắc chắn muốn xóa tài khoản không?"
+            android:textColor="@color/neutral_black"
+            android:textStyle="bold" />
+
+        <TextView
+            style="@style/TextAppearance.HealthUp.CaptionLabel"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:gravity="center"
+            android:text="Lưu ý: Bạn sẽ không thể khôi phục tài khoản sau khi xóa."
+            android:textColor="@color/action_error" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="32dp"
+            android:orientation="horizontal">
+
+            <Button
+                android:id="@+id/btnCancel"
+                style="@style/Widget.HealthUp.Button.SmallOutline"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_weight="1"
+                android:text="Hủy"
+                android:textAllCaps="false"
+                android:backgroundTint="#E0E0E0"
+                android:textColor="@color/neutral_black" />
+
+            <Button
+                android:id="@+id/btnConfirmDelete"
+                style="@style/Widget.HealthUp.Button.SmallFilled"
+                android:layout_width="0dp"
+                android:layout_height="48dp"
+                android:layout_marginStart="12dp"
+                android:layout_weight="1"
+                android:text="Xác nhận xóa"
+                android:textAllCaps="false"
+                android:backgroundTint="@color/action_error" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

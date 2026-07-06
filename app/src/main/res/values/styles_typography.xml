@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- =====================================================
+         2. TYPOGRAPHY — Be Vietnam Pro
+         ===================================================== -->
+
+    <style name="TextAppearance.HealthUp.Title" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">700</item>
+        <item name="android:textStyle">bold</item>
+        <item name="android:textSize">@dimen/text_size_title</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.SubTitle" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">600</item>
+        <item name="android:textSize">@dimen/text_size_sub_title</item>
+        <item name="android:lineSpacingMultiplier">1.3</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.Content" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">500</item>
+        <item name="android:textSize">@dimen/text_size_content</item>
+        <item name="android:lineSpacingMultiplier">1.5</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.SubContent" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textSize">@dimen/text_size_sub_content</item>
+        <item name="android:lineSpacingMultiplier">1.1</item>
+        <item name="android:textColor">@color/neutral_dark_grey</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.SubContent.Bold">
+        <item name="android:textStyle">bold</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.ButtonLarge" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">500</item>
+        <item name="android:textSize">@dimen/text_size_button_large</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.ButtonSmall" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">400</item>
+        <item name="android:textSize">@dimen/text_size_button_small</item>
+        <item name="android:lineSpacingMultiplier">1.2</item>
+        <item name="android:textAllCaps">false</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.EditText" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">400</item>
+        <item name="android:textSize">@dimen/text_size_edit_text</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+        <item name="android:textColor">@color/neutral_black</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.CaptionLabel" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textFontWeight" tools:targetApi="p">400</item>
+        <item name="android:textSize">@dimen/text_size_caption_label</item>
+        <item name="android:lineSpacingMultiplier">1.4</item>
+        <item name="android:textColor">@color/neutral_grey</item>
+    </style>
+
+    <!-- Dùng riêng cho label nav bar: 12sp rõ nét -->
+    <style name="TextAppearance.HealthUp.NavLabel" parent="TextAppearance.AppCompat">
+        <item name="fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
+        <item name="android:textSize">12sp</item>
+        <item name="android:lineSpacingMultiplier">1.0</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.NavLabel.Active" parent="TextAppearance.HealthUp.NavLabel">
+        <item name="android:textColor">@color/primary_shade_3</item>
+        <item name="android:textStyle">bold</item>
+    </style>
+
+    <style name="TextAppearance.HealthUp.NavLabel.Inactive" parent="TextAppearance.HealthUp.NavLabel">
+        <item name="android:textColor">@color/neutral_dark_grey</item>
+    </style>
+
+</resources>
