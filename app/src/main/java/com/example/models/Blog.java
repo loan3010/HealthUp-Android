@@ -27,4 +27,9 @@ public class Blog implements Serializable {
     public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
+
+    public Object getTag() { return null; }
+    public void setTag(Object tag) {}
+    public Object getPublishedAt() { return null; }
+    public void setPublishedAt(Object publishedAt) {}
 }

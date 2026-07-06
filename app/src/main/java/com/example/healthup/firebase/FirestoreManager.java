@@ -1,9 +1,17 @@
 package com.example.healthup.firebase;
 
+import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.CollectionReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
+import com.google.firebase.firestore.QuerySnapshot;
 import com.example.models.Product;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class FirestoreManager {
     private static FirestoreManager instance;
@@ -28,39 +36,88 @@ public class FirestoreManager {
         return db.collection("products");
     }
 
-    public Query getFilteredProducts(String category, String sortOrder, double minPrice, double maxPrice, float minRating) {
+    /**
+     * CHỈ lọc theo category trên Firestore (whereEqualTo đơn lẻ).
+     * KHÔNG kết hợp orderBy hay whereGreaterThan/LessThan ở đây nữa,
+     * vì đó là nguyên nhân gây lỗi "FAILED_PRECONDITION: query requires an index".
+     * Việc lọc giá/rating và sắp xếp sẽ được xử lý ở processProductSnapshots() bên dưới.
+     */
+    public Query getFilteredProductsQuery(String category) {
         Query query = db.collection("products");
-
-        // 1. Lọc theo danh mục (Ưu tiên lọc field này trước)
         if (category != null && !category.isEmpty() && !category.equals("Tất cả")) {
             query = query.whereEqualTo("cat", category);
         }
+        return query;
+    }
 
-        // 2. Lọc theo giá - CHỈ lọc nếu không phải dải mặc định
-        if (minPrice > 0 || maxPrice < 10000000) {
-            query = query.whereGreaterThanOrEqualTo("price", minPrice)
-                         .whereLessThanOrEqualTo("price", maxPrice);
-            // Lưu ý: Nếu lọc range trên field 'price', Firestore yêu cầu orderBy trên chính field đó trước
-            query = query.orderBy("price", Query.Direction.ASCENDING);
+    /**
+     * Nhận kết quả thô từ Firestore (đã lọc category), sau đó:
+     * 1. Lọc theo khoảng giá (minPrice - maxPrice)
+     * 2. Lọc theo rating tối thiểu (minRating)
+     * 3. Sắp xếp theo sortOrder
+     * Tất cả xử lý bằng Java, không cần Firestore composite index.
+     *
+     * Lưu ý: đọc trực tiếp field thô ("price", "rating", "sold", "createdAt") từ
+     * DocumentSnapshot để không phụ thuộc vào tên hàm getter cụ thể trong Product.java.
+     */
+    public List<Product> processProductSnapshots(QuerySnapshot snapshots, String sortOrder,
+                                                 double minPrice, double maxPrice, float minRating) {
+        List<Product> filtered = new ArrayList<>();
+        Map<String, Double> priceMap = new HashMap<>();
+        Map<String, Long> soldMap = new HashMap<>();
+        Map<String, Timestamp> createdAtMap = new HashMap<>();
+
+        if (snapshots == null) return filtered;
+
+        for (DocumentSnapshot doc : snapshots) {
+            Product p = doc.toObject(Product.class);
+            if (p == null) continue;
+            p.setId(doc.getId());
+
+            Double priceVal = doc.getDouble("price");
+            double price = (priceVal != null) ? priceVal : 0;
+
+            Double ratingVal = doc.getDouble("rating");
+            double rating = (ratingVal != null) ? ratingVal : 0;
+
+            // Lọc theo giá
+            if (price < minPrice || price > maxPrice) continue;
+            // Lọc theo rating tối thiểu
+            if (minRating > 0 && rating < minRating) continue;
+
+            priceMap.put(doc.getId(), price);
+            Long soldVal = doc.getLong("sold");
+            soldMap.put(doc.getId(), soldVal != null ? soldVal : 0L);
+            createdAtMap.put(doc.getId(), doc.getTimestamp("createdAt"));
+
+            filtered.add(p);
         }
 
-        // 3. Sắp xếp
         if (sortOrder != null) {
             if (sortOrder.equals("Giá Thấp-Cao")) {
-                // Đã được handle bởi logic range filter nếu có
-                if (!(minPrice > 0 || maxPrice < 10000000)) {
-                    query = query.orderBy("price", Query.Direction.ASCENDING);
-                }
+                filtered.sort((a, b) -> Double.compare(
+                        priceMap.getOrDefault(a.getId(), 0.0),
+                        priceMap.getOrDefault(b.getId(), 0.0)));
             } else if (sortOrder.equals("Giá Cao-Thấp")) {
-                query = query.orderBy("price", Query.Direction.DESCENDING);
+                filtered.sort((a, b) -> Double.compare(
+                        priceMap.getOrDefault(b.getId(), 0.0),
+                        priceMap.getOrDefault(a.getId(), 0.0)));
             } else if (sortOrder.equals("Mới nhất")) {
-                query = query.orderBy("createdAt", Query.Direction.DESCENDING);
+                filtered.sort((a, b) -> {
+                    Timestamp ta = createdAtMap.get(a.getId());
+                    Timestamp tb = createdAtMap.get(b.getId());
+                    if (ta == null && tb == null) return 0;
+                    if (ta == null) return 1;
+                    if (tb == null) return -1;
+                    return tb.compareTo(ta); // mới nhất lên trước
+                });
             } else if (sortOrder.equals("Phổ biến")) {
-                // Sắp xếp theo số lượng bán nếu có field 'sold'
-                query = query.orderBy("sold", Query.Direction.DESCENDING);
+                filtered.sort((a, b) -> Long.compare(
+                        soldMap.getOrDefault(b.getId(), 0L),
+                        soldMap.getOrDefault(a.getId(), 0L)));
             }
         }
 
-        return query;
+        return filtered;
     }
 }

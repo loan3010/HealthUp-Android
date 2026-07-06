@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -29,7 +30,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+
 public class ProductListFragment extends Fragment implements ProductAdapter.OnProductClickListener {
+
 
     private RecyclerView rvProducts, rvRecommendations;
     private ProductAdapter productAdapter, recommendationAdapter;
@@ -40,29 +43,36 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     private ChipGroup chipGroupCategories;
     private View layoutEmpty;
 
+
     private List<String> categoryNames = new ArrayList<>();
     private String selectedCategory = "Tất cả";
 
+
     private String currentSort = "Phổ biến";
     private double minPrice = 0;
-    private double maxPrice = 10000000;
+    // Giá tối đa mặc định: 1.000.000đ (trước là 10.000.000đ)
+    private double maxPrice = 1000000;
     private float minRating = 0;
+
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_product_list, container, false);
         initViews(view);
-        
+
+
         if (getArguments() != null) {
             selectedCategory = getArguments().getString("category", "Tất cả");
         }
+
 
         setupRecyclerViews();
         fetchCategoriesFromFirestore();
         fetchProducts();
         return view;
     }
+
 
     private void initViews(View view) {
         rvProducts = view.findViewById(R.id.rv_products);
@@ -72,16 +82,20 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         chipGroupCategories = view.findViewById(R.id.chip_group_categories);
         layoutEmpty = view.findViewById(R.id.layout_empty);
 
+
         if (layoutEmpty != null) {
             View btnClear = layoutEmpty.findViewById(R.id.btn_clear_filter);
             if (btnClear != null) btnClear.setOnClickListener(v -> resetFilters());
         }
 
+
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
 
+
         fabFilter.setOnClickListener(v -> showFilterBottomSheet());
+
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -92,15 +106,24 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         });
     }
 
+
     private void setupRecyclerViews() {
         productAdapter = new ProductAdapter(productList, this);
         rvProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvProducts.setAdapter(productAdapter);
+        // FIX: RecyclerView wrap_content lồng trong NestedScrollView không tự đo lại
+        // chiều cao khi dữ liệu Firestore load xong (bất đồng bộ, sau khi layout đã đo lần đầu).
+        // Đây là nguyên nhân khiến sản phẩm không hiển thị cho tới khi người dùng đổi tab
+        // (thao tác đổi tab vô tình kích hoạt lại việc đo layout của cây view cha).
+        rvProducts.setNestedScrollingEnabled(false);
+
 
         recommendationAdapter = new ProductAdapter(recommendationList, this);
         rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvRecommendations.setAdapter(recommendationAdapter);
+        rvRecommendations.setNestedScrollingEnabled(false);
     }
+
 
     private void fetchCategoriesFromFirestore() {
         FirestoreManager.getInstance().getFirestore().collection("categories").get().addOnSuccessListener(snapshots -> {
@@ -117,16 +140,19 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         });
     }
 
+
     private void setupCategoryChips() {
         chipGroupCategories.removeAllViews();
         for (String name : categoryNames) {
             Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_category_chip, chipGroupCategories, false);
             chip.setText(name);
             chip.setCheckable(true);
-            
+
+
             boolean isSelected = name.equals(selectedCategory);
             chip.setChecked(isSelected);
             updateChipStyle(chip, isSelected);
+
 
             chip.setOnClickListener(v -> {
                 selectedCategory = name;
@@ -137,6 +163,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
     }
 
+
     private void refreshChipGroupUI() {
         for (int i = 0; i < chipGroupCategories.getChildCount(); i++) {
             Chip chip = (Chip) chipGroupCategories.getChildAt(i);
@@ -145,6 +172,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             updateChipStyle(chip, isSelected);
         }
     }
+
 
     private void updateChipStyle(Chip chip, boolean isSelected) {
         if (isSelected) {
@@ -159,23 +187,20 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
     }
 
+
     private void fetchProducts() {
-        // Sử dụng hàm lọc tập trung để đảm bảo tính ổn định và tránh lỗi Index
-        Query query = FirestoreManager.getInstance().getFilteredProducts(selectedCategory, currentSort, minPrice, maxPrice, minRating);
+        // Chỉ lọc category trên Firestore (không cần index).
+        // Lọc giá/rating + sắp xếp được xử lý ở processProductSnapshots() bằng Java.
+        Query query = FirestoreManager.getInstance().getFilteredProductsQuery(selectedCategory);
+
 
         query.get().addOnSuccessListener(snapshots -> {
+            List<Product> result = FirestoreManager.getInstance()
+                    .processProductSnapshots(snapshots, currentSort, minPrice, maxPrice, minRating);
+
+
             productList.clear();
-            for (DocumentSnapshot doc : snapshots) {
-                try {
-                    Product p = doc.toObject(Product.class);
-                    if (p != null) {
-                        p.setId(doc.getId());
-                        productList.add(p);
-                    }
-                } catch (Exception e) {
-                    Log.e("ProductList", "Error parsing product: " + e.getMessage());
-                }
-            }
+            productList.addAll(result);
             productAdapter.updateData(new ArrayList<>(productList));
             updateEmptyState();
         }).addOnFailureListener(e -> {
@@ -183,6 +208,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             Toast.makeText(getContext(), "Lỗi tải sản phẩm: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             updateEmptyState();
         });
+
 
         // Recommendations
         FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
@@ -198,6 +224,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         });
     }
 
+
     private void updateEmptyState() {
         if (productList.isEmpty()) {
             rvProducts.setVisibility(View.GONE);
@@ -210,15 +237,17 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
     }
 
+
     private void resetFilters() {
         selectedCategory = "Tất cả";
         currentSort = "Phổ biến";
         minPrice = 0;
-        maxPrice = 10000000;
+        maxPrice = 1000000;
         minRating = 0;
         setupCategoryChips();
         fetchProducts();
     }
+
 
     private void filterLocal(String query) {
         List<Product> filtered = new ArrayList<>();
@@ -227,6 +256,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
         productAdapter.updateData(filtered);
     }
+
 
     private void showFilterBottomSheet() {
         try {
@@ -248,6 +278,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
     }
 
+
     @Override
     public void onProductClick(Product product) {
         if (product == null || product.getId() == null) return;
@@ -256,9 +287,11 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         startActivity(intent);
     }
 
+
     @Override public void onAddToCart(Product product) {
         Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
     }
+
 
     @Override
     public void onFavoriteClick(Product product) {

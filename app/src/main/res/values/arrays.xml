@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <array name="initial_range_values">
+    <array name="initial_slider_values">
         <item>0</item>
         <item>1000000</item>
     </array>

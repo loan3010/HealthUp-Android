@@ -135,8 +135,40 @@ public class Product implements Serializable {
     public boolean isFlashSale() { return isFlashSale; }
     public void setFlashSale(boolean flashSale) { isFlashSale = flashSale; }
 
-    public boolean isNew() { return true; }
-    public boolean isHot() { return false; }
+    public boolean isNew() {
+        if (isNew) return true;
+        if (badge != null && badge.toLowerCase().contains("mới")) return true;
+        return false;
+    }
+    public void setNew(boolean aNew) { isNew = aNew; }
+
+    public boolean isHot() {
+        if (isHot) return true;
+        if (badge != null && badge.toLowerCase().contains("hot")) return true;
+        return false;
+    }
+    public void setHot(boolean hot) { isHot = hot; }
+
+    public String getStarsDisplay() { return starsDisplay; }
+    public void setStarsDisplay(String starsDisplay) { this.starsDisplay = starsDisplay; }
+
+    public int getSold() { return sold; }
+    public void setSold(int sold) { this.sold = sold; }
+
+    public String getWeight() { return weight; }
+    public void setWeight(String weight) { this.weight = weight; }
+
+    public Object getStars() { return stars; }
+    public void setStars(Object stars) { this.stars = stars; }
+
+    public String getSaving() { return saving; }
+    public void setSaving(String saving) { this.saving = saving; }
+
+    public Object getSale() { return sale; }
+    public void setSale(Object sale) { this.sale = sale; }
+
+    public Object getReviews() { return reviews; }
+    public void setReviews(Object reviews) { this.reviews = reviews; }
 
     public List<Object> getWeights() {
         if (weights instanceof List) return (List<Object>) weights;
@@ -178,7 +210,33 @@ public class Product implements Serializable {
 
     public static List<Product> getDummyProducts() {
         List<Product> list = new ArrayList<>();
-        // Mockup data
+        
+        Product p1 = new Product();
+        p1.setId("dummy1");
+        p1.setName("Granola Siêu Hạt");
+        p1.setPrice(150000);
+        p1.setOriginalPrice(200000);
+        p1.setImages(java.util.Collections.singletonList("images/products/granola_classic.jpg"));
+        p1.setNew(true);
+        p1.setFlashSale(true);
+        list.add(p1);
+
+        Product p2 = new Product();
+        p2.setId("dummy2");
+        p2.setName("Hạt Điều Rang Muối");
+        p2.setPrice(120000);
+        p2.setImages(java.util.Collections.singletonList("images/products/hat_dieu.jpg"));
+        p2.setNew(true);
+        list.add(p2);
+
+        Product p3 = new Product();
+        p3.setId("dummy3");
+        p3.setName("Snack Rong Biển");
+        p3.setPrice(45000);
+        p3.setImages(java.util.Collections.singletonList("images/products/rong_bien.jpg"));
+        p3.setHot(true);
+        list.add(p3);
+
         return list;
     }
 

@@ -6,17 +6,20 @@
     android:background="@color/neutral_cream"
     android:fillViewport="true">
 
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:paddingBottom="24dp">
 
+
         <!-- Header -->
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:padding="16dp">
+
 
             <ImageView
                 android:id="@+id/btnBack"
@@ -26,6 +29,7 @@
                 android:src="@drawable/ic_back"
                 app:tint="@color/neutral_black" />
 
+
             <TextView
                 style="@style/TextAppearance.HealthUp.SubTitle"
                 android:layout_width="wrap_content"
@@ -34,6 +38,7 @@
                 android:text="Thiết lập tài khoản"
                 android:textColor="@color/neutral_black"
                 android:textStyle="bold" />
+
 
             <ImageView
                 android:id="@+id/btnChatSupport"
@@ -47,6 +52,7 @@
                 app:tint="@color/neutral_grey" />
         </RelativeLayout>
 
+
         <!-- Section: Tài khoản -->
         <TextView
             style="@style/TextAppearance.HealthUp.SubContent.Bold"
@@ -56,6 +62,7 @@
             android:layout_marginTop="8dp"
             android:text="Tài khoản" />
 
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -64,36 +71,56 @@
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp">
 
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+
                 <include
                     android:id="@+id/itemInfo"
                     layout="@layout/item_setting_row" />
+
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
+
 
                 <include
                     android:id="@+id/itemAddress"
                     layout="@layout/item_setting_row" />
 
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
 
+
                 <include
                     android:id="@+id/itemPayment"
                     layout="@layout/item_setting_row" />
+
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginHorizontal="16dp"
+                    android:background="@color/neutral_light_grey" />
+
+
+                <!-- FIX: Thêm mục Sản phẩm yêu thích -->
+                <include
+                    android:id="@+id/itemWishlist"
+                    layout="@layout/item_setting_row" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
 
         <!-- Section: Cài đặt -->
         <TextView
@@ -104,6 +131,7 @@
             android:layout_marginTop="20dp"
             android:text="Cài đặt" />
 
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -112,46 +140,55 @@
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp">
 
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
 
+
                 <include
                     android:id="@+id/itemNotification"
                     layout="@layout/item_setting_row" />
+
 
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
+
 
                 <include
                     android:id="@+id/itemLanguage"
                     layout="@layout/item_setting_row" />
 
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
+
 
                 <include
                     android:id="@+id/itemAccess"
                     layout="@layout/item_setting_row" />
 
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
+
 
                 <include
                     android:id="@+id/itemDeleteAccount"
                     layout="@layout/item_setting_row" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
+
 
         <!-- Section: Liên hệ -->
         <TextView
@@ -162,6 +199,7 @@
             android:layout_marginTop="20dp"
             android:text="Liên hệ" />
 
+
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -170,10 +208,12 @@
             app:cardCornerRadius="16dp"
             app:cardElevation="0dp">
 
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical">
+
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -181,6 +221,7 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:padding="16dp">
+
 
                     <ImageView
                         android:layout_width="32dp"
@@ -191,6 +232,7 @@
                         android:src="@drawable/ic_phone"
                         app:tint="@color/primary_default" />
 
+
                     <TextView
                         style="@style/TextAppearance.HealthUp.SubContent.Bold"
                         android:layout_width="wrap_content"
@@ -199,11 +241,13 @@
                         android:text="0769845728" />
                 </LinearLayout>
 
+
                 <View
                     android:layout_width="match_parent"
                     android:layout_height="1dp"
                     android:layout_marginHorizontal="16dp"
                     android:background="@color/neutral_light_grey" />
+
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -211,6 +255,7 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
                     android:padding="16dp">
+
 
                     <ImageView
                         android:layout_width="32dp"
@@ -220,6 +265,7 @@
                         android:padding="8dp"
                         android:src="@drawable/ic_mail"
                         app:tint="@color/primary_default" />
+
 
                     <TextView
                         style="@style/TextAppearance.HealthUp.SubContent.Bold"
@@ -231,6 +277,7 @@
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
+
         <!-- Social Icons Row -->
         <LinearLayout
             android:layout_width="wrap_content"
@@ -239,10 +286,12 @@
             android:layout_marginTop="32dp"
             android:orientation="horizontal">
 
+
             <ImageView
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@drawable/ic_facebook" />
+
 
             <ImageView
                 android:layout_width="48dp"
@@ -250,11 +299,13 @@
                 android:layout_marginStart="16dp"
                 android:src="@drawable/ic_instagram" />
 
+
             <ImageView
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:layout_marginStart="16dp"
                 android:src="@drawable/ic_threads" />
+
 
             <ImageView
                 android:layout_width="48dp"
@@ -262,6 +313,7 @@
                 android:layout_marginStart="16dp"
                 android:src="@drawable/ic_tiktok" />
         </LinearLayout>
+
 
         <Button
             android:id="@+id/btnLogout"
@@ -275,6 +327,7 @@
             android:textSize="14sp"
             android:textStyle="bold" />
 
+
         <TextView
             style="@style/TextAppearance.HealthUp.CaptionLabel"
             android:layout_width="wrap_content"
@@ -283,6 +336,7 @@
             android:layout_marginTop="16dp"
             android:text="Phiên bản: v1.2.3"
             android:textColor="@color/neutral_grey" />
+
 
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

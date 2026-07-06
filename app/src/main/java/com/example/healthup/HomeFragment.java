@@ -248,7 +248,14 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                             // Phân loại Flash Sale
                             Object isFlash = doc.get("isFlashSale");
                             if (isFlash instanceof Boolean && (Boolean)isFlash) {
+                                product.setFlashSale(true);
                                 flashSales.add(product);
+                            }
+
+                            // Phân loại Sản phẩm mới
+                            Object isNewObj = doc.get("isNew");
+                            if (isNewObj instanceof Boolean && (Boolean)isNewObj) {
+                                product.setNew(true);
                             }
                         }
                     }
@@ -265,18 +272,26 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                         // Nếu không có sp nào marked flash sale, lấy tạm 5 cái đầu
                         flashSaleList.addAll(allFetched.subList(0, Math.min(allFetched.size(), 5)));
                     }
-                    flashSaleAdapter.notifyDataSetChanged();
+                    flashSaleAdapter.updateData(new ArrayList<>(flashSaleList));
 
-                    // Hiển thị New Products (Random 10 cái)
+                    // Hiển thị New Products (Lọc sản phẩm mới hoặc Random 10 cái nếu không có)
                     newProductList.clear();
-                    if (!allFetched.isEmpty()) {
+                    List<Product> newProducts = new ArrayList<>();
+                    for (Product p : allFetched) {
+                        if (p.isNew()) newProducts.add(p);
+                    }
+
+                    if (!newProducts.isEmpty()) {
+                        Collections.shuffle(newProducts);
+                        newProductList.addAll(newProducts.subList(0, Math.min(newProducts.size(), 10)));
+                    } else if (!allFetched.isEmpty()) {
                         Collections.shuffle(allFetched);
                         int limit = Math.min(allFetched.size(), 10);
                         newProductList.addAll(allFetched.subList(0, limit));
                     } else {
                         newProductList.addAll(Product.getDummyProducts());
                     }
-                    newProductAdapter.notifyDataSetChanged();
+                    newProductAdapter.updateData(new ArrayList<>(newProductList));
                 })
                 .addOnFailureListener(e -> {
                     newProductList.clear();

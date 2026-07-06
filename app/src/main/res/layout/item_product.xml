@@ -8,15 +8,18 @@
     app:cardElevation="2dp"
     app:cardBackgroundColor="@color/neutral_white">
 
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
         android:padding="8dp">
 
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="120dp">
+
 
             <ImageView
                 android:id="@+id/ivProduct"
@@ -24,6 +27,7 @@
                 android:layout_height="match_parent"
                 android:scaleType="centerCrop"
                 android:src="@color/neutral_light_grey" />
+
 
             <TextView
                 android:id="@+id/tvBadgeNew"
@@ -34,6 +38,7 @@
                 android:text="MỚI"
                 android:visibility="gone" />
 
+
             <TextView
                 android:id="@+id/tvBadgeHot"
                 style="@style/Widget.HealthUp.Badge.Hot"
@@ -43,6 +48,7 @@
                 android:text="HOT"
                 android:visibility="gone" />
         </RelativeLayout>
+
 
         <TextView
             android:id="@+id/tvProductName"
@@ -56,6 +62,7 @@
             android:textColor="@color/neutral_black"
             android:textStyle="bold" />
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -63,12 +70,14 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+
             <ImageView
                 android:layout_width="12dp"
                 android:layout_height="12dp"
                 android:src="@drawable/ic_star"
                 app:tint="#FFB300"
                 android:layout_marginEnd="2dp"/>
+
 
             <TextView
                 android:id="@+id/tvRating"
@@ -78,6 +87,7 @@
                 android:textSize="11sp"
                 android:textColor="@color/neutral_black"
                 android:textStyle="bold" />
+
 
             <TextView
                 android:id="@+id/tvSoldCount"
@@ -89,6 +99,7 @@
                 android:textColor="@color/neutral_grey" />
         </LinearLayout>
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -96,11 +107,13 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+
             <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
+
 
                 <TextView
                     android:id="@+id/tvProductPrice"
@@ -111,6 +124,7 @@
                     android:textColor="@color/primary_default"
                     android:textStyle="bold" />
 
+
                 <TextView
                     android:id="@+id/tvOriginalPrice"
                     style="@style/TextAppearance.HealthUp.CaptionLabel"
@@ -120,11 +134,18 @@
                     android:visibility="gone" />
             </LinearLayout>
 
+
+            <!-- FIX: clickable=false + focusable=false để sự kiện chạm được truyền lên
+                 itemView.setOnClickListener() thay vì bị CheckBox tự "nuốt" mất.
+                 Đây là nguyên nhân khiến chọn/bỏ chọn không cập nhật được selectedProducts. -->
             <CheckBox
                 android:id="@+id/cbSelect"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:clickable="false"
+                android:focusable="false"
                 android:visibility="gone" />
+
 
             <ImageView
                 android:id="@+id/btnWishlist"
@@ -135,6 +156,7 @@
                 android:padding="6dp"
                 android:src="@drawable/ic_wishlist"
                 app:tint="@color/primary_default" />
+
 
             <ImageView
                 android:id="@+id/btnAddToCart"

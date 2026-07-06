@@ -20,6 +20,7 @@ import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.slider.RangeSlider;
 import com.example.healthup.firebase.FirestoreManager;
+import com.example.models.Product;
 
 import java.text.NumberFormat;
 import java.util.Arrays;
@@ -31,6 +32,11 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     public interface OnFilterAppliedListener {
         void onFilterApplied(String category, String sort, double minPrice, double maxPrice, float rating);
     }
+
+    // Giá tối đa của cả bộ lọc: 1.000.000đ (trước là 10.000.000đ)
+    private static final float PRICE_MAX = 1000000f;
+    // Bước nhảy khi kéo thanh trượt giá, tránh số thập phân lẻ
+    private static final float PRICE_STEP = 5000f;
 
     private OnFilterAppliedListener listener;
     private String selectedCategory, selectedSort;
@@ -69,6 +75,10 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             minPrice = getArguments().getDouble("min");
             maxPrice = getArguments().getDouble("max");
             minRating = getArguments().getFloat("rating");
+
+            // Bảo vệ: nếu giá trị truyền vào vượt mức tối đa mới, ép về giới hạn mới
+            if (maxPrice > PRICE_MAX) maxPrice = PRICE_MAX;
+            if (minPrice > PRICE_MAX) minPrice = PRICE_MAX;
         }
     }
 
@@ -99,7 +109,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
 
         view.findViewById(R.id.btn_close).setOnClickListener(v -> dismiss());
         view.findViewById(R.id.btn_reset).setOnClickListener(v -> resetFilters());
-        
+
         MaterialButton btnApply = view.findViewById(R.id.btn_apply);
         if (btnApply != null) {
             btnApply.setOnClickListener(v -> {
@@ -139,7 +149,26 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void setupPriceSlider(View view) {
-        priceSlider.setValues((float) minPrice, (float) maxPrice);
+        // Đặt giá trị tạm an toàn (0,0) trước khi đổi valueFrom/valueTo/stepSize.
+        // Bắt buộc phải làm vậy vì RangeSlider sẽ crash nếu giá trị hiện tại (từ XML, có thể là 10.000.000)
+        // vượt quá valueTo mới (1.000.000) tại bất kỳ thời điểm nào.
+        priceSlider.setValues(0f, 0f);
+
+        priceSlider.setValueFrom(0f);
+        priceSlider.setValueTo(PRICE_MAX);
+        priceSlider.setStepSize(PRICE_STEP);
+
+        // Làm tròn giá trị min/max hiện có về đúng bước 5.000đ và giới hạn 0 - 1.000.000đ,
+        // phòng trường hợp giá trị cũ không khớp bước nhảy mới -> tránh crash
+        float safeMin = roundToStep(minPrice);
+        float safeMax = roundToStep(maxPrice);
+        if (safeMax <= safeMin) {
+            safeMax = Math.min(PRICE_MAX, safeMin + PRICE_STEP);
+        }
+        minPrice = safeMin;
+        maxPrice = safeMax;
+
+        priceSlider.setValues(safeMin, safeMax);
         updatePriceTexts();
 
         priceSlider.addOnChangeListener((slider, value, fromUser) -> {
@@ -157,7 +186,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             } else if (id == R.id.btn_price_100_200) {
                 priceSlider.setValues(100000f, 200000f);
             } else if (id == R.id.btn_price_above_200) {
-                priceSlider.setValues(200000f, 10000000f);
+                priceSlider.setValues(200000f, PRICE_MAX);
             }
             updateApplyButton(getView());
         };
@@ -165,6 +194,15 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         view.findViewById(R.id.btn_price_under_100).setOnClickListener(priceQuickAction);
         view.findViewById(R.id.btn_price_100_200).setOnClickListener(priceQuickAction);
         view.findViewById(R.id.btn_price_above_200).setOnClickListener(priceQuickAction);
+    }
+
+    // Hàm hỗ trợ làm tròn giá trị về đúng bội số của PRICE_STEP (5.000đ),
+    // đồng thời giới hạn trong khoảng [0, PRICE_MAX] để tránh crash RangeSlider
+    private float roundToStep(double value) {
+        float v = (float) value;
+        if (v < 0) v = 0;
+        if (v > PRICE_MAX) v = PRICE_MAX;
+        return Math.round(v / PRICE_STEP) * PRICE_STEP;
     }
 
     private void updatePriceTexts() {
@@ -188,13 +226,15 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     private void updateApplyButton(View view) {
         if (view == null) return;
         FirestoreManager.getInstance()
-                .getFilteredProducts(selectedCategory, selectedSort, minPrice, maxPrice, minRating)
+                .getFilteredProductsQuery(selectedCategory)
                 .get()
                 .addOnSuccessListener(snapshots -> {
                     if (isAdded() && getView() != null) {
+                        List<Product> filtered = FirestoreManager.getInstance()
+                                .processProductSnapshots(snapshots, selectedSort, minPrice, maxPrice, minRating);
                         MaterialButton btnApply = view.findViewById(R.id.btn_apply);
                         if (btnApply != null) {
-                            btnApply.setText(getString(R.string.filter_apply_count, snapshots.size()));
+                            btnApply.setText(getString(R.string.filter_apply_count, filtered.size()));
                         }
                     }
                 })
@@ -211,11 +251,11 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         selectedCategory = "Tất cả";
         selectedSort = "Phổ biến";
         minPrice = 0;
-        maxPrice = 10000000;
+        maxPrice = PRICE_MAX;
         minRating = 0;
-        
+
         if (chipGroupSort != null) chipGroupSort.check(R.id.chip_popular);
-        priceSlider.setValues(0f, 10000000f);
+        priceSlider.setValues(0f, PRICE_MAX);
         rgRating.clearCheck();
         categoryAdapter.setSelectedCategory(selectedCategory);
         updatePriceTexts();
@@ -259,7 +299,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             holder.tvName.setText(categoryName);
             holder.tvCount.setVisibility(View.GONE); // Ẩn số lượng cho đơn giản
             holder.checkBox.setChecked(categoryName.equals(selectedCategory));
-            
+
             View.OnClickListener clickListener = v -> {
                 selectedCategory = categoryName;
                 listener.onSelected(selectedCategory);

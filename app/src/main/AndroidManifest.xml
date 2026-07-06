@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     package="com.example.healthup">
 
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -11,13 +12,16 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
     <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
 
+
     <uses-feature android:name="android.hardware.camera" android:required="false" />
+
 
     <queries>
         <intent>
             <action android:name="android.media.action.IMAGE_CAPTURE" />
         </intent>
     </queries>
+
 
     <application
         android:allowBackup="true"
@@ -30,6 +34,7 @@
         android:theme="@style/Theme.HealthUp"
         android:enableOnBackInvokedCallback="true">
 
+
         <activity
             android:name="com.example.healthup.SplashActivity"
             android:exported="true"
@@ -40,16 +45,20 @@
             </intent-filter>
         </activity>
 
+
         <activity android:name="com.example.healthup.LoginActivity" />
         <activity android:name="com.example.healthup.RegisterActivity" />
         <activity android:name="com.example.healthup.OTPActivity" />
         <activity android:name="com.example.healthup.ForgotPasswordActivity" />
-        <activity android:name="com.example.healthup.MainActivity" />
+        <activity
+            android:name="com.example.healthup.MainActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.ProductDetailActivity" />
         <activity android:name="com.example.healthup.OrderDetailActivity" />
         <activity android:name="com.example.healthup.AddressFormActivity" />
         <activity android:name="com.example.healthup.AboutActivity" />
         <activity android:name="com.example.healthup.BlogDetailActivity" />
+
 
         <activity android:name="com.example.healthup.AccountInfoActivity" />
         <activity android:name="com.example.healthup.PaymentInfoActivity" />
@@ -61,6 +70,7 @@
         <activity android:name="com.example.healthup.LanguageSettingsActivity" />
         <activity android:name="com.example.healthup.AccessSettingsActivity" />
 
+
         <activity android:name="com.example.healthup.ReturnRefundActivity" />
         <activity
             android:name="com.example.healthup.ReturnRefundDetailActivity"
@@ -69,6 +79,7 @@
         <activity android:name="com.example.healthup.WriteReviewActivity" />
         <activity android:name="com.example.healthup.ViewReviewsActivity" />
         <activity android:name="com.example.healthup.ProductReviewsActivity" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -80,6 +91,8 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
+
     </application>
+
 
 </manifest>
