@@ -114,6 +114,17 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
         binding = ActivityReturnRefundDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nút dưới cùng
+        View root = findViewById(R.id.return_refund_detail_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
+
         allOrderItems = (ArrayList<OrderItem>) getIntent().getSerializableExtra("items");
         paymentMethod = getIntent().getStringExtra("paymentMethod");
         shippingAddress = getIntent().getStringExtra("shippingAddress");
@@ -365,15 +376,29 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
         if (paymentMethod == null) return;
         String refundMethod = paymentMethod;
         int iconRes = R.drawable.ic_payment_wallet;
-        if ("Thanh toán khi nhận hàng".equals(paymentMethod)) {
+        
+        // Cập nhật mapping code -> text đầy đủ
+        if ("cod".equalsIgnoreCase(paymentMethod) || "Thanh toán khi nhận hàng".equals(paymentMethod)) {
             refundMethod = "Tài khoản Ngân hàng liên kết";
             iconRes = R.drawable.ic_payment_card;
-        } else if (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")) {
+        } else if ("momo".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("MoMo")) {
+            refundMethod = "Ví MoMo";
+            iconRes = R.drawable.ic_payment_wallet;
+        } else if ("zalopay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("ZaloPay")) {
+            refundMethod = "Ví ZaloPay";
+            iconRes = R.drawable.ic_payment_wallet;
+        } else if ("vnpay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("VNPAY")) {
+            refundMethod = "Ví VNPAY";
+            iconRes = R.drawable.ic_payment_wallet;
+        } else if ("card".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")) {
+            refundMethod = "Thẻ Tín dụng / Ghi nợ";
             iconRes = R.drawable.ic_payment_card;
         }
+
         String displayInfo = refundMethod;
         if (refundMethod.contains("Ví")) displayInfo += " – 09xx xxx 567";
         else if (refundMethod.contains("Ngân hàng") || refundMethod.contains("Thẻ")) displayInfo += " – **** 1234";
+
         binding.tvRefundMethod.setText(displayInfo);
         binding.imgRefundMethod.setImageResource(iconRes);
         binding.rlRefundMethod.setOnClickListener(null);
@@ -458,6 +483,17 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
             itemBinding.tvQtyHeader.setText(isMissingItemsRequest ? "Số lượng bị thiếu" : "Số lượng bị lỗi");
             itemBinding.icCheck.setOnClickListener(v -> { selectedItemsMap.remove(item); updateSelectedProductsUI(); });
             
+            // Click product image or name to see product details
+            View.OnClickListener toProductDetail = v -> {
+                if (item.getProductId() != null) {
+                    Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                    detailIntent.putExtra("productId", item.getProductId());
+                    startActivity(detailIntent);
+                }
+            };
+            itemBinding.imgProduct.setOnClickListener(toProductDetail);
+            itemBinding.tvProductName.setOnClickListener(toProductDetail);
+
             // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
             String imagePath = item.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {

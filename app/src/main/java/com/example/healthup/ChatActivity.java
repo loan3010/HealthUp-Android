@@ -3,7 +3,7 @@ package com.example.healthup;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-
+import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
@@ -91,6 +91,17 @@ public class ChatActivity extends AppCompatActivity {
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat);
+
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung dưới cùng (Input bar)
+        View root = findViewById(R.id.chat_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
 
         if (savedInstanceState == null) {
             boolean sellerMode = getIntent().getBooleanExtra(EXTRA_SELLER_MODE, false);

@@ -33,6 +33,16 @@ public class ViewReviewsActivity extends AppCompatActivity {
         binding = ActivityViewReviewsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
+        View root = findViewById(R.id.view_reviews_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
 
         order = (Order) getIntent().getSerializableExtra("order");
         if (order == null) {
@@ -52,8 +62,7 @@ public class ViewReviewsActivity extends AppCompatActivity {
             ItemViewReviewBinding itemBinding = ItemViewReviewBinding.inflate(getLayoutInflater(), binding.lnReviewContainer, false);
 
 
-            // FIX (yêu cầu #5): không hiển thị tên đầy đủ sản phẩm ở trang này nữa, chỉ giữ
-            // ảnh nhỏ + phân loại để người dùng vẫn nhận ra sản phẩm nào đang được đánh giá.
+            itemBinding.tvProductName.setText(item.getName());
             String variantLabel = item.getVariantLabel();
             if (!TextUtils.isEmpty(variantLabel)) {
                 itemBinding.tvVariant.setVisibility(View.VISIBLE);
@@ -62,6 +71,16 @@ public class ViewReviewsActivity extends AppCompatActivity {
                 itemBinding.tvVariant.setVisibility(View.GONE);
             }
 
+            // Click product image or name to see product details
+            View.OnClickListener toProductDetail = v -> {
+                if (item.getProductId() != null) {
+                    Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                    detailIntent.putExtra("productId", item.getProductId());
+                    startActivity(detailIntent);
+                }
+            };
+            itemBinding.imgContainer.setOnClickListener(toProductDetail);
+            itemBinding.tvProductName.setOnClickListener(toProductDetail);
 
             String imagePath = item.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
@@ -115,6 +134,16 @@ public class ViewReviewsActivity extends AppCompatActivity {
                 } else {
                     itemBinding.rvMedia.setVisibility(View.GONE);
                 }
+
+                // Link to all reviews for this product
+                itemBinding.btnViewAllReviews.setOnClickListener(v -> {
+                    if (item.getProductId() != null) {
+                        Intent reviewsIntent = new Intent(this, ProductReviewsActivity.class);
+                        reviewsIntent.putExtra("productId", item.getProductId());
+                        reviewsIntent.putExtra("product_name", item.getName());
+                        startActivity(reviewsIntent);
+                    }
+                });
             } else {
                 itemBinding.lnReviewedContent.setVisibility(View.GONE);
                 itemBinding.btnWriteReviewNow.setVisibility(View.VISIBLE);

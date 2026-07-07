@@ -28,6 +28,7 @@ import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.Review;
 import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -80,6 +81,17 @@ public class WriteReviewActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityWriteReviewBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nút dưới cùng
+        View root = findViewById(R.id.write_review_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
 
         order = (Order) getIntent().getSerializableExtra("order");
         if (order == null) {
@@ -223,34 +235,52 @@ public class WriteReviewActivity extends AppCompatActivity {
         }
 
         com.google.android.gms.tasks.Tasks.whenAllComplete(allUploadTasks).addOnCompleteListener(task -> {
-            // Save reviews
-            List<com.google.android.gms.tasks.Task<Void>> saveTasks = new ArrayList<>();
-            for (int i = 0; i < binding.lnReviewContainer.getChildCount(); i++) {
-                View view = binding.lnReviewContainer.getChildAt(i);
-                RatingBar rb = view.findViewById(R.id.ratingBar);
-                float rating = rb.getRating();
-                if (rating > 0) {
-                    String comment = ((EditText) view.findViewById(R.id.etComment)).getText().toString();
-                    String title = ((TextView) view.findViewById(R.id.tvProductName)).getText().toString();
-                    
-                    int realIndex = -1;
-                    for (int j = 0; j < order.getItems().size(); j++) {
-                        if (order.getItems().get(j).getName().equals(title)) { realIndex = j; break; }
-                    }
+            // Lấy thông tin User hiện tại trước khi lưu đánh giá
+            String uid = FirebaseManager.getInstance().getCurrentUserId();
+            FirebaseFirestore.getInstance().collection("users").document(uid).get().addOnSuccessListener(userDoc -> {
+                String userName = userDoc.getString("name");
+                if (userName == null || userName.isEmpty()) userName = userDoc.getString("displayName");
+                if (userName == null || userName.isEmpty()) userName = "Người dùng HealthUp";
+                String userAvatar = userDoc.getString("avatarUrl");
 
-                    if (realIndex != -1) {
-                        Review review = new Review(rating, comment, uploadedUrlsMap.get(realIndex), Timestamp.now());
-                        saveTasks.add(FirebaseManager.getInstance().updateItemReview(order.getId(), realIndex, review, order.getItems()));
+                // Save reviews
+                List<com.google.android.gms.tasks.Task<Void>> saveTasks = new ArrayList<>();
+                for (int i = 0; i < binding.lnReviewContainer.getChildCount(); i++) {
+                    View view = binding.lnReviewContainer.getChildAt(i);
+                    RatingBar rb = view.findViewById(R.id.ratingBar);
+                    float rating = rb.getRating();
+                    if (rating > 0) {
+                        String comment = ((EditText) view.findViewById(R.id.etComment)).getText().toString();
+                        String title = ((TextView) view.findViewById(R.id.tvProductName)).getText().toString();
+                        
+                        int realIndex = -1;
+                        OrderItem orderItem = null;
+                        for (int j = 0; j < order.getItems().size(); j++) {
+                            if (order.getItems().get(j).getName().equals(title)) { 
+                                realIndex = j; 
+                                orderItem = order.getItems().get(j);
+                                break; 
+                            }
+                        }
+
+                        if (realIndex != -1 && orderItem != null) {
+                            Review review = new Review(rating, comment, uploadedUrlsMap.get(realIndex), Timestamp.now());
+                            review.setUserName(userName);
+                            review.setUserAvatar(userAvatar);
+                            review.setVariantLabel(orderItem.getVariantLabel());
+                            
+                            saveTasks.add(FirebaseManager.getInstance().updateItemReview(order.getId(), realIndex, review, order.getItems()));
+                        }
                     }
                 }
-            }
 
-            com.google.android.gms.tasks.Tasks.whenAll(saveTasks).addOnSuccessListener(aVoid -> {
-                loadingDialog.dismiss();
-                showSuccessPopup();
-            }).addOnFailureListener(e -> {
-                loadingDialog.dismiss();
-                Toast.makeText(this, "Lỗi lưu đánh giá: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                com.google.android.gms.tasks.Tasks.whenAll(saveTasks).addOnSuccessListener(aVoid -> {
+                    loadingDialog.dismiss();
+                    showSuccessPopup();
+                }).addOnFailureListener(e -> {
+                    loadingDialog.dismiss();
+                    Toast.makeText(this, "Lỗi lưu đánh giá: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
             });
         });
     }

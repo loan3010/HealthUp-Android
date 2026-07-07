@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
@@ -41,11 +43,32 @@ public class OrderDetailActivity extends AppCompatActivity {
     private SimpleDateFormat sdfDate = new SimpleDateFormat("dd-MM-yyyy", Locale.getDefault());
     private Order currentOrder;
 
+    private final ActivityResultLauncher<Intent> addressLauncher =
+            registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+                if (result.getResultCode() == RESULT_OK && result.getData() != null) {
+                    com.example.models.Address address = (com.example.models.Address) result.getData().getSerializableExtra("selected_address");
+                    if (address != null) {
+                        updateOrderAddress(address);
+                    }
+                }
+            });
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         binding = ActivityOrderDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất các nút ở dưới cùng
+        View root = findViewById(R.id.order_detail_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
 
         currentOrder = (Order) getIntent().getSerializableExtra("order");
         String orderIdFallback = getIntent().getStringExtra(EXTRA_ORDER_ID);
@@ -144,6 +167,43 @@ public class OrderDetailActivity extends AppCompatActivity {
             intent.putExtra("shippingAddress", currentOrder.getAddress().getAddressDetail());
             startActivity(intent);
         });
+
+        binding.btnUpdateAddress.setOnClickListener(v -> {
+            Intent intent = new Intent(this, AddressBookActivity.class);
+            intent.putExtra("select_mode", true);
+            addressLauncher.launch(intent);
+        });
+    }
+
+    private void updateOrderAddress(com.example.models.Address newAddress) {
+        if (currentOrder == null || newAddress == null) return;
+
+        AlertDialog.Builder loadingBuilder = new AlertDialog.Builder(this);
+        DialogLoadingBinding loadingBinding = DialogLoadingBinding.inflate(getLayoutInflater());
+        loadingBuilder.setView(loadingBinding.getRoot());
+        loadingBuilder.setCancelable(false);
+        AlertDialog loadingDialog = loadingBuilder.create();
+        if (loadingDialog.getWindow() != null) {
+            loadingDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        loadingDialog.show();
+
+        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+        updates.put("address", newAddress);
+        updates.put("updatedAt", com.google.firebase.Timestamp.now());
+
+        FirebaseFirestore.getInstance().collection("orders").document(currentOrder.getId())
+            .update(updates)
+            .addOnSuccessListener(aVoid -> {
+                loadingDialog.dismiss();
+                currentOrder.setAddress(newAddress);
+                populateUI(currentOrder);
+                Toast.makeText(this, "Cập nhật địa chỉ thành công", Toast.LENGTH_SHORT).show();
+            })
+            .addOnFailureListener(e -> {
+                loadingDialog.dismiss();
+                Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void handleConfirmReceived() {
@@ -283,8 +343,15 @@ public class OrderDetailActivity extends AppCompatActivity {
             binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
         }
 
-        binding.tvPaymentMethod.setText("Thanh toán bằng " + order.getPaymentMethod());
-        if (order.getPaymentMethod().contains("Thẻ") || order.getPaymentMethod().contains("Tài khoản")) {
+        String paymentMethod = order.getPaymentMethod();
+        if ("cod".equalsIgnoreCase(paymentMethod)) paymentMethod = "Thanh toán khi nhận hàng (COD)";
+        else if ("momo".equalsIgnoreCase(paymentMethod)) paymentMethod = "Ví MoMo";
+        else if ("zalopay".equalsIgnoreCase(paymentMethod)) paymentMethod = "Ví ZaloPay";
+        else if ("vnpay".equalsIgnoreCase(paymentMethod)) paymentMethod = "Ví VNPAY";
+        else if ("card".equalsIgnoreCase(paymentMethod)) paymentMethod = "Thẻ Tín dụng / Ghi nợ";
+
+        binding.tvPaymentMethod.setText("Thanh toán bằng " + paymentMethod);
+        if (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản") || paymentMethod.contains("card")) {
             binding.imgPaymentIcon.setImageResource(R.drawable.ic_payment_card);
         } else {
             binding.imgPaymentIcon.setImageResource(R.drawable.ic_payment_wallet);
@@ -351,6 +418,17 @@ public class OrderDetailActivity extends AppCompatActivity {
             }
 
             pBinding.btnAskProduct.setOnClickListener(v -> openProductChat(item));
+
+            // Click product image or name to see product details
+            View.OnClickListener toProductDetail = v -> {
+                if (item.getProductId() != null) {
+                    Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                    detailIntent.putExtra("productId", item.getProductId());
+                    startActivity(detailIntent);
+                }
+            };
+            pBinding.imgProduct.setOnClickListener(toProductDetail);
+            pBinding.tvProductName.setOnClickListener(toProductDetail);
 
             binding.lnItemsContainer.addView(pBinding.getRoot());
         }

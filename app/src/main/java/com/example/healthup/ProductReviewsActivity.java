@@ -31,6 +31,17 @@ public class ProductReviewsActivity extends AppCompatActivity {
         binding = ActivityProductReviewsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
+        View root = findViewById(R.id.product_reviews_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
+
         productId = getIntent().getStringExtra("productId");
         String productName = getIntent().getStringExtra("product_name");
         float avgRating = getIntent().getFloatExtra("avgRating", 0f);

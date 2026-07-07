@@ -244,18 +244,27 @@ public class MainActivity extends AppCompatActivity {
 
     private void applySystemBarInsets() {
         View root = findViewById(R.id.main_root);
+        // Cho phép app vẽ tràn viền (Edge-to-edge)
+        root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            
+            // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
+            
+            // Fix Fragment Container: không để content lọt xuống dưới Nav Bar của app
+            // Chúng ta không cần padding bottom ở đây vì fragment_container đã được constraint
+            // vào TOP của bottom_navigation (đã được dãn chiều cao ở trên).
+            
             if (fabChat != null) {
                 ViewGroup.MarginLayoutParams params =
                         (ViewGroup.MarginLayoutParams) fabChat.getLayoutParams();
-                params.bottomMargin = 16 + systemBars.bottom;
+                params.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density) + systemBars.bottom;
                 fabChat.setLayoutParams(params);
             }
             return windowInsets;
         });
-        ViewCompat.requestApplyInsets(root);
     }
 
 

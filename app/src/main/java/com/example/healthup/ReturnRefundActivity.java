@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 import android.os.Bundle;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityReturnRefundBinding;
@@ -18,16 +19,28 @@ public class ReturnRefundActivity extends AppCompatActivity {
         binding = ActivityReturnRefundBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
+        View root = findViewById(R.id.return_refund_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
+
         String orderId = getIntent().getStringExtra("orderId");
         String orderCode = getIntent().getStringExtra("orderCode");
         String paymentMethod = getIntent().getStringExtra("paymentMethod");
         String shippingAddress = getIntent().getStringExtra("shippingAddress");
         ArrayList<OrderItem> items = (ArrayList<OrderItem>) getIntent().getSerializableExtra("items");
 
-        if (orderCode != null) {
+        if (orderCode != null && !orderCode.isEmpty()) {
             binding.tvOrderCodeLabel.setText("Mã đơn hàng: " + orderCode);
-        } else if (orderId != null) {
-            binding.tvOrderCodeLabel.setText("Mã đơn hàng: " + orderId.substring(0, 8));
+        } else if (orderId != null && !orderId.isEmpty()) {
+            // Fallback if code is missing, use ID but maybe indicate it
+            binding.tvOrderCodeLabel.setText("Đơn hàng: " + orderId);
         }
 
         if (items != null && !items.isEmpty()) {
@@ -59,6 +72,17 @@ public class ReturnRefundActivity extends AppCompatActivity {
             } else {
                 binding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
             }
+            
+            // Click product image or name to see product details
+            View.OnClickListener toProductDetail = v -> {
+                if (items != null && !items.isEmpty() && items.get(0).getProductId() != null) {
+                    android.content.Intent detailIntent = new android.content.Intent(this, ProductDetailActivity.class);
+                    detailIntent.putExtra("productId", items.get(0).getProductId());
+                    startActivity(detailIntent);
+                }
+            };
+            binding.imgProduct.setOnClickListener(toProductDetail);
+            binding.tvProductName.setOnClickListener(toProductDetail);
         }
 
         binding.btnBack.setOnClickListener(v -> finish());

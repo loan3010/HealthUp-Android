@@ -140,12 +140,27 @@ public class FirebaseManager {
 
     public Task<Void> updateItemReview(String orderId, int itemIndex, Review review, List<OrderItem> allItems) {
         if (itemIndex < 0 || itemIndex >= allItems.size()) return Tasks.forException(new Exception("Invalid index"));
+        
+        // 1. Cập nhật review vào Order (để hiện trạng thái "Đã đánh giá" trong đơn hàng)
         allItems.get(itemIndex).setReview(review);
         Map<String, Object> updates = new HashMap<>();
         updates.put("items", allItems);
         updates.put("reviewed", true);
         updates.put("updatedAt", Timestamp.now());
-        return db.collection("orders").document(orderId).update(updates);
+        Task<Void> orderTask = db.collection("orders").document(orderId).update(updates);
+
+        // 2. Đồng thời đẩy review này vào danh sách review của sản phẩm
+        String productId = allItems.get(itemIndex).getProductId();
+        if (productId != null && !productId.isEmpty()) {
+            DocumentReference productRef = db.collection("products").document(productId);
+            // Lưu vào sub-collection
+            productRef.collection("reviews").add(review);
+            
+            // Cập nhật thống kê sơ bộ (tăng count)
+            productRef.update("reviewCount", com.google.firebase.firestore.FieldValue.increment(1));
+        }
+        
+        return orderTask;
     }
 
     public Task<Void> rebuyOrder(List<OrderItem> rebuyItems) {

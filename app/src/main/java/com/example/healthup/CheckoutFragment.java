@@ -379,7 +379,16 @@ public class CheckoutFragment extends Fragment {
         order.setShippingFee(shippingFee - currentShippingDiscount);
         order.setDiscountAmount(totalDiscount);
         order.setTotalPrice(finalAmount);
-        order.setPaymentMethod(selectedPaymentMethod);
+        
+        // Map payment method code to display name
+        String paymentDisplay = selectedPaymentMethod;
+        if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
+        else if ("momo".equals(selectedPaymentMethod)) paymentDisplay = "Ví MoMo";
+        else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
+        else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
+        else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
+        
+        order.setPaymentMethod(paymentDisplay);
         order.setStatus(com.example.models.Order.STATUS_PENDING);
         order.setCreatedAt(com.google.firebase.Timestamp.now());
 

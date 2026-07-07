@@ -307,6 +307,17 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
 
         pBinding.btnAskProduct.setVisibility(View.GONE);
 
+        // Click product image or name to see product details
+        View.OnClickListener toProductDetail = v -> {
+            if (item.getProductId() != null) {
+                Intent detailIntent = new Intent(context, ProductDetailActivity.class);
+                detailIntent.putExtra("productId", item.getProductId());
+                context.startActivity(detailIntent);
+            }
+        };
+        pBinding.imgProduct.setOnClickListener(toProductDetail);
+        pBinding.tvProductName.setOnClickListener(toProductDetail);
+
         binding.lnItemsContainer.addView(pBinding.getRoot());
     }
 
@@ -384,25 +395,37 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     }
                     break;
                 case "delivered":
-                    if (!order.isReturnExpired()) {
-                        setupButton(binding.btnActionLeft, "Trả hàng/Hoàn tiền", "outline");
+                    boolean canReturn = !order.isReturnExpired();
+                    boolean isAlreadyReviewed = order.isReviewed();
+                    boolean canStillReview = !order.isReviewExpired();
+                    
+                    if (canReturn) {
+                        // CHỈ KHI có 3 nút: Trả hàng + XEM ĐÁNH GIÁ + Mua lại -> Mới rút ngắn text
+                        if (isAlreadyReviewed) {
+                            setupButton(binding.btnActionLeft, "Trả/Hoàn", "outline");
+                        } else {
+                            setupButton(binding.btnActionLeft, "Trả hàng/Hoàn tiền", "outline");
+                        }
+                        
                         binding.btnActionLeft.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ReturnRefundActivity.class);
                             intent.putExtra("orderId", order.getId());
+                            intent.putExtra("orderCode", order.getOrderCode());
                             intent.putExtra("items", new java.util.ArrayList<>(order.getItems()));
                             intent.putExtra("paymentMethod", order.getPaymentMethod());
                             intent.putExtra("shippingAddress", order.getAddress().getAddressDetail());
                             context.startActivity(intent);
                         });
                     }
-                    if (order.isReviewed()) {
+
+                    if (isAlreadyReviewed) {
                         setupButton(binding.btnActionMiddle, "Xem đánh giá", "outline");
                         binding.btnActionMiddle.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ViewReviewsActivity.class);
                             intent.putExtra("order", order);
                             context.startActivity(intent);
                         });
-                    } else if (!order.isReviewExpired()) {
+                    } else if (canStillReview) {
                         setupButton(binding.btnActionMiddle, "Đánh giá", "outline");
                         binding.btnActionMiddle.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, WriteReviewActivity.class);
@@ -410,6 +433,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                             context.startActivity(intent);
                         });
                     }
+
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
                     binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;
@@ -482,6 +506,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             btn.setText(text);
             com.google.android.material.button.MaterialButton mBtn = (com.google.android.material.button.MaterialButton) btn;
             float density = btn.getContext().getResources().getDisplayMetrics().density;
+
             mBtn.setAlpha(1.0f);
             mBtn.setEnabled(true);
             switch (type) {

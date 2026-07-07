@@ -52,6 +52,7 @@ public class ProfileFragment extends Fragment {
     private View rowSellerInbox;
     private View cardStaffInbox;
     private TextView tvName, tvTier, tvSpent, tvProgressHint;
+    private TextView badgePending, badgePickup, badgeShipping;
     private ProgressBar progressTichLuy;
 
 
@@ -73,6 +74,10 @@ public class ProfileFragment extends Fragment {
         tvSpent = view.findViewById(R.id.tv_spent);
         tvProgressHint = view.findViewById(R.id.tv_progress_hint);
         progressTichLuy = view.findViewById(R.id.progress_tich_luy);
+
+        badgePending = view.findViewById(R.id.badge_pending);
+        badgePickup = view.findViewById(R.id.badge_pickup);
+        badgeShipping = view.findViewById(R.id.badge_shipping);
 
 
         mAuth = FirebaseAuth.getInstance();
@@ -285,6 +290,7 @@ public class ProfileFragment extends Fragment {
 
         if (currentUser == null) {
             updateStaffInboxVisibility(false);
+            resetBadges();
             return;
         }
 
@@ -292,7 +298,10 @@ public class ProfileFragment extends Fragment {
         db.collection(COLLECTION_USERS)
                 .document(currentUser.getUid())
                 .get(preferServer ? Source.SERVER : Source.DEFAULT)
-                .addOnSuccessListener(this::bindUserToUi)
+                .addOnSuccessListener(doc -> {
+                    bindUserToUi(doc);
+                    loadOrderCounts(currentUser.getUid());
+                })
                 .addOnFailureListener(e -> {
                     updateStaffInboxVisibility(false);
                     if (isAdded()) {
@@ -367,6 +376,41 @@ public class ProfileFragment extends Fragment {
         if (cardStaffInbox != null) {
             cardStaffInbox.setVisibility(visibility);
         }
+    }
+
+
+    private void loadOrderCounts(String uid) {
+        if (uid == null) return;
+
+        // Fetch counts for each status
+        fetchCount(uid, "pending", badgePending);
+        fetchCount(uid, "confirmed", badgePickup);
+        fetchCount(uid, "shipping", badgeShipping);
+    }
+
+    private void fetchCount(String uid, String status, TextView badge) {
+        if (badge == null) return;
+        
+        db.collection("orders")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("status", status)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!isAdded()) return;
+                    int count = queryDocumentSnapshots.size();
+                    if (count > 0) {
+                        badge.setText(String.valueOf(count));
+                        badge.setVisibility(View.VISIBLE);
+                    } else {
+                        badge.setVisibility(View.GONE);
+                    }
+                });
+    }
+
+    private void resetBadges() {
+        if (badgePending != null) badgePending.setVisibility(View.GONE);
+        if (badgePickup != null) badgePickup.setVisibility(View.GONE);
+        if (badgeShipping != null) badgeShipping.setVisibility(View.GONE);
     }
 
 

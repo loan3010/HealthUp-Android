@@ -16,7 +16,7 @@
         android:orientation="vertical"
         android:padding="14dp">
 
-        <!-- Header gọn: ảnh nhỏ + phân loại (KHÔNG hiện tên đầy đủ sản phẩm) + sao đánh giá -->
+        <!-- Header gọn: ảnh nhỏ + phân loại + sao đánh giá -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -27,7 +27,7 @@
                 android:id="@+id/imgContainer"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                app:cardCornerRadius="8dp"
+                app:cardCornerRadius="12dp"
                 app:cardElevation="0dp">
 
                 <ImageView
@@ -37,16 +37,32 @@
                     android:scaleType="centerCrop" />
             </androidx.cardview.widget.CardView>
 
-            <TextView
-                android:id="@+id/tvVariant"
+            <LinearLayout
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="10dp"
                 android:layout_weight="1"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:textColor="@color/text_hint"
-                android:textSize="12sp" />
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvProductName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_main"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvVariant"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="@color/text_hint"
+                    android:textSize="11sp" />
+            </LinearLayout>
 
             <RatingBar
                 android:id="@+id/ratingBar"
@@ -83,14 +99,33 @@
                 android:clipToPadding="false"
                 android:orientation="horizontal" />
 
-            <TextView
-                android:id="@+id/tvReviewTime"
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
-                android:gravity="end"
-                android:textColor="@color/text_hint"
-                android:textSize="11sp" />
+                android:layout_marginTop="10dp">
+
+                <TextView
+                    android:id="@+id/btnViewAllReviews"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentStart="true"
+                    android:layout_centerVertical="true"
+                    android:text="Xem tất cả đánh giá của SP →"
+                    android:textColor="@color/primary"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:clickable="true"
+                    android:focusable="true"/>
+
+                <TextView
+                    android:id="@+id/tvReviewTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:textColor="@color/text_hint"
+                    android:textSize="11sp" />
+            </RelativeLayout>
 
         </LinearLayout>
 

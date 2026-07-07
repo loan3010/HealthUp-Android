@@ -3,6 +3,7 @@ package com.example.healthup;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
@@ -32,6 +33,17 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         binding = ActivityReturnRefundHistoryDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
+
+        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
+        View root = findViewById(R.id.return_refund_history_root);
+        if (root != null) {
+            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
+                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+                v.setPadding(0, 0, 0, systemBars.bottom);
+                return windowInsets;
+            });
+        }
 
         order = (Order) getIntent().getSerializableExtra("order");
         String orderIdFallback = getIntent().getStringExtra("extra_order_id");
@@ -100,9 +112,22 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             binding.lnRefundMethodRow.setVisibility(View.VISIBLE);
             binding.lnShippingAddressRow.setVisibility(View.GONE);
             
+            String paymentMethod = order.getPaymentMethod();
+            if ("cod".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("nhận hàng"))) {
+                paymentMethod = "Tài khoản Ngân hàng liên kết";
+            } else if ("momo".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("MoMo"))) {
+                paymentMethod = "Ví MoMo";
+            } else if ("zalopay".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("ZaloPay"))) {
+                paymentMethod = "Ví ZaloPay";
+            } else if ("vnpay".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("VNPAY"))) {
+                paymentMethod = "Ví VNPAY";
+            } else if ("card".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")))) {
+                paymentMethod = "Thẻ Tín dụng / Ghi nợ";
+            }
+
             binding.tvRefundAmount.setText(df.format(order.getTotalPrice()));
-            binding.tvRefundMethod.setText(order.getPaymentMethod());
-            if (order.getPaymentMethod().contains("Thẻ") || order.getPaymentMethod().contains("Tài khoản")) {
+            binding.tvRefundMethod.setText(paymentMethod);
+            if (paymentMethod != null && (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản") || paymentMethod.contains("Ngân hàng") || paymentMethod.contains("card"))) {
                 binding.imgRefundMethod.setImageResource(R.drawable.ic_payment_card);
             } else {
                 binding.imgRefundMethod.setImageResource(R.drawable.ic_payment_wallet);
@@ -174,6 +199,17 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
                             this, order, binding.tvOrderCode.getText().toString(), item));
 
             binding.lnItemsContainer.addView(pBinding.getRoot());
+
+            // Click product image or name to see product details
+            View.OnClickListener toProductDetail = v -> {
+                if (item.getProductId() != null) {
+                    Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                    detailIntent.putExtra("productId", item.getProductId());
+                    startActivity(detailIntent);
+                }
+            };
+            pBinding.imgProduct.setOnClickListener(toProductDetail);
+            pBinding.tvProductName.setOnClickListener(toProductDetail);
         }
     }
 
