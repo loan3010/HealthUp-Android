@@ -1,8 +1,5 @@
 package com.example.healthup;
 
-
-
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -35,22 +32,17 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-
-
-
+import java.util.Locale;
 
 public class HomeFragment extends Fragment implements ProductAdapter.OnProductClickListener, CategoryAdapter.OnCategoryClickListener, BlogAdapter.OnBlogClickListener {
 
-
-
+    private static final int REQUEST_CODE_SPEECH_INPUT = 1001;
+    private static final int REQUEST_CODE_CAMERA_INPUT = 1002;
 
     private RecyclerView rvNewProducts, rvCategories, rvFlashSale, rvBlogs;
     private ProductAdapter newProductAdapter, flashSaleAdapter;
     private CategoryAdapter categoryAdapter;
     private BlogAdapter blogAdapter;
-
-
-
 
     private List<Product> newProductList = new ArrayList<>();
     private List<Product> flashSaleList = new ArrayList<>();
@@ -60,12 +52,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     private List<String> bannerImages = new ArrayList<>();
     private int currentBannerIndex = 0;
 
-
-
-
     private android.os.Handler timerHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private long endTime;
-
 
     private Runnable bannerRunnable = new Runnable() {
         @Override
@@ -80,7 +68,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                                 .transition(com.bumptech.glide.load.resource.drawable.DrawableTransitionOptions.withCrossFade())
                                 .into(ivBanner);
 
-
                         currentBannerIndex = (currentBannerIndex + 1) % bannerImages.size();
                     }
                 }
@@ -88,6 +75,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             timerHandler.postDelayed(this, 2000);
         }
     };
+
     private Runnable timerRunnable = new Runnable() {
         @Override
         public void run() {
@@ -98,9 +86,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 int hours = minutes / 60;
                 seconds = seconds % 60;
                 minutes = minutes % 60;
-
-
-
 
                 View view = getView();
                 if (view != null) {
@@ -116,14 +101,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
     };
 
-
-
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_home, container, false);
 
+        updateWelcomeMessage(view);
 
         bannerImages.clear();
         bannerImages.addAll(Arrays.asList(
@@ -133,32 +116,18 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         ));
         Collections.shuffle(bannerImages);
 
-
-
-
         initViews(view);
         setupSearch(view);
         fetchCategories();
         fetchProducts();
         fetchBlogs();
 
-
-
-
         endTime = System.currentTimeMillis() + (2 * 60 * 60 * 1000);
         timerHandler.post(timerRunnable);
-
-
         timerHandler.post(bannerRunnable);
-
-
-
 
         return view;
     }
-
-
-
 
     private void initViews(View view) {
         rvCategories = view.findViewById(R.id.rvCategories);
@@ -166,85 +135,56 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvCategories.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
         rvCategories.setAdapter(categoryAdapter);
 
-
-
-
         rvFlashSale = view.findViewById(R.id.rvFlashSale);
         flashSaleAdapter = new ProductAdapter(flashSaleList, this, true);
         LinearLayoutManager flashSaleLM = new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false);
         rvFlashSale.setLayoutManager(flashSaleLM);
         rvFlashSale.setAdapter(flashSaleAdapter);
 
-
-
-
         View btnLeft = view.findViewById(R.id.btnFlashSaleLeft);
         View btnRight = view.findViewById(R.id.btnFlashSaleRight);
 
+        if (btnLeft != null) {
+            btnLeft.setOnClickListener(v -> {
+                int pos = flashSaleLM.findFirstVisibleItemPosition();
+                if (pos > 0) rvFlashSale.smoothScrollToPosition(pos - 1);
+            });
+        }
 
-
-
-        btnLeft.setOnClickListener(v -> {
-            int pos = flashSaleLM.findFirstVisibleItemPosition();
-            if (pos > 0) rvFlashSale.smoothScrollToPosition(pos - 1);
-        });
-
-
-
-
-        btnRight.setOnClickListener(v -> {
-            int pos = flashSaleLM.findLastVisibleItemPosition();
-            if (pos < flashSaleAdapter.getItemCount() - 1) rvFlashSale.smoothScrollToPosition(pos + 1);
-        });
-
-
-
+        if (btnRight != null) {
+            btnRight.setOnClickListener(v -> {
+                int pos = flashSaleLM.findLastVisibleItemPosition();
+                if (pos < flashSaleAdapter.getItemCount() - 1) rvFlashSale.smoothScrollToPosition(pos + 1);
+            });
+        }
 
         rvFlashSale.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
-                btnLeft.setVisibility(flashSaleLM.findFirstVisibleItemPosition() > 0 ? View.VISIBLE : View.GONE);
-                btnRight.setVisibility(flashSaleLM.findLastVisibleItemPosition() < flashSaleAdapter.getItemCount() - 1 ? View.VISIBLE : View.GONE);
+                if (btnLeft != null) btnLeft.setVisibility(flashSaleLM.findFirstVisibleItemPosition() > 0 ? View.VISIBLE : View.GONE);
+                if (btnRight != null) btnRight.setVisibility(flashSaleLM.findLastVisibleItemPosition() < flashSaleAdapter.getItemCount() - 1 ? View.VISIBLE : View.GONE);
             }
         });
-
-
-
 
         rvNewProducts = view.findViewById(R.id.rvNewProducts);
         newProductAdapter = new ProductAdapter(newProductList, this, false);
         rvNewProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvNewProducts.setAdapter(newProductAdapter);
 
-
-
-
         rvBlogs = view.findViewById(R.id.rvBlogs);
         blogAdapter = new BlogAdapter(blogList, this);
         rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
         rvBlogs.setAdapter(blogAdapter);
 
-
-
-
         view.findViewById(R.id.tvViewAllNew).setOnClickListener(v -> navigateToCategory(null));
-
-
-
 
         View tvViewAllBlogs = view.findViewById(R.id.tvViewAllBlogs);
         if (tvViewAllBlogs != null) {
             tvViewAllBlogs.setOnClickListener(v -> openBlogList());
         }
 
-
-
-
         setupChipListeners(view);
     }
-
-
-
 
     private void openBlogList() {
         if (getActivity() instanceof MainActivity) {
@@ -256,9 +196,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
     }
 
-
-
-
     private void setupChipListeners(View view) {
         int[] chipIds = {
                 R.id.chipHatDinhDuong, R.id.chipGranola, R.id.chipTraiCaySay,
@@ -269,9 +206,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 "Đồ ăn vặt", "Trà thảo mộc", "Combo"
         };
 
-
-
-
         for (int i = 0; i < chipIds.length; i++) {
             final String categoryName = categoryNames[i];
             View chip = view.findViewById(chipIds[i]);
@@ -281,17 +215,11 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
     }
 
-
-
-
     private void setupSearch(View view) {
         EditText etSearch = view.findViewById(R.id.etSearch);
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-
-
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -303,14 +231,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     view.findViewById(R.id.mainContent).setVisibility(View.GONE);
                     view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.VISIBLE);
 
-
                     List<Product> searchResults = new ArrayList<>();
                     for (Product p : allProductsForSearch) {
                         if (p.getName().toLowerCase().contains(query)) {
                             searchResults.add(p);
                         }
                     }
-
 
                     RecyclerView rvSearch = view.findViewById(R.id.rvRealtimeSearch);
                     ProductAdapter searchAdapter = new ProductAdapter(searchResults, HomeFragment.this);
@@ -319,27 +245,75 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 }
             }
 
-
-
-
             @Override
             public void afterTextChanged(Editable s) {}
         });
+
+        // Voice search click
+        view.findViewById(R.id.ivMic).setOnClickListener(v -> startVoiceRecognition());
+
+        // Camera search click
+        view.findViewById(R.id.ivCamera).setOnClickListener(v -> startCameraSearch());
     }
 
+    private void startVoiceRecognition() {
+        Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault());
+        intent.putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Nói tên sản phẩm muốn tìm...");
 
+        try {
+            startActivityForResult(intent, REQUEST_CODE_SPEECH_INPUT);
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Máy bạn không hỗ trợ tìm kiếm giọng nói", Toast.LENGTH_SHORT).show();
+        }
+    }
 
+    private void startCameraSearch() {
+        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+        try {
+            startActivityForResult(intent, REQUEST_CODE_CAMERA_INPUT);
+        } catch (Exception e) {
+            Toast.makeText(getContext(), "Máy bạn không hỗ trợ camera", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_CODE_SPEECH_INPUT && resultCode == android.app.Activity.RESULT_OK && data != null) {
+            ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
+            if (result != null && !result.isEmpty()) {
+                String voiceQuery = result.get(0);
+                EditText etSearch = getView().findViewById(R.id.etSearch);
+                if (etSearch != null) {
+                    etSearch.setText(voiceQuery);
+                }
+            }
+        } else if (requestCode == REQUEST_CODE_CAMERA_INPUT && resultCode == android.app.Activity.RESULT_OK) {
+            Toast.makeText(getContext(), "Đang phân tích hình ảnh để tìm sản phẩm...", Toast.LENGTH_LONG).show();
+        }
+    }
 
     private void fetchCategories() {
         List<String> brandCategories = Arrays.asList("Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo");
         categoryList.clear();
         for (int i = 0; i < brandCategories.size(); i++) {
-            categoryList.add(new Category(String.valueOf(i + 1), brandCategories.get(i), "fruit.png"));
+            String name = brandCategories.get(i);
+            String icon = "fruit.png";
+
+            if (name.contains("Hạt")) icon = "grain.png";
+            else if (name.contains("Granola")) icon = "dry.png";
+            else if (name.contains("Trái cây")) icon = "fruit.png";
+            else if (name.contains("vặt")) icon = "cooking.png";
+            else if (name.contains("Trà")) icon = "leaf.png";
+            else if (name.contains("Combo")) icon = "multiple.png";
+
+            categoryList.add(new Category(String.valueOf(i + 1), name, icon));
         }
         categoryAdapter.notifyDataSetChanged();
-
-
-
 
         FirestoreManager.getInstance().getFirestore().collection("categories")
                 .get()
@@ -363,9 +337,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 });
     }
 
-
-
-
     private void fetchProducts() {
         FirestoreManager.getInstance().getProductsCollection()
                 .get()
@@ -373,22 +344,17 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     List<Product> allFetched = new ArrayList<>();
                     List<Product> flashSales = new ArrayList<>();
 
-
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         Product product = doc.toObject(Product.class);
                         if (product != null) {
                             product.setId(doc.getId());
                             allFetched.add(product);
 
-
                             Object isFlash = doc.get("isFlashSale");
                             if (isFlash instanceof Boolean && (Boolean)isFlash) {
                                 product.setFlashSale(true);
                                 flashSales.add(product);
                             }
-
-
-
 
                             Object isNewObj = doc.get("isNew");
                             if (isNewObj instanceof Boolean && (Boolean)isNewObj) {
@@ -397,12 +363,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                         }
                     }
 
-
                     allProductsForSearch.clear();
                     allProductsForSearch.addAll(allFetched);
-
-
-
 
                     flashSaleList.clear();
                     if (!flashSales.isEmpty()) {
@@ -413,17 +375,11 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     }
                     flashSaleAdapter.updateData(new ArrayList<>(flashSaleList));
 
-
-
-
                     newProductList.clear();
                     List<Product> newProducts = new ArrayList<>();
                     for (Product p : allFetched) {
                         if (p.isNew()) newProducts.add(p);
                     }
-
-
-
 
                     if (!newProducts.isEmpty()) {
                         Collections.shuffle(newProducts);
@@ -445,42 +401,17 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 });
     }
 
-
-
-
-    // FIX ROOT CAUSE (yêu cầu #4): applyFavoriteState() MUTATE trực tiếp trên các Product
-    // object đang được adapter giữ tham chiếu (không tạo bản sao mới). Khi đó gọi
-    // updateData(new ArrayList<>(list)) truyền vào DiffUtil 1 "newList" chứa CHÍNH XÁC
-    // cùng các object reference với "oldList" (vốn cũng chỉ là những Product cũ chưa từng
-    // bị clone) -> DiffUtil.areContentsTheSame() so sánh 2 tham chiếu giống hệt nhau
-    // (bằng nhau tuyệt đối) nên luôn kết luận "không có gì thay đổi" -> KHÔNG gọi
-    // notifyItemChanged cho item đó -> RecyclerView không vẽ lại trái tim dù dữ liệu
-    // isFavorite đã đổi. Đây chính là lý do trái tim không đỏ trên Home dù đã tim ở
-    // trang Chi tiết sản phẩm. Sửa: dùng notifyDataSetChanged() cho bước đồng bộ này
-    // (không dùng updateData/DiffUtil), vì đây chỉ là cập nhật field của các item sẵn có,
-    // không phải thay đổi cấu trúc danh sách.
     private void applyWishlistToHomeLists() {
         String uid = WishlistManager.currentUserId();
-        if (uid == null) {
-            return;
-        }
+        if (uid == null) return;
         WishlistManager.loadFavoriteIds(uid, ids -> {
-            if (!isAdded()) {
-                return;
-            }
+            if (!isAdded()) return;
             WishlistManager.applyFavoriteState(flashSaleList, ids);
             WishlistManager.applyFavoriteState(newProductList, ids);
-            if (flashSaleAdapter != null) {
-                flashSaleAdapter.notifyDataSetChanged();
-            }
-            if (newProductAdapter != null) {
-                newProductAdapter.notifyDataSetChanged();
-            }
+            if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
+            if (newProductAdapter != null) newProductAdapter.notifyDataSetChanged();
         });
     }
-
-
-
 
     private void fetchBlogs() {
         FirestoreManager.getInstance().getFirestore().collection("blogs")
@@ -499,16 +430,10 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 });
     }
 
-
-
-
     @Override
     public void onCategoryClick(Category category) {
         navigateToCategory(category.getName());
     }
-
-
-
 
     private void navigateToCategory(String categoryName) {
         if (getActivity() instanceof MainActivity) {
@@ -516,16 +441,10 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
             navView.setSelectedItemId(R.id.nav_category);
 
-
-
-
             ProductListFragment fragment = new ProductListFragment();
             Bundle args = new Bundle();
             args.putString("category", categoryName != null ? categoryName : "Tất cả");
             fragment.setArguments(args);
-
-
-
 
             mainActivity.getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragment_container, fragment)
@@ -534,9 +453,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
     }
 
-
-
-
     @Override
     public void onProductClick(Product product) {
         Intent intent = new Intent(getContext(), ProductDetailActivity.class);
@@ -544,12 +460,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         startActivity(intent);
     }
 
-
-
-
-    // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại khi bấm "+", bất kể
-    // sản phẩm có phân loại hay không, để giống hành vi nút "Thêm vào giỏ hàng" ở trang
-    // Chi tiết sản phẩm (vốn luôn mở bottom sheet, kể cả sản phẩm không có phân loại).
     @Override
     public void onAddToCart(Product product) {
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
@@ -560,32 +470,20 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         showVariantSheet(product);
     }
 
-
-
-
     private void showVariantSheet(Product product) {
         VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
                 performAddToCart(product, variant, quantity));
         sheet.show(getChildFragmentManager(), "VariantSelection");
     }
 
-
-
-
     private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
         String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
         String productId = product.getId();
         String variantId = (variant != null) ? variant.getId() : null;
 
-
-
-
         com.google.firebase.firestore.CollectionReference cartRef =
                 FirestoreManager.getInstance().getFirestore()
                         .collection("users").document(userId).collection("cart");
-
-
-
 
         cartRef.whereEqualTo("productId", productId)
                 .whereEqualTo("variantId", variantId)
@@ -614,23 +512,15 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 });
     }
 
-
-
-
     @Override
     public void onFavoriteClick(Product product) {
         WishlistManager.toggle(requireContext(), product, success -> {
             if (success && isAdded()) {
                 newProductAdapter.notifyDataSetChanged();
-                if (flashSaleAdapter != null) {
-                    flashSaleAdapter.notifyDataSetChanged();
-                }
+                if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
             }
         });
     }
-
-
-
 
     @Override
     public void onBlogClick(Blog blog) {
@@ -639,13 +529,30 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         startActivity(intent);
     }
 
-
-
-
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         timerHandler.removeCallbacks(timerRunnable);
         timerHandler.removeCallbacks(bannerRunnable);
+    }
+
+    private void updateWelcomeMessage(View view) {
+        TextView tvWelcome = view.findViewById(R.id.tvWelcome);
+        if (tvWelcome == null) return;
+        
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            String uid = user.getUid();
+            FirestoreManager.getInstance().getFirestore().collection("users").document(uid).get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            String name = doc.getString("fullName");
+                            if (name == null || name.isEmpty()) name = doc.getString("name");
+                            if (name != null && !name.isEmpty()) {
+                                tvWelcome.setText("Chào mừng trở lại, " + name + "!");
+                            }
+                        }
+                    });
+        }
     }
 }

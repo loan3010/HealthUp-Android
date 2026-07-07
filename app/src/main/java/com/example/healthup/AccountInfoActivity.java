@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.app.DatePickerDialog;
 import android.os.Bundle;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
@@ -9,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.healthup.databinding.ActivityAccountInfoBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +37,11 @@ public class AccountInfoActivity extends AppCompatActivity {
 
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnSave.setOnClickListener(v -> saveUserInfo());
+        
+        // Date Picker for DOB
+        View.OnClickListener dobListener = v -> showDatePicker();
+        binding.containerDob.setOnClickListener(dobListener);
+        binding.ivEditDob.setOnClickListener(dobListener);
         
         // --- CÁC SỰ KIỆN CLICK MỞ MÀN HÌNH CHỈNH SỬA ---
         
@@ -80,6 +87,20 @@ public class AccountInfoActivity extends AppCompatActivity {
         });
     }
 
+    private void showDatePicker() {
+        final Calendar c = Calendar.getInstance();
+        int year = c.get(Calendar.YEAR);
+        int month = c.get(Calendar.MONTH);
+        int day = c.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                (view, year1, monthOfYear, dayOfMonth) -> {
+                    String date = String.format("%02d/%02d/%d", dayOfMonth, monthOfYear + 1, year1);
+                    binding.etDob.setText(date);
+                }, year, month, day);
+        datePickerDialog.show();
+    }
+
     private void loadUserInfo() {
         binding.progressBar.setVisibility(View.VISIBLE);
         db.collection("users").document(userId).get()
@@ -89,11 +110,13 @@ public class AccountInfoActivity extends AppCompatActivity {
                         binding.etFullName.setText(documentSnapshot.getString("fullName"));
                         binding.etUsername.setText(documentSnapshot.getString("username"));
                         binding.etEmail.setText(documentSnapshot.getString("email"));
+                        binding.etPhone.setText(documentSnapshot.getString("phone"));
+                        binding.etDob.setText(documentSnapshot.getString("dob"));
                         
                         String gender = documentSnapshot.getString("gender");
                         if ("Nam".equals(gender)) binding.rbMale.setChecked(true);
                         else if ("Nữ".equals(gender)) binding.rbFemale.setChecked(true);
-                        else binding.rbOther.setChecked(true);
+                        else if ("Khác".equals(gender)) binding.rbOther.setChecked(true);
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -104,7 +127,11 @@ public class AccountInfoActivity extends AppCompatActivity {
 
     private void saveUserInfo() {
         String fullName = binding.etFullName.getText().toString().trim();
-        String gender = binding.rbMale.isChecked() ? "Nam" : (binding.rbFemale.isChecked() ? "Nữ" : "Khác");
+        String dob = binding.etDob.getText().toString().trim();
+        String gender = "";
+        if (binding.rbMale.isChecked()) gender = "Nam";
+        else if (binding.rbFemale.isChecked()) gender = "Nữ";
+        else if (binding.rbOther.isChecked()) gender = "Khác";
 
         if (fullName.isEmpty()) {
             Toast.makeText(this, "Vui lòng nhập họ tên", Toast.LENGTH_SHORT).show();
@@ -112,11 +139,12 @@ public class AccountInfoActivity extends AppCompatActivity {
         }
 
         binding.progressBar.setVisibility(View.VISIBLE);
-        Map<String, Object> user = new HashMap<>();
-        user.put("fullName", fullName);
-        user.put("gender", gender);
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("fullName", fullName);
+        updates.put("gender", gender);
+        updates.put("dob", dob);
 
-        db.collection("users").document(userId).update(user)
+        db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     binding.progressBar.setVisibility(View.GONE);
                     UIUtils.showSuccessDialog(this, null);

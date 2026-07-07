@@ -30,6 +30,7 @@
                 tools:targetApi="p" />
 
             <TextView
+                android:id="@+id/tvWelcome"
                 style="@style/TextAppearance.HealthUp.SubContent"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -75,16 +76,24 @@
                     android:textSize="14sp" />
 
                 <ImageView
+                    android:id="@+id/ivMic"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:layout_marginEnd="@dimen/spacing_s"
                     android:src="@drawable/ic_mic"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:tint="@color/neutral_grey" />
 
                 <ImageView
+                    android:id="@+id/ivCamera"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_camera"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:tint="@color/neutral_grey" />
             </LinearLayout>
         </LinearLayout>

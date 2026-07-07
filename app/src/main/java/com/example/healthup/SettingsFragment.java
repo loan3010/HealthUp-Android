@@ -51,7 +51,7 @@ public class SettingsFragment extends Fragment {
 
 
         binding.itemAddress.getRoot().setOnClickListener(v -> {
-            // Chức năng Số địa chỉ
+            loadFragment(new AddressBookFragment());
         });
 
 

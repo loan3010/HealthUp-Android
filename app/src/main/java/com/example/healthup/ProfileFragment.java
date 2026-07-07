@@ -86,12 +86,7 @@ public class ProfileFragment extends Fragment {
 
         View rowAddressBook = view.findViewById(R.id.row_address_book);
         if (rowAddressBook != null) {
-            rowAddressBook.setOnClickListener(v -> {
-                requireActivity().getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, new AddressManagementFragment())
-                        .addToBackStack(null)
-                        .commit();
-            });
+            rowAddressBook.setOnClickListener(v -> loadFragment(new AddressBookFragment()));
         }
 
 
@@ -315,10 +310,12 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
-
-        String name = document.getString(FIELD_NAME);
+        String name = document.getString("fullName");
         if (name == null || name.isEmpty()) {
-            name = document.getString("displayName"); // Thử field khác nếu field 'name' trống
+            name = document.getString(FIELD_NAME);
+        }
+        if (name == null || name.isEmpty()) {
+            name = document.getString("displayName");
         }
         if (name == null || name.isEmpty()) {
             name = "Người dùng";

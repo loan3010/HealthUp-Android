@@ -104,7 +104,7 @@
                     android:background="@drawable/input_active"
                     android:hint="Nhập họ tên"
                     android:padding="12dp"
-                    android:text="Lê Xuân Mai"
+                    android:text=""
                     android:textSize="16sp" />
 
                 <!-- Giới tính -->
@@ -177,7 +177,8 @@
                         android:enabled="false"
                         android:focusable="false"
                         android:padding="12dp"
-                        android:text="12/08/1996"
+                        android:hint="Nhập ngày sinh"
+                        android:text=""
                         android:textSize="16sp" />
 
                     <ImageView
@@ -219,7 +220,8 @@
                         android:background="@null"
                         android:padding="12dp"
                         android:paddingEnd="44dp"
-                        android:text="lexuanmai96"
+                        android:hint="Chưa thiết lập"
+                        android:text=""
                         android:textColor="@color/neutral_grey"
                         android:enabled="false"
                         android:focusable="false"
@@ -269,7 +271,8 @@
                         android:enabled="false"
                         android:focusable="false"
                         android:padding="12dp"
-                        android:text="lexuanmai96@gmail.com"
+                        android:hint="Chưa thiết lập"
+                        android:text=""
                         android:textColor="@color/neutral_grey"
                         android:textSize="16sp" />
 
@@ -313,7 +316,8 @@
                         android:enabled="false"
                         android:focusable="false"
                         android:padding="12dp"
-                        android:text="0987 654 321"
+                        android:hint="Chưa thiết lập"
+                        android:text=""
                         android:textSize="16sp" />
 
                     <ImageView
@@ -358,7 +362,8 @@
                         android:inputType="textPassword"
                         android:padding="12dp"
                         android:paddingEnd="90dp"
-                        android:text="Lexuanmai@@96"
+                        android:hint="********"
+                        android:text="********"
                         android:textSize="16sp" />
 
                     <LinearLayout

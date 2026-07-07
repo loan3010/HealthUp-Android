@@ -40,24 +40,30 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
         
         // Glide for category icon
         String iconUrl = category.getIconUrl();
-        if (iconUrl != null && !iconUrl.isEmpty() && (iconUrl.startsWith("icons/") || iconUrl.startsWith("images/icons/"))) {
-            String cleanPath = iconUrl.startsWith("images/") ? iconUrl : "images/" + iconUrl;
-            Glide.with(holder.itemView.getContext())
-                    .load("file:///android_asset/" + cleanPath)
-                    .placeholder(R.drawable.ic_cat_fruit)
-                    .into(holder.ivIcon);
-        } else if (iconUrl != null && iconUrl.startsWith("http")) {
-            Glide.with(holder.itemView.getContext())
-                    .load(iconUrl)
-                    .placeholder(R.drawable.ic_cat_fruit)
-                    .into(holder.ivIcon);
+        Object loadTarget;
+
+        if (iconUrl != null && !iconUrl.isEmpty()) {
+            if (iconUrl.startsWith("http")) {
+                loadTarget = iconUrl;
+            } else {
+                String cleanPath = iconUrl;
+                if (!cleanPath.startsWith("images/icons/")) {
+                    if (cleanPath.startsWith("icons/")) {
+                        cleanPath = "images/" + cleanPath;
+                    } else {
+                        cleanPath = "images/icons/" + cleanPath;
+                    }
+                }
+                loadTarget = "file:///android_asset/" + cleanPath;
+            }
         } else {
-            // Default icon from assets if no URL is provided
-            Glide.with(holder.itemView.getContext())
-                    .load("file:///android_asset/images/icons/fruit.png")
-                    .placeholder(R.drawable.ic_cat_fruit)
-                    .into(holder.ivIcon);
+            loadTarget = "file:///android_asset/images/icons/fruit.png";
         }
+
+        Glide.with(holder.itemView.getContext())
+                .load(loadTarget)
+                .placeholder(R.drawable.ic_cat_fruit)
+                .into(holder.ivIcon);
 
         // Standard style for category items (no hardcoded highlighting)
         holder.ivIcon.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(holder.itemView.getContext(), R.color.primary_tint_5)));
