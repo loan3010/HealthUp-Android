@@ -1,6 +1,8 @@
 package com.example.healthup;
 
 
+
+
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -21,10 +23,15 @@ import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Product;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 
+
+
 public class WishlistFragment extends Fragment implements ProductAdapter.OnProductClickListener {
+
+
 
 
     private RecyclerView rvWishlist, rvRecommendations;
@@ -33,15 +40,20 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     private List<Product> filteredWishlist = new ArrayList<>();
     private List<Product> recommendationList = new ArrayList<>();
 
+
+
+
     private View layoutEmpty, layoutList, cardDeleteBar;
     private View layoutHeaderActions, layoutSearchBar;
-    private TextView tvTitle, btnEdit, tvRecommendationTitle, btnCancelSearch;
+    private TextView tvTitle, btnEdit, tvRecommendationTitle, btnCancelSearch, tvViewAllWishlist;
     private com.google.android.material.button.MaterialButton btnDelete;
     private EditText etSearch;
     private android.widget.ImageButton btnSearch;
     private boolean isEditMode = false;
     private String currentSearchQuery = "";
     private List<Product> selectedProducts = new ArrayList<>();
+
+
 
 
     @Nullable
@@ -56,6 +68,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        fetchWishlist();
+        fetchRecommendations();
+    }
+
+
+
+
     private void initViews(View view) {
         rvWishlist = view.findViewById(R.id.rv_wishlist);
         rvRecommendations = view.findViewById(R.id.rv_wishlist_recommendations);
@@ -67,6 +91,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         btnDelete = view.findViewById(R.id.btn_delete_selected);
         btnSearch = view.findViewById(R.id.btn_search);
         tvRecommendationTitle = view.findViewById(R.id.tv_recommendation_title);
+        tvViewAllWishlist = view.findViewById(R.id.tv_view_all_wishlist);
+
+
+
 
         layoutHeaderActions = view.findViewById(R.id.layout_header_actions);
         layoutSearchBar = view.findViewById(R.id.layout_search_bar);
@@ -74,10 +102,17 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         btnCancelSearch = view.findViewById(R.id.btn_cancel_search);
 
 
+
+
         btnEdit.setOnClickListener(v -> toggleEditMode());
+
+
+
 
         btnSearch.setOnClickListener(v -> showSearchBar(true));
         btnCancelSearch.setOnClickListener(v -> showSearchBar(false));
+
+
 
 
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -91,12 +126,26 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         });
 
 
+
+
         view.findViewById(R.id.btn_shop_now).setOnClickListener(v -> {
-            // Navigate to category/shop
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).findViewById(R.id.nav_category).performClick();
             }
         });
+
+
+
+
+        if (tvViewAllWishlist != null) {
+            tvViewAllWishlist.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).findViewById(R.id.nav_category).performClick();
+                }
+            });
+        }
+
+
 
 
         btnDelete.setOnClickListener(v -> {
@@ -104,10 +153,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         });
 
 
+
+
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
     }
+
+
 
 
     private void setupRecyclerViews() {
@@ -117,11 +170,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         rvWishlist.setNestedScrollingEnabled(false);
 
 
+
+
         recommendationAdapter = new ProductAdapter(recommendationList, this);
         rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvRecommendations.setAdapter(recommendationAdapter);
         rvRecommendations.setNestedScrollingEnabled(false);
     }
+
+
 
 
     private void fetchWishlist() {
@@ -132,6 +189,9 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             applyFilters();
             return;
         }
+
+
+
 
         WishlistManager.loadWishlistProducts(uid, products -> {
             if (!isAdded()) {
@@ -145,8 +205,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
-    // FIX: bỏ điều kiện lọc "Đang giảm giá" (showOnlyOnSale) theo yêu cầu bỏ tab lọc,
-    // chỉ còn lọc theo từ khóa tìm kiếm
+
+
     private void applyFilters() {
         List<Product> newList = new ArrayList<>();
         for (Product product : wishlist) {
@@ -160,6 +220,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void showSearchBar(boolean show) {
         if (show) {
             tvTitle.setVisibility(View.GONE);
@@ -167,7 +229,6 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             layoutSearchBar.setVisibility(View.VISIBLE);
             btnCancelSearch.setVisibility(View.VISIBLE);
             etSearch.requestFocus();
-            // Show keyboard logic could go here
         } else {
             tvTitle.setVisibility(View.VISIBLE);
             layoutHeaderActions.setVisibility(View.VISIBLE);
@@ -180,54 +241,83 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void fetchRecommendations() {
-        FirestoreManager.getInstance().getProductsCollection().limit(4)
+        FirestoreManager.getInstance().getProductsCollection().limit(20)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    recommendationList.clear();
+                    if (!isAdded()) return;
+                    List<Product> pool = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         Product product = doc.toObject(Product.class);
                         if (product != null) {
                             product.setId(doc.getId());
-                            recommendationList.add(product);
+                            pool.add(product);
                         }
                     }
-                    recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+                    Collections.shuffle(pool);
+                    recommendationList.clear();
+                    recommendationList.addAll(pool.subList(0, Math.min(4, pool.size())));
+                    syncRecommendationFavoriteState();
                 });
     }
 
 
+
+
+    private void syncRecommendationFavoriteState() {
+        String uid = WishlistManager.currentUserId();
+        if (uid == null) {
+            for (Product p : recommendationList) p.setFavorite(false);
+            recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+            return;
+        }
+        WishlistManager.loadFavoriteIds(uid, ids -> {
+            if (!isAdded()) return;
+            WishlistManager.applyFavoriteState(recommendationList, ids);
+            recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+        });
+    }
+
+
+
+
+    // FIX ROOT CAUSE (yêu cầu #4): nhánh "wishlist rỗng" trước đây KHÔNG hề đụng tới
+    // cardDeleteBar -> nếu xóa hết sản phẩm trong khi đang ở chế độ sửa, thanh "Xóa (n)"
+    // giữ nguyên trạng thái VISIBLE từ trước đó, không bao giờ tự ẩn. Thêm dòng ẩn nó ở đây.
     private void updateUI() {
         if (wishlist.isEmpty()) {
-            // State: Empty Wishlist
             layoutEmpty.setVisibility(View.VISIBLE);
             layoutList.setVisibility(View.GONE);
             btnEdit.setVisibility(View.GONE);
             btnSearch.setVisibility(View.GONE);
+            cardDeleteBar.setVisibility(View.GONE);
             tvTitle.setText("Yêu thích");
-            tvRecommendationTitle.setText("Gợi ý cho bạn");
         } else {
-            // State: Wishlist with items
             layoutEmpty.setVisibility(View.GONE);
             layoutList.setVisibility(View.VISIBLE);
             btnEdit.setVisibility(View.VISIBLE);
-            tvRecommendationTitle.setText("Có thể bạn quan tâm");
+
+
+
 
             if (isEditMode) {
-                // State: Edit Mode
                 tvTitle.setText("Đã chọn (" + selectedProducts.size() + ")");
                 btnEdit.setText("Xong");
                 btnSearch.setVisibility(View.GONE);
                 cardDeleteBar.setVisibility(View.VISIBLE);
             } else {
-                // State: Normal Mode
                 tvTitle.setText("Yêu thích");
                 btnEdit.setText("Chỉnh sửa");
                 btnSearch.setVisibility(View.VISIBLE);
                 cardDeleteBar.setVisibility(View.GONE);
             }
         }
+        tvRecommendationTitle.setText("Có thể bạn quan tâm");
     }
+
+
 
 
     private void toggleEditMode() {
@@ -241,6 +331,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void deleteSelected() {
         if (selectedProducts.isEmpty()) {
             Toast.makeText(getContext(), "Vui lòng chọn sản phẩm cần xóa", Toast.LENGTH_SHORT).show();
@@ -248,11 +340,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         }
 
 
-        // Tạo bản sao danh sách cần xóa
+
+
         List<Product> toRemove = new ArrayList<>(selectedProducts);
         int total = toRemove.size();
         final int[] successCount = {0};
         final int[] failCount = {0};
+
+
 
 
         for (Product p : toRemove) {
@@ -277,10 +372,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                         }
                     });
 
+
+
+
             wishlist.remove(p);
         }
 
-        // Reset trạng thái chỉnh sửa ngay lập tức
+
+
+
         selectedProducts.clear();
         isEditMode = false;
         wishlistAdapter.setSelectionMode(false);
@@ -289,16 +389,19 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void handleDeleteResult(int success, int fail) {
         if (getContext() == null) return;
         if (fail > 0) {
             Toast.makeText(getContext(), "Đã xóa " + success + " sản phẩm. Lỗi " + fail + " sản phẩm (có thể do quyền truy cập)", Toast.LENGTH_LONG).show();
-            // Nạp lại dữ liệu từ Server để hiện lại những sản phẩm xóa lỗi
             fetchWishlist();
         } else {
             Toast.makeText(getContext(), "Đã xóa thành công " + success + " sản phẩm", Toast.LENGTH_SHORT).show();
         }
     }
+
+
 
 
     private void updateDeleteButtonText() {
@@ -307,16 +410,20 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     @Override
     public void onProductClick(Product product) {
         if (isEditMode) {
             boolean isCurrentlySelected = product.isSelected();
             product.setSelected(!isCurrentlySelected);
 
+
+
+
             if (!isCurrentlySelected) {
                 selectedProducts.add(product);
             } else {
-                // Remove by ID to be safe
                 for (int i = 0; i < selectedProducts.size(); i++) {
                     if (selectedProducts.get(i).getId().equals(product.getId())) {
                         selectedProducts.remove(i);
@@ -324,17 +431,19 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     }
                 }
             }
-            wishlistAdapter.notifyDataSetChanged(); // Dùng notifyDataSetChanged để ép CheckBox vẽ lại màu
+            wishlistAdapter.notifyDataSetChanged();
             updateDeleteButtonText();
         } else {
             android.content.Intent intent = new android.content.Intent(getContext(), ProductDetailActivity.class);
-            // CHỈ truyền productId để tránh lỗi TransactionTooLargeException
             intent.putExtra("productId", product.getId());
             startActivity(intent);
         }
     }
 
 
+
+
+    // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại, bất kể có phân loại hay không.
     @Override
     public void onAddToCart(Product product) {
         if (!isEditMode) {
@@ -343,15 +452,11 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                 Toast.makeText(getContext(), getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
                 return;
             }
-
-
-            if (product.isHasVariants()) {
-                showVariantSheet(product);
-            } else {
-                performAddToCart(product, null, 1);
-            }
+            showVariantSheet(product);
         }
     }
+
+
 
 
     private void showVariantSheet(Product product) {
@@ -362,15 +467,22 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
         String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
         String productId = product.getId();
         String variantId = (variant != null) ? variant.getId() : null;
 
 
+
+
         com.google.firebase.firestore.CollectionReference cartRef =
                 FirestoreManager.getInstance().getFirestore()
                         .collection("users").document(userId).collection("cart");
+
+
+
 
         cartRef.whereEqualTo("productId", productId)
                 .whereEqualTo("variantId", variantId)
@@ -398,15 +510,38 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     @Override
     public void onFavoriteClick(Product product) {
         if (isEditMode) return;
 
+
+
+
         WishlistManager.toggle(requireContext(), product, success -> {
-            if (!isAdded() || !success || product.isFavorite()) {
+            if (!isAdded() || !success) {
                 return;
             }
-            wishlist.remove(product);
+            if (product.isFavorite()) {
+                boolean alreadyInList = false;
+                for (Product p : wishlist) {
+                    if (p.getId() != null && p.getId().equals(product.getId())) {
+                        alreadyInList = true;
+                        break;
+                    }
+                }
+                if (!alreadyInList) {
+                    wishlist.add(0, product);
+                }
+            } else {
+                for (int i = 0; i < wishlist.size(); i++) {
+                    if (wishlist.get(i).getId() != null && wishlist.get(i).getId().equals(product.getId())) {
+                        wishlist.remove(i);
+                        break;
+                    }
+                }
+            }
             applyFilters();
             updateUI();
         });

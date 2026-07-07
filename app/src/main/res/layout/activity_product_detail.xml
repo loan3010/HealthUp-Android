@@ -4,7 +4,8 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/white">
+    android:background="@color/neutral_cream">
+
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
@@ -13,10 +14,12 @@
         android:background="@android:color/transparent"
         app:elevation="0dp">
 
+
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:layout_scrollFlags="scroll|exitUntilCollapsed">
+
 
             <androidx.viewpager2.widget.ViewPager2
                 android:id="@+id/view_pager_images"
@@ -24,15 +27,18 @@
                 android:layout_height="360dp"
                 android:background="#F5F5F5" />
 
+
             <androidx.appcompat.widget.Toolbar
                 android:layout_width="match_parent"
                 android:layout_height="?attr/actionBarSize"
                 app:layout_collapseMode="pin">
 
+
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     android:layout_marginEnd="16dp">
+
 
                     <ImageButton
                         android:id="@+id/btn_back"
@@ -43,12 +49,14 @@
                         android:src="@drawable/ic_back"
                         app:tint="@color/text_dark" />
 
+
                     <LinearLayout
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_alignParentEnd="true"
                         android:layout_centerVertical="true"
                         android:orientation="horizontal">
+
 
                         <ImageButton
                             android:id="@+id/btn_share"
@@ -59,16 +67,18 @@
                             android:src="@android:drawable/ic_menu_share"
                             app:tint="@color/text_dark" />
 
+
                         <ImageButton
                             android:id="@+id/btn_wishlist"
                             android:layout_width="36dp"
                             android:layout_height="36dp"
                             android:background="@drawable/bg_circle_translucent"
                             android:src="@drawable/ic_heart_outline"
-                            app:tint="@color/text_dark" />
+                            app:tint="@color/primary_default" />
                     </LinearLayout>
                 </RelativeLayout>
             </androidx.appcompat.widget.Toolbar>
+
 
             <TextView
                 android:id="@+id/tv_image_index"
@@ -83,14 +93,17 @@
                 android:textColor="@color/white"
                 android:textSize="12sp" />
 
+
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
+
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:background="@color/white"
+        android:background="@color/neutral_cream"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -98,12 +111,14 @@
             android:orientation="vertical"
             android:paddingBottom="100dp">
 
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp"
                 android:paddingTop="16dp">
+
 
                 <TextView
                     android:id="@+id/tv_detail_name"
@@ -114,6 +129,7 @@
                     android:textSize="22sp"
                     android:textStyle="bold" />
 
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -121,11 +137,13 @@
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
 
+
                     <ImageView
                         android:layout_width="14dp"
                         android:layout_height="14dp"
                         android:src="@drawable/ic_star"
                         app:tint="#FFB300" />
+
 
                     <TextView
                         android:id="@+id/tv_detail_rating"
@@ -137,11 +155,13 @@
                         android:textSize="14sp"
                         android:textStyle="bold" />
 
+
                     <View
                         android:layout_width="1dp"
                         android:layout_height="12dp"
                         android:layout_marginHorizontal="8dp"
                         android:background="#E0E0E0" />
+
 
                     <TextView
                         android:id="@+id/tv_review_count"
@@ -151,11 +171,13 @@
                         android:textColor="@color/text_gray"
                         android:textSize="14sp" />
 
+
                     <View
                         android:layout_width="1dp"
                         android:layout_height="12dp"
                         android:layout_marginHorizontal="8dp"
                         android:background="#E0E0E0" />
+
 
                     <TextView
                         android:id="@+id/tv_detail_sold"
@@ -165,11 +187,13 @@
                         android:textColor="@color/text_gray"
                         android:textSize="14sp" />
 
+
                     <View
                         android:layout_width="1dp"
                         android:layout_height="12dp"
                         android:layout_marginHorizontal="8dp"
                         android:background="#E0E0E0" />
+
 
                     <TextView
                         android:id="@+id/tv_detail_stock"
@@ -180,12 +204,14 @@
                         android:textSize="14sp" />
                 </LinearLayout>
 
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     android:gravity="center_vertical"
                     android:orientation="horizontal">
+
 
                     <TextView
                         android:id="@+id/tv_detail_price"
@@ -196,6 +222,7 @@
                         android:textSize="24sp"
                         android:textStyle="bold" />
 
+
                     <TextView
                         android:id="@+id/tv_detail_original_price"
                         android:layout_width="wrap_content"
@@ -204,6 +231,7 @@
                         android:text="250.000đ"
                         android:textColor="@color/text_gray"
                         android:textSize="14sp" />
+
 
                     <TextView
                         android:id="@+id/tv_discount_tag"
@@ -219,6 +247,7 @@
                         android:textStyle="bold" />
                 </LinearLayout>
 
+
                 <TextView
                     android:id="@+id/tv_savings"
                     android:layout_width="wrap_content"
@@ -229,11 +258,13 @@
                     android:textSize="14sp" />
             </LinearLayout>
 
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
                 android:layout_marginTop="24dp"
-                android:background="#F5F5F5" />
+                android:background="@color/neutral_cream" />
+
 
             <!-- Expandable Sections -->
             <LinearLayout
@@ -245,6 +276,7 @@
                 android:visibility="gone"
                 tools:visibility="visible">
 
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -252,6 +284,7 @@
                     android:textColor="@color/text_dark"
                     android:textSize="16sp"
                     android:textStyle="bold" />
+
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chip_group_variants"
@@ -261,63 +294,90 @@
                     app:singleSelection="true" />
             </LinearLayout>
 
+
             <View
                 android:id="@+id/divider_variants"
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
-                android:background="#F5F5F5"
+                android:background="@color/neutral_cream"
                 android:visibility="gone"
                 tools:visibility="visible" />
+
 
             <include
                 android:id="@+id/section_ingredients"
                 layout="@layout/layout_detail_expandable" />
 
+
             <include
                 android:id="@+id/section_nutrition"
                 layout="@layout/layout_detail_expandable" />
+
 
             <include
                 android:id="@+id/section_usage"
                 layout="@layout/layout_detail_expandable" />
 
+
             <include
                 android:id="@+id/section_origin"
                 layout="@layout/layout_detail_expandable" />
 
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
-                android:background="#F5F5F5" />
+                android:background="@color/neutral_cream" />
+
 
             <!-- Reviews Section -->
+            <!-- FIX: đổi từ RelativeLayout căn theo alignParentEnd (dễ chồng chéo khi title dài)
+                 sang LinearLayout với weight, giúp tiêu đề và "Xem tất cả" luôn thẳng hàng,
+                 không bị lộn xộn. -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <RelativeLayout
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:text="Đánh giá khách hàng"
                         android:textColor="@color/text_dark"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
+
                     <TextView
                         android:id="@+id/tv_view_all_reviews"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:text="Xem tất cả >"
-                        android:textColor="@color/text_gray"
-                        android:textSize="12sp" />
-                </RelativeLayout>
+                        android:gravity="center_vertical"
+                        android:paddingVertical="4dp"
+                        android:text="Xem tất cả"
+                        android:textColor="@color/primary_default"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+
+                    <ImageView
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:layout_marginStart="2dp"
+                        android:src="@drawable/ic_chevron_right"
+                        app:tint="@color/primary_default" />
+                </LinearLayout>
+
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_reviews"
@@ -325,6 +385,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="16dp"
                     tools:listitem="@layout/item_review" />
+
 
                 <TextView
                     android:id="@+id/tv_no_reviews"
@@ -337,10 +398,12 @@
                     android:visibility="gone" />
             </LinearLayout>
 
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
-                android:background="#F5F5F5" />
+                android:background="@color/neutral_cream" />
+
 
             <!-- Recommendations -->
             <LinearLayout
@@ -349,26 +412,35 @@
                 android:orientation="vertical"
                 android:padding="16dp">
 
-                <RelativeLayout
+
+                <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
 
                     <TextView
-                        android:layout_width="wrap_content"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
+                        android:layout_weight="1"
                         android:text="Có thể bạn quan tâm"
                         android:textColor="@color/text_dark"
                         android:textSize="18sp"
                         android:textStyle="bold" />
 
+
                     <TextView
+                        android:id="@+id/tv_view_all_recommend"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
+                        android:paddingVertical="4dp"
                         android:text="Xem tất cả"
-                        android:textColor="@color/text_gray"
-                        android:textSize="12sp" />
-                </RelativeLayout>
+                        android:textColor="@color/primary_default"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
 
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_detail_recommendations"
@@ -380,8 +452,10 @@
                     tools:listitem="@layout/item_product" />
             </LinearLayout>
 
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
 
     <!-- Bottom Actions -->
     <androidx.cardview.widget.CardView
@@ -392,6 +466,7 @@
         app:cardElevation="16dp"
         app:cardBackgroundColor="@color/neutral_cream">
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
@@ -399,64 +474,70 @@
             android:orientation="horizontal"
             android:paddingHorizontal="16dp">
 
-                <LinearLayout
-                    android:id="@+id/btn_chat"
-                    android:layout_width="60dp"
-                    android:layout_height="match_parent"
-                    android:gravity="center"
-                    android:orientation="vertical"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:clickable="true"
-                    android:focusable="true">
 
-                    <ImageView
-                        android:layout_width="24dp"
-                        android:layout_height="24dp"
-                        android:src="@drawable/ic_chat"
-                        app:tint="@color/neutral_black" />
+            <LinearLayout
+                android:id="@+id/btn_chat"
+                android:layout_width="60dp"
+                android:layout_height="match_parent"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true">
 
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="Chat"
-                        android:textSize="10sp"
-                        android:textColor="@color/neutral_black"
-                        android:textStyle="bold" />
-                </LinearLayout>
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_detail_add_cart"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="54dp"
-                    android:layout_marginHorizontal="12dp"
-                    android:layout_weight="1"
-                    android:text="Thêm"
-                    android:textAllCaps="false"
-                    android:textColor="@color/primary_default"
-                    android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="14dp"
-                    app:icon="@drawable/ic_cart"
-                    app:iconGravity="textStart"
-                    app:iconSize="18dp"
-                    app:iconTint="@color/primary_default"
-                    app:strokeColor="@color/primary_default"
-                    app:backgroundTint="@color/primary_tint_5" />
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_chat"
+                    app:tint="@color/neutral_black" />
 
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_buy_now"
-                    android:layout_width="0dp"
-                    android:layout_height="54dp"
-                    android:layout_weight="1.2"
-                    android:backgroundTint="@color/primary_default"
-                    android:text="Mua ngay"
-                    android:textAllCaps="false"
-                    android:textSize="15sp"
-                    android:textStyle="bold"
-                    app:cornerRadius="14dp" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:text="Chat"
+                    android:textSize="10sp"
+                    android:textColor="@color/neutral_black"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_detail_add_cart"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_marginHorizontal="12dp"
+                android:layout_weight="1"
+                android:text="Thêm"
+                android:textAllCaps="false"
+                android:textColor="@color/primary_default"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                app:cornerRadius="14dp"
+                app:icon="@drawable/ic_cart"
+                app:iconGravity="textStart"
+                app:iconSize="18dp"
+                app:iconTint="@color/primary_default"
+                app:strokeColor="@color/primary_default"
+                app:backgroundTint="@color/primary_tint_5" />
+
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_buy_now"
+                android:layout_width="0dp"
+                android:layout_height="54dp"
+                android:layout_weight="1.2"
+                android:backgroundTint="@color/primary_default"
+                android:text="Mua ngay"
+                android:textAllCaps="false"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                app:cornerRadius="14dp" />
         </LinearLayout>
     </androidx.cardview.widget.CardView>
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

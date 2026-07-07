@@ -11,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/bg_cream"
-        app:elevation="2dp">
+        app:elevation="0dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -52,61 +52,80 @@
                 </RelativeLayout>
             </androidx.appcompat.widget.Toolbar>
 
-            <!-- FIX: rating summary giống Shopee (4.9 ⭐ + số lượng đánh giá) -->
-            <LinearLayout
+            <!-- FIX: bọc phần tóm tắt đánh giá (điểm TB + sao + số lượng) vào 1 card
+                 trắng riêng biệt, bo góc, tách bạch rõ với phần tìm kiếm/lọc bên dưới
+                 bằng khoảng cách nhất quán, thay vì mọi thứ dồn liền mạch như trước. -->
+            <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingHorizontal="16dp"
-                android:paddingVertical="12dp">
-
-                <TextView
-                    android:id="@+id/tv_avg_rating"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="4.9"
-                    android:textColor="@color/primary_green"
-                    android:textSize="28sp"
-                    android:textStyle="bold" />
+                android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="8dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp">
 
                 <LinearLayout
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:orientation="vertical">
-
-                    <RatingBar
-                        android:id="@+id/rating_bar_avg"
-                        style="@style/Widget.AppCompat.RatingBar.Small"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:isIndicator="true"
-                        android:numStars="5"
-                        android:progressTint="#FFB300"
-                        android:rating="5" />
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
 
                     <TextView
-                        android:id="@+id/tv_total_reviews"
+                        android:id="@+id/tv_avg_rating"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="110 đánh giá"
-                        android:textColor="@color/text_gray"
-                        android:textSize="13sp" />
+                        android:text="4.9"
+                        android:textColor="@color/primary_green"
+                        android:textSize="32sp"
+                        android:textStyle="bold" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="36dp"
+                        android:layout_marginHorizontal="16dp"
+                        android:background="#E0E0E0" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <RatingBar
+                            android:id="@+id/rating_bar_avg"
+                            style="@style/Widget.AppCompat.RatingBar.Small"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:isIndicator="true"
+                            android:numStars="5"
+                            android:progressTint="#FFB300"
+                            android:rating="5" />
+
+                        <TextView
+                            android:id="@+id/tv_total_reviews"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="110 đánh giá"
+                            android:textColor="@color/text_gray"
+                            android:textSize="13sp" />
+                    </LinearLayout>
                 </LinearLayout>
-            </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Search -->
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:layout_marginHorizontal="16dp"
+                android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp"
                 android:background="@drawable/bg_search_input"
                 android:paddingHorizontal="12dp">
 
                 <ImageView
+                    android:id="@+id/ic_search_review"
                     android:layout_width="18dp"
                     android:layout_height="18dp"
                     android:layout_centerVertical="true"
@@ -117,7 +136,8 @@
                     android:id="@+id/et_search_review"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
-                    android:layout_marginStart="26dp"
+                    android:layout_toEndOf="@id/ic_search_review"
+                    android:layout_marginStart="8dp"
                     android:background="@android:color/transparent"
                     android:hint="Tìm đánh giá từ những người mua khác"
                     android:imeOptions="actionSearch"
@@ -136,7 +156,8 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp"
-                    android:paddingBottom="12dp"
+                    android:paddingBottom="16dp"
+                    app:chipSpacingHorizontal="8dp"
                     app:singleLine="true"
                     app:singleSelection="true">
 
@@ -198,27 +219,49 @@
                         android:text="1 sao" />
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
+
+            <!-- FIX: thêm dải phân cách mỏng để tách rõ khối header (tóm tắt + tìm kiếm +
+                 lọc) với danh sách đánh giá bên dưới, giúp mắt dễ phân biệt từng khu vực -->
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:background="@color/bg_light" />
+
         </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvReviews"
+    <!-- FIX ROOT CAUSE: trước đây RecyclerView và tv_no_reviews là 2 view con độc lập của
+         CoordinatorLayout, trong đó tv_no_reviews dùng layout_marginTop="120dp" CỐ ĐỊNH để
+         né phần header phía trên. Vì header có chiều cao thay đổi được (dải chip lọc có thể
+         xuống dòng ở màn hình hẹp), con số 120dp cố định khiến dòng "Chưa có đánh giá nào"
+         dễ bị chồng lên phần tìm kiếm/lọc -> đây chính là phần "lộn xộn" người dùng phản ánh.
+         Sửa: gộp cả 2 vào chung 1 FrameLayout dùng app:layout_behavior chuẩn của
+         CoordinatorLayout, để luôn tự động nằm đúng bên dưới AppBarLayout bất kể chiều cao
+         header co giãn thế nào. -->
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:padding="16dp"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior"
-        tools:listitem="@layout/item_review" />
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <TextView
-        android:id="@+id/tv_no_reviews"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:layout_marginTop="120dp"
-        android:text="Chưa có đánh giá nào cho sản phẩm này"
-        android:textColor="@color/text_secondary"
-        android:textSize="14sp"
-        android:visibility="gone" />
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvReviews"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:padding="16dp"
+            tools:listitem="@layout/item_review" />
+
+        <TextView
+            android:id="@+id/tv_no_reviews"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:paddingHorizontal="40dp"
+            android:text="Chưa có đánh giá nào cho sản phẩm này"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp"
+            android:visibility="gone" />
+    </FrameLayout>
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

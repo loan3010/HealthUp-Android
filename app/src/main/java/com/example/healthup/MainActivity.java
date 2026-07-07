@@ -1,12 +1,15 @@
 package com.example.healthup;
 
 
+
+
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
+
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -16,13 +19,21 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.util.NotificationPermissionHelper;
+import com.example.models.CartItem;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
+import java.io.Serializable;
+import java.util.List;
+
+
+
 
 public class MainActivity extends AppCompatActivity {
+
 
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
             registerForActivityResult(
@@ -35,17 +46,21 @@ public class MainActivity extends AppCompatActivity {
                     }
             );
 
+
     private BottomNavigationView navView;
     private FloatingActionButton fabChat;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         navView = findViewById(R.id.bottom_navigation);
+
 
         fabChat = findViewById(R.id.fabChat);
         if (fabChat != null) {
@@ -53,7 +68,9 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(ChatActivity.buyerIntent(MainActivity.this)));
         }
 
+
         applySystemBarInsets();
+
 
         navView.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -81,18 +98,22 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
+
         setupKeyboardVisibilityListener();
         maybeShowNotificationPermissionDialog();
+
 
         if (savedInstanceState == null) {
             handleIntent(getIntent());
         }
     }
 
+
     private void maybeShowNotificationPermissionDialog() {
         if (!NotificationPermissionHelper.shouldShowPrompt(this)) {
             return;
         }
+
 
         NotifyPermissionDialogFragment.show(
                 getSupportFragmentManager(),
@@ -102,6 +123,7 @@ public class MainActivity extends AppCompatActivity {
                         NotificationPermissionHelper.request(notificationPermissionLauncher);
                     }
 
+
                     @Override
                     public void onDecline() {
                         NotificationPermissionHelper.markDeclined(MainActivity.this);
@@ -109,6 +131,7 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
     }
+
 
     private void setupKeyboardVisibilityListener() {
         rootLayout = findViewById(android.R.id.content);
@@ -118,7 +141,9 @@ public class MainActivity extends AppCompatActivity {
             int screenHeight = rootLayout.getRootView().getHeight();
             int keypadHeight = screenHeight - r.bottom;
 
+
             boolean keyboardNowShowing = keypadHeight > screenHeight * 0.15;
+
 
             if (keyboardNowShowing != isKeyboardShowing) {
                 isKeyboardShowing = keyboardNowShowing;
@@ -127,17 +152,54 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent);
     }
 
+
+    @SuppressWarnings("unchecked")
     private void handleIntent(Intent intent) {
         if (intent != null && intent.hasExtra("navigate_to")) {
             String target = intent.getStringExtra("navigate_to");
+
+
+            // FIX: điều hướng nhanh sang tab Giỏ hàng (sau khi "Mua ngay") hoặc tab Danh mục
+            // (sau khi bấm "Xem tất cả"), không cần tạo OrderHistoryFragment cho các case này.
+            if ("cart_tab".equals(target)) {
+                navView.setSelectedItemId(R.id.nav_cart);
+                return;
+            } else if ("category_tab".equals(target)) {
+                navView.setSelectedItemId(R.id.nav_category);
+                return;
+            } else if ("checkout".equals(target)) {
+                // FIX (yêu cầu #2): mở thẳng CheckoutFragment với đúng 1 sản phẩm (kèm phân
+                // loại/số lượng) vừa được chọn ở Popup "Mua ngay" từ trang Chi tiết sản phẩm.
+                // Dùng cùng "khe" args ("selected_items") mà CheckoutFragment vốn đã đọc khi
+                // được mở từ CartFragment, nên không cần sửa gì thêm ở CheckoutFragment.
+                Serializable data = intent.getSerializableExtra("checkout_items");
+                if (data instanceof List) {
+                    List<CartItem> checkoutItems = (List<CartItem>) data;
+                    CheckoutFragment fragment = new CheckoutFragment();
+                    Bundle args = new Bundle();
+                    args.putSerializable("selected_items", (Serializable) checkoutItems);
+                    fragment.setArguments(args);
+                    loadFragment(fragment);
+                    updateFabVisibility(false);
+                } else {
+                    // An toàn: nếu vì lý do gì đó dữ liệu bị thiếu, không mở trang Thanh toán
+                    // trống mà quay về Giỏ hàng để người dùng không bị kẹt ở màn hình lỗi.
+                    navView.setSelectedItemId(R.id.nav_cart);
+                }
+                return;
+            }
+
+
             OrderHistoryFragment fragment = new OrderHistoryFragment();
             Bundle args = new Bundle();
+
 
             if ("returned_tab".equals(target)) {
                 args.putInt("initial_tab", 5);
@@ -161,6 +223,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
+
             fragment.setArguments(args);
             loadFragment(fragment);
             updateFabVisibility(false);
@@ -169,6 +232,7 @@ public class MainActivity extends AppCompatActivity {
             updateFabVisibility(false);
         }
     }
+
 
     private void applySystemBarInsets() {
         View root = findViewById(R.id.main_root);
@@ -186,12 +250,14 @@ public class MainActivity extends AppCompatActivity {
         ViewCompat.requestApplyInsets(root);
     }
 
+
     private void updateFabVisibility(boolean hideOnCart) {
         if (fabChat == null) {
             return;
         }
         fabChat.setVisibility(hideOnCart ? View.GONE : View.VISIBLE);
     }
+
 
     private void loadFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()

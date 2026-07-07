@@ -1,9 +1,12 @@
 package com.example.healthup;
 
+
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -12,14 +15,16 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.Query;
 import com.example.healthup.BlogAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Blog;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
+
 public class BlogFragment extends Fragment {
+
 
     private RecyclerView rvBlogs;
     private BlogAdapter blogAdapter;
@@ -27,6 +32,7 @@ public class BlogFragment extends Fragment {
     private List<Blog> filteredList = new ArrayList<>();
     private ChipGroup chipGroup;
     private String currentCategory;
+
 
     @Nullable
     @Override
@@ -39,13 +45,16 @@ public class BlogFragment extends Fragment {
         return view;
     }
 
+
     private void initViews(View view) {
         rvBlogs = view.findViewById(R.id.rv_blogs);
         chipGroup = view.findViewById(R.id.chip_group_blog);
 
+
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
+
 
         chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
             Chip chip = group.findViewById(checkedId);
@@ -55,6 +64,7 @@ public class BlogFragment extends Fragment {
             }
         });
     }
+
 
     private void setupRecyclerView() {
         blogAdapter = new BlogAdapter(filteredList, blog -> {
@@ -66,9 +76,15 @@ public class BlogFragment extends Fragment {
         rvBlogs.setAdapter(blogAdapter);
     }
 
+
+    // FIX ROOT CAUSE: orderBy("timestamp", DESC) phía Firestore sẽ loại bỏ mọi document
+    // không có field "timestamp" (hoặc kiểu dữ liệu không nhất quán) ra khỏi kết quả trả về.
+    // Nếu dữ liệu blog thực tế đang bị thiếu/không đồng nhất field này thì kết quả trả về
+    // trống hoàn toàn -> trang chỉ còn tiêu đề + tab, không có bài viết nào cả.
+    // Sửa: lấy toàn bộ document không orderBy, tự sắp xếp bằng Java (không loại bỏ ai),
+    // đồng thời thêm addOnFailureListener để không còn "im lặng" khi query lỗi.
     private void fetchBlogs() {
         FirestoreManager.getInstance().getFirestore().collection("blogs")
-                .orderBy("timestamp", Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     blogList.clear();
@@ -79,15 +95,25 @@ public class BlogFragment extends Fragment {
                             blogList.add(blog);
                         }
                     }
+                    Collections.sort(blogList, (a, b) -> Long.compare(b.getTimestamp(), a.getTimestamp()));
                     filterBlogs();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e("BlogFragment", "Lỗi tải danh sách blog: " + e.getMessage());
+                    if (getContext() != null) {
+                        Toast.makeText(getContext(), "Không thể tải bài viết. Vui lòng thử lại.", Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
+
 
     private void filterBlogs() {
         filteredList.clear();
         String allCats = getString(R.string.all_categories);
         for (Blog blog : blogList) {
-            if (currentCategory.equals(allCats) || blog.getCategory().equals(currentCategory)) {
+            String category = blog.getCategory();
+            // FIX: thêm kiểm tra null để tránh NPE nếu bài viết nào đó thiếu field "category"
+            if (currentCategory.equals(allCats) || (category != null && category.equals(currentCategory))) {
                 filteredList.add(blog);
             }
         }
