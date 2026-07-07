@@ -84,15 +84,28 @@ public class FirebaseManager {
         return db.collection("orders").document(orderId).update(updates);
     }
 
-    public Task<Void> cancelOrder(String orderId, String reason) {
+    public Task<Void> cancelOrder(String orderId, String reason, double amount) {
         if (orderId == null || orderId.isEmpty()) {
             return com.google.android.gms.tasks.Tasks.forException(new Exception("OrderId is missing"));
         }
+        
+        String uid = getCurrentUserId();
+        if (uid == null) return Tasks.forException(new Exception("User not logged in"));
+
+        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        
+        // 1. Cập nhật trạng thái đơn hàng
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "cancelled");
         updates.put("returnReason", reason);
         updates.put("updatedAt", Timestamp.now());
-        return db.collection("orders").document(orderId).update(updates);
+        batch.update(db.collection("orders").document(orderId), updates);
+        
+        // 2. Hoàn lại số tiền đã chi trong tích lũy
+        DocumentReference userRef = db.collection("users").document(uid);
+        batch.update(userRef, "spentAmount", com.google.firebase.firestore.FieldValue.increment(-amount));
+        
+        return batch.commit();
     }
 
     public Task<Void> confirmReceived(String orderId) {

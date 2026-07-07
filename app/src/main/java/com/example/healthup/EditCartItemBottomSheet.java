@@ -48,9 +48,9 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     public EditCartItemBottomSheet(CartItem item, OnConfirmListener listener) {
         this.item = item;
         this.listener = listener;
-        this.selectedWeight = item.getWeight();
-        this.selectedFlavor = item.getFlavor();
-        this.selectedPackage = item.getPackageType();
+        this.selectedWeight = extractLabel(item.getWeight());
+        this.selectedFlavor = extractLabel(item.getFlavor());
+        this.selectedPackage = extractLabel(item.getPackageType());
         this.quantity = item.getQuantity();
     }
 
@@ -103,13 +103,25 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         });
 
         if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            com.bumptech.glide.Glide.with(this).load(item.getImageUrl()).into(imgProduct);
+            com.bumptech.glide.Glide.with(requireContext())
+                    .load(item.getImageUrl())
+                    .placeholder(R.color.track_gray)
+                    .into(imgProduct);
         }
 
         return rootView;
     }
 
     private void loadProductOptions() {
+        // Luôn load ảnh từ CartItem trước
+        ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            com.bumptech.glide.Glide.with(this)
+                    .load(item.getImageUrl())
+                    .placeholder(R.color.track_gray)
+                    .into(imgProduct);
+        }
+
         if (item.getProductId() == null) {
             showFallbackOptions();
             return;
@@ -120,7 +132,16 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         Product p = doc.toObject(Product.class);
-                        if (p != null) updateOptionsUI(p);
+                        if (p != null) {
+                            // Chỉ cập nhật ảnh từ Product nếu CartItem không có ảnh
+                            if (p.getImages() != null && !p.getImages().isEmpty() && (item.getImageUrl() == null || item.getImageUrl().isEmpty())) {
+                                com.bumptech.glide.Glide.with(this)
+                                        .load(p.getImages().get(0))
+                                        .placeholder(R.color.track_gray)
+                                        .into(imgProduct);
+                            }
+                            updateOptionsUI(p);
+                        }
                     } else {
                         showFallbackOptions();
                     }
@@ -169,11 +190,16 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private void buildOptionGroup(FlexboxLayout container, List<String> options, String currentValue, OnOptionSelected callback) {
         container.removeAllViews();
-        for (String option : options) {
+        for (String rawOption : options) {
+            // Fix: Trích xuất nhãn từ cấu trúc Map nếu cần (ví dụ: {label=100g})
+            String displayLabel = extractLabel(rawOption);
+            
             Chip chip = new Chip(requireContext());
-            chip.setText(option);
+            chip.setText(displayLabel);
             chip.setCheckable(true);
-            boolean isSelected = option.equals(currentValue);
+            
+            // So sánh dựa trên giá trị gốc (rawOption) để giữ logic đồng bộ với Firestore
+            boolean isSelected = rawOption.equals(currentValue) || displayLabel.equals(currentValue);
             chip.setChecked(isSelected);
             
             // Cập nhật style
@@ -200,11 +226,26 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 chip.setChecked(true);
                 chip.setChipBackgroundColorResource(R.color.green_button);
                 chip.setTextColor(getResources().getColor(R.color.white));
-                callback.onSelected(option);
+                // Trả về giá trị hiển thị để cập nhật lên UI
+                callback.onSelected(displayLabel);
             });
 
             container.addView(chip);
         }
+    }
+
+    private String extractLabel(String input) {
+        if (input == null) return "";
+        if (input.contains("label=")) {
+            // Thử trích xuất từ chuỗi dạng {outOfStock=false, label=100g}
+            try {
+                int start = input.indexOf("label=") + 6;
+                int end = input.indexOf(",", start);
+                if (end == -1) end = input.indexOf("}", start);
+                if (end != -1) return input.substring(start, end).trim();
+            } catch (Exception ignored) {}
+        }
+        return input;
     }
 
     private int dp(int value) {

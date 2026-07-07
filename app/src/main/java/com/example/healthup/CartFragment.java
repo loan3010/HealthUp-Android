@@ -33,7 +33,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private CartAdapter adapter;
 
     private RecyclerView rvCartItems;
-    private View emptyState, footer, btnDeleteSelected, rowVoucher;
+    private View emptyState, footer, btnDeleteSelected, rowVoucher, btnContinueShopping;
     private ProgressBar progressBar;
     private CheckBox cbSelectAll;
     private TextView tvTotalPrice, btnCheckout, btnBackFooter, tvCartTitle;
@@ -70,6 +70,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         btnBackFooter = view.findViewById(R.id.btnBackFooter);
         tvCartTitle = view.findViewById(R.id.tvCartTitle);
         rowVoucher = view.findViewById(R.id.rowVoucher);
+        btnContinueShopping = view.findViewById(R.id.btnContinueShopping);
 
         rvCartItems.setLayoutManager(new LinearLayoutManager(getContext()));
     }
@@ -91,13 +92,32 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
         if (btnBackFooter != null) {
             btnBackFooter.setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().onBackPressed();
+                if (!isAdded()) return;
+                
+                // Thử quay lại màn hình trước đó trong stack
+                boolean movedBack = requireActivity().getSupportFragmentManager().popBackStackImmediate();
+                
+                // Nếu không có gì để quay lại (đang ở tab giỏ hàng), chuyển về tab Trang chủ
+                if (!movedBack) {
+                    com.google.android.material.bottomnavigation.BottomNavigationView navView = 
+                        requireActivity().findViewById(R.id.bottom_navigation);
+                    if (navView != null) {
+                        navView.setSelectedItemId(R.id.nav_home);
+                    }
                 }
             });
         }
         if (rowVoucher != null) {
             rowVoucher.setOnClickListener(v -> openVoucherList());
+        }
+        if (btnContinueShopping != null) {
+            btnContinueShopping.setOnClickListener(v -> {
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, new ProductListFragment())
+                        .addToBackStack(null)
+                        .commit();
+            });
         }
     }
 
@@ -110,20 +130,33 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     }
 
     private void loadCartFromFirestore() {
-        cartItems.clear();
-        renderList();
-        updateFooter();
-
         if (userId == null) {
+            renderList();
+            updateFooter();
             return;
         }
 
         db.collection("users").document(userId).collection("cart")
                 .get()
-                .addOnSuccessListener(this::applyFirestoreCart)
-                .addOnFailureListener(e -> {
+                .addOnSuccessListener(snapshot -> {
                     if (isAdded()) {
-                        Toast.makeText(getContext(), "Không thể tải giỏ hàng", Toast.LENGTH_SHORT).show();
+                        // Lưu trạng thái chọn hiện tại
+                        java.util.Map<String, Boolean> selection = new java.util.HashMap<>();
+                        for (CartItem ci : cartItems) if (ci.getId() != null) selection.put(ci.getId(), ci.isSelected());
+
+                        cartItems.clear();
+                        if (!snapshot.isEmpty()) {
+                            for (QueryDocumentSnapshot doc : snapshot) {
+                                CartItem item = parseCartItem(doc);
+                                if (item != null) {
+                                    Boolean wasSelected = selection.get(item.getId());
+                                    item.setSelected(wasSelected != null ? wasSelected : true);
+                                    cartItems.add(item);
+                                }
+                            }
+                        }
+                        renderList();
+                        updateFooter();
                     }
                 });
     }
@@ -131,33 +164,26 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onResume() {
         super.onResume();
+        // Cập nhật lại userId đề phòng user vừa đăng nhập
         userId = FirebaseAuth.getInstance().getUid();
         loadCartFromFirestore();
     }
 
-    private void applyFirestoreCart(com.google.firebase.firestore.QuerySnapshot snapshot) {
-        if (!isAdded()) {
-            return;
+    private String getStringOrMapLabel(com.google.firebase.firestore.DocumentSnapshot doc, String field) {
+        Object val = doc.get(field);
+        if (val instanceof String) return (String) val;
+        if (val instanceof java.util.Map) {
+            Object label = ((java.util.Map<?, ?>) val).get("label");
+            if (label != null) return String.valueOf(label);
         }
-
-        cartItems.clear();
-        for (QueryDocumentSnapshot doc : snapshot) {
-            CartItem item = parseCartItem(doc);
-            if (item != null) {
-                item.setSelected(true);
-                cartItems.add(item);
-            }
-        }
-        refreshCartUi();
+        return null;
     }
 
     private CartItem parseCartItem(QueryDocumentSnapshot doc) {
         CartItem item = null;
         try {
             item = doc.toObject(CartItem.class);
-        } catch (RuntimeException ignored) {
-            // Nested product maps from add-to-cart can fail CustomClassMapper deserialization.
-        }
+        } catch (RuntimeException ignored) {}
 
         if (item == null) {
             item = new CartItem();
@@ -173,25 +199,17 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 Object productObj = doc.get("product");
                 if (productObj instanceof java.util.Map) {
                     Object productName = ((java.util.Map<?, ?>) productObj).get("name");
-                    if (productName instanceof String) {
-                        name = (String) productName;
-                    }
+                    if (productName instanceof String) name = (String) productName;
                 }
             }
             item.setName(name);
         }
-        if (item.getVariantName() == null) {
-            item.setVariantName(doc.getString("variantName"));
-        }
-        if (item.getWeight() == null) {
-            item.setWeight(doc.getString("weight"));
-        }
-        if (item.getFlavor() == null) {
-            item.setFlavor(doc.getString("flavor"));
-        }
-        if (item.getPackageType() == null) {
-            item.setPackageType(doc.getString("packageType"));
-        }
+
+        // Fix: Trích xuất nhãn sạch từ Firestore (nếu là Map)
+        item.setWeight(getStringOrMapLabel(doc, "weight"));
+        item.setFlavor(getStringOrMapLabel(doc, "flavor"));
+        item.setPackageType(getStringOrMapLabel(doc, "packageType"));
+
         if (item.getQuantity() <= 0) {
             Long quantity = doc.getLong("quantity");
             item.setQuantity(quantity != null ? quantity.intValue() : 1);
@@ -202,10 +220,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (item.getOriginalPrice() <= 0) {
             double original = readDouble(doc, "originalPrice");
             item.setOriginalPrice(original > 0 ? original : item.getPrice());
-        }
-        Long stock = doc.getLong("stock");
-        if (stock != null) {
-            item.setStock(stock.intValue());
         }
 
         hydrateImageUrl(item, doc);

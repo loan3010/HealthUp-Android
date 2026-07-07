@@ -22,6 +22,10 @@ import com.example.adapters.CheckoutProductAdapter;
 import com.example.models.Address;
 import com.example.models.CartItem;
 import com.example.models.Voucher;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.io.Serializable;
 import java.text.NumberFormat;
@@ -99,7 +103,7 @@ public class CheckoutFragment extends Fragment {
         setupListeners();
         renderProductList();
         renderVouchers();
-        renderAddress(); // Hiển thị địa chỉ ngay khi load (nếu có)
+        loadDefaultAddress();
         calculateSummary();
 
         return view;
@@ -177,6 +181,29 @@ public class CheckoutFragment extends Fragment {
             else if (checkedId == R.id.rbMomo) selectedPaymentMethod = "momo";
             else selectedPaymentMethod = "cod";
         });
+    }
+
+    private void loadDefaultAddress() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        String effectiveUserId = (user != null) ? user.getUid() : "guest_user";
+        
+        FirebaseFirestore.getInstance()
+                .collection("users").document(effectiveUserId)
+                .collection("addresses")
+                .whereEqualTo("default", true)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        selectedAddress = queryDocumentSnapshots.getDocuments().get(0).toObject(Address.class);
+                        if (selectedAddress != null) {
+                            selectedAddress.setId(queryDocumentSnapshots.getDocuments().get(0).getId());
+                        }
+                        renderAddress();
+                    } else {
+                        renderAddress();
+                    }
+                });
     }
 
     private void toggleShopNote() {
@@ -302,9 +329,8 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
-        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            // Chưa đăng nhập -> Chuyển sang màn hình Xác minh số điện thoại
             requireActivity().getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragment_container, new PhoneVerificationFragment())
                     .addToBackStack(null)
@@ -312,14 +338,12 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
-        // --- BẮT ĐẦU QUY TRÌNH LƯU ĐƠN HÀNG VÀ CẬP NHẬT TÍCH LŨY ---
         btnPlaceOrder.setEnabled(false);
         btnPlaceOrder.setText("Đang xử lý...");
 
         String userId = user.getUid();
-        com.google.firebase.firestore.FirebaseFirestore db = com.google.firebase.firestore.FirebaseFirestore.getInstance();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
 
-        // 1. Tính tổng tiền cuối cùng
         double itemsTotal = getItemsTotal();
         double totalDiscount = 0;
         double currentShippingDiscount = 0;
@@ -332,7 +356,6 @@ public class CheckoutFragment extends Fragment {
         }
         double finalAmount = Math.max(0, itemsTotal + shippingFee - currentShippingDiscount - totalDiscount);
 
-        // 2. Chuyển đổi CartItem sang OrderItem
         List<com.example.models.OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : selectedItems) {
             orderItems.add(new com.example.models.OrderItem(
@@ -345,7 +368,6 @@ public class CheckoutFragment extends Fragment {
             ));
         }
 
-        // 3. Tạo đối tượng Đơn hàng
         com.example.models.Order order = new com.example.models.Order();
         order.setOrderCode("ORD" + System.currentTimeMillis());
         order.setUserId(userId);
@@ -359,30 +381,24 @@ public class CheckoutFragment extends Fragment {
         order.setStatus(com.example.models.Order.STATUS_PENDING);
         order.setCreatedAt(com.google.firebase.Timestamp.now());
 
-        com.google.firebase.firestore.WriteBatch batch = db.batch();
+        WriteBatch batch = db.batch();
 
-        // 4. Batch job: Lưu Order và Cập nhật SpentAmount của User
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
-        order.setId(orderRef.getId()); // Cập nhật ID Firestore vào object Order trước khi lưu
+        order.setId(orderRef.getId());
         batch.set(orderRef, order);
 
         com.google.firebase.firestore.DocumentReference userRef = db.collection("users").document(userId);
         batch.update(userRef, "spentAmount", com.google.firebase.firestore.FieldValue.increment(finalAmount));
 
-        // 5. Xóa các sản phẩm đã mua khỏi giỏ hàng
         for (CartItem ci : selectedItems) {
             if (ci.getId() != null) {
                 batch.delete(db.collection("users").document(userId).collection("cart").document(ci.getId()));
             }
         }
 
-        // 6. Thực thi Batch
         batch.commit().addOnSuccessListener(aVoid -> {
             if (isAdded()) {
-                Toast.makeText(getContext(), "Đặt hàng thành công!", Toast.LENGTH_LONG).show();
-                // Xóa backstack để quay về Home hoặc thông báo thành công
-                requireActivity().getSupportFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
-                // Bạn có thể chuyển sang fragment Home ở đây
+                showSuccessDialog();
             }
         }).addOnFailureListener(e -> {
             if (isAdded()) {
@@ -391,5 +407,43 @@ public class CheckoutFragment extends Fragment {
                 Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showSuccessDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_order_success, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext(), R.style.CustomDialogTheme)
+                .setView(dialogView)
+                .setCancelable(false)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        dialogView.findViewById(R.id.btnTrackOrder).setOnClickListener(v -> {
+            dialog.dismiss();
+            loadFragment(new OrderHistoryFragment());
+        });
+
+        dialogView.findViewById(R.id.btnContinueShopping).setOnClickListener(v -> {
+            dialog.dismiss();
+            // Xóa toàn bộ stack để quay về trạng thái gốc
+            getParentFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
+            
+            // Chuyển tab BottomNavigation sang Trang chủ
+            View navView = requireActivity().findViewById(R.id.bottom_navigation);
+            if (navView instanceof com.google.android.material.bottomnavigation.BottomNavigationView) {
+                ((com.google.android.material.bottomnavigation.BottomNavigationView) navView).setSelectedItemId(R.id.nav_home);
+            }
+        });
+
+        dialog.show();
+    }
+
+    private void loadFragment(androidx.fragment.app.Fragment fragment) {
+        getParentFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .addToBackStack(null)
+                .commit();
     }
 }

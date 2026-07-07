@@ -93,6 +93,21 @@
             android:text="Giỏ hàng của bạn đang trống"
             android:textSize="14sp"
             android:textColor="@color/text_gray" />
+
+        <TextView
+            android:id="@+id/btnContinueShopping"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginTop="16dp"
+            android:paddingHorizontal="24dp"
+            android:gravity="center"
+            android:text="Tiếp tục mua sắm"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="14sp"
+            android:background="@drawable/bg_button_rounded"
+            android:clickable="true"
+            android:focusable="true" />
     </LinearLayout>
 
     <!-- ===== FOOTER ===== -->
@@ -155,6 +170,13 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Tổng tiền"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_gray" />
 
                 <TextView
                     android:id="@+id/tvTotalPrice"

@@ -65,13 +65,26 @@ public class CartItem implements Serializable {
     public void setStock(int stock) { this.stock = stock; }
 
     public String getWeight() { return weight; }
-    public void setWeight(String weight) { this.weight = weight; }
+    public void setWeight(String weight) { this.weight = extractLabel(weight); }
 
     public String getFlavor() { return flavor; }
-    public void setFlavor(String flavor) { this.flavor = flavor; }
+    public void setFlavor(String flavor) { this.flavor = extractLabel(flavor); }
 
     public String getPackageType() { return packageType; }
-    public void setPackageType(String packageType) { this.packageType = packageType; }
+    public void setPackageType(String packageType) { this.packageType = extractLabel(packageType); }
+
+    private String extractLabel(String input) {
+        if (input == null) return null;
+        if (input.contains("label=")) {
+            try {
+                int start = input.indexOf("label=") + 6;
+                int end = input.indexOf(",", start);
+                if (end == -1) end = input.indexOf("}", start);
+                if (end != -1) return input.substring(start, end).trim();
+            } catch (Exception ignored) {}
+        }
+        return input;
+    }
 
     public boolean isSelected() { return selected; }
     public void setSelected(boolean selected) { this.selected = selected; }
@@ -89,9 +102,7 @@ public class CartItem implements Serializable {
     public void setVariantName(String variantName) { this.variantName = variantName; }
 
     public String getVariantLabel() {
-        if (variantName != null && !variantName.isEmpty()) {
-            return variantName;
-        }
+        // Ưu tiên hiển thị các thành phần đã chọn lẻ trước để đảm bảo cập nhật tức thì
         StringBuilder sb = new StringBuilder();
         if (weight != null && !weight.isEmpty()) sb.append(weight);
         if (flavor != null && !flavor.isEmpty()) {
@@ -102,6 +113,15 @@ public class CartItem implements Serializable {
             if (sb.length() > 0) sb.append(", ");
             sb.append(packageType);
         }
-        return sb.toString();
+        
+        String label = sb.toString();
+        if (!label.isEmpty()) return label;
+
+        // Nếu không có các trường trên mới dùng variantName cũ
+        if (variantName != null && !variantName.isEmpty()) {
+            return extractLabel(variantName);
+        }
+        
+        return "";
     }
 }

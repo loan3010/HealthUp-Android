@@ -95,7 +95,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             dialog.dismiss();
             
             AlertDialog loadingDialog = showLoadingDialog();
-            FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle())
+            FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle(), order.getTotalPrice())
                 .addOnSuccessListener(aVoid -> {
                     // Chờ 1.5s cho cảm giác đang xử lý như yêu cầu
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {

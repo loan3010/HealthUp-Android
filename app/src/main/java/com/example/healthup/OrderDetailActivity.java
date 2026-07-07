@@ -189,7 +189,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         }
 
         if ("cancelled".equals(targetStatus)) {
-            updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason);
+            updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason, currentOrder.getTotalPrice());
             targetTab = "cancelled_tab";
         } else {
             updateTask = FirebaseManager.getInstance().confirmReceived(orderId);

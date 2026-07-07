@@ -62,9 +62,9 @@ public class CheckoutProductAdapter extends RecyclerView.Adapter<CheckoutProduct
         }
 
         if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            Glide.with(holder.itemView.getContext())
-                    .load(item.getImageUrl())
-                    .into(holder.imgProduct);
+            com.example.healthup.util.ImageLoadHelper.loadInto(holder.imgProduct, item.getImageUrl());
+        } else {
+            holder.imgProduct.setImageResource(R.color.neutral_light_grey);
         }
     }
 
