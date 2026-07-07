@@ -23,7 +23,7 @@ import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import com.example.adapters.NotificationAdapter;
 import com.example.models.NotificationItem;
 import com.example.models.NotificationType;
-import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.chip.ChipGroup;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
@@ -44,6 +44,13 @@ import java.util.Set;
 
 public class NotificationsFragment extends Fragment {
 
+    private enum NotificationFilter {
+        ALL,
+        UNREAD,
+        ORDERS,
+        PROMO
+    }
+
     private static final String COLLECTION_USERS = "users";
     private static final String SUBCOLLECTION_NOTIFICATIONS = "notifications";
     private static final String TOP_LEVEL_NOTIFICATIONS = "notifications";
@@ -56,9 +63,11 @@ public class NotificationsFragment extends Fragment {
     private View emptyState;
     private ProgressBar progressBar;
     private TextView tvEmptyMessage;
-    private MaterialToolbar toolbar;
+    private TextView tvViewAll;
+    private ChipGroup chipGroupFilters;
 
     private final List<NotificationItem> items = new ArrayList<>();
+    private NotificationFilter currentFilter = NotificationFilter.ALL;
     private final Set<String> readMockIds = new HashSet<>();
     private final Set<String> deletedMockIds = new HashSet<>();
     private NotificationAdapter adapter;
@@ -79,7 +88,8 @@ public class NotificationsFragment extends Fragment {
         emptyState = view.findViewById(R.id.emptyState);
         progressBar = view.findViewById(R.id.progressBar);
         tvEmptyMessage = view.findViewById(R.id.tvEmptyMessage);
-        toolbar = view.findViewById(R.id.toolbar);
+        tvViewAll = view.findViewById(R.id.tvViewAll);
+        chipGroupFilters = view.findViewById(R.id.chipGroupFilters);
 
         swipeRefresh.setColorSchemeColors(
                 ContextCompat.getColor(requireContext(), R.color.primary),
@@ -102,7 +112,8 @@ public class NotificationsFragment extends Fragment {
         });
         rvNotifications.setAdapter(adapter);
         setupSwipeToDelete();
-        setupToolbar();
+        setupHeaderActions();
+        setupFilterChips();
 
         loadNotifications();
 
@@ -115,13 +126,22 @@ public class NotificationsFragment extends Fragment {
         userId = FirebaseAuth.getInstance().getUid();
     }
 
-    private void setupToolbar() {
-        toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_mark_all_read) {
-                markAllAsRead();
-                return true;
+    private void setupHeaderActions() {
+        tvViewAll.setOnClickListener(v -> markAllAsRead());
+    }
+
+    private void setupFilterChips() {
+        chipGroupFilters.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == R.id.chipFilterUnread) {
+                currentFilter = NotificationFilter.UNREAD;
+            } else if (checkedId == R.id.chipFilterOrders) {
+                currentFilter = NotificationFilter.ORDERS;
+            } else if (checkedId == R.id.chipFilterPromo) {
+                currentFilter = NotificationFilter.PROMO;
+            } else {
+                currentFilter = NotificationFilter.ALL;
             }
-            return false;
+            refreshDisplay();
         });
     }
 
@@ -330,18 +350,60 @@ public class NotificationsFragment extends Fragment {
     }
 
     private void refreshDisplay() {
-        if (items.isEmpty()) {
-            showEmpty(getString(R.string.notifications_empty));
+        List<NotificationItem> filteredItems = getFilteredItems();
+        if (filteredItems.isEmpty()) {
+            String message = items.isEmpty()
+                    ? getString(R.string.notifications_empty)
+                    : getString(R.string.notifications_empty_filter);
+            showEmpty(message);
             return;
         }
         showList();
-        adapter.setRows(buildGroupedRows());
+        adapter.setRows(buildGroupedRows(filteredItems));
+    }
+
+    private List<NotificationItem> getFilteredItems() {
+        List<NotificationItem> filtered = new ArrayList<>();
+        for (NotificationItem item : items) {
+            if (matchesFilter(item)) {
+                filtered.add(item);
+            }
+        }
+        return filtered;
+    }
+
+    private boolean matchesFilter(NotificationItem item) {
+        switch (currentFilter) {
+            case UNREAD:
+                return !item.isRead();
+            case ORDERS:
+                return isOrderNotification(item.getNotificationType());
+            case PROMO:
+                return isPromoNotification(item.getNotificationType());
+            default:
+                return true;
+        }
+    }
+
+    private static boolean isOrderNotification(NotificationType type) {
+        return type == NotificationType.ORDER_SHIPPING
+                || type == NotificationType.PAYMENT
+                || type == NotificationType.REVIEW_REMINDER;
+    }
+
+    private static boolean isPromoNotification(NotificationType type) {
+        return type == NotificationType.PROMO
+                || type == NotificationType.WISHLIST_SALE;
     }
 
     private List<NotificationAdapter.Row> buildGroupedRows() {
+        return buildGroupedRows(getFilteredItems());
+    }
+
+    private List<NotificationAdapter.Row> buildGroupedRows(List<NotificationItem> sourceItems) {
         List<NotificationAdapter.Row> rows = new ArrayList<>();
         String lastGroup = null;
-        for (NotificationItem item : items) {
+        for (NotificationItem item : sourceItems) {
             String group = getDateGroupLabel(item.getCreatedAt());
             if (!group.equals(lastGroup)) {
                 rows.add(NotificationAdapter.Row.header(group));

@@ -90,9 +90,8 @@ public class ProductDetailActivity extends AppCompatActivity {
     private void fetchProductDetails(String productId) {
         FirestoreManager.getInstance().getProductsCollection().document(productId).get()
                 .addOnSuccessListener(documentSnapshot -> {
-                    product = documentSnapshot.toObject(Product.class);
+                    product = Product.fromDocument(documentSnapshot);
                     if (product != null) {
-                        product.setId(documentSnapshot.getId());
                         showProductUi();
                     } else {
                         finish();
@@ -269,15 +268,12 @@ public class ProductDetailActivity extends AppCompatActivity {
 
 
     private void setupVariants() {
-        if (product.isHasVariants() && product.getVariants() != null && !product.getVariants().isEmpty()) {
+        if (product.hasResolvableVariants()) {
             layoutVariants.setVisibility(View.VISIBLE);
             dividerVariants.setVisibility(View.VISIBLE);
             chipGroupVariants.removeAllViews();
 
-
-
-
-            for (Product.ProductVariant variant : product.getVariants()) {
+            for (Product.ProductVariant variant : product.getResolvableVariants()) {
                 com.google.android.material.chip.Chip chip = (com.google.android.material.chip.Chip) getLayoutInflater()
                         .inflate(R.layout.item_variant_chip, chipGroupVariants, false);
                 chip.setText(variant.getName());

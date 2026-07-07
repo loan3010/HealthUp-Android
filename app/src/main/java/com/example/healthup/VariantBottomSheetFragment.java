@@ -121,11 +121,11 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
 
         // FIX: nếu sản phẩm không có variant, ẩn hẳn khối "Phân loại" thay vì để trống trơ trọi.
-        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
+        if (product.hasResolvableVariants()) {
             if (tvVariantSectionLabel != null) tvVariantSectionLabel.setVisibility(View.VISIBLE);
             chipGroup.setVisibility(View.VISIBLE);
             chipGroup.removeAllViews();
-            for (Product.ProductVariant variant : product.getVariants()) {
+            for (Product.ProductVariant variant : product.getResolvableVariants()) {
                 Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, chipGroup, false);
                 chip.setText(variant.getName());
                 chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
@@ -168,7 +168,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
 
         btnConfirm.setOnClickListener(v -> {
-            if (product.isHasVariants() && selectedVariant == null) {
+            if (product.hasResolvableVariants() && selectedVariant == null) {
                 Toast.makeText(getContext(), getString(R.string.please_select_variant), Toast.LENGTH_SHORT).show();
                 return;
             }

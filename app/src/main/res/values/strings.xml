@@ -229,6 +229,11 @@
     <string name="notifications_login_required">Đăng nhập để xem thông báo</string>
     <string name="notifications_load_error">Không thể tải thông báo</string>
     <string name="notifications_mark_all_read">Đánh dấu tất cả đã đọc</string>
+    <string name="notifications_filter_all">Tất cả</string>
+    <string name="notifications_filter_unread">Chưa đọc</string>
+    <string name="notifications_filter_orders">Đơn hàng</string>
+    <string name="notifications_filter_promo">Khuyến mãi</string>
+    <string name="notifications_empty_filter">Không có thông báo trong mục này</string>
     <string name="notifications_all_read_toast">Đã đánh dấu tất cả là đã đọc</string>
     <string name="notifications_deleted">Đã xóa thông báo</string>
     <string name="notifications_group_today">Hôm nay</string>
