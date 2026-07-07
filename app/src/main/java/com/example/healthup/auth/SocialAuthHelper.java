@@ -14,6 +14,8 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.BuildConfig;
 import com.example.healthup.R;
+import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.GuestCartManager;
 import com.facebook.AccessToken;
 import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
@@ -227,8 +229,11 @@ public class SocialAuthHelper {
         String phone = doc.exists() ? doc.getString("phone") : null;
         if (doc.exists() && !TextUtils.isEmpty(phone)) {
             Toast.makeText(activity, R.string.login_success, Toast.LENGTH_SHORT).show();
-            activity.startActivity(new Intent(activity, com.example.healthup.MainActivity.class));
-            activity.finish();
+            GuestCartManager.getInstance(activity).mergeToFirestore(user.getUid(), () ->
+                    activity.runOnUiThread(() -> {
+                        activity.startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(activity));
+                        activity.finish();
+                    }));
             return;
         }
 

@@ -16,6 +16,7 @@ import com.example.models.Product;
 import com.google.android.flexbox.FlexboxLayout;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.chip.Chip;
+import com.example.healthup.util.ImageLoadHelper;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.NumberFormat;
@@ -27,7 +28,7 @@ import java.util.Locale;
 public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     public interface OnConfirmListener {
-        void onConfirm(String weight, String flavor, String packageType, int quantity);
+        void onConfirm(String weight, String flavor, String packageType, int quantity, double price);
     }
 
     private final CartItem item;
@@ -42,6 +43,8 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private View rootView;
     private FlexboxLayout groupWeight, groupFlavor, groupPackage;
     private TextView tvLabelWeight, tvLabelFlavor, tvLabelPackage;
+    private TextView tvPrice;
+    private Product loadedProduct;
 
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
 
@@ -64,7 +67,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
         TextView tvName = rootView.findViewById(R.id.tvName);
-        TextView tvPrice = rootView.findViewById(R.id.tvPrice);
+        tvPrice = rootView.findViewById(R.id.tvPrice);
         TextView tvStockWarning = rootView.findViewById(R.id.tvStockWarning);
         TextView tvQuantity = rootView.findViewById(R.id.tvQuantity);
         View btnDecrease = rootView.findViewById(R.id.btnDecrease);
@@ -80,7 +83,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         tvLabelPackage = rootView.findViewById(R.id.tvLabelPackage);
 
         tvName.setText(item.getName());
-        tvPrice.setText("đ " + currencyFormat.format(item.getPrice()));
+        updatePriceDisplay();
         tvQuantity.setText(String.valueOf(quantity));
 
         loadProductOptions();
@@ -98,16 +101,11 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         });
 
         btnConfirm.setOnClickListener(v -> {
-            listener.onConfirm(selectedWeight, selectedFlavor, selectedPackage, quantity);
+            listener.onConfirm(selectedWeight, selectedFlavor, selectedPackage, quantity, resolveSelectedPrice());
             dismiss();
         });
 
-        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            com.bumptech.glide.Glide.with(requireContext())
-                    .load(item.getImageUrl())
-                    .placeholder(R.color.track_gray)
-                    .into(imgProduct);
-        }
+        ImageLoadHelper.loadInto(imgProduct, item.getImageUrl());
 
         return rootView;
     }
@@ -115,12 +113,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private void loadProductOptions() {
         // Luôn load ảnh từ CartItem trước
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
-        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
-            com.bumptech.glide.Glide.with(this)
-                    .load(item.getImageUrl())
-                    .placeholder(R.color.track_gray)
-                    .into(imgProduct);
-        }
+        ImageLoadHelper.loadInto(imgProduct, item.getImageUrl());
 
         if (item.getProductId() == null) {
             showFallbackOptions();
@@ -131,16 +124,19 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 .get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        Product p = doc.toObject(Product.class);
+                        Product p = Product.fromDocument(doc);
                         if (p != null) {
+                            loadedProduct = p;
                             // Chỉ cập nhật ảnh từ Product nếu CartItem không có ảnh
-                            if (p.getImages() != null && !p.getImages().isEmpty() && (item.getImageUrl() == null || item.getImageUrl().isEmpty())) {
-                                com.bumptech.glide.Glide.with(this)
-                                        .load(p.getImages().get(0))
-                                        .placeholder(R.color.track_gray)
-                                        .into(imgProduct);
+                            if (item.getImageUrl() == null || item.getImageUrl().isEmpty()) {
+                                String productImage = p.getImageUrl();
+                                if (productImage != null && !productImage.isEmpty()) {
+                                    item.setImageUrl(productImage);
+                                    ImageLoadHelper.loadInto(imgProduct, productImage);
+                                }
                             }
                             updateOptionsUI(p);
+                            updatePriceDisplay();
                         }
                     } else {
                         showFallbackOptions();
@@ -160,9 +156,25 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void updateOptionsUI(Product product) {
-        updateUISection(tvLabelWeight, groupWeight, convertToStringList(product.getWeights()), selectedWeight, v -> selectedWeight = v);
+        loadedProduct = product;
+        updateUISection(tvLabelWeight, groupWeight, convertToStringList(product.getWeights()), selectedWeight, v -> {
+            selectedWeight = v;
+            updatePriceDisplay();
+        });
         updateUISection(tvLabelFlavor, groupFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> selectedFlavor = v);
         updateUISection(tvLabelPackage, groupPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> selectedPackage = v);
+    }
+
+    private void updatePriceDisplay() {
+        if (tvPrice == null) return;
+        tvPrice.setText("đ " + currencyFormat.format(resolveSelectedPrice()));
+    }
+
+    private double resolveSelectedPrice() {
+        if (loadedProduct != null) {
+            return loadedProduct.getPriceForOption(selectedWeight);
+        }
+        return item.getPrice();
     }
 
     private void updateUISection(TextView label, FlexboxLayout group, List<String> options, String current, OnOptionSelected callback) {
@@ -176,10 +188,12 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         buildOptionGroup(group, options, current, callback);
     }
 
-    private List<String> convertToStringList(Object input) {
+    private List<String> convertToStringList(List<Object> input) {
         List<String> result = new ArrayList<>();
-        if (input instanceof List) {
-            for (Object obj : (List<?>) input) result.add(String.valueOf(obj));
+        if (input == null) return result;
+        for (Object obj : input) {
+            String label = Product.extractOptionLabel(obj);
+            if (!label.isEmpty()) result.add(label);
         }
         return result;
     }

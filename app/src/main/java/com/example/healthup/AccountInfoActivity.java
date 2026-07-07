@@ -1,10 +1,14 @@
 package com.example.healthup;
 
 import android.app.DatePickerDialog;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.EditText;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.healthup.databinding.ActivityAccountInfoBinding;
@@ -36,7 +40,12 @@ public class AccountInfoActivity extends AppCompatActivity {
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
-        binding.btnSave.setOnClickListener(v -> saveUserInfo());
+        binding.btnSave.setOnClickListener(v -> {
+            UIUtils.hideKeyboard(this);
+            saveUserInfo();
+        });
+
+        setupKeyboardHandling();
         
         // Date Picker for DOB
         View.OnClickListener dobListener = v -> showDatePicker();
@@ -87,6 +96,39 @@ public class AccountInfoActivity extends AppCompatActivity {
         });
     }
 
+    private void setupKeyboardHandling() {
+        binding.etFullName.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                UIUtils.hideKeyboard(this);
+                return true;
+            }
+            return false;
+        });
+
+        binding.etFullName.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus) {
+                binding.scrollContent.post(() ->
+                        binding.scrollContent.smoothScrollTo(0, v.getBottom()));
+            }
+        });
+    }
+
+    @Override
+    public boolean dispatchTouchEvent(MotionEvent event) {
+        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+            View focused = getCurrentFocus();
+            if (focused instanceof EditText) {
+                Rect rect = new Rect();
+                focused.getGlobalVisibleRect(rect);
+                if (!rect.contains((int) event.getRawX(), (int) event.getRawY())) {
+                    focused.clearFocus();
+                    UIUtils.hideKeyboard(this);
+                }
+            }
+        }
+        return super.dispatchTouchEvent(event);
+    }
+
     private void showDatePicker() {
         final Calendar c = Calendar.getInstance();
         int year = c.get(Calendar.YEAR);
@@ -99,6 +141,22 @@ public class AccountInfoActivity extends AppCompatActivity {
                     binding.etDob.setText(date);
                 }, year, month, day);
         datePickerDialog.show();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        refreshUsername();
+    }
+
+    private void refreshUsername() {
+        if (userId == null) return;
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        binding.etUsername.setText(documentSnapshot.getString("username"));
+                    }
+                });
     }
 
     private void loadUserInfo() {

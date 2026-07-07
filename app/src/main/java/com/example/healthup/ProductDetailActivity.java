@@ -272,27 +272,50 @@ public class ProductDetailActivity extends AppCompatActivity {
             layoutVariants.setVisibility(View.VISIBLE);
             dividerVariants.setVisibility(View.VISIBLE);
             chipGroupVariants.removeAllViews();
+            chipGroupVariants.setSelectionRequired(true);
 
-            for (Product.ProductVariant variant : product.getResolvableVariants()) {
+            List<Product.ProductVariant> variants = product.getResolvableVariants();
+            for (Product.ProductVariant variant : variants) {
                 com.google.android.material.chip.Chip chip = (com.google.android.material.chip.Chip) getLayoutInflater()
                         .inflate(R.layout.item_variant_chip, chipGroupVariants, false);
                 chip.setText(variant.getName());
-                chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    if (isChecked) {
-                        selectedVariant = variant;
-                        updatePriceDisplay();
-                    }
-                });
+                chip.setTag(variant.getId());
+                chip.setOnClickListener(v -> selectVariantChip(variant));
                 chipGroupVariants.addView(chip);
             }
-            if (chipGroupVariants.getChildCount() > 0) {
-                ((com.google.android.material.chip.Chip) chipGroupVariants.getChildAt(0)).setChecked(true);
+            if (!variants.isEmpty()) {
+                selectVariantChip(variants.get(0));
             }
         } else {
             layoutVariants.setVisibility(View.GONE);
             dividerVariants.setVisibility(View.GONE);
             selectedVariant = null;
             updatePriceDisplay();
+        }
+    }
+
+    private void selectVariantChip(Product.ProductVariant variant) {
+        selectedVariant = variant;
+        for (int i = 0; i < chipGroupVariants.getChildCount(); i++) {
+            com.google.android.material.chip.Chip chip =
+                    (com.google.android.material.chip.Chip) chipGroupVariants.getChildAt(i);
+            boolean isSelected = variant.getId() != null && variant.getId().equals(chip.getTag());
+            chip.setChecked(isSelected);
+            updateVariantChipStyle(chip, isSelected);
+        }
+        updatePriceDisplay();
+    }
+
+    private void updateVariantChipStyle(com.google.android.material.chip.Chip chip, boolean isSelected) {
+        if (isSelected) {
+            chip.setChipBackgroundColorResource(R.color.primary_green);
+            chip.setTextColor(ContextCompat.getColor(this, R.color.white));
+            chip.setChipStrokeWidth(0f);
+        } else {
+            chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
+            chip.setTextColor(ContextCompat.getColor(this, R.color.text_dark));
+            chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
+            chip.setChipStrokeColorResource(R.color.primary_green);
         }
     }
 
@@ -464,9 +487,8 @@ public class ProductDetailActivity extends AppCompatActivity {
                 .addOnSuccessListener(snapshot -> {
                     List<Product> pool = new ArrayList<>();
                     for (DocumentSnapshot doc : snapshot) {
-                        Product p = doc.toObject(Product.class);
+                        Product p = Product.fromDocument(doc);
                         if (p != null && !doc.getId().equals(product.getId())) {
-                            p.setId(doc.getId());
                             pool.add(p);
                         }
                     }
@@ -595,14 +617,8 @@ public class ProductDetailActivity extends AppCompatActivity {
     // đúng danh sách "checkout_items" này. Vui lòng gửi nội dung MainActivity.java để tôi
     // viết nốt phần đó (xem hướng dẫn/snippet mẫu ở cuối câu trả lời).
     private void performBuyNow(int quantity) {
-        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            Toast.makeText(this, getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
-            return;
-        }
-
         com.example.models.CartItem buyNowItem = new com.example.models.CartItem(
-                product.getId(), product, quantity, user.getUid());
+                product.getId(), product, quantity, null);
         if (selectedVariant != null) {
             buyNowItem.setVariantId(selectedVariant.getId());
             buyNowItem.setVariantName(selectedVariant.getName());
@@ -614,10 +630,19 @@ public class ProductDetailActivity extends AppCompatActivity {
         ArrayList<com.example.models.CartItem> checkoutItems = new ArrayList<>();
         checkoutItems.add(buyNowItem);
 
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         Intent intent = new Intent(this, MainActivity.class);
-        intent.putExtra("navigate_to", "checkout");
-        intent.putExtra("checkout_items", checkoutItems);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+
+        if (user != null) {
+            buyNowItem.setUserId(user.getUid());
+            intent.putExtra("navigate_to", "checkout");
+            intent.putExtra("checkout_items", checkoutItems);
+        } else {
+            com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(this, checkoutItems);
+            intent.putExtra("navigate_to", "phone_verification");
+        }
+
         startActivity(intent);
     }
 
@@ -632,54 +657,6 @@ public class ProductDetailActivity extends AppCompatActivity {
 
 
     private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity) {
-        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            Toast.makeText(this, getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
-            return;
-        }
-        String userId = user.getUid();
-
-
-
-
-        String productId = targetProduct.getId();
-        String variantId = (variant != null) ? variant.getId() : null;
-
-
-
-
-        com.google.firebase.firestore.CollectionReference cartRef =
-                FirestoreManager.getInstance().getFirestore()
-                        .collection("users").document(userId).collection("cart");
-
-
-
-
-        cartRef.whereEqualTo("productId", productId)
-                .whereEqualTo("variantId", variantId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        Long currentQtyLong = doc.getLong("quantity");
-                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
-                        doc.getReference().update("quantity", currentQty + quantity);
-                    } else {
-                        com.example.models.CartItem newItem = new com.example.models.CartItem(
-                                productId, targetProduct, quantity, userId);
-                        if (variant != null) {
-                            newItem.setVariantId(variant.getId());
-                            newItem.setVariantName(variant.getName());
-                            newItem.setPrice(variant.getPrice());
-                        } else {
-                            newItem.setPrice(targetProduct.getPrice());
-                        }
-                        cartRef.add(newItem);
-                    }
-                    Toast.makeText(this, getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
-                })
-                .addOnFailureListener(e -> {
-                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
+        com.example.healthup.util.CartHelper.addToCart(this, targetProduct, variant, quantity);
     }
 }

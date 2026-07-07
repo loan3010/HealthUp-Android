@@ -10,12 +10,17 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
+import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.GuestCartManager;
+import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UsernameGenerator;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
@@ -23,7 +28,6 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class OTPActivity extends AppCompatActivity {
@@ -90,7 +94,7 @@ public class OTPActivity extends AppCompatActivity {
 
     private boolean readExtras() {
         fullName = getIntent().getStringExtra(EXTRA_FULL_NAME);
-        localPhone = getIntent().getStringExtra(EXTRA_PHONE);
+        localPhone = PhoneNormalizer.normalize(getIntent().getStringExtra(EXTRA_PHONE));
         email = getIntent().getStringExtra(EXTRA_EMAIL);
         password = getIntent().getStringExtra(EXTRA_PASSWORD);
         isSocialAuth = getIntent().getBooleanExtra(EXTRA_IS_SOCIAL_AUTH, false);
@@ -271,14 +275,51 @@ public class OTPActivity extends AppCompatActivity {
     }
 
     private void saveSocialUserProfile(String uid, String authEmail) {
-        Map<String, Object> userData = UserProfileBuilder.buildSocialRegistration(
-                fullName,
-                localPhone,
-                authEmail,
-                email,
-                authProvider
-        );
+        UsernameGenerator.generateUnique(fullName, new UsernameGenerator.Callback() {
+            @Override
+            public void onSuccess(@NonNull String username) {
+                Map<String, Object> userData = UserProfileBuilder.buildSocialRegistration(
+                        fullName,
+                        localPhone,
+                        authEmail,
+                        email,
+                        authProvider,
+                        username
+                );
+                persistUserProfile(uid, userData);
+            }
 
+            @Override
+            public void onFailure(@NonNull Exception error) {
+                setLoading(false);
+                showSnackbar(getString(R.string.register_error_generic));
+            }
+        });
+    }
+
+    private void saveUserProfile(String uid, String authEmail) {
+        UsernameGenerator.generateUnique(fullName, new UsernameGenerator.Callback() {
+            @Override
+            public void onSuccess(@NonNull String username) {
+                Map<String, Object> userData = UserProfileBuilder.buildPasswordRegistration(
+                        fullName,
+                        localPhone,
+                        authEmail,
+                        email,
+                        username
+                );
+                persistUserProfile(uid, userData);
+            }
+
+            @Override
+            public void onFailure(@NonNull Exception error) {
+                setLoading(false);
+                showSnackbar(getString(R.string.register_error_generic));
+            }
+        });
+    }
+
+    private void persistUserProfile(String uid, Map<String, Object> userData) {
         firebaseFirestore.collection("users")
                 .document(uid)
                 .set(userData)
@@ -286,10 +327,7 @@ public class OTPActivity extends AppCompatActivity {
                     registrationRepository.deleteOtpDoc(localPhone);
                     setLoading(false);
                     Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(OTPActivity.this, MainActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    finish();
+                    navigateAfterRegistration(uid);
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
@@ -297,34 +335,11 @@ public class OTPActivity extends AppCompatActivity {
                 });
     }
 
-    private void saveUserProfile(String uid, String authEmail) {
-        Map<String, Object> userData = new HashMap<>();
-        userData.put("fullName", fullName);
-        userData.put("phone", localPhone);
-        userData.put("email", authEmail);
-        userData.put("phoneVerified", true);
-        if (!TextUtils.isEmpty(email)) {
-            userData.put("displayEmail", email);
-        }
-
-        firebaseFirestore.collection("users")
-                .document(uid)
-                .set(userData)
-                .addOnSuccessListener(unused -> {
-                    registrationRepository.deleteOtpDoc(localPhone);
-                    setLoading(false);
-                    firebaseAuth.signOut();
-                    Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
-                    Intent intent = new Intent(OTPActivity.this, LoginActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-                    startActivity(intent);
-                    finish();
-                })
-                .addOnFailureListener(e -> {
-                    setLoading(false);
-                    firebaseAuth.signOut();
-                    showSnackbar(getString(R.string.register_error_generic));
-                });
+    private void navigateAfterRegistration(String uid) {
+        GuestCartManager.getInstance(this).mergeToFirestore(uid, () -> runOnUiThread(() -> {
+            startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(OTPActivity.this));
+            finish();
+        }));
     }
 
     private void startResendCountdown() {

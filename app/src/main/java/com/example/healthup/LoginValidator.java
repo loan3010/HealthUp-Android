@@ -3,6 +3,8 @@ package com.example.healthup;
 import android.text.TextUtils;
 import android.util.Patterns;
 
+import com.example.healthup.util.PhoneNormalizer;
+
 final class LoginValidator {
 
     private LoginValidator() {
@@ -20,12 +22,8 @@ final class LoginValidator {
             return null;
         }
 
-        if (!TextUtils.isDigitsOnly(identifier)) {
+        if (!PhoneNormalizer.isValidLocalPhone(identifier)) {
             return "phone_invalid";
-        }
-
-        if (identifier.length() != 10) {
-            return "phone_length";
         }
 
         return null;
@@ -52,6 +50,6 @@ final class LoginValidator {
     }
 
     static boolean isPhoneIdentifier(String identifier) {
-        return TextUtils.isDigitsOnly(identifier) && identifier.length() == 10;
+        return PhoneNormalizer.isValidLocalPhone(identifier);
     }
 }

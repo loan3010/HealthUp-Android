@@ -3,6 +3,8 @@ package com.example.healthup;
 import android.text.TextUtils;
 import android.util.Patterns;
 
+import com.example.healthup.util.PhoneNormalizer;
+
 public final class RegisterValidator {
 
     private RegisterValidator() {
@@ -19,10 +21,10 @@ public final class RegisterValidator {
         if (TextUtils.isEmpty(phone)) {
             return "required";
         }
-        if (!TextUtils.isDigitsOnly(phone)) {
-            return "invalid";
-        }
-        if (phone.length() != 10) {
+        if (!PhoneNormalizer.isValidLocalPhone(phone)) {
+            if (TextUtils.isEmpty(phone.replaceAll("[^0-9]", ""))) {
+                return "invalid";
+            }
             return "length";
         }
         return null;

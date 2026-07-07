@@ -37,10 +37,8 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class NotificationsFragment extends Fragment {
 
@@ -68,10 +66,7 @@ public class NotificationsFragment extends Fragment {
 
     private final List<NotificationItem> items = new ArrayList<>();
     private NotificationFilter currentFilter = NotificationFilter.ALL;
-    private final Set<String> readMockIds = new HashSet<>();
-    private final Set<String> deletedMockIds = new HashSet<>();
     private NotificationAdapter adapter;
-    private boolean usingMockData;
     private final android.graphics.Paint swipeDeletePaint = new android.graphics.Paint();
 
     @Nullable
@@ -204,7 +199,7 @@ public class NotificationsFragment extends Fragment {
         userId = FirebaseAuth.getInstance().getUid();
         if (userId == null) {
             swipeRefresh.setRefreshing(false);
-            bindMockNotifications();
+            showEmptyNotifications();
             return;
         }
 
@@ -261,22 +256,12 @@ public class NotificationsFragment extends Fragment {
                                     if (!isAdded()) {
                                         return;
                                     }
-                                    bindMockNotifications();
+                                    showEmptyNotifications();
                                 }));
     }
 
-    private void bindMockNotifications() {
-        usingMockData = true;
+    private void showEmptyNotifications() {
         items.clear();
-        for (NotificationItem sample : NotificationMockProvider.getSamples()) {
-            if (deletedMockIds.contains(sample.getId())) {
-                continue;
-            }
-            if (readMockIds.contains(sample.getId())) {
-                sample.setRead(true);
-            }
-            items.add(sample);
-        }
         refreshDisplay();
     }
 
@@ -284,7 +269,6 @@ public class NotificationsFragment extends Fragment {
         if (!isAdded()) {
             return;
         }
-        usingMockData = false;
         items.clear();
         for (QueryDocumentSnapshot doc : snapshot) {
             NotificationItem item = parseNotification(doc);
@@ -300,11 +284,7 @@ public class NotificationsFragment extends Fragment {
             ).reversed());
         }
 
-        if (items.isEmpty()) {
-            bindMockNotifications();
-        } else {
-            refreshDisplay();
-        }
+        refreshDisplay();
     }
 
     private NotificationItem parseNotification(DocumentSnapshot doc) {
@@ -459,13 +439,6 @@ public class NotificationsFragment extends Fragment {
         item.setRead(true);
         adapter.setRows(buildGroupedRows());
 
-        if (item.isMock() || usingMockData) {
-            if (item.getId() != null) {
-                readMockIds.add(item.getId());
-            }
-            return;
-        }
-
         if (userId == null || item.getId() == null) {
             return;
         }
@@ -490,11 +463,7 @@ public class NotificationsFragment extends Fragment {
             if (!item.isRead()) {
                 item.setRead(true);
                 changed = true;
-                if (item.isMock() || usingMockData) {
-                    if (item.getId() != null) {
-                        readMockIds.add(item.getId());
-                    }
-                } else if (userId != null && item.getId() != null) {
+                if (userId != null && item.getId() != null) {
                     Map<String, Object> update = new HashMap<>();
                     update.put("read", true);
                     db.collection(COLLECTION_USERS)
@@ -518,15 +487,6 @@ public class NotificationsFragment extends Fragment {
 
     private void deleteNotification(NotificationItem item) {
         items.remove(item);
-
-        if (item.isMock() || usingMockData) {
-            if (item.getId() != null) {
-                deletedMockIds.add(item.getId());
-            }
-            refreshDisplay();
-            Toast.makeText(requireContext(), R.string.notifications_deleted, Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         if (userId != null && item.getId() != null) {
             db.collection(COLLECTION_USERS)

@@ -5,40 +5,55 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_cream"
+    android:clipChildren="false"
+    android:clipToPadding="false"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:orientation="vertical"
         android:paddingBottom="40dp">
 
         <!-- ===== HEADER ===== -->
         <RelativeLayout
+            android:id="@+id/profile_header"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:clipChildren="false"
+            android:clipToPadding="false"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:paddingTop="30dp"
             android:paddingBottom="20dp">
 
-            <ImageView
-                android:id="@+id/img_avatar"
+            <FrameLayout
+                android:id="@+id/avatar_container"
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:layout_alignParentStart="true"
-                android:background="@drawable/bg_avatar_circle"
-                android:padding="8dp"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_account_default"
-                android:contentDescription="Ảnh đại diện" />
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageView
+                    android:id="@+id/img_avatar"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_avatar_circle"
+                    android:padding="8dp"
+                    android:scaleType="centerCrop"
+                    android:src="@drawable/ic_account_default"
+                    android:contentDescription="Ảnh đại diện" />
+            </FrameLayout>
 
             <!-- Nhóm hiển thị khi CHƯA đăng nhập -->
             <LinearLayout
                 android:id="@+id/group_logged_out"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/img_avatar"
+                android:layout_toEndOf="@id/avatar_container"
                 android:layout_centerVertical="true"
                 android:layout_marginStart="16dp"
                 android:orientation="vertical"
@@ -74,19 +89,28 @@
             <!-- Nhóm hiển thị khi ĐÃ đăng nhập -->
             <LinearLayout
                 android:id="@+id/group_logged_in"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_toEndOf="@id/img_avatar"
-                android:layout_centerVertical="true"
+                android:layout_toEndOf="@id/avatar_container"
+                android:layout_toStartOf="@id/btn_settings"
+                android:layout_alignTop="@id/avatar_container"
                 android:layout_marginStart="16dp"
+                android:layout_marginEnd="12dp"
+                android:gravity="center_vertical"
+                android:minHeight="80dp"
                 android:orientation="vertical"
                 android:visibility="gone">
 
                 <TextView
                     android:id="@+id/tv_name"
-                    android:layout_width="wrap_content"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="lexuanmai96"
+                    android:includeFontPadding="true"
+                    android:lineSpacingExtra="2dp"
+                    android:maxLines="2"
+                    android:ellipsize="end"
+                    android:paddingTop="2dp"
+                    android:text=""
                     android:textColor="@color/text_dark"
                     android:textSize="18sp"
                     android:textStyle="bold" />

@@ -48,12 +48,12 @@ public class SplashActivity extends AppCompatActivity {
         // Firebase seeding
         FirebaseManager.getInstance().seedProductsIfEmpty();
 
-        // Chuyển màn hình sau khi hoàn tất (tổng cộng 5 giây cho thong thả)
+        // Chuyển màn hình nhanh; seed Firebase chạy nền, không chặn navigation
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
             Intent intent = new Intent(SplashActivity.this, MainActivity.class);
             startActivity(intent);
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
             finish();
-        }, 5000);
+        }, 1500);
     }
 }

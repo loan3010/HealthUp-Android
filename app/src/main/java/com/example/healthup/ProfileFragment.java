@@ -3,6 +3,7 @@ package com.example.healthup;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,6 +17,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 
@@ -23,6 +27,8 @@ import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.example.healthup.util.StaffRoleHelper;
+import com.example.healthup.util.UserPhoneLookup;
+import com.example.healthup.util.UserProfileResolver;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Source;
@@ -36,7 +42,6 @@ public class ProfileFragment extends Fragment {
 
 
     private static final String COLLECTION_USERS = "users";
-    private static final String FIELD_NAME = "name";
     private static final String FIELD_TIER = "tier";
     private static final String FIELD_SPENT = "spentAmount";
     private static final String FIELD_AVATAR_URL = "avatarUrl";
@@ -51,7 +56,7 @@ public class ProfileFragment extends Fragment {
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
     private View rowSellerInbox;
     private View cardStaffInbox;
-    private TextView tvName, tvTier, tvSpent, tvProgressHint;
+    private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping;
     private ProgressBar progressTichLuy;
 
@@ -70,6 +75,7 @@ public class ProfileFragment extends Fragment {
         rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
         cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
         tvName = view.findViewById(R.id.tv_name);
+        tvUsername = view.findViewById(R.id.tv_username);
         tvTier = view.findViewById(R.id.tv_tier);
         tvSpent = view.findViewById(R.id.tv_spent);
         tvProgressHint = view.findViewById(R.id.tv_progress_hint);
@@ -84,6 +90,7 @@ public class ProfileFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
 
 
+        applyHeaderWindowInsets(view);
         setupNavigation(view);
         updateAuthUi(view);
         loadUserData();
@@ -118,6 +125,31 @@ public class ProfileFragment extends Fragment {
             updateAuthUi(view);
             loadUserData(true);
         }
+    }
+
+
+    private void applyHeaderWindowInsets(View view) {
+        View header = view.findViewById(R.id.profile_header);
+        if (header == null) {
+            return;
+        }
+
+        final int basePaddingStart = header.getPaddingStart();
+        final int basePaddingTop = header.getPaddingTop();
+        final int basePaddingEnd = header.getPaddingEnd();
+        final int basePaddingBottom = header.getPaddingBottom();
+
+        ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPaddingRelative(
+                    basePaddingStart,
+                    basePaddingTop + systemBars.top,
+                    basePaddingEnd,
+                    basePaddingBottom
+            );
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(header);
     }
 
 
@@ -295,50 +327,89 @@ public class ProfileFragment extends Fragment {
         }
 
 
+        FirebaseUser firebaseUser = currentUser;
         db.collection(COLLECTION_USERS)
                 .document(currentUser.getUid())
                 .get(preferServer ? Source.SERVER : Source.DEFAULT)
                 .addOnSuccessListener(doc -> {
-                    bindUserToUi(doc);
-                    loadOrderCounts(currentUser.getUid());
+                    if (!isAdded()) {
+                        return;
+                    }
+                    if (UserProfileResolver.hasProfileName(doc)) {
+                        bindUserToUi(doc, firebaseUser);
+                        loadOrderCounts(currentUser.getUid());
+                        return;
+                    }
+                    fallbackLoadProfile(doc, firebaseUser);
                 })
                 .addOnFailureListener(e -> {
-                    updateStaffInboxVisibility(false);
-                    if (isAdded()) {
-                        Toast.makeText(requireContext(),
-                                "Lỗi tải dữ liệu: " + e.getMessage(),
-                                Toast.LENGTH_SHORT).show();
+                    if (!isAdded()) {
+                        return;
                     }
+                    fallbackLoadProfile(null, firebaseUser);
+                    Toast.makeText(requireContext(),
+                            "Lỗi tải dữ liệu: " + e.getMessage(),
+                            Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void fallbackLoadProfile(@Nullable DocumentSnapshot uidDoc, @NonNull FirebaseUser firebaseUser) {
+        String phone = uidDoc != null && uidDoc.exists() ? uidDoc.getString("phone") : null;
+        if (TextUtils.isEmpty(phone)) {
+            phone = UserProfileResolver.extractPhoneFromAuthEmail(firebaseUser.getEmail());
+        }
+
+        if (TextUtils.isEmpty(phone)) {
+            bindUserToUi(uidDoc, firebaseUser);
+            loadOrderCounts(firebaseUser.getUid());
+            return;
+        }
+
+        String lookupPhone = phone;
+        UserPhoneLookup.queryUsers(lookupPhone)
+                .addOnSuccessListener(snapshot -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    DocumentSnapshot profileDoc = !snapshot.isEmpty()
+                            ? snapshot.getDocuments().get(0)
+                            : uidDoc;
+                    bindUserToUi(profileDoc, firebaseUser);
+                    UserProfileResolver.syncProfileAfterLogin(firebaseUser.getUid(), profileDoc);
+                    loadOrderCounts(firebaseUser.getUid());
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    bindUserToUi(uidDoc, firebaseUser);
+                    loadOrderCounts(firebaseUser.getUid());
                 });
     }
 
 
-    private void bindUserToUi(DocumentSnapshot document) {
-        if (!document.exists()) {
+    private long readSpentAmount(@Nullable DocumentSnapshot document) {
+        if (document == null) return 0;
+        Long spentLong = document.getLong(FIELD_SPENT);
+        if (spentLong != null) return spentLong;
+        Double spentDouble = document.getDouble(FIELD_SPENT);
+        return spentDouble != null ? spentDouble.longValue() : 0;
+    }
+
+    private void bindUserToUi(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
+        bindHeaderName(document, firebaseUser);
+
+        if (document == null || !document.exists()) {
+            tvTier.setText("Thành viên");
             updateStaffInboxVisibility(false);
             return;
         }
 
-        String name = document.getString("fullName");
-        if (name == null || name.isEmpty()) {
-            name = document.getString(FIELD_NAME);
-        }
-        if (name == null || name.isEmpty()) {
-            name = document.getString("displayName");
-        }
-        if (name == null || name.isEmpty()) {
-            name = "Người dùng";
-        }
-
-
-        String tier = document.getString(FIELD_TIER);
         String avatarUrl = document.getString(FIELD_AVATAR_URL);
-        Long spentLong = document.getLong(FIELD_SPENT);
-        long spent = spentLong != null ? spentLong : 0;
+        long spent = readSpentAmount(document);
+        String tier = spent >= MUC_VIP ? "VIP" : "Thành viên";
 
-
-        tvName.setText(name);
-        tvTier.setText(tier != null ? tier : "Thành viên");
+        tvTier.setText(tier);
 
 
         NumberFormat vnFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
@@ -365,6 +436,31 @@ public class ProfileFragment extends Fragment {
 
 
         updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
+    }
+
+
+    /**
+     * Matches legacy profile header: show @username when set, otherwise full name only.
+     */
+    private void bindHeaderName(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
+        String username = document != null && document.exists()
+                ? document.getString("username")
+                : null;
+
+        if (!TextUtils.isEmpty(username)) {
+            tvName.setText("@" + username);
+        } else {
+            tvName.setText(resolveDisplayName(document, firebaseUser));
+        }
+
+        if (tvUsername != null) {
+            tvUsername.setVisibility(View.GONE);
+        }
+    }
+
+
+    private String resolveDisplayName(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
+        return UserProfileResolver.resolveDisplayName(document, firebaseUser);
     }
 
 

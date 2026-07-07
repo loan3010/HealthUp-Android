@@ -11,11 +11,16 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.adapters.CartAdapter;
+import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.GuestCartManager;
 import com.example.models.CartItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -33,7 +38,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private CartAdapter adapter;
 
     private RecyclerView rvCartItems;
-    private View emptyState, footer, btnDeleteSelected, rowVoucher, btnContinueShopping;
+    private View emptyState, footer, btnDeleteSelected, rowVoucher, btnContinueShopping, guestSyncBanner;
     private ProgressBar progressBar;
     private CheckBox cbSelectAll;
     private TextView tvTotalPrice, btnCheckout, btnBackFooter, tvCartTitle;
@@ -53,10 +58,41 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         userId = FirebaseAuth.getInstance().getUid();
 
         bindViews(view);
+        applyHeaderWindowInsets(view);
         setupListeners();
         loadCartFromFirestore();
 
         return view;
+    }
+
+    @Override
+    public void onDestroyView() {
+        adapter = null;
+        super.onDestroyView();
+    }
+
+    private void applyHeaderWindowInsets(View view) {
+        View header = view.findViewById(R.id.header);
+        if (header == null) {
+            return;
+        }
+
+        final int basePaddingStart = header.getPaddingStart();
+        final int basePaddingTop = header.getPaddingTop();
+        final int basePaddingEnd = header.getPaddingEnd();
+        final int basePaddingBottom = header.getPaddingBottom();
+
+        ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPaddingRelative(
+                    basePaddingStart,
+                    basePaddingTop + systemBars.top,
+                    basePaddingEnd,
+                    basePaddingBottom
+            );
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(header);
     }
 
     private void bindViews(View view) {
@@ -71,6 +107,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         tvCartTitle = view.findViewById(R.id.tvCartTitle);
         rowVoucher = view.findViewById(R.id.rowVoucher);
         btnContinueShopping = view.findViewById(R.id.btnContinueShopping);
+        guestSyncBanner = view.findViewById(R.id.guestSyncBanner);
 
         rvCartItems.setLayoutManager(new LinearLayoutManager(getContext()));
     }
@@ -131,8 +168,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private void loadCartFromFirestore() {
         if (userId == null) {
-            renderList();
-            updateFooter();
+            loadGuestCart();
             return;
         }
 
@@ -141,41 +177,86 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (isAdded()) {
-                        // Lưu trạng thái chọn hiện tại (để duy trì khi reload list)
-                        java.util.Map<String, Boolean> selection = new java.util.HashMap<>();
-                        for (CartItem ci : cartItems) if (ci.getId() != null) selection.put(ci.getId(), ci.isSelected());
-
-                        boolean isRebuyFlow = getArguments() != null && getArguments().getBoolean("is_rebuy_flow", false);
-
-                        cartItems.clear();
-                        if (!snapshot.isEmpty()) {
-                            for (QueryDocumentSnapshot doc : snapshot) {
-                                CartItem item = parseCartItem(doc);
-                                if (item != null) {
-                                    if (isRebuyFlow) {
-                                        // Nếu là luồng mua lại, ưu tiên trạng thái tick từ DB (đã được FirebaseManager xử lý)
-                                        Boolean dbSelected = doc.getBoolean("selected");
-                                        item.setSelected(dbSelected != null ? dbSelected : false);
-                                    } else {
-                                        // Luồng bình thường: Giữ nguyên logic auto-tick mặc định của app
-                                        Boolean wasSelected = selection.get(item.getId());
-                                        item.setSelected(wasSelected != null ? wasSelected : true);
-                                    }
-                                    cartItems.add(item);
-                                }
-                            }
-                        }
-                        renderList();
-                        updateFooter();
+                        applyFirestoreCartSnapshot(snapshot);
                     }
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) {
+                        return;
+                    }
+                    db.collection("users").document(userId).collection("cart")
+                            .get()
+                            .addOnSuccessListener(snapshot -> {
+                                if (isAdded()) {
+                                    applyFirestoreCartSnapshot(snapshot);
+                                }
+                            });
                 });
+    }
+
+    private void applyFirestoreCartSnapshot(com.google.firebase.firestore.QuerySnapshot snapshot) {
+        java.util.Map<String, Boolean> selection = new java.util.HashMap<>();
+        for (CartItem ci : cartItems) {
+            if (ci.getId() != null) {
+                selection.put(ci.getId(), ci.isSelected());
+            }
+        }
+
+        boolean isRebuyFlow = getArguments() != null && getArguments().getBoolean("is_rebuy_flow", false);
+
+        cartItems.clear();
+        if (snapshot != null && !snapshot.isEmpty()) {
+            for (QueryDocumentSnapshot doc : snapshot) {
+                CartItem item = parseCartItem(doc);
+                if (item != null) {
+                    if (isRebuyFlow) {
+                        Boolean dbSelected = doc.getBoolean("selected");
+                        item.setSelected(dbSelected != null ? dbSelected : false);
+                    } else {
+                        Boolean wasSelected = selection.get(item.getId());
+                        item.setSelected(wasSelected != null ? wasSelected : true);
+                    }
+                    cartItems.add(item);
+                }
+            }
+        }
+        renderList();
+        updateFooter();
+    }
+
+    private void loadGuestCart() {
+        cartItems.clear();
+        cartItems.addAll(GuestCartManager.getInstance(requireContext()).getItems());
+        for (CartItem item : cartItems) {
+            if (!item.isSelected()) {
+                item.setSelected(true);
+            }
+        }
+        updateGuestBanner();
+        renderList();
+        updateFooter();
+    }
+
+    private void updateGuestBanner() {
+        if (guestSyncBanner != null) {
+            guestSyncBanner.setVisibility(userId == null && !cartItems.isEmpty() ? View.VISIBLE : View.GONE);
+        }
     }
 
     @Override
     public void onResume() {
         super.onResume();
-        // Cập nhật lại userId đề phòng user vừa đăng nhập
-        userId = FirebaseAuth.getInstance().getUid();
+        String newUserId = FirebaseAuth.getInstance().getUid();
+        if (newUserId != null && !newUserId.equals(userId)) {
+            userId = newUserId;
+            GuestCartManager.getInstance(requireContext()).mergeToFirestore(userId, () -> {
+                if (isAdded()) {
+                    loadCartFromFirestore();
+                }
+            });
+            return;
+        }
+        userId = newUserId;
         loadCartFromFirestore();
     }
 
@@ -303,13 +384,14 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         emptyState.setVisibility(View.GONE);
         rvCartItems.setVisibility(View.VISIBLE);
         footer.setVisibility(View.VISIBLE);
+        updateGuestBanner();
 
         if (adapter == null) {
             adapter = new CartAdapter(cartItems, this);
-            rvCartItems.setAdapter(adapter);
         } else {
             adapter.notifyDataSetChanged();
         }
+        rvCartItems.setAdapter(adapter);
     }
 
     @Override
@@ -339,6 +421,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             db.collection("users").document(userId).collection("cart")
                     .document(item.getId())
                     .update("quantity", newQuantity);
+        } else if (userId == null) {
+            GuestCartManager.getInstance(requireContext()).updateQuantity(item.getId(), newQuantity);
         }
     }
 
@@ -357,6 +441,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
                                 .delete();
+                    } else if (userId == null) {
+                        GuestCartManager.getInstance(requireContext()).removeItem(item.getId());
                     }
                 })
                 .setNegativeButton("Hủy", null)
@@ -366,11 +452,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onEditVariant(CartItem item) {
         EditCartItemBottomSheet sheet = new EditCartItemBottomSheet(item,
-                (weight, flavor, packageType, quantity) -> {
+                (weight, flavor, packageType, quantity, price) -> {
                     item.setWeight(weight);
                     item.setFlavor(flavor);
                     item.setPackageType(packageType);
                     item.setQuantity(quantity);
+                    item.setPrice(price);
+                    item.setOriginalPrice(price);
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
                     }
@@ -381,7 +469,10 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                                 .document(item.getId())
                                 .update("weight", weight, "flavor", flavor,
                                         "packageType", packageType, "quantity", quantity,
+                                        "price", price, "originalPrice", price,
                                         "updatedAt", com.google.firebase.Timestamp.now());
+                    } else if (userId == null) {
+                        GuestCartManager.getInstance(requireContext()).updateItem(item);
                     }
                 });
         sheet.show(getChildFragmentManager(), "edit_cart_item");
@@ -433,6 +524,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                             }
                         }
                         batch.commit();
+                    } else {
+                        GuestCartManager.getInstance(requireContext()).removeItems(toRemove);
                     }
 
                     cartItems.removeAll(toRemove);
@@ -452,6 +545,16 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         if (selectedItems.isEmpty()) {
             Toast.makeText(getContext(), "Vui lòng chọn ít nhất 1 sản phẩm", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
+            CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
+            requireActivity().getSupportFragmentManager()
+                    .beginTransaction()
+                    .replace(R.id.fragment_container, new PhoneVerificationFragment())
+                    .addToBackStack(null)
+                    .commit();
             return;
         }
 
