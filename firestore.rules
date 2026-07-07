@@ -216,7 +216,7 @@ service cloud.firestore {
                       && request.resource.data.senderId == request.auth.uid;
 
         allow update: if (isParticipant(convData()) || isStaff());
-        allow delete: if false;
+        allow delete: if isParticipant(convData()) || isStaff();
       }
     }
   }

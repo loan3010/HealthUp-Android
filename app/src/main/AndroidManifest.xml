@@ -113,6 +113,7 @@
         <activity android:name="com.example.healthup.WriteReviewActivity" />
         <activity android:name="com.example.healthup.ViewReviewsActivity" />
         <activity android:name="com.example.healthup.ProductReviewsActivity" />
+        <activity android:name="com.example.healthup.OrderSearchActivity" />
 
 
         <provider

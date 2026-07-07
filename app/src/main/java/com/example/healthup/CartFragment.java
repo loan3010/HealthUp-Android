@@ -137,20 +137,30 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         db.collection("users").document(userId).collection("cart")
+                .orderBy("updatedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (isAdded()) {
-                        // Lưu trạng thái chọn hiện tại
+                        // Lưu trạng thái chọn hiện tại (để duy trì khi reload list)
                         java.util.Map<String, Boolean> selection = new java.util.HashMap<>();
                         for (CartItem ci : cartItems) if (ci.getId() != null) selection.put(ci.getId(), ci.isSelected());
+
+                        boolean isRebuyFlow = getArguments() != null && getArguments().getBoolean("is_rebuy_flow", false);
 
                         cartItems.clear();
                         if (!snapshot.isEmpty()) {
                             for (QueryDocumentSnapshot doc : snapshot) {
                                 CartItem item = parseCartItem(doc);
                                 if (item != null) {
-                                    Boolean wasSelected = selection.get(item.getId());
-                                    item.setSelected(wasSelected != null ? wasSelected : true);
+                                    if (isRebuyFlow) {
+                                        // Nếu là luồng mua lại, ưu tiên trạng thái tick từ DB (đã được FirebaseManager xử lý)
+                                        Boolean dbSelected = doc.getBoolean("selected");
+                                        item.setSelected(dbSelected != null ? dbSelected : false);
+                                    } else {
+                                        // Luồng bình thường: Giữ nguyên logic auto-tick mặc định của app
+                                        Boolean wasSelected = selection.get(item.getId());
+                                        item.setSelected(wasSelected != null ? wasSelected : true);
+                                    }
                                     cartItems.add(item);
                                 }
                             }
@@ -370,7 +380,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
                                 .update("weight", weight, "flavor", flavor,
-                                        "packageType", packageType, "quantity", quantity);
+                                        "packageType", packageType, "quantity", quantity,
+                                        "updatedAt", com.google.firebase.Timestamp.now());
                     }
                 });
         sheet.show(getChildFragmentManager(), "edit_cart_item");

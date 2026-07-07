@@ -47,6 +47,18 @@ public class OrderHistoryFragment extends Fragment {
                 getActivity().onBackPressed();
             }
         });
+
+        binding.btnSearch.setOnClickListener(v -> {
+            android.content.Intent intent = new android.content.Intent(getContext(), OrderSearchActivity.class);
+            startActivity(intent);
+        });
+
+        binding.btnChatBot.setOnClickListener(v -> {
+            requireActivity().getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, new ChatBotFragment())
+                    .addToBackStack(null)
+                    .commit();
+        });
     }
 
     @Override

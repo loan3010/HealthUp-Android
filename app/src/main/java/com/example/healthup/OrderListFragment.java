@@ -14,9 +14,13 @@ import com.example.healthup.databinding.FragmentOrderListBinding;
 import com.example.models.Order;
 import com.example.models.Product;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.example.models.CartItem;
+import com.google.firebase.auth.FirebaseAuth;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 public class OrderListFragment extends Fragment {
     private FragmentOrderListBinding binding;
@@ -98,11 +102,17 @@ public class OrderListFragment extends Fragment {
                 }
             }
 
-            // Sắp xếp lại phía client (dù server đã order by, nhưng có thể cần thiết nếu logic phức tạp)
+            // Sắp xếp đơn hàng theo thời gian: Mới nhất lên đầu (Dựa trên updatedAt hoặc createdAt)
             Collections.sort(filteredOrders, (o1, o2) -> {
-                long t1 = (o1.getUpdatedAt() != null) ? o1.getUpdatedAt().getSeconds() : 0;
-                long t2 = (o2.getUpdatedAt() != null) ? o2.getUpdatedAt().getSeconds() : 0;
-                return Long.compare(t2, t1);
+                long t1 = 0;
+                if (o1.getUpdatedAt() != null) t1 = o1.getUpdatedAt().getSeconds();
+                else if (o1.getCreatedAt() != null) t1 = o1.getCreatedAt().getSeconds();
+
+                long t2 = 0;
+                if (o2.getUpdatedAt() != null) t2 = o2.getUpdatedAt().getSeconds();
+                else if (o2.getCreatedAt() != null) t2 = o2.getCreatedAt().getSeconds();
+
+                return Long.compare(t2, t1); // Đảo ngược t2, t1 để lấy DESC (mới nhất lên trước)
             });
 
             if (filteredOrders.isEmpty()) {
@@ -122,6 +132,50 @@ public class OrderListFragment extends Fragment {
                 Toast.makeText(getContext(), "Lỗi tải đơn hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void showVariantSheet(Product product) {
+        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
+                performAddToCart(product, variant, quantity));
+        sheet.show(getChildFragmentManager(), "VariantSelection");
+    }
+
+    private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
+        String userId = FirebaseAuth.getInstance().getUid();
+        if (userId == null) return;
+
+        String productId = product.getId();
+        String variantId = (variant != null) ? variant.getId() : null;
+
+        com.google.firebase.firestore.CollectionReference cartRef =
+                com.example.healthup.firebase.FirestoreManager.getInstance().getFirestore()
+                        .collection("users").document(userId).collection("cart");
+
+        cartRef.whereEqualTo("productId", productId)
+                .whereEqualTo("variantId", variantId)
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!queryDocumentSnapshots.isEmpty()) {
+                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
+                        Long currentQtyLong = doc.getLong("quantity");
+                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
+                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", com.google.firebase.Timestamp.now());
+                    } else {
+                        CartItem newItem = new CartItem(productId, product, quantity, userId);
+                        if (variant != null) {
+                            newItem.setVariantId(variant.getId());
+                            newItem.setVariantName(variant.getName());
+                            newItem.setPrice(variant.getPrice());
+                            newItem.setOriginalPrice(variant.getPrice());
+                        } else {
+                            newItem.setPrice(product.getPrice());
+                            newItem.setOriginalPrice(product.getOriginalPrice());
+                        }
+                        newItem.setUpdatedAt(com.google.firebase.Timestamp.now());
+                        cartRef.add(newItem);
+                    }
+                    Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void setupRecommendList() {
@@ -157,8 +211,16 @@ public class OrderListFragment extends Fragment {
 
                 @Override
                 public void onAddToCart(Product p) {
-                    // Reuse existing logic from HomeFragment if needed, or simple toast for demo
-                    Toast.makeText(getContext(), "Đã thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+                    com.google.firebase.auth.FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    if (user == null) {
+                        Toast.makeText(getContext(), "Vui lòng đăng nhập để thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (p.isHasVariants()) {
+                        showVariantSheet(p);
+                    } else {
+                        performAddToCart(p, null, 1);
+                    }
                 }
 
                 @Override

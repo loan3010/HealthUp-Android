@@ -16,7 +16,9 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:minHeight="56dp"
+            android:paddingTop="30dp"
             android:paddingHorizontal="16dp">
 
 

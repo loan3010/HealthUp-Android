@@ -397,7 +397,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
                         DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
                         Long currentQtyLong = doc.getLong("quantity");
                         long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
-                        doc.getReference().update("quantity", currentQty + quantity);
+                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", com.google.firebase.Timestamp.now());
                     } else {
                         com.example.models.CartItem newItem = new com.example.models.CartItem(
                                 productId, product, quantity, userId);
@@ -410,6 +410,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
                             newItem.setPrice(product.getPrice());
                             newItem.setOriginalPrice(product.getOriginalPrice());
                         }
+                        newItem.setUpdatedAt(com.google.firebase.Timestamp.now());
                         cartRef.add(newItem);
                     }
                     Toast.makeText(getContext(), getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();

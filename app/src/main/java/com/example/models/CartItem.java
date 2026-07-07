@@ -23,6 +23,7 @@ public class CartItem implements Serializable {
     private String userId;
     private String variantId;
     private String variantName;
+    private transient com.google.firebase.Timestamp updatedAt;
 
     public CartItem() {
     }
@@ -100,6 +101,9 @@ public class CartItem implements Serializable {
 
     public String getVariantName() { return variantName; }
     public void setVariantName(String variantName) { this.variantName = variantName; }
+
+    public com.google.firebase.Timestamp getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(com.google.firebase.Timestamp updatedAt) { this.updatedAt = updatedAt; }
 
     public String getVariantLabel() {
         // Ưu tiên hiển thị các thành phần đã chọn lẻ trước để đảm bảo cập nhật tức thì

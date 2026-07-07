@@ -280,6 +280,26 @@ public class ChatRepository {
                 });
     }
 
+    public void deleteConversationHistory(@NonNull String conversationId, @NonNull SimpleCallback callback) {
+        firestore.collection("conversations").document(conversationId)
+                .collection("messages")
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (snapshot.isEmpty()) {
+                        callback.onComplete(true);
+                        return;
+                    }
+                    com.google.firebase.firestore.WriteBatch batch = firestore.batch();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        batch.delete(doc.getReference());
+                    }
+                    batch.commit()
+                            .addOnSuccessListener(unused -> callback.onComplete(true))
+                            .addOnFailureListener(e -> callback.onComplete(false));
+                })
+                .addOnFailureListener(e -> callback.onComplete(false));
+    }
+
     private void updateLastMessage(@NonNull DocumentReference convRef, @Nullable String text) {
         Map<String, Object> data = new HashMap<>();
         data.put("lastMessage", text != null ? text : "");

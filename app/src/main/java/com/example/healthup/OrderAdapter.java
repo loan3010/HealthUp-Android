@@ -348,14 +348,17 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             switch (status) {
                 case "pending":
                     setupButton(binding.btnActionMiddle, "Liên hệ", "outline");
+                    binding.btnActionMiddle.setOnClickListener(v -> showContactOptions(order));
                     setupButton(binding.btnActionRight, "Hủy", "outline_error");
                     binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
                     break;
                 case "confirmed":
                     setupButton(binding.btnActionRight, "Liên hệ", "outline");
+                    binding.btnActionRight.setOnClickListener(v -> showContactOptions(order));
                     break;
                 case "shipping":
                     setupButton(binding.btnActionMiddle, "Liên hệ", "outline");
+                    binding.btnActionMiddle.setOnClickListener(v -> showContactOptions(order));
                     if (!order.isShopConfirmedDelivery()) {
                         setupButton(binding.btnActionRight, "Đã nhận được hàng", "outline_disabled");
                         binding.btnActionRight.setEnabled(false);
@@ -408,6 +411,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         });
                     }
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
+                    binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;
                 case "cancelled":
                     setupButton(binding.btnActionMiddle, "Xem chi tiết đơn hủy", "outline");
@@ -417,6 +421,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         context.startActivity(intent);
                     });
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
+                    binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;
                 case "returned":
                 case "refunded":
@@ -427,8 +432,49 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         context.startActivity(intent);
                     });
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
+                    binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;
             }
+        }
+
+        private void showContactOptions(Order order) {
+            BottomSheetDialog dialog = new BottomSheetDialog(context, R.style.BottomSheetDialogTheme);
+            com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding dialogBinding = 
+                com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding.inflate(LayoutInflater.from(context));
+            dialog.setContentView(dialogBinding.getRoot());
+
+            dialogBinding.btnChat.setOnClickListener(v -> {
+                dialog.dismiss();
+                Intent intent = ChatActivity.buyerIntentForOrder(context, order.getOrderCode(), order.getId());
+                context.startActivity(intent);
+            });
+
+            dialogBinding.btnCall.setOnClickListener(v -> {
+                dialog.dismiss();
+                Intent intent = new Intent(Intent.ACTION_DIAL);
+                intent.setData(android.net.Uri.parse("tel:0769845728"));
+                context.startActivity(intent);
+            });
+
+            dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+            dialog.show();
+        }
+
+        private void performRebuy(Order order) {
+            AlertDialog loading = showLoadingDialog();
+            FirebaseManager.getInstance().rebuyOrder(order.getItems())
+                .addOnSuccessListener(aVoid -> {
+                    loading.dismiss();
+                    Intent intent = new Intent(context, MainActivity.class);
+                    intent.putExtra("navigate_to", "cart_tab");
+                    intent.putExtra("is_rebuy", true); // Đánh dấu đây là luồng mua lại
+                    intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                    context.startActivity(intent);
+                })
+                .addOnFailureListener(e -> {
+                    loading.dismiss();
+                    android.widget.Toast.makeText(context, "Lỗi mua lại: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
+                });
         }
 
         private void setupButton(Button btn, String text, String type) {

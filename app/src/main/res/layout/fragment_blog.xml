@@ -14,22 +14,23 @@
 
         <RelativeLayout
             android:layout_width="match_parent"
-            android:layout_height="56dp"
+            android:layout_height="wrap_content"
+            android:paddingTop="36dp"
             android:paddingHorizontal="16dp">
 
             <ImageButton
                 android:id="@+id/btn_back"
                 android:layout_width="40dp"
-                android:layout_height="40dp"
-                android:layout_centerVertical="true"
+                android:layout_height="56dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_back"
                 app:tint="@color/text_dark" />
 
             <TextView
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_centerInParent="true"
+                android:layout_height="56dp"
+                android:gravity="center"
+                android:layout_centerHorizontal="true"
                 android:text="@string/blog_title"
                 android:textColor="@color/text_dark"
                 android:textSize="18sp"

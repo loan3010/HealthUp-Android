@@ -170,6 +170,14 @@ public class MainActivity extends AppCompatActivity {
             // (sau khi bấm "Xem tất cả"), không cần tạo OrderHistoryFragment cho các case này.
             if ("cart_tab".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_cart);
+                boolean isRebuy = intent.getBooleanExtra("is_rebuy", false);
+                CartFragment fragment = new CartFragment();
+                if (isRebuy) {
+                    Bundle args = new Bundle();
+                    args.putBoolean("is_rebuy_flow", true);
+                    fragment.setArguments(args);
+                }
+                loadFragment(fragment);
                 return;
             } else if ("category_tab".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_category);

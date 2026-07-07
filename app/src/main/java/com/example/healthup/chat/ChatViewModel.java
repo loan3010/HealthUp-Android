@@ -121,30 +121,30 @@ public class ChatViewModel extends ViewModel {
     }
 
     public void dispatchPendingInquiry() {
-        if (!pendingInquiry || !initialized || sellerMode) {
+        if (!pendingInquiry || !initialized || sellerMode || conversationId == null) {
             return;
         }
         pendingInquiry = false;
-        String message = buildInquiryMessage();
-        if (message != null) {
-            sendUserText(message);
-        }
-    }
-
-    @Nullable
-    private String buildInquiryMessage() {
+        
+        // Thay vì để User tự gõ, Bot sẽ chủ động chào và nhắc tới đơn hàng/sản phẩm
         if (pendingProductName != null && !pendingProductName.isEmpty()) {
             String variantPart = (pendingProductVariant != null && !pendingProductVariant.isEmpty())
                     ? " (" + pendingProductVariant + ")" : "";
             String orderPart = (pendingOrderCode != null && !pendingOrderCode.isEmpty())
-                    ? " trong đơn " + pendingOrderCode : "";
-            return "Tôi muốn hỏi về sản phẩm " + pendingProductName + variantPart + orderPart;
+                    ? " thuộc đơn hàng " + pendingOrderCode : "";
+            
+            String botMsg = "Chào bạn! Mình thấy bạn đang cần hỗ trợ về sản phẩm **" 
+                    + pendingProductName + variantPart + "**" + orderPart 
+                    + ". Bạn cần mình tư vấn thêm gì về sản phẩm này không?";
+            addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
+        } else if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
+            String botMsg = "Chào bạn! Mình đã nhận được yêu cầu hỗ trợ cho đơn hàng **" 
+                    + pendingOrderCode + "**. Bạn đang gặp vấn đề gì với đơn hàng này (vận chuyển, thanh toán, đổi trả...) để mình giúp nhé?";
+            addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
         }
-        if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
-            return "Tôi cần hỗ trợ về đơn hàng " + pendingOrderCode;
-        }
-        return null;
+        recompute();
     }
+
 
     public boolean isHumanMode() {
         Conversation c = conversation.getValue();
@@ -181,25 +181,52 @@ public class ChatViewModel extends ViewModel {
 
         // Buyer mode
         this.buyerId = uid;
-        addLocal(botEngine.greeting(), SORT_GREETING);
-        addSuggestionCard();
-        recompute();
-
+        
         if (uid == null) {
+            addLocal(botEngine.greeting(), SORT_GREETING);
+            addSuggestionCard();
+            recompute();
             return;
         }
+
+        // New Session logic: Always clear old messages for buyers upon entry
         chatRepository.fetchUserName(uid, name ->
                 chatRepository.getOrCreateConversation(uid, name, null,
                         new ChatRepository.ConversationIdCallback() {
                             @Override
                             public void onReady(@NonNull String id) {
                                 conversationId = id;
-                                startListening(id);
+                                // Pre-clear local UI state immediately to hide old messages while waiting for delete
+                                localMessages.clear();
+                                remoteMessages.clear();
+                                messages.setValue(new ArrayList<>());
+
+                                // Clear old messages from Firestore for a fresh session
+                                chatRepository.deleteConversationHistory(id, success -> {
+                                    // Reset mode to Bot upon new entry
+                                    chatRepository.setMode(id, Conversation.MODE_BOT, s -> {});
+
+                                    // Reset local items AFTER delete is triggered
+                                    localMessages.clear();
+                                    addLocal(botEngine.greeting(), SORT_GREETING);
+                                    addSuggestionCard();
+                                    
+                                    // Now start fresh listener
+                                    startListening(id);
+                                    
+                                    // If we have order context, send initial inquiry
+                                    dispatchPendingInquiry();
+                                    
+                                    recompute();
+                                });
                             }
 
                             @Override
                             public void onError(@NonNull Exception e) {
-                                // Bot still works locally; seller handoff unavailable.
+                                // Fallback: still show bot greeting even if history clear fails
+                                addLocal(botEngine.greeting(), SORT_GREETING);
+                                addSuggestionCard();
+                                recompute();
                             }
                         }));
     }

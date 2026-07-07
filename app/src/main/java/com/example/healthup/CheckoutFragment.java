@@ -359,6 +359,8 @@ public class CheckoutFragment extends Fragment {
         List<com.example.models.OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : selectedItems) {
             orderItems.add(new com.example.models.OrderItem(
+                    ci.getProductId(),
+                    ci.getVariantId(),
                     ci.getName(),
                     ci.getVariantLabel(),
                     ci.getPrice(),

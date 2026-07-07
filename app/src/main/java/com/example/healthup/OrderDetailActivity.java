@@ -74,29 +74,44 @@ public class OrderDetailActivity extends AppCompatActivity {
 
     private void setupSupportAndContactListeners() {
         binding.rowFAQ.setOnClickListener(v -> {
-            // FAQ thường là Fragment trong MainActivity, nên quay về và điều hướng
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra("navigate_to", "faq");
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
         });
 
-        binding.rowChat.setOnClickListener(v -> openOrderChat());
+        // Cả 3 mục Chat, Phone, Email đều dẫn tới lựa chọn liên hệ nhanh như yêu cầu
+        View.OnClickListener contactClick = v -> {
+            if (currentOrder != null) {
+                showContactOptions(currentOrder);
+            }
+        };
 
-        binding.rowContactPhone.setOnClickListener(v -> {
-            String phone = binding.tvPhone.getText().toString();
+        binding.rowChat.setOnClickListener(contactClick);
+        binding.rowContactPhone.setOnClickListener(contactClick);
+        binding.rowContactEmail.setOnClickListener(contactClick);
+    }
+
+    private void showContactOptions(Order order) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding dialogBinding = 
+            com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
+
+        dialogBinding.btnChat.setOnClickListener(v -> {
+            dialog.dismiss();
+            startActivity(ChatActivity.buyerIntentForOrder(this, order.getOrderCode(), order.getId()));
+        });
+
+        dialogBinding.btnCall.setOnClickListener(v -> {
+            dialog.dismiss();
             Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(android.net.Uri.parse("tel:" + phone));
+            intent.setData(android.net.Uri.parse("tel:0769845728"));
             startActivity(intent);
         });
 
-        binding.rowContactEmail.setOnClickListener(v -> {
-            String email = binding.tvEmail.getText().toString();
-            Intent intent = new Intent(Intent.ACTION_SENDTO);
-            intent.setData(android.net.Uri.parse("mailto:" + email));
-            intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ đơn hàng: " + binding.tvOrderCode.getText().toString());
-            startActivity(Intent.createChooser(intent, "Gửi email cho HealthUp"));
-        });
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void loadOrderFromFirestore(String orderId) {
@@ -213,6 +228,34 @@ public class OrderDetailActivity extends AppCompatActivity {
             }
             Toast.makeText(this, "Lỗi cập nhật: " + errorMsg, Toast.LENGTH_LONG).show();
         });
+    }
+
+    private void performRebuy() {
+        if (currentOrder == null) return;
+        AlertDialog.Builder loadingBuilder = new AlertDialog.Builder(this);
+        DialogLoadingBinding loadingBinding = DialogLoadingBinding.inflate(getLayoutInflater());
+        loadingBuilder.setView(loadingBinding.getRoot());
+        loadingBuilder.setCancelable(false);
+        AlertDialog loadingDialog = loadingBuilder.create();
+        if (loadingDialog.getWindow() != null) {
+            loadingDialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+        loadingDialog.show();
+
+        FirebaseManager.getInstance().rebuyOrder(currentOrder.getItems())
+            .addOnSuccessListener(aVoid -> {
+                loadingDialog.dismiss();
+                Intent intent = new Intent(this, MainActivity.class);
+                intent.putExtra("navigate_to", "cart_tab");
+                intent.putExtra("is_rebuy", true);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                startActivity(intent);
+                finish();
+            })
+            .addOnFailureListener(e -> {
+                loadingDialog.dismiss();
+                Toast.makeText(this, "Lỗi mua lại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            });
     }
 
     private void populateUI(Order order) {
@@ -353,6 +396,7 @@ public class OrderDetailActivity extends AppCompatActivity {
             }
         } else if ("delivered".equals(status)) {
             binding.lnDeliveredActions.setVisibility(View.VISIBLE);
+            binding.btnRebuyDetail.setOnClickListener(v -> performRebuy());
             if (order.isReviewed()) {
                 binding.btnReviewDetail.setText("Xem đánh giá");
                 binding.btnReviewDetail.setOnClickListener(v -> {
@@ -371,6 +415,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         } else if ("cancelled".equals(status)) {
             binding.cvCancelledInfo.setVisibility(View.VISIBLE);
             binding.btnRebuyFull.setVisibility(View.VISIBLE);
+            binding.btnRebuyFull.setOnClickListener(v -> performRebuy());
             if (order.getUpdatedAt() != null) {
                 binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt().toDate()));
             }
@@ -392,9 +437,6 @@ public class OrderDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void openOrderChat() {
-        OrderChatHelper.openOrderChat(this, currentOrder, getDisplayedOrderCode());
-    }
 
     private void openProductChat(OrderItem item) {
         if (item == null) {

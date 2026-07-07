@@ -11,6 +11,7 @@ import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
@@ -145,6 +146,77 @@ public class FirebaseManager {
         updates.put("reviewed", true);
         updates.put("updatedAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
+    }
+
+    public Task<Void> rebuyOrder(List<OrderItem> rebuyItems) {
+        String userId = getCurrentUserId();
+        if (userId == null) return Tasks.forException(new Exception("User not logged in"));
+
+        com.google.firebase.firestore.CollectionReference cartRef = db.collection("users").document(userId).collection("cart");
+
+        return cartRef.get().continueWithTask(task -> {
+            if (!task.isSuccessful()) {
+                if (task.getException() != null) throw task.getException();
+                throw new Exception("Cannot access cart");
+            }
+
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+            List<DocumentSnapshot> existingCartDocs = task.getResult().getDocuments();
+
+            // 1. Bỏ chọn tất cả các sản phẩm đang có trong giỏ
+            for (DocumentSnapshot doc : existingCartDocs) {
+                batch.update(doc.getReference(), "selected", false);
+            }
+
+            // 2. Xử lý các sản phẩm mua lại
+            for (OrderItem item : rebuyItems) {
+                String pId = item.getProductId();
+                String vId = item.getVariantId();
+                String name = item.getName();
+                String variantLabel = item.getVariantLabel();
+
+                // Tìm sản phẩm trùng khớp trong giỏ hàng hiện tại để cập nhật thay vì tạo mới
+                DocumentSnapshot existingDoc = null;
+                for (DocumentSnapshot doc : existingCartDocs) {
+                    String docPId = doc.getString("productId");
+                    String docVId = doc.getString("variantId");
+                    String docName = doc.getString("name");
+                    String docVLabel = doc.getString("variantName");
+
+                    // Khớp theo ID (ưu tiên) hoặc khớp theo Tên + Biến thể (dành cho dữ liệu cũ)
+                    boolean matchId = (pId != null && pId.equals(docPId)) && 
+                                     ((vId == null && docVId == null) || (vId != null && vId.equals(docVId)));
+                    
+                    boolean matchName = (pId == null && name != null && name.equals(docName)) &&
+                                       ((variantLabel == null && docVLabel == null) || (variantLabel != null && variantLabel.equals(docVLabel)));
+
+                    if (matchId || matchName) {
+                        existingDoc = doc;
+                        break;
+                    }
+                }
+
+                com.google.firebase.firestore.DocumentReference docRef = (existingDoc != null) 
+                        ? existingDoc.getReference() 
+                        : cartRef.document(); // Nếu hoàn toàn mới thì tạo ID ngẫu nhiên
+
+                Map<String, Object> cartData = new HashMap<>();
+                if (pId != null) cartData.put("productId", pId);
+                if (vId != null) cartData.put("variantId", vId);
+                cartData.put("name", name);
+                cartData.put("variantName", variantLabel);
+                cartData.put("price", item.getPrice());
+                cartData.put("originalPrice", item.getOriginalPrice() > 0 ? item.getOriginalPrice() : item.getPrice());
+                cartData.put("quantity", item.getQuantity()); // Ghi đè số lượng
+                cartData.put("imageUrl", item.getImageUrl());
+                cartData.put("selected", true); // Chỉ món mua lại mới được tick
+                cartData.put("userId", userId);
+                
+                batch.set(docRef, cartData, com.google.firebase.firestore.SetOptions.merge());
+            }
+
+            return batch.commit();
+        });
     }
 
 
