@@ -21,6 +21,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.auth.SocialAuthHelper;
+import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.GuestCartManager;
+import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UserPhoneLookup;
+import com.example.healthup.util.UserProfileResolver;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
@@ -28,6 +33,8 @@ import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseAuthInvalidUserException;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
@@ -74,11 +81,22 @@ public class LoginActivity extends AppCompatActivity {
         firebaseFirestore = FirebaseFirestore.getInstance();
 
         bindViews();
+        applyPrefillIdentifier();
         setupSocialAuth();
         setupInputBehavior();
         setupActions();
         setupLegalLinks();
         updateLoginButtonState();
+    }
+
+    private void applyPrefillIdentifier() {
+        String prefillPhone = getIntent().getStringExtra(CheckoutIntentHelper.EXTRA_PREFILL_PHONE);
+        if (!android.text.TextUtils.isEmpty(prefillPhone)) {
+            identifierEditText.setText(PhoneNormalizer.normalize(prefillPhone));
+        }
+        if (getIntent().getBooleanExtra(CheckoutIntentHelper.EXTRA_FOCUS_PASSWORD, false)) {
+            passwordEditText.requestFocus();
+        }
     }
 
     private void bindViews() {
@@ -237,12 +255,12 @@ public class LoginActivity extends AppCompatActivity {
         String password = getInputValue(passwordEditText);
 
         if (LoginValidator.isEmailIdentifier(identifier)) {
-            signInWithEmail(identifier, password);
+            signInWithEmail(identifier, password, null);
             return;
         }
 
         if (LoginValidator.isPhoneIdentifier(identifier)) {
-            signInWithPhone(identifier, password);
+            signInWithPhone(PhoneNormalizer.normalize(identifier), password);
             return;
         }
 
@@ -438,33 +456,33 @@ public class LoginActivity extends AppCompatActivity {
 
     private void signInWithPhone(String phone, String password) {
         setLoading(true);
-        firebaseFirestore.collection("users")
-                .whereEqualTo("phone", phone)
-                .limit(1)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (queryDocumentSnapshots.isEmpty()) {
-                        setLoading(false);
-                        showIdentifierError(getString(R.string.login_phone_not_registered));
-                        return;
-                    }
-
-                    String email = queryDocumentSnapshots.getDocuments().get(0).getString("email");
-                    if (email == null || email.trim().isEmpty()) {
-                        setLoading(false);
-                        showPasswordError(getString(R.string.login_credentials_wrong));
-                        return;
-                    }
-
-                    signInWithEmail(email, password);
-                })
+        UserPhoneLookup.queryUsers(phone)
+                .addOnSuccessListener(queryDocumentSnapshots -> handlePhoneLoginResult(queryDocumentSnapshots, password))
                 .addOnFailureListener(e -> {
                     setLoading(false);
                     showPasswordError(getString(R.string.login_failed_generic));
                 });
     }
 
-    private void signInWithEmail(String email, String password) {
+    private void handlePhoneLoginResult(com.google.firebase.firestore.QuerySnapshot queryDocumentSnapshots, String password) {
+        if (queryDocumentSnapshots.isEmpty()) {
+            setLoading(false);
+            showIdentifierError(getString(R.string.login_phone_not_registered));
+            return;
+        }
+
+        String email = queryDocumentSnapshots.getDocuments().get(0).getString("email");
+        if (email == null || email.trim().isEmpty()) {
+            setLoading(false);
+            showPasswordError(getString(R.string.login_credentials_wrong));
+            return;
+        }
+
+        DocumentSnapshot profileDoc = queryDocumentSnapshots.getDocuments().get(0);
+        signInWithEmail(email, password, profileDoc);
+    }
+
+    private void signInWithEmail(String email, String password, DocumentSnapshot profileDoc) {
         setLoading(true);
         firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
@@ -472,6 +490,14 @@ public class LoginActivity extends AppCompatActivity {
                     updateLoginButtonState();
 
                     if (task.isSuccessful()) {
+                        FirebaseUser user = firebaseAuth.getCurrentUser();
+                        if (user != null) {
+                            if (profileDoc != null) {
+                                UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
+                            } else {
+                                ensureProfileFromAuthEmail(user);
+                            }
+                        }
                         Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
                         openMainScreen();
                         return;
@@ -483,6 +509,22 @@ public class LoginActivity extends AppCompatActivity {
                         showPasswordError(getString(R.string.login_credentials_wrong));
                     } else {
                         showPasswordError(getString(R.string.login_failed_generic));
+                    }
+                });
+    }
+
+    private void ensureProfileFromAuthEmail(@NonNull FirebaseUser user) {
+        String phone = UserProfileResolver.extractPhoneFromAuthEmail(user.getEmail());
+        if (phone == null) {
+            return;
+        }
+        UserPhoneLookup.queryUsers(phone)
+                .addOnSuccessListener(snapshot -> {
+                    if (!snapshot.isEmpty()) {
+                        UserProfileResolver.syncProfileAfterLogin(
+                                user.getUid(),
+                                snapshot.getDocuments().get(0)
+                        );
                     }
                 });
     }
@@ -501,8 +543,17 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void openMainScreen() {
-        startActivity(new Intent(LoginActivity.this, MainActivity.class));
-        finish();
+        com.google.firebase.auth.FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user == null) {
+            startActivity(new Intent(LoginActivity.this, MainActivity.class));
+            finish();
+            return;
+        }
+
+        GuestCartManager.getInstance(this).mergeToFirestore(user.getUid(), () -> runOnUiThread(() -> {
+            startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(LoginActivity.this));
+            finish();
+        }));
     }
 
     private abstract static class SimpleTextWatcher implements TextWatcher {

@@ -5,6 +5,7 @@ package com.example.healthup;
 
 import android.content.Intent;
 import android.graphics.Rect;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
@@ -21,6 +22,8 @@ import androidx.fragment.app.Fragment;
 
 
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
+import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
+import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.NotificationPermissionHelper;
 import com.example.models.CartItem;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -33,6 +36,9 @@ import java.util.List;
 
 
 public class MainActivity extends AppCompatActivity {
+
+    /** Bỏ qua một lần load ProductListFragment mặc định khi HomeFragment đã tự navigate. */
+    static boolean skipNextCategoryNavLoad = false;
 
 
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
@@ -79,6 +85,11 @@ public class MainActivity extends AppCompatActivity {
                 updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_category) {
+                if (skipNextCategoryNavLoad) {
+                    skipNextCategoryNavLoad = false;
+                    updateFabVisibility(false);
+                    return true;
+                }
                 loadFragment(new ProductListFragment());
                 updateFabVisibility(false);
                 return true;
@@ -105,7 +116,17 @@ public class MainActivity extends AppCompatActivity {
 
         if (savedInstanceState == null) {
             handleIntent(getIntent());
+            maybeShowWelcomePromo();
         }
+    }
+
+
+    private void maybeShowWelcomePromo() {
+        if (getIntent() != null && getIntent().hasExtra("navigate_to")) {
+            return;
+        }
+        getSupportFragmentManager().executePendingTransactions();
+        WelcomePromoBottomSheet.showIfNeeded(getSupportFragmentManager(), this);
     }
 
 
@@ -182,14 +203,14 @@ public class MainActivity extends AppCompatActivity {
             } else if ("category_tab".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_category);
                 return;
+            } else if ("phone_verification".equals(target)) {
+                navView.setSelectedItemId(R.id.nav_cart);
+                loadFragment(new PhoneVerificationFragment());
+                updateFabVisibility(true);
+                return;
             } else if ("checkout".equals(target)) {
-                // FIX (yêu cầu #2): mở thẳng CheckoutFragment với đúng 1 sản phẩm (kèm phân
-                // loại/số lượng) vừa được chọn ở Popup "Mua ngay" từ trang Chi tiết sản phẩm.
-                // Dùng cùng "khe" args ("selected_items") mà CheckoutFragment vốn đã đọc khi
-                // được mở từ CartFragment, nên không cần sửa gì thêm ở CheckoutFragment.
-                Serializable data = intent.getSerializableExtra("checkout_items");
-                if (data instanceof List) {
-                    List<CartItem> checkoutItems = (List<CartItem>) data;
+                List<CartItem> checkoutItems = readCheckoutItems(intent);
+                if (checkoutItems != null && !checkoutItems.isEmpty()) {
                     CheckoutFragment fragment = new CheckoutFragment();
                     Bundle args = new Bundle();
                     args.putSerializable("selected_items", (Serializable) checkoutItems);
@@ -197,8 +218,6 @@ public class MainActivity extends AppCompatActivity {
                     loadFragment(fragment);
                     updateFabVisibility(false);
                 } else {
-                    // An toàn: nếu vì lý do gì đó dữ liệu bị thiếu, không mở trang Thanh toán
-                    // trống mà quay về Giỏ hàng để người dùng không bị kẹt ở màn hình lỗi.
                     navView.setSelectedItemId(R.id.nav_cart);
                 }
                 return;
@@ -280,5 +299,36 @@ public class MainActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
+    }
+
+    public void showCartTab() {
+        navView.setSelectedItemId(R.id.nav_cart);
+        loadFragment(new CartFragment());
+        updateFabVisibility(true);
+    }
+
+    public void showHomeTab() {
+        navView.setSelectedItemId(R.id.nav_home);
+        loadFragment(new HomeFragment());
+        updateFabVisibility(false);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<CartItem> readCheckoutItems(Intent intent) {
+        if (intent == null) {
+            return null;
+        }
+
+        Serializable data;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            data = intent.getSerializableExtra(CheckoutIntentHelper.EXTRA_CHECKOUT_ITEMS, Serializable.class);
+        } else {
+            data = intent.getSerializableExtra(CheckoutIntentHelper.EXTRA_CHECKOUT_ITEMS);
+        }
+
+        if (data instanceof List) {
+            return (List<CartItem>) data;
+        }
+        return null;
     }
 }

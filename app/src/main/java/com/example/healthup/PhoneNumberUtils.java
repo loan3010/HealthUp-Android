@@ -2,6 +2,8 @@ package com.example.healthup;
 
 import android.text.TextUtils;
 
+import com.example.healthup.util.PhoneNormalizer;
+
 public final class PhoneNumberUtils {
 
     private PhoneNumberUtils() {
@@ -9,16 +11,17 @@ public final class PhoneNumberUtils {
 
     /** Converts local VN phone (0912345678) to E.164 (+84912345678). */
     public static String toE164(String localPhone) {
-        if (TextUtils.isEmpty(localPhone)) {
+        String normalized = PhoneNormalizer.normalize(localPhone);
+        if (TextUtils.isEmpty(normalized)) {
             return "";
         }
-        if (localPhone.startsWith("+")) {
-            return localPhone;
+        if (normalized.startsWith("+")) {
+            return normalized;
         }
-        if (localPhone.startsWith("0") && localPhone.length() == 10) {
-            return "+84" + localPhone.substring(1);
+        if (normalized.startsWith("0") && normalized.length() == 10) {
+            return "+84" + normalized.substring(1);
         }
-        return "+84" + localPhone;
+        return "+84" + normalized;
     }
 
     public static String maskPhone(String localPhone) {

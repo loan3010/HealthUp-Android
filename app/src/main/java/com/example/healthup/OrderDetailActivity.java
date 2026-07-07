@@ -25,6 +25,7 @@ import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnReason;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -32,6 +33,7 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class OrderDetailActivity extends AppCompatActivity {
 
@@ -147,12 +149,38 @@ public class OrderDetailActivity extends AppCompatActivity {
                         Order order = doc.toObject(Order.class);
                         if (order != null) {
                             order.setId(doc.getId());
+                            normalizeOrderItems(doc, order);
                             setupOrder(order);
                         }
                     }
                 })
                 .addOnFailureListener(e ->
                         Toast.makeText(this, "Không thể tải đơn hàng", Toast.LENGTH_SHORT).show());
+    }
+
+    private void normalizeOrderItems(DocumentSnapshot doc, Order order) {
+        if (order.getItems() == null) return;
+        Object rawItems = doc.get("items");
+        if (!(rawItems instanceof List)) return;
+        List<?> rawList = (List<?>) rawItems;
+        List<OrderItem> items = order.getItems();
+        for (int i = 0; i < items.size() && i < rawList.size(); i++) {
+            OrderItem item = items.get(i);
+            if (item.getVariantLabel() != null && !item.getVariantLabel().trim().isEmpty()) {
+                continue;
+            }
+            if (rawList.get(i) instanceof Map) {
+                Map<?, ?> map = (Map<?, ?>) rawList.get(i);
+                Object variantName = map.get("variantName");
+                if (variantName == null) variantName = map.get("variantLabel");
+                if (variantName != null) {
+                    String label = String.valueOf(variantName).trim();
+                    if (!label.isEmpty() && !"null".equalsIgnoreCase(label)) {
+                        item.setVariantLabel(label);
+                    }
+                }
+            }
+        }
     }
 
     private void setupOrder(Order order) {

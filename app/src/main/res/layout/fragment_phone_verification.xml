@@ -9,11 +9,15 @@
     <LinearLayout
         android:id="@+id/header"
         android:layout_width="0dp"
-        android:layout_height="53dp"
+        android:layout_height="wrap_content"
+        android:minHeight="53dp"
+        android:paddingTop="30dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
+        android:background="@color/bg_cream"
         android:paddingStart="8dp"
         android:paddingEnd="16dp"
+        android:elevation="2dp"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -24,12 +28,14 @@
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_arrow_back"
+            android:contentDescription="@string/phone_verification_back_to_cart"
             app:tint="@color/text_dark" />
 
         <TextView
             android:id="@+id/tvTitle"
-            android:layout_width="match_parent"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:gravity="center"
             android:layout_marginEnd="40dp"
             android:text="Xác minh số điện thoại"
@@ -99,7 +105,9 @@
                 android:textColorHint="@color/text_gray_light"
                 android:textSize="14sp"
                 android:textColor="@color/text_dark"
-                android:inputType="phone"
+                android:inputType="text"
+                android:digits="0123456789"
+                android:maxLength="10"
                 android:layout_marginStart="8dp" />
         </LinearLayout>
 
@@ -165,6 +173,17 @@
             android:textSize="13sp"
             android:textColor="@color/text_gray"
             android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvBackToShopping"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:layout_marginTop="12dp"
+            android:padding="4dp"
+            android:text="@string/phone_verification_back_to_cart"
+            android:textSize="13sp"
+            android:textColor="@color/green_primary" />
 
         <View
             android:layout_width="0dp"

@@ -1,6 +1,8 @@
 package com.example.healthup;
 
+import android.os.Build;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,14 +26,21 @@ import com.example.models.CartItem;
 import com.example.models.Voucher;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class CheckoutFragment extends Fragment {
 
@@ -94,13 +103,21 @@ public class CheckoutFragment extends Fragment {
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_checkout, container, false);
 
-        Serializable data = getArguments() != null ? getArguments().getSerializable("selected_items") : null;
-        if (data instanceof List) {
-            selectedItems = (List<CartItem>) data;
+        if (getArguments() != null) {
+            Serializable data;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                data = getArguments().getSerializable("selected_items", Serializable.class);
+            } else {
+                data = getArguments().getSerializable("selected_items");
+            }
+            if (data instanceof List) {
+                selectedItems = (List<CartItem>) data;
+            }
         }
 
         bindViews(view);
         setupListeners();
+        hydrateSelectedItemImages();
         renderProductList();
         renderVouchers();
         loadDefaultAddress();
@@ -255,6 +272,21 @@ public class CheckoutFragment extends Fragment {
         }
     }
 
+    private void hydrateSelectedItemImages() {
+        for (CartItem item : selectedItems) {
+            hydrateImageUrl(item);
+        }
+    }
+
+    private void hydrateImageUrl(CartItem item) {
+        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+            return;
+        }
+        if (item.getProduct() != null && item.getProduct().getImageUrl() != null) {
+            item.setImageUrl(item.getProduct().getImageUrl());
+        }
+    }
+
     private void renderProductList() {
         rvCheckoutProducts.setAdapter(new CheckoutProductAdapter(selectedItems));
     }
@@ -331,6 +363,7 @@ public class CheckoutFragment extends Fragment {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
+            com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
             requireActivity().getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragment_container, new PhoneVerificationFragment())
                     .addToBackStack(null)
@@ -392,32 +425,103 @@ public class CheckoutFragment extends Fragment {
         order.setStatus(com.example.models.Order.STATUS_PENDING);
         order.setCreatedAt(com.google.firebase.Timestamp.now());
 
-        WriteBatch batch = db.batch();
-
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
         order.setId(orderRef.getId());
-        batch.set(orderRef, order);
 
-        com.google.firebase.firestore.DocumentReference userRef = db.collection("users").document(userId);
-        batch.update(userRef, "spentAmount", com.google.firebase.firestore.FieldValue.increment(finalAmount));
+        db.collection("users").document(userId).collection("cart")
+                .get()
+                .addOnSuccessListener(cartSnapshot -> {
+                    if (!isAdded()) {
+                        return;
+                    }
 
-        for (CartItem ci : selectedItems) {
-            if (ci.getId() != null) {
-                batch.delete(db.collection("users").document(userId).collection("cart").document(ci.getId()));
+                    db.collection("users").document(userId).get()
+                            .addOnSuccessListener(userDoc -> {
+                                if (!isAdded()) return;
+
+                                WriteBatch batch = db.batch();
+                                batch.set(orderRef, order);
+
+                                Map<String, Object> userUpdates = new HashMap<>();
+                                userUpdates.put("spentAmount",
+                                        com.google.firebase.firestore.FieldValue.increment(finalAmount));
+
+                                long currentSpent = readSpentAmount(userDoc);
+                                if (currentSpent + (long) finalAmount >= 5_000_000L) {
+                                    userUpdates.put("tier", "VIP");
+                                }
+
+                                batch.set(
+                                        db.collection("users").document(userId),
+                                        userUpdates,
+                                        SetOptions.merge()
+                                );
+
+                                for (CartItem ci : selectedItems) {
+                                    DocumentReference cartDocRef = resolveCartDocument(cartSnapshot, ci);
+                                    if (cartDocRef != null) {
+                                        batch.delete(cartDocRef);
+                                    }
+                                }
+
+                                batch.commit().addOnSuccessListener(aVoid -> {
+                                    if (isAdded()) {
+                                        showSuccessDialog();
+                                    }
+                                }).addOnFailureListener(e -> {
+                                    if (isAdded()) {
+                                        btnPlaceOrder.setEnabled(true);
+                                        btnPlaceOrder.setText("Đặt hàng");
+                                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            })
+                            .addOnFailureListener(e -> {
+                                if (isAdded()) {
+                                    btnPlaceOrder.setEnabled(true);
+                                    btnPlaceOrder.setText("Đặt hàng");
+                                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (isAdded()) {
+                        btnPlaceOrder.setEnabled(true);
+                        btnPlaceOrder.setText("Đặt hàng");
+                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+    private long readSpentAmount(DocumentSnapshot document) {
+        if (document == null || !document.exists()) return 0;
+        Long spentLong = document.getLong("spentAmount");
+        if (spentLong != null) return spentLong;
+        Double spentDouble = document.getDouble("spentAmount");
+        return spentDouble != null ? spentDouble.longValue() : 0;
+    }
+
+    private DocumentReference resolveCartDocument(QuerySnapshot cartSnapshot, CartItem item) {
+        if (cartSnapshot == null || item == null) {
+            return null;
+        }
+
+        for (QueryDocumentSnapshot doc : cartSnapshot) {
+            if (TextUtils.equals(item.getProductId(), doc.getString("productId"))
+                    && TextUtils.equals(item.getVariantId(), doc.getString("variantId"))) {
+                return doc.getReference();
             }
         }
 
-        batch.commit().addOnSuccessListener(aVoid -> {
-            if (isAdded()) {
-                showSuccessDialog();
+        if (!TextUtils.isEmpty(item.getId())) {
+            for (QueryDocumentSnapshot doc : cartSnapshot) {
+                if (TextUtils.equals(item.getId(), doc.getId())) {
+                    return doc.getReference();
+                }
             }
-        }).addOnFailureListener(e -> {
-            if (isAdded()) {
-                btnPlaceOrder.setEnabled(true);
-                btnPlaceOrder.setText("Đặt hàng");
-                Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        });
+        }
+
+        return null;
     }
 
     private void showSuccessDialog() {

@@ -1,10 +1,12 @@
 package com.example.models;
 
+import androidx.annotation.NonNull;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.PropertyName;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -17,6 +19,8 @@ public class Product implements Serializable {
     private double oldPrice;
     private double originalPrice;
     private List<String> images;
+    private String image;
+    private String imageUrl;
     
     @PropertyName("cat")
     private Object cat; // Can be String or List<String> from Firestore
@@ -55,6 +59,7 @@ public class Product implements Serializable {
 
     private boolean hasVariants;
     private List<ProductVariant> variants;
+    private transient List<ProductVariant> resolvedVariantsCache;
 
     public Product() {
         // Required for Firestore
@@ -173,8 +178,7 @@ public class Product implements Serializable {
     public void setReviews(Object reviews) { this.reviews = reviews; }
 
     public List<Object> getWeights() {
-        if (weights instanceof List) return (List<Object>) weights;
-        return new ArrayList<>();
+        return toObjectList(weights);
     }
     public void setWeights(Object weights) { this.weights = weights; }
 
@@ -193,6 +197,12 @@ public class Product implements Serializable {
     public String getImageUrl() {
         if (images != null && !images.isEmpty()) {
             return images.get(0);
+        }
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            return imageUrl;
+        }
+        if (image != null && !image.isEmpty()) {
+            return image;
         }
         return null;
     }
@@ -257,15 +267,41 @@ public class Product implements Serializable {
     public List<ProductVariant> getVariants() { return variants; }
     public void setVariants(List<ProductVariant> variants) { this.variants = variants; }
 
-    /** Variants for UI: prefers `variants`, falls back to legacy weights/flavors/packagingTypes. */
+    /** Variants for UI: prefers `variants`, merges pricing from `weights`, falls back to legacy options. */
     public List<ProductVariant> getResolvableVariants() {
-        List<ProductVariant> resolved = normalizeVariants(variants);
-        if (!resolved.isEmpty()) return resolved;
-        return buildVariantsFromLegacyOptions();
+        if (resolvedVariantsCache != null) return resolvedVariantsCache;
+        List<ProductVariant> resolved;
+        if (variants != null && !variants.isEmpty()) {
+            resolved = new ArrayList<>(variants);
+            List<ProductVariant> fromLegacy = buildVariantsFromLegacyOptions();
+            if (!fromLegacy.isEmpty()) {
+                mergeVariantPricing(resolved, fromLegacy);
+            }
+        } else {
+            resolved = buildVariantsFromLegacyOptions();
+        }
+        resolvedVariantsCache = normalizeVariants(resolved);
+        return resolvedVariantsCache;
     }
 
     public boolean hasResolvableVariants() {
         return !getResolvableVariants().isEmpty();
+    }
+
+    /** Finds a variant by display name (e.g. "100g", "200g"). */
+    public ProductVariant findVariantByName(String name) {
+        if (name == null || name.isEmpty()) return null;
+        for (ProductVariant variant : getResolvableVariants()) {
+            if (name.equals(variant.getName())) return variant;
+        }
+        return null;
+    }
+
+    /** Price for a weight/option label; falls back to base product price. */
+    public double getPriceForOption(String optionLabel) {
+        ProductVariant variant = findVariantByName(optionLabel);
+        if (variant != null && variant.getPrice() > 0) return variant.getPrice();
+        return getPrice();
     }
 
     public static Product fromDocument(DocumentSnapshot doc) {
@@ -273,20 +309,104 @@ public class Product implements Serializable {
         Product p = doc.toObject(Product.class);
         if (p == null) return null;
         p.setId(doc.getId());
-        p.variants = parseVariantsField(doc.get("variants"), p);
+        p.resolvedVariantsCache = null;
+        List<ProductVariant> fromVariants = parseVariantsField(doc.get("variants"), p);
+        List<ProductVariant> fromWeights = parseVariantsField(doc.get("weights"), p);
+        p.variants = mergeVariantLists(fromVariants, fromWeights);
+        if (p.variants.isEmpty()) {
+            p.variants = p.buildVariantsFromLegacyOptions();
+        }
         if (!p.variants.isEmpty()) {
             p.hasVariants = true;
         }
         return p;
     }
 
+    private static List<ProductVariant> mergeVariantLists(List<ProductVariant> primary, List<ProductVariant> secondary) {
+        if (primary.isEmpty()) return new ArrayList<>(secondary);
+        if (secondary.isEmpty()) return new ArrayList<>(primary);
+        List<ProductVariant> merged = new ArrayList<>(primary);
+        mergeVariantPricing(merged, secondary);
+        return merged;
+    }
+
+    /** Applies per-variant price/stock from weights when the variants list only has labels. */
+    private static void mergeVariantPricing(List<ProductVariant> target, List<ProductVariant> pricingSource) {
+        Map<String, ProductVariant> byName = new HashMap<>();
+        for (ProductVariant source : pricingSource) {
+            if (source.getName() != null) byName.put(source.getName(), source);
+        }
+        for (ProductVariant variant : target) {
+            ProductVariant priced = byName.get(variant.getName());
+            if (priced == null) continue;
+            if (priced.getPrice() > 0) variant.setPrice(priced.getPrice());
+            variant.setStock(priced.getStock());
+        }
+    }
+
     private static List<ProductVariant> parseVariantsField(Object raw, Product parent) {
         List<ProductVariant> result = new ArrayList<>();
         if (raw == null) return result;
+        if (raw instanceof Map) {
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) raw).entrySet()) {
+                ProductVariant variant = toVariantWithMapKey(entry.getKey(), entry.getValue(), parent, result.size());
+                if (variant != null && !containsVariantName(result, variant.getName())) {
+                    result.add(variant);
+                }
+            }
+            return result;
+        }
+        for (Object item : toObjectList(raw)) {
+            ProductVariant variant = toVariant(item, parent, result.size());
+            if (variant != null && !containsVariantName(result, variant.getName())) {
+                result.add(variant);
+            }
+        }
+        return result;
+    }
+
+    private static ProductVariant toVariantWithMapKey(Object key, Object value, Product parent, int index) {
+        ProductVariant variant = toVariant(value, parent, index);
+        if (variant != null) {
+            if ((variant.getName() == null || variant.getName().isEmpty()) && key != null) {
+                variant.setName(String.valueOf(key).trim());
+            }
+            return variant;
+        }
+        if (key == null) return null;
+        String name = String.valueOf(key).trim();
+        if (name.isEmpty()) return null;
+        ProductVariant keyed = new ProductVariant();
+        keyed.setId("variant_" + index);
+        keyed.setName(name);
+        if (value instanceof Number) {
+            keyed.setPrice(((Number) value).doubleValue());
+            keyed.setStock(parent.getStockCount());
+            return keyed;
+        }
+        if (value instanceof String) {
+            try {
+                keyed.setPrice(Double.parseDouble(((String) value).trim()));
+                keyed.setStock(parent.getStockCount());
+                return keyed;
+            } catch (NumberFormatException ignored) {
+                keyed.setPrice(parent.getPrice());
+                keyed.setStock(parent.getStockCount());
+                return keyed;
+            }
+        }
+        return null;
+    }
+
+    private static List<Object> toObjectList(Object raw) {
+        List<Object> result = new ArrayList<>();
         if (raw instanceof List) {
             for (Object item : (List<?>) raw) {
-                ProductVariant variant = toVariant(item, parent, result.size());
-                if (variant != null) result.add(variant);
+                if (item != null) result.add(item);
+            }
+        } else if (raw instanceof Map) {
+            for (Object item : ((Map<?, ?>) raw).values()) {
+                if (item != null) result.add(item);
             }
         }
         return result;
@@ -306,8 +426,12 @@ public class Product implements Serializable {
             v.setId(firstString(map, "id", "variantId"));
             if (v.getId() == null) v.setId("variant_" + index);
             v.setName(name);
-            v.setPrice(firstDouble(map, "price", parent.getPrice()));
+            v.setPrice(firstDouble(map, parent.getPrice(), "price", "salePrice", "variantPrice", "amount"));
             v.setStock(firstInt(map, "stock", "stockCount", parent.getStockCount()));
+            Object outOfStock = map.get("outOfStock");
+            if (outOfStock instanceof Boolean && (Boolean) outOfStock) {
+                v.setStock(0);
+            }
             return v;
         }
         if (item instanceof String) {
@@ -339,29 +463,43 @@ public class Product implements Serializable {
     }
 
     private List<ProductVariant> buildVariantsFromLegacyOptions() {
-        List<String> options = new ArrayList<>();
-        appendOptionLabels(options, getWeights(), null);
-        if (options.isEmpty()) appendOptionLabels(options, getFlavors(), null);
-        if (options.isEmpty() && packagingTypes != null) {
-            appendOptionLabels(options, packagingTypes, null);
-        }
-        List<ProductVariant> result = new ArrayList<>();
-        for (int i = 0; i < options.size(); i++) {
-            ProductVariant v = new ProductVariant();
-            v.setId("legacy_" + i);
-            v.setName(options.get(i));
-            v.setPrice(getPrice());
-            v.setStock(getStockCount());
-            result.add(v);
+        List<ProductVariant> result = parseVariantsField(weights, this);
+        if (result.isEmpty()) result = parseVariantsField(flavors, this);
+        if (result.isEmpty()) result = parseVariantsField(packagingTypes, this);
+        for (int i = 0; i < result.size(); i++) {
+            ProductVariant variant = result.get(i);
+            if (variant.getId() == null || variant.getId().isEmpty()) {
+                variant.setId("legacy_" + i);
+            }
         }
         return result;
+    }
+
+    private static boolean containsVariantName(List<ProductVariant> variants, String name) {
+        if (name == null || name.isEmpty()) return true;
+        for (ProductVariant variant : variants) {
+            if (name.equals(variant.getName())) return true;
+        }
+        return false;
+    }
+
+    /** Extracts a display label from a Firestore option entry (String or Map). */
+    @NonNull
+    public static String extractOptionLabel(Object item) {
+        if (item instanceof Map) {
+            String label = firstString((Map<?, ?>) item, "label", "name", "title", "option");
+            return label != null ? label : "";
+        }
+        if (item == null) return "";
+        String label = String.valueOf(item).trim();
+        return "null".equalsIgnoreCase(label) ? "" : label;
     }
 
     private static void appendOptionLabels(List<String> target, List<Object> source, String prefix) {
         if (source == null) return;
         for (Object item : source) {
-            String label = String.valueOf(item).trim();
-            if (label.isEmpty() || "null".equalsIgnoreCase(label)) continue;
+            String label = extractOptionLabel(item);
+            if (label.isEmpty()) continue;
             if (prefix != null && !label.isEmpty()) label = prefix + label;
             if (!target.contains(label)) target.add(label);
         }
@@ -378,11 +516,13 @@ public class Product implements Serializable {
         return null;
     }
 
-    private static double firstDouble(Map<?, ?> map, String key, double fallback) {
-        Object value = map.get(key);
-        if (value instanceof Number) return ((Number) value).doubleValue();
-        if (value instanceof String) {
-            try { return Double.parseDouble((String) value); } catch (NumberFormatException ignored) {}
+    private static double firstDouble(Map<?, ?> map, double fallback, String... keys) {
+        for (String key : keys) {
+            Object value = map.get(key);
+            if (value instanceof Number) return ((Number) value).doubleValue();
+            if (value instanceof String) {
+                try { return Double.parseDouble(((String) value).trim()); } catch (NumberFormatException ignored) {}
+            }
         }
         return fallback;
     }

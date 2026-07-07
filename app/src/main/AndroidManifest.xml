@@ -94,7 +94,9 @@
         <activity android:name="com.example.healthup.BlogDetailActivity" />
 
 
-        <activity android:name="com.example.healthup.AccountInfoActivity" />
+        <activity
+            android:name="com.example.healthup.AccountInfoActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.PaymentInfoActivity" />
         <activity android:name="com.example.healthup.ChangeUsernameActivity" />
         <activity android:name="com.example.healthup.ChangePasswordActivity" />

@@ -439,6 +439,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         if (getActivity() instanceof MainActivity) {
             MainActivity mainActivity = (MainActivity) getActivity();
             BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
+            MainActivity.skipNextCategoryNavLoad = true;
             navView.setSelectedItemId(R.id.nav_category);
 
             ProductListFragment fragment = new ProductListFragment();
@@ -462,55 +463,13 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     @Override
     public void onAddToCart(Product product) {
-        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getContext(), getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
-            return;
-        }
         showVariantSheet(product);
     }
 
     private void showVariantSheet(Product product) {
         VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
-                performAddToCart(product, variant, quantity));
+                com.example.healthup.util.CartHelper.addToCart(requireContext(), product, variant, quantity));
         sheet.show(getChildFragmentManager(), "VariantSelection");
-    }
-
-    private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
-        String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
-        String productId = product.getId();
-        String variantId = (variant != null) ? variant.getId() : null;
-
-        com.google.firebase.firestore.CollectionReference cartRef =
-                FirestoreManager.getInstance().getFirestore()
-                        .collection("users").document(userId).collection("cart");
-
-        cartRef.whereEqualTo("productId", productId)
-                .whereEqualTo("variantId", variantId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        Long currentQtyLong = doc.getLong("quantity");
-                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
-                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", com.google.firebase.Timestamp.now());
-                    } else {
-                        com.example.models.CartItem newItem = new com.example.models.CartItem(
-                                productId, product, quantity, userId);
-                        if (variant != null) {
-                            newItem.setVariantId(variant.getId());
-                            newItem.setVariantName(variant.getName());
-                            newItem.setPrice(variant.getPrice());
-                            newItem.setOriginalPrice(variant.getPrice());
-                        } else {
-                            newItem.setPrice(product.getPrice());
-                            newItem.setOriginalPrice(product.getOriginalPrice());
-                        }
-                        newItem.setUpdatedAt(com.google.firebase.Timestamp.now());
-                        cartRef.add(newItem);
-                    }
-                    Toast.makeText(getContext(), getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
-                });
     }
 
     @Override

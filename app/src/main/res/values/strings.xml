@@ -64,6 +64,10 @@
     <string name="register_error_network">Không thể kết nối máy chủ</string>
     <string name="register_error_timeout">Kết nối quá lâu. Vui lòng thử lại.</string>
 
+    <string name="username_required_error">Vui lòng nhập tên tài khoản</string>
+    <string name="username_invalid_format_error">Tên tài khoản chỉ được chứa chữ cái và số (3–30 ký tự)</string>
+    <string name="username_taken_error">Tên tài khoản đã tồn tại. Vui lòng đổi tên tài khoản khác.</string>
+
     <string name="otp_back">← Quay lại</string>
     <string name="otp_title">Xác minh OTP</string>
     <string name="otp_subtitle">Mã xác minh đã gửi đến %1$s</string>
@@ -224,7 +228,7 @@
     <string name="nav_categories">Danh mục</string>
     <string name="nav_cart">Giỏ hàng</string>
     <string name="nav_notifications">Thông báo</string>
-    <string name="notifications_empty">Chưa có thông báo nào</string>
+    <string name="notifications_empty">Chưa có thông báo</string>
     <string name="notifications_empty_title">Không có thông báo</string>
     <string name="notifications_login_required">Đăng nhập để xem thông báo</string>
     <string name="notifications_load_error">Không thể tải thông báo</string>
@@ -252,4 +256,17 @@
     <string name="no_reviews">Chưa có đánh giá nào cho sản phẩm này.</string>
     <string name="filter_apply_count">Áp dụng (%1$d)</string>
     <string name="filter_apply">Áp dụng</string>
+
+    <string name="welcome_promo_title">Đăng nhập để nhận ưu đãi</string>
+    <string name="welcome_promo_message">Đăng nhập hoặc đăng ký để nhận khuyến mãi, tích điểm thành viên và đồng bộ giỏ hàng trên mọi thiết bị.</string>
+    <string name="welcome_promo_login">Đăng nhập / Đăng ký</string>
+    <string name="welcome_promo_explore">Khám phá thêm</string>
+    <string name="welcome_promo_banner_desc">Banner khuyến mãi</string>
+    <string name="welcome_promo_logo_desc">Logo HealthUp</string>
+    <string name="welcome_promo_close_desc">Đóng</string>
+    <string name="guest_cart_sync_banner">Đăng nhập để đồng bộ giỏ hàng</string>
+    <string name="phone_verification_login">Đăng nhập ngay</string>
+    <string name="phone_verification_register">Đăng ký ngay</string>
+    <string name="phone_verification_back_to_cart">Quay lại giỏ hàng</string>
+    <string name="phone_verification_continue_shopping">Tiếp tục mua sắm</string>
 </resources>

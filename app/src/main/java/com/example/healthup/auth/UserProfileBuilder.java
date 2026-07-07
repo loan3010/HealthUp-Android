@@ -18,7 +18,8 @@ public final class UserProfileBuilder {
             String fullName,
             String phone,
             String authEmail,
-            String displayEmail
+            String displayEmail,
+            String username
     ) {
         Map<String, Object> userData = new HashMap<>();
         userData.put("fullName", fullName);
@@ -27,8 +28,12 @@ public final class UserProfileBuilder {
         userData.put("phoneVerified", true);
         userData.put("role", "buyer");
         userData.put("authProvider", AUTH_PROVIDER_PASSWORD);
+        userData.put("spentAmount", 0d);
         if (!TextUtils.isEmpty(displayEmail)) {
             userData.put("displayEmail", displayEmail);
+        }
+        if (!TextUtils.isEmpty(username)) {
+            userData.put("username", username);
         }
         return userData;
     }
@@ -38,7 +43,8 @@ public final class UserProfileBuilder {
             String phone,
             String authEmail,
             String displayEmail,
-            String authProvider
+            String authProvider,
+            String username
     ) {
         Map<String, Object> userData = new HashMap<>();
         userData.put("fullName", fullName);
@@ -47,8 +53,12 @@ public final class UserProfileBuilder {
         userData.put("phoneVerified", true);
         userData.put("role", "buyer");
         userData.put("authProvider", authProvider);
+        userData.put("spentAmount", 0d);
         if (!TextUtils.isEmpty(displayEmail)) {
             userData.put("displayEmail", displayEmail);
+        }
+        if (!TextUtils.isEmpty(username)) {
+            userData.put("username", username);
         }
         return userData;
     }

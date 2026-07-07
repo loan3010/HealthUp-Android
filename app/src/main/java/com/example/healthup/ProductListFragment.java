@@ -48,6 +48,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     private ExtendedFloatingActionButton fabFilter;
     private ChipGroup chipGroupCategories;
     private View layoutEmpty;
+    private android.widget.ProgressBar progressBar;
 
 
 
@@ -98,6 +99,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         fabFilter = view.findViewById(R.id.fab_filter);
         chipGroupCategories = view.findViewById(R.id.chip_group_categories);
         layoutEmpty = view.findViewById(R.id.layout_empty);
+        progressBar = view.findViewById(R.id.progressBar);
 
 
 
@@ -225,6 +227,10 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
 
     private void fetchProducts() {
+        if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
+        if (layoutEmpty != null) layoutEmpty.setVisibility(View.GONE);
+        rvProducts.setVisibility(View.GONE);
+
         Query query = FirestoreManager.getInstance().getFilteredProductsQuery(selectedCategory);
 
 
@@ -241,10 +247,12 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             productList.addAll(result);
             productAdapter.updateData(new ArrayList<>(productList));
             applyWishlistState();
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
             updateEmptyState();
         }).addOnFailureListener(e -> {
             Log.e("ProductList", "Error fetching products: " + e.getMessage());
             Toast.makeText(getContext(), "Lỗi tải sản phẩm: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            if (progressBar != null) progressBar.setVisibility(View.GONE);
             updateEmptyState();
         });
 
@@ -362,59 +370,14 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại, bất kể có phân loại hay không.
     @Override
     public void onAddToCart(Product product) {
-        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            Toast.makeText(getContext(), getString(R.string.login_required_cart), Toast.LENGTH_SHORT).show();
-            return;
-        }
         showVariantSheet(product);
     }
 
 
     private void showVariantSheet(Product product) {
         VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
-                performAddToCart(product, variant, quantity));
+                com.example.healthup.util.CartHelper.addToCart(requireContext(), product, variant, quantity));
         sheet.show(getChildFragmentManager(), "VariantSelection");
-    }
-
-
-    private void performAddToCart(Product product, Product.ProductVariant variant, int quantity) {
-        String userId = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser().getUid();
-        String productId = product.getId();
-        String variantId = (variant != null) ? variant.getId() : null;
-
-
-        com.google.firebase.firestore.CollectionReference cartRef =
-                FirestoreManager.getInstance().getFirestore()
-                        .collection("users").document(userId).collection("cart");
-
-
-        cartRef.whereEqualTo("productId", productId)
-                .whereEqualTo("variantId", variantId)
-                .get()
-                .addOnSuccessListener(queryDocumentSnapshots -> {
-                    if (!queryDocumentSnapshots.isEmpty()) {
-                        DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
-                        Long currentQtyLong = doc.getLong("quantity");
-                        long currentQty = (currentQtyLong != null) ? currentQtyLong : 0;
-                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", com.google.firebase.Timestamp.now());
-                    } else {
-                        com.example.models.CartItem newItem = new com.example.models.CartItem(
-                                productId, product, quantity, userId);
-                        if (variant != null) {
-                            newItem.setVariantId(variant.getId());
-                            newItem.setVariantName(variant.getName());
-                            newItem.setPrice(variant.getPrice());
-                            newItem.setOriginalPrice(variant.getPrice());
-                        } else {
-                            newItem.setPrice(product.getPrice());
-                            newItem.setOriginalPrice(product.getOriginalPrice());
-                        }
-                        newItem.setUpdatedAt(com.google.firebase.Timestamp.now());
-                        cartRef.add(newItem);
-                    }
-                    Toast.makeText(getContext(), getString(R.string.added_to_cart), Toast.LENGTH_SHORT).show();
-                });
     }
 
 

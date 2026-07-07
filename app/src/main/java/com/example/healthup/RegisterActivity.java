@@ -20,6 +20,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.auth.SocialAuthHelper;
+import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UserPhoneLookup;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
@@ -30,6 +33,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RegisterActivity extends AppCompatActivity {
+
+    public static final String EXTRA_PHONE = "extra_phone";
 
     private static final int BORDER_ANIMATION_MS = 200;
 
@@ -78,10 +83,21 @@ public class RegisterActivity extends AppCompatActivity {
         firebaseFirestore = FirebaseFirestore.getInstance();
 
         bindViews();
+        applyPrefillPhone();
         setupSocialAuth();
         setupInputBehavior();
         setupActions();
         updateRegisterButtonState();
+    }
+
+    private void applyPrefillPhone() {
+        String prefillPhone = getIntent().getStringExtra(EXTRA_PHONE);
+        if (TextUtils.isEmpty(prefillPhone)) {
+            prefillPhone = getIntent().getStringExtra(CheckoutIntentHelper.EXTRA_PREFILL_PHONE);
+        }
+        if (!TextUtils.isEmpty(prefillPhone)) {
+            fields.get(FieldType.PHONE).editText.setText(PhoneNormalizer.normalize(prefillPhone));
+        }
     }
 
     private void bindViews() {
@@ -225,7 +241,7 @@ public class RegisterActivity extends AppCompatActivity {
         }
 
         String fullName = getFieldValue(FieldType.FULL_NAME);
-        String phone = getFieldValue(FieldType.PHONE);
+        String phone = PhoneNormalizer.normalize(getFieldValue(FieldType.PHONE));
         String email = getFieldValue(FieldType.EMAIL);
         String password = getFieldValue(FieldType.PASSWORD);
 
@@ -234,10 +250,7 @@ public class RegisterActivity extends AppCompatActivity {
     }
 
     private void checkPhoneAndSendOtp(String fullName, String phone, String email, String password) {
-        firebaseFirestore.collection("users")
-                .whereEqualTo("phone", phone)
-                .limit(1)
-                .get()
+        UserPhoneLookup.queryUsers(phone)
                 .addOnSuccessListener(phoneQuery -> {
                     if (!phoneQuery.isEmpty()) {
                         setLoading(false);
@@ -280,6 +293,8 @@ public class RegisterActivity extends AppCompatActivity {
         intent.putExtra(OTPActivity.EXTRA_PHONE, phone);
         intent.putExtra(OTPActivity.EXTRA_EMAIL, email == null ? "" : email);
         intent.putExtra(OTPActivity.EXTRA_PASSWORD, password);
+        intent.putExtra(CheckoutIntentHelper.EXTRA_RETURN_TO_CHECKOUT,
+                CheckoutIntentHelper.shouldReturnToCheckout(getIntent()));
         startActivity(intent);
     }
 

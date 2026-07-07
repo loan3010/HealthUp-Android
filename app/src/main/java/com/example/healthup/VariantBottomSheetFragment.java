@@ -19,6 +19,7 @@ import com.google.android.material.chip.ChipGroup;
 import com.example.healthup.R;
 import com.example.models.Product;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Locale;
 
 
@@ -125,23 +126,23 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
             if (tvVariantSectionLabel != null) tvVariantSectionLabel.setVisibility(View.VISIBLE);
             chipGroup.setVisibility(View.VISIBLE);
             chipGroup.removeAllViews();
-            for (Product.ProductVariant variant : product.getResolvableVariants()) {
+            chipGroup.setSelectionRequired(true);
+            List<Product.ProductVariant> variants = product.getResolvableVariants();
+            for (Product.ProductVariant variant : variants) {
                 Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, chipGroup, false);
                 chip.setText(variant.getName());
-                chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    if (isChecked) {
-                        selectedVariant = variant;
-                        updateDisplay();
-                    }
-                });
+                chip.setTag(variant.getId());
+                chip.setOnClickListener(v -> selectVariantChip(variant));
                 chipGroup.addView(chip);
             }
-            if (chipGroup.getChildCount() > 0) {
-                ((Chip) chipGroup.getChildAt(0)).setChecked(true);
+            if (!variants.isEmpty()) {
+                selectVariantChip(variants.get(0));
             }
         } else {
             if (tvVariantSectionLabel != null) tvVariantSectionLabel.setVisibility(View.GONE);
             chipGroup.setVisibility(View.GONE);
+            selectedVariant = null;
+            updateDisplay();
         }
 
 
@@ -179,6 +180,30 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         });
     }
 
+
+    private void selectVariantChip(Product.ProductVariant variant) {
+        selectedVariant = variant;
+        for (int i = 0; i < chipGroup.getChildCount(); i++) {
+            Chip chip = (Chip) chipGroup.getChildAt(i);
+            boolean isSelected = variant.getId() != null && variant.getId().equals(chip.getTag());
+            chip.setChecked(isSelected);
+            updateVariantChipStyle(chip, isSelected);
+        }
+        updateDisplay();
+    }
+
+    private void updateVariantChipStyle(Chip chip, boolean isSelected) {
+        if (isSelected) {
+            chip.setChipBackgroundColorResource(R.color.primary_green);
+            chip.setTextColor(getResources().getColor(R.color.white));
+            chip.setChipStrokeWidth(0f);
+        } else {
+            chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
+            chip.setTextColor(getResources().getColor(R.color.text_dark));
+            chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
+            chip.setChipStrokeColorResource(R.color.primary_green);
+        }
+    }
 
     private void updateDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
