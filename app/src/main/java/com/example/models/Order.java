@@ -25,9 +25,9 @@ public class Order implements Serializable {
     private double shippingFee;
     private double totalPrice;
     private Address address;
-    private transient com.google.firebase.Timestamp createdAt;
-    private transient com.google.firebase.Timestamp updatedAt;
-    private transient com.google.firebase.Timestamp deliveredAt;
+    private java.util.Date createdAt;
+    private java.util.Date updatedAt;
+    private java.util.Date deliveredAt;
     private boolean reviewed;
     private boolean returnExpired;
     private boolean reviewExpired;
@@ -41,14 +41,14 @@ public class Order implements Serializable {
     public Order() {}
 
     public Order(String orderCode, List<OrderItem> items, String status, String paymentStatus,
-                 double totalPrice, Timestamp createdAt, String paymentMethod, Address address) {
+                 double totalPrice, com.google.firebase.Timestamp createdAt, String paymentMethod, Address address) {
         this.orderCode = orderCode;
         this.items = items;
         this.status = status;
         this.paymentStatus = paymentStatus;
         this.totalPrice = totalPrice;
-        this.createdAt = createdAt;
-        this.updatedAt = createdAt;
+        this.createdAt = createdAt != null ? createdAt.toDate() : null;
+        this.updatedAt = this.createdAt;
         this.paymentMethod = paymentMethod;
         this.address = address;
     }
@@ -109,14 +109,14 @@ public class Order implements Serializable {
     public Address getAddress() { return address; }
     public void setAddress(Address address) { this.address = address; }
 
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public java.util.Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.util.Date createdAt) { this.createdAt = createdAt; }
 
-    public Timestamp getUpdatedAt() { return updatedAt; }
-    public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+    public java.util.Date getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(java.util.Date updatedAt) { this.updatedAt = updatedAt; }
 
-    public Timestamp getDeliveredAt() { return deliveredAt; }
-    public void setDeliveredAt(Timestamp deliveredAt) { this.deliveredAt = deliveredAt; }
+    public java.util.Date getDeliveredAt() { return deliveredAt; }
+    public void setDeliveredAt(java.util.Date deliveredAt) { this.deliveredAt = deliveredAt; }
 
     public boolean isReviewed() { return reviewed; }
     public void setReviewed(boolean reviewed) { this.reviewed = reviewed; }

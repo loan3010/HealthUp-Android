@@ -165,7 +165,7 @@ public class FirebaseManager {
         }
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", status);
-        updates.put("updatedAt", Timestamp.now());
+        updates.put("updatedAt", new java.util.Date());
         return db.collection("orders").document(orderId).update(updates);
     }
 
@@ -183,7 +183,7 @@ public class FirebaseManager {
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "cancelled");
         updates.put("returnReason", reason);
-        updates.put("updatedAt", Timestamp.now());
+        updates.put("updatedAt", new java.util.Date());
         batch.update(db.collection("orders").document(orderId), updates);
         
         // 2. Hoàn lại số tiền đã chi trong tích lũy
@@ -196,8 +196,8 @@ public class FirebaseManager {
     public Task<Void> confirmReceived(String orderId) {
         Map<String, Object> updates = new HashMap<>();
         updates.put("status", "delivered");
-        updates.put("updatedAt", Timestamp.now());
-        updates.put("deliveredAt", Timestamp.now());
+        updates.put("updatedAt", new java.util.Date());
+        updates.put("deliveredAt", new java.util.Date());
         return db.collection("orders").document(orderId).update(updates);
     }
 
@@ -235,13 +235,19 @@ public class FirebaseManager {
 
         // 2. Đồng thời đẩy review này vào danh sách review của sản phẩm
         String productId = allItems.get(itemIndex).getProductId();
+        
+        // Fallback: Nếu đơn hàng cũ không có productId, ta có thể thử lấy từ một chỗ khác hoặc bỏ qua
+        // Nhưng tốt nhất nên log để debug
         if (productId != null && !productId.isEmpty()) {
             DocumentReference productRef = db.collection("products").document(productId);
             // Lưu vào sub-collection
-            productRef.collection("reviews").add(review);
+            productRef.collection("reviews").add(review)
+                .addOnFailureListener(e -> android.util.Log.e("FirebaseManager", "Lỗi lưu review vào SP: " + e.getMessage()));
             
             // Cập nhật thống kê sơ bộ (tăng count)
             productRef.update("reviewCount", com.google.firebase.firestore.FieldValue.increment(1));
+        } else {
+            android.util.Log.w("FirebaseManager", "Không thể lưu review vào SP vì productId bị thiếu (đơn hàng cũ)");
         }
         
         return orderTask;
@@ -319,22 +325,41 @@ public class FirebaseManager {
     }
 
 
-    // --- STORAGE ---
+    // --- IMAGE PROCESSING (Alternative for blocked Storage) ---
     public Task<Uri> uploadImage(Uri fileUri) {
         if (fileUri == null) return com.google.android.gms.tasks.Tasks.forException(new Exception("File URI is null"));
-        
+
         com.google.android.gms.tasks.TaskCompletionSource<Uri> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
-        String fileName = UUID.randomUUID().toString() + ".jpg";
-        StorageReference ref = storage.getReference().child("evidence/" + fileName);
         
-        ref.putFile(fileUri)
-            .addOnSuccessListener(taskSnapshot -> {
-                // Sau khi upload thành công mới lấy URL
-                ref.getDownloadUrl()
-                    .addOnSuccessListener(tcs::setResult)
-                    .addOnFailureListener(tcs::setException);
-            })
-            .addOnFailureListener(tcs::setException);
+        // Chạy xử lý ảnh trong một thread riêng để không làm lag giao diện
+        new Thread(() -> {
+            try {
+                android.content.Context context = com.google.firebase.FirebaseApp.getInstance().getApplicationContext();
+                android.graphics.Bitmap bitmap = android.provider.MediaStore.Images.Media.getBitmap(context.getContentResolver(), fileUri);
+                
+                // Nén ảnh thật nhỏ để không vượt giới hạn 1MB của Firestore
+                // Scale ảnh về chiều rộng tối đa 800px
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+                float bitmapRatio = (float)width / (float) height;
+                if (width > 800) {
+                    width = 800;
+                    height = (int) (width / bitmapRatio);
+                }
+                android.graphics.Bitmap scaledBitmap = android.graphics.Bitmap.createScaledBitmap(bitmap, width, height, true);
+                
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                scaledBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 60, baos); // Nén chất lượng 60%
+                byte[] b = baos.toByteArray();
+                String encodedImage = android.util.Base64.encodeToString(b, android.util.Base64.DEFAULT);
+                
+                // Trả về một "Data URI" để Glide vẫn có thể hiển thị được
+                String dataUriString = "data:image/jpeg;base64," + encodedImage;
+                tcs.setResult(Uri.parse(dataUriString));
+            } catch (Exception e) {
+                tcs.setException(e);
+            }
+        }).start();
             
         return tcs.getTask();
     }

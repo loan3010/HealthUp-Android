@@ -45,13 +45,31 @@ public class ViewReviewsActivity extends AppCompatActivity {
         }
 
         order = (Order) getIntent().getSerializableExtra("order");
-        if (order == null) {
-            finish();
-            return;
+        String orderIdFallback = getIntent().getStringExtra("extra_order_id");
+
+        if (order != null && order.getItems() != null && !order.getItems().isEmpty() && order.getItems().get(0).getProductId() != null) {
+            setupUI();
+        } else {
+            String fetchId = (order != null) ? order.getId() : orderIdFallback;
+            if (fetchId != null && !fetchId.isEmpty()) {
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("orders")
+                        .document(fetchId)
+                        .get()
+                        .addOnSuccessListener(doc -> {
+                            if (doc.exists()) {
+                                order = doc.toObject(Order.class);
+                                if (order != null) {
+                                    order.setId(doc.getId());
+                                    setupUI();
+                                }
+                            }
+                        })
+                        .addOnFailureListener(e -> finish());
+            } else {
+                finish();
+            }
         }
-
-
-        setupUI();
         binding.btnBack.setOnClickListener(v -> finish());
     }
 
@@ -73,14 +91,18 @@ public class ViewReviewsActivity extends AppCompatActivity {
 
             // Click product image or name to see product details
             View.OnClickListener toProductDetail = v -> {
-                if (item.getProductId() != null) {
+                String pId = item.getProductId();
+                if (pId != null && !pId.isEmpty()) {
                     Intent detailIntent = new Intent(this, ProductDetailActivity.class);
-                    detailIntent.putExtra("productId", item.getProductId());
+                    detailIntent.putExtra("productId", pId);
                     startActivity(detailIntent);
+                } else {
+                    android.widget.Toast.makeText(this, "Không thể xem chi tiết sản phẩm này.", android.widget.Toast.LENGTH_SHORT).show();
                 }
             };
             itemBinding.imgContainer.setOnClickListener(toProductDetail);
             itemBinding.tvProductName.setOnClickListener(toProductDetail);
+            itemBinding.layoutProductHeader.setOnClickListener(toProductDetail);
 
             String imagePath = item.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
@@ -119,7 +141,7 @@ public class ViewReviewsActivity extends AppCompatActivity {
                 }
 
                 if (review.getCreatedAt() != null) {
-                    itemBinding.tvReviewTime.setText("Đã đánh giá vào: " + sdf.format(review.getCreatedAt().toDate()));
+                    itemBinding.tvReviewTime.setText("Đã đánh giá vào: " + sdf.format(review.getCreatedAt()));
                 }
 
 
@@ -137,11 +159,15 @@ public class ViewReviewsActivity extends AppCompatActivity {
 
                 // Link to all reviews for this product
                 itemBinding.btnViewAllReviews.setOnClickListener(v -> {
-                    if (item.getProductId() != null) {
+                    String pId = item.getProductId();
+                    if (pId != null && !pId.isEmpty()) {
                         Intent reviewsIntent = new Intent(this, ProductReviewsActivity.class);
-                        reviewsIntent.putExtra("productId", item.getProductId());
+                        reviewsIntent.putExtra("productId", pId);
                         reviewsIntent.putExtra("product_name", item.getName());
                         startActivity(reviewsIntent);
+                    } else {
+                        // Fallback logic: có thể là đơn hàng cũ không có productId
+                        android.widget.Toast.makeText(this, "Dữ liệu sản phẩm này quá cũ, không thể xem danh sách đánh giá tổng hợp.", android.widget.Toast.LENGTH_SHORT).show();
                     }
                 });
             } else {

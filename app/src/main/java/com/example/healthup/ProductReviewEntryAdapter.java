@@ -80,9 +80,9 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
         }
 
         private String formatDate(Review review) {
-            Timestamp createdAt = review.getCreatedAt();
+            java.util.Date createdAt = review.getCreatedAt();
             if (createdAt != null) {
-                return dateFormat.format(createdAt.toDate());
+                return dateFormat.format(createdAt);
             }
             return !TextUtils.isEmpty(review.getDate()) ? review.getDate() : "";
         }

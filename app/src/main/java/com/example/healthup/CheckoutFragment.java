@@ -568,7 +568,7 @@ public class CheckoutFragment extends Fragment {
         
         order.setPaymentMethod(paymentDisplay);
         order.setStatus(com.example.models.Order.STATUS_PENDING);
-        order.setCreatedAt(com.google.firebase.Timestamp.now());
+        order.setCreatedAt(new java.util.Date()); // Use java.util.Date
 
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
         order.setId(orderRef.getId());

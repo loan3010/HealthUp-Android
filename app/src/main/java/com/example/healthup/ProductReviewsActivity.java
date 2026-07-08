@@ -108,14 +108,27 @@ public class ProductReviewsActivity extends AppCompatActivity {
         FirestoreManager.getInstance().getProductsCollection()
                 .document(productId)
                 .collection("reviews")
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .get()
+                .get() // Bỏ orderBy để lấy toàn bộ, kể cả đơn cũ thiếu field createdAt
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     allReviews.clear();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         Review r = doc.toObject(Review.class);
-                        if (r != null) allReviews.add(r);
+                        if (r != null) {
+                            // Nếu thiếu createdAt thì lấy thời gian doc được tạo (nếu có) hoặc mặc định
+                            if (r.getCreatedAt() == null) {
+                                // Gán tạm thời gian hiện tại hoặc từ date String
+                                // r.setCreatedAt(...) 
+                            }
+                            allReviews.add(r);
+                        }
                     }
+
+                    // Sắp xếp thủ công ở Client để tránh lỗi missing field ở Firestore query
+                    allReviews.sort((r1, r2) -> {
+                        long t1 = r1.getCreatedAt() != null ? r1.getCreatedAt().getTime() : 0;
+                        long t2 = r2.getCreatedAt() != null ? r2.getCreatedAt().getTime() : 0;
+                        return Long.compare(t2, t1); // Mới nhất lên đầu
+                    });
 
 
                     if (getIntent().getFloatExtra("avgRating", 0f) <= 0 && !allReviews.isEmpty()) {

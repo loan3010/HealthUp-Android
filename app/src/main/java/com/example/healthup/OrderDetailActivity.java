@@ -295,7 +295,13 @@ public class OrderDetailActivity extends AppCompatActivity {
             updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason, currentOrder.getTotalPrice());
             targetTab = "cancelled_tab";
         } else {
-            updateTask = FirebaseManager.getInstance().confirmReceived(orderId);
+            // Update to delivered
+            java.util.Map<String, Object> updates = new java.util.HashMap<>();
+            updates.put("status", "delivered");
+            updates.put("updatedAt", new java.util.Date());
+            updates.put("deliveredAt", new java.util.Date());
+            updateTask = com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("orders").document(orderId).update(updates);
             targetTab = "delivered_tab";
         }
 
@@ -462,22 +468,22 @@ public class OrderDetailActivity extends AppCompatActivity {
         }
 
         if ("confirmed".equals(status)) {
-            long shipBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getSeconds() * 1000 : System.currentTimeMillis()) + 86400000L;
-            binding.tvOrderTime.setText("Đơn hàng sẽ được gửi đi trước " + sdf.format(new Date(shipBeforeTime)));
+            long shipBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getTime() : System.currentTimeMillis()) + 86400000L;
+            binding.tvOrderTime.setText("Đơn hàng sẽ được gửi đi trước " + sdf.format(new java.util.Date(shipBeforeTime)));
         } else if ("shipping".equals(status)) {
             if (order.isShopConfirmedDelivery()) {
-                Date deliveredDate = order.getDeliveredAt() != null ? order.getDeliveredAt().toDate() : new Date();
+                java.util.Date deliveredDate = order.getDeliveredAt() != null ? order.getDeliveredAt() : new java.util.Date();
                 binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(deliveredDate));
             } else {
-                long deliveryBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getSeconds() * 1000 : System.currentTimeMillis()) + 3 * 86400000L;
-                binding.tvOrderTime.setText("Đơn hàng sẽ được giao đến bạn trước ngày " + sdfDate.format(new Date(deliveryBeforeTime)));
+                long deliveryBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getTime() : System.currentTimeMillis()) + 3 * 86400000L;
+                binding.tvOrderTime.setText("Đơn hàng sẽ được giao đến bạn trước ngày " + sdfDate.format(new java.util.Date(deliveryBeforeTime)));
             }
         } else if ("delivered".equals(status)) {
-            Date deliveryDate = order.getDeliveredAt() != null ? order.getDeliveredAt().toDate() : 
-                               (order.getCreatedAt() != null ? new Date(order.getCreatedAt().getSeconds() * 1000 + 2 * 86400000L) : new Date());
+            java.util.Date deliveryDate = order.getDeliveredAt() != null ? order.getDeliveredAt() : 
+                               (order.getCreatedAt() != null ? new java.util.Date(order.getCreatedAt().getTime() + 2 * 86400000L) : new java.util.Date());
             binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(deliveryDate));
         } else {
-            String timeStr = order.getCreatedAt() != null ? sdf.format(order.getCreatedAt().toDate()) : "N/A";
+            String timeStr = order.getCreatedAt() != null ? sdf.format(order.getCreatedAt()) : "N/A";
             binding.tvOrderTime.setText("Thời gian đặt hàng: " + timeStr);
         }
 
@@ -508,6 +514,7 @@ public class OrderDetailActivity extends AppCompatActivity {
                 binding.btnReviewDetail.setOnClickListener(v -> {
                     Intent intent = new Intent(this, ViewReviewsActivity.class);
                     intent.putExtra("order", order);
+                    intent.putExtra("extra_order_id", order.getId());
                     startActivity(intent);
                 });
             } else {
@@ -523,7 +530,7 @@ public class OrderDetailActivity extends AppCompatActivity {
             binding.btnRebuyFull.setVisibility(View.VISIBLE);
             binding.btnRebuyFull.setOnClickListener(v -> performRebuy());
             if (order.getUpdatedAt() != null) {
-                binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt().toDate()));
+                binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt()));
             }
             String method = order.getPaymentMethod();
             binding.tvPaymentMethodCancelled.setText(method.contains("Thanh toán khi nhận hàng") ? "COD" : method);

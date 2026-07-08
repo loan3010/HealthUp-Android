@@ -157,7 +157,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                             loading.dismiss();
                             // Update local data to reflect change immediately
                             order.setShopConfirmedDelivery(true);
-                            order.setDeliveredAt(com.google.firebase.Timestamp.now());
+                            order.setDeliveredAt(new java.util.Date());
                             notifyItemChanged(getAdapterPosition());
                         })
                         .addOnFailureListener(e -> {
@@ -258,7 +258,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                 String time = "vừa xong";
                 if (order.getDeliveredAt() != null) {
                     java.text.SimpleDateFormat timeSdf = new java.text.SimpleDateFormat("HH:mm dd-MM", java.util.Locale.getDefault());
-                    time = timeSdf.format(order.getDeliveredAt().toDate());
+                    time = timeSdf.format(order.getDeliveredAt());
                 }
                 binding.tvDeliveryInfo.setText("Đơn hàng đã giao thành công vào " + time);
             } else {
@@ -423,6 +423,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         binding.btnActionMiddle.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ViewReviewsActivity.class);
                             intent.putExtra("order", order);
+                            intent.putExtra("extra_order_id", order.getId());
                             context.startActivity(intent);
                         });
                     } else if (canStillReview) {

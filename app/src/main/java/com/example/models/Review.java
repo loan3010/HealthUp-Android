@@ -12,7 +12,7 @@ public class Review implements Serializable {
     private String date;
     private String imageUrl;
     private List<String> mediaUris;
-    private transient com.google.firebase.Timestamp createdAt;
+    private java.util.Date createdAt;
     private String variantLabel;
 
     public Review() {}
@@ -23,19 +23,19 @@ public class Review implements Serializable {
         this.comment = comment;
     }
 
-    public Review(String userName, float rating, String comment, List<String> mediaUris, Timestamp createdAt) {
+    public Review(String userName, float rating, String comment, List<String> mediaUris, com.google.firebase.Timestamp createdAt) {
         this.userName = userName;
         this.rating = rating;
         this.comment = comment;
         this.mediaUris = mediaUris;
-        this.createdAt = createdAt;
+        this.createdAt = createdAt != null ? createdAt.toDate() : null;
     }
 
-    public Review(float rating, String comment, List<String> mediaUris, Timestamp createdAt) {
+    public Review(float rating, String comment, List<String> mediaUris, com.google.firebase.Timestamp createdAt) {
         this.rating = rating;
         this.comment = comment;
         this.mediaUris = mediaUris;
-        this.createdAt = createdAt;
+        this.createdAt = createdAt != null ? createdAt.toDate() : null;
     }
 
     // Getters and Setters
@@ -53,8 +53,8 @@ public class Review implements Serializable {
     public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     public List<String> getMediaUris() { return mediaUris; }
     public void setMediaUris(List<String> mediaUris) { this.mediaUris = mediaUris; }
-    public Timestamp getCreatedAt() { return createdAt; }
-    public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+    public java.util.Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(java.util.Date createdAt) { this.createdAt = createdAt; }
     public String getVariantLabel() { return variantLabel; }
     public void setVariantLabel(String variantLabel) { this.variantLabel = variantLabel; }
 }

@@ -105,12 +105,12 @@ public class OrderListFragment extends Fragment {
             // Sắp xếp đơn hàng theo thời gian: Mới nhất lên đầu (Dựa trên updatedAt hoặc createdAt)
             Collections.sort(filteredOrders, (o1, o2) -> {
                 long t1 = 0;
-                if (o1.getUpdatedAt() != null) t1 = o1.getUpdatedAt().getSeconds();
-                else if (o1.getCreatedAt() != null) t1 = o1.getCreatedAt().getSeconds();
+                if (o1.getUpdatedAt() != null) t1 = o1.getUpdatedAt().getTime();
+                else if (o1.getCreatedAt() != null) t1 = o1.getCreatedAt().getTime();
 
                 long t2 = 0;
-                if (o2.getUpdatedAt() != null) t2 = o2.getUpdatedAt().getSeconds();
-                else if (o2.getCreatedAt() != null) t2 = o2.getCreatedAt().getSeconds();
+                if (o2.getUpdatedAt() != null) t2 = o2.getUpdatedAt().getTime();
+                else if (o2.getCreatedAt() != null) t2 = o2.getCreatedAt().getTime();
 
                 return Long.compare(t2, t1); // Đảo ngược t2, t1 để lấy DESC (mới nhất lên trước)
             });

@@ -215,7 +215,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
 
     private void setupTimeline(boolean isCompleted, boolean isReship) {
         binding.lnTimeline.removeAllViews();
-        long updatedAtMs = (order.getUpdatedAt() != null) ? order.getUpdatedAt().getSeconds() * 1000 : System.currentTimeMillis();
+        long updatedAtMs = (order.getUpdatedAt() != null) ? order.getUpdatedAt().getTime() : System.currentTimeMillis();
         long day = 86400000L;
 
         addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAtMs - day * 2)));
