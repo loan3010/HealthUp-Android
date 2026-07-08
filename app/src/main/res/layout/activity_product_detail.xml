@@ -70,6 +70,38 @@
                             app:tint="@color/text_dark" />
 
 
+                        <FrameLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginEnd="12dp">
+
+
+                            <ImageButton
+                                android:id="@+id/btn_cart_header"
+                                android:layout_width="36dp"
+                                android:layout_height="36dp"
+                                android:background="@drawable/bg_circle_translucent"
+                                android:src="@drawable/ic_cart"
+                                app:tint="@color/text_dark" />
+
+
+                            <TextView
+                                android:id="@+id/tv_cart_badge_header"
+                                android:layout_width="16dp"
+                                android:layout_height="16dp"
+                                android:layout_gravity="top|end"
+                                android:layout_marginTop="-2dp"
+                                android:layout_marginEnd="-2dp"
+                                android:background="@drawable/bg_badge_red"
+                                android:gravity="center"
+                                android:text="0"
+                                android:textColor="@color/white"
+                                android:textSize="9sp"
+                                android:visibility="gone"
+                                tools:visibility="visible" />
+                        </FrameLayout>
+
+
                         <ImageButton
                             android:id="@+id/btn_wishlist"
                             android:layout_width="36dp"

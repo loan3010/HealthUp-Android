@@ -1,5 +1,6 @@
 package com.example.adapters;
 
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -7,18 +8,23 @@ import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 
 import com.example.healthup.R;
 import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.CartItem;
 
+
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
 
+
 public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
+
 
     public interface Listener {
         void onSelectChanged(CartItem item, boolean selected);
@@ -28,14 +34,17 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         void onItemClick(CartItem item);
     }
 
+
     private final List<CartItem> items;
     private final Listener listener;
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+
 
     public CartAdapter(List<CartItem> items, Listener listener) {
         this.items = items;
         this.listener = listener;
     }
+
 
     @NonNull
     @Override
@@ -45,9 +54,20 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         return new ViewHolder(v);
     }
 
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CartItem item = items.get(position);
+
+
+        // FIX (yêu cầu #1): trước đây chỉ ảnh sản phẩm và tên sản phẩm có thể bấm để mở
+        // Chi tiết sản phẩm, phần còn lại của ô (giá, số lượng, khoảng trống...) không phản
+        // hồi khi bấm, khiến người dùng có cảm giác "không click vào sản phẩm được". Gắn thêm
+        // listener cho toàn bộ ô (itemView); các nút con đã có listener riêng (checkbox, tăng/
+        // giảm số lượng, xóa, chọn phân loại) sẽ tự nhận sự kiện chạm trước và không bị ảnh
+        // hưởng bởi listener này.
+        holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+
 
         if (holder.cbSelect != null) {
             holder.cbSelect.setOnCheckedChangeListener(null);
@@ -58,25 +78,30 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
             });
         }
 
+
         if (holder.tvName != null) {
             String name = item.getName();
             holder.tvName.setText(name != null ? name : "");
         }
+
 
         if (holder.tvVariant != null) {
             String variantLabel = item.getVariantLabel();
             holder.tvVariant.setText(variantLabel != null ? variantLabel : "");
         }
 
+
         if (holder.tvPrice != null) {
             double price = item.getPrice();
             holder.tvPrice.setText("đ " + currencyFormat.format(price));
         }
 
+
         if (holder.tvQuantity != null) {
             int quantity = Math.max(item.getQuantity(), 1);
             holder.tvQuantity.setText(String.valueOf(quantity));
         }
+
 
         if (holder.tvOriginalPrice != null) {
             if (item.getOriginalPrice() > item.getPrice()) {
@@ -89,6 +114,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
             }
         }
 
+
         if (holder.tvStockWarning != null) {
             if (item.getStock() > 0 && item.getStock() <= 3) {
                 holder.tvStockWarning.setVisibility(View.VISIBLE);
@@ -97,6 +123,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
                 holder.tvStockWarning.setVisibility(View.GONE);
             }
         }
+
 
         if (holder.imgProduct != null) {
             String imagePath = item.getImageUrl();
@@ -108,9 +135,11 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
             holder.imgProduct.setOnClickListener(v -> listener.onItemClick(item));
         }
 
+
         if (holder.tvName != null) {
             holder.tvName.setOnClickListener(v -> listener.onItemClick(item));
         }
+
 
         if (holder.tvVariant != null) {
             holder.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
@@ -118,6 +147,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         if (holder.btnRemove != null) {
             holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
         }
+
 
         if (holder.btnIncrease != null) {
             holder.btnIncrease.setOnClickListener(v -> {
@@ -130,6 +160,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
                 listener.onQuantityChanged(item, newQty);
             });
         }
+
 
         if (holder.btnDecrease != null) {
             holder.btnDecrease.setOnClickListener(v -> {
@@ -144,13 +175,16 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
     }
 
+
     @Override
     public int getItemCount() { return items.size(); }
+
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         CheckBox cbSelect;
         ImageView imgProduct, btnRemove;
         TextView tvName, tvVariant, tvStockWarning, tvPrice, tvOriginalPrice, tvQuantity, btnDecrease, btnIncrease;
+
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
