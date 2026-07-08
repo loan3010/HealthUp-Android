@@ -218,7 +218,19 @@ public class FirebaseManager {
         updates.put("returnDescription", desc);
         updates.put("returnMediaUris", mediaUrls);
         updates.put("returnHandling", handling);
+        updates.put("returnStep", 1); // Tự động duyệt -> Step 1
+        updates.put("returnRequestedAt", Timestamp.now()); // Lưu thời điểm yêu cầu để sắp xếp cố định
         updates.put("updatedAt", Timestamp.now());
+        return db.collection("orders").document(orderId).update(updates);
+    }
+
+    public Task<Void> advanceReturnStep(String orderId, int nextStep, boolean isFinal) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("returnStep", nextStep);
+        updates.put("updatedAt", Timestamp.now());
+        if (isFinal) {
+            updates.put("status", "completed");
+        }
         return db.collection("orders").document(orderId).update(updates);
     }
 

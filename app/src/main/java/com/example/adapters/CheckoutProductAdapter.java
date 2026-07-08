@@ -66,6 +66,17 @@ public class CheckoutProductAdapter extends RecyclerView.Adapter<CheckoutProduct
         } else {
             holder.imgProduct.setImageResource(R.color.neutral_light_grey);
         }
+
+        // Link to Product Detail
+        View.OnClickListener toProductDetail = v -> {
+            if (item.getProductId() != null) {
+                android.content.Intent intent = new android.content.Intent(v.getContext(), com.example.healthup.ProductDetailActivity.class);
+                intent.putExtra("productId", item.getProductId());
+                v.getContext().startActivity(intent);
+            }
+        };
+        holder.imgProduct.setOnClickListener(toProductDetail);
+        holder.tvName.setOnClickListener(toProductDetail);
     }
 
     @Override

@@ -682,7 +682,11 @@ public class CheckoutFragment extends Fragment {
 
         dialogView.findViewById(R.id.btnTrackOrder).setOnClickListener(v -> {
             dialog.dismiss();
-            loadFragment(new OrderHistoryFragment());
+            OrderHistoryFragment fragment = new OrderHistoryFragment();
+            Bundle args = new Bundle();
+            args.putInt("initial_tab", 1); // Chuyển đến tab "Chờ xác nhận"
+            fragment.setArguments(args);
+            loadFragment(fragment);
         });
 
         dialogView.findViewById(R.id.btnContinueShopping).setOnClickListener(v -> {

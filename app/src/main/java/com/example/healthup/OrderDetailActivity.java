@@ -105,16 +105,28 @@ public class OrderDetailActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        // Cả 3 mục Chat, Phone, Email đều dẫn tới lựa chọn liên hệ nhanh như yêu cầu
-        View.OnClickListener contactClick = v -> {
+        binding.rowChat.setOnClickListener(v -> {
             if (currentOrder != null) {
                 showContactOptions(currentOrder);
             }
-        };
+        });
 
-        binding.rowChat.setOnClickListener(contactClick);
-        binding.rowContactPhone.setOnClickListener(contactClick);
-        binding.rowContactEmail.setOnClickListener(contactClick);
+        binding.rowContactPhone.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            startActivity(intent);
+        });
+
+        binding.rowContactEmail.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(android.net.Uri.parse("mailto:healthup@gmail.com"));
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ đơn hàng #" + (currentOrder != null ? currentOrder.getOrderCode() : ""));
+            try {
+                startActivity(intent);
+            } catch (android.content.ActivityNotFoundException e) {
+                Toast.makeText(this, "Không tìm thấy ứng dụng email", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void showContactOptions(Order order) {
@@ -371,6 +383,10 @@ public class OrderDetailActivity extends AppCompatActivity {
             binding.tvStatusBanner.setText("ĐÃ GIAO HÀNG");
             binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_delivered);
             binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
+        } else if ("completed".equals(status)) {
+            binding.tvStatusBanner.setText("HOÀN THÀNH");
+            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_delivered);
+            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
         } else if ("cancelled".equals(status)) {
             binding.tvStatusBanner.setText("ĐÃ HỦY");
             binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_cancelled);
@@ -533,9 +549,18 @@ public class OrderDetailActivity extends AppCompatActivity {
                 binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt()));
             }
             String method = order.getPaymentMethod();
-            binding.tvPaymentMethodCancelled.setText(method.contains("Thanh toán khi nhận hàng") ? "COD" : method);
+            String displayMethod = method;
+            if (method != null) {
+                String lowMethod = method.toLowerCase();
+                if (lowMethod.contains("momo")) displayMethod = "Ví MoMo";
+                else if (lowMethod.contains("zalopay")) displayMethod = "Ví ZaloPay";
+                else if (lowMethod.contains("vnpay")) displayMethod = "Ví VNPAY";
+                else if (lowMethod.contains("cod") || lowMethod.contains("nhận hàng")) displayMethod = "COD";
+                else if (lowMethod.contains("card") || lowMethod.contains("thẻ")) displayMethod = "Thẻ Tín dụng / Ghi nợ";
+            }
+            binding.tvPaymentMethodCancelled.setText(displayMethod);
 
-            if (!method.contains("Thanh toán khi nhận hàng")) {
+            if (method != null && !method.toLowerCase().contains("nhận hàng") && !method.toLowerCase().contains("cod")) {
                 binding.tvRefundCancelledInfo.setVisibility(View.VISIBLE);
                 String refundMsg;
                 if (method.contains("MoMo")) refundMsg = "Tiền sẽ được hoàn về ví MoMo của bạn trong vòng 24h làm việc.";

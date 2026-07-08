@@ -27,6 +27,7 @@ import com.example.healthup.databinding.ItemWriteReviewBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.Review;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
@@ -168,10 +169,23 @@ public class WriteReviewActivity extends AppCompatActivity {
     }
 
     private void showImageSourceDialog() {
-        String[] options = {"Chụp ảnh", "Chọn từ thư viện"};
-        new AlertDialog.Builder(this).setTitle("Thêm minh chứng").setItems(options, (dialog, which) -> {
-            if (which == 0) launchCamera(); else launchGallery();
-        }).show();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding dialogBinding =
+                com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
+
+        dialogBinding.btnCamera.setOnClickListener(v -> {
+            dialog.dismiss();
+            launchCamera();
+        });
+
+        dialogBinding.btnGallery.setOnClickListener(v -> {
+            dialog.dismiss();
+            launchGallery();
+        });
+
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void launchGallery() {
@@ -238,9 +252,20 @@ public class WriteReviewActivity extends AppCompatActivity {
             // Lấy thông tin User hiện tại trước khi lưu đánh giá
             String uid = FirebaseManager.getInstance().getCurrentUserId();
             FirebaseFirestore.getInstance().collection("users").document(uid).get().addOnSuccessListener(userDoc -> {
-                String userName = userDoc.getString("name");
-                if (userName == null || userName.isEmpty()) userName = userDoc.getString("displayName");
-                if (userName == null || userName.isEmpty()) userName = "Người dùng HealthUp";
+                // Ưu tiên lấy username theo yêu cầu
+                String userName = userDoc.getString("username");
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("name");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("fullName");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("displayName");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = "Người dùng HealthUp";
+                }
                 String userAvatar = userDoc.getString("avatarUrl");
 
                 // Save reviews

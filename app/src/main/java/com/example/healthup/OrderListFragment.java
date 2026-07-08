@@ -81,15 +81,21 @@ public class OrderListFragment extends Fragment {
                     o.setId(doc.getId());
 
                     String orderStatus = o.getStatus().toLowerCase().trim();
+                    boolean isReturnOrder = o.getReturnHandling() != null;
                     
                     if ("all".equals(filter)) {
                         filteredOrders.add(o);
                     } else if ("delivered".equals(filter)) {
-                        if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
+                        // Tab Đã giao là tab cha, bao gồm cả các đơn đang/đã trả hàng
+                        if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) || 
+                            "refunded".equals(orderStatus) || "reshipped".equals(orderStatus) || 
+                            "completed".equals(orderStatus)) {
                             filteredOrders.add(o);
                         }
                     } else if ("returned".equals(filter)) {
-                        if ("returned".equals(orderStatus) || "refunded".equals(orderStatus) || "reshipped".equals(orderStatus)) {
+                        // Chỉ hiện đơn có yêu cầu trả hàng
+                        if ("returned".equals(orderStatus) || "refunded".equals(orderStatus) || 
+                            "reshipped".equals(orderStatus) || ("completed".equals(orderStatus) && isReturnOrder)) {
                             filteredOrders.add(o);
                         }
                     } else {
@@ -102,17 +108,28 @@ public class OrderListFragment extends Fragment {
                 }
             }
 
-            // Sắp xếp đơn hàng theo thời gian: Mới nhất lên đầu (Dựa trên updatedAt hoặc createdAt)
+            // Sắp xếp linh hoạt theo từng Tab dựa trên yêu cầu của người dùng
             Collections.sort(filteredOrders, (o1, o2) -> {
                 long t1 = 0;
-                if (o1.getUpdatedAt() != null) t1 = o1.getUpdatedAt().getTime();
-                else if (o1.getCreatedAt() != null) t1 = o1.getCreatedAt().getTime();
-
                 long t2 = 0;
-                if (o2.getUpdatedAt() != null) t2 = o2.getUpdatedAt().getTime();
-                else if (o2.getCreatedAt() != null) t2 = o2.getCreatedAt().getTime();
 
-                return Long.compare(t2, t1); // Đảo ngược t2, t1 để lấy DESC (mới nhất lên trước)
+                if ("delivered".equals(filter)) {
+                    // Sắp xếp theo thời gian Giao hàng thành công
+                    t1 = o1.getDeliveredAt() != null ? o1.getDeliveredAt().getTime() : 0;
+                    t2 = o2.getDeliveredAt() != null ? o2.getDeliveredAt().getTime() : 0;
+                } else if ("returned".equals(filter)) {
+                    // Sắp xếp theo thời gian gửi Yêu cầu trả hàng (Cố định, không đổi khi cập nhật tiến độ)
+                    t1 = o1.getReturnRequestedAt() != null ? o1.getReturnRequestedAt().getTime() : 
+                         (o1.getUpdatedAt() != null ? o1.getUpdatedAt().getTime() : 0);
+                    t2 = o2.getReturnRequestedAt() != null ? o2.getReturnRequestedAt().getTime() : 
+                         (o2.getUpdatedAt() != null ? o2.getUpdatedAt().getTime() : 0);
+                } else {
+                    // Mặc định (Tất cả, Chờ xác nhận, ...) sắp xếp theo thời gian Đặt hàng
+                    t1 = o1.getCreatedAt() != null ? o1.getCreatedAt().getTime() : 0;
+                    t2 = o2.getCreatedAt() != null ? o2.getCreatedAt().getTime() : 0;
+                }
+
+                return Long.compare(t2, t1); // Mới nhất lên đầu
             });
 
             if (filteredOrders.isEmpty()) {

@@ -37,6 +37,8 @@ public class Order implements Serializable {
     private String returnDescription;
     private List<String> returnMediaUris;
     private String returnHandling;
+    private int returnStep;
+    private java.util.Date returnRequestedAt;
 
     public Order() {}
 
@@ -143,4 +145,10 @@ public class Order implements Serializable {
 
     public String getReturnHandling() { return returnHandling; }
     public void setReturnHandling(String returnHandling) { this.returnHandling = returnHandling; }
+
+    public int getReturnStep() { return returnStep; }
+    public void setReturnStep(int returnStep) { this.returnStep = returnStep; }
+
+    public java.util.Date getReturnRequestedAt() { return returnRequestedAt; }
+    public void setReturnRequestedAt(java.util.Date returnRequestedAt) { this.returnRequestedAt = returnRequestedAt; }
 }

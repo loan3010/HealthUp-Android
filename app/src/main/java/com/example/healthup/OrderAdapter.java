@@ -105,7 +105,6 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         intent.putExtra("navigate_to", "cancelled_tab");
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                         context.startActivity(intent);
-                        android.widget.Toast.makeText(context, "Đã hủy đơn hàng thành công", android.widget.Toast.LENGTH_SHORT).show();
                     }, 1500);
                 })
                 .addOnFailureListener(e -> {
@@ -202,9 +201,10 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             itemView.setOnClickListener(v -> {
                 String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
                 String orderId = order.getId();
+                boolean isReturnFlow = order.getReturnHandling() != null;
                 
                 android.content.Intent intent;
-                if ("returned".equals(status) || "refunded".equals(status)) {
+                if ("returned".equals(status) || "refunded".equals(status) || ("completed".equals(status) && isReturnFlow)) {
                     intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                 } else {
                     intent = new android.content.Intent(context, OrderDetailActivity.class);
@@ -337,6 +337,8 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
                 case "cancelled":
                     displayStatus = "Đã hủy"; color = 0xFFE53835; break;
+                case "completed":
+                    displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
                 case "returned":
                 case "refunded":
                     if ("refunded".equalsIgnoreCase(order.getPaymentStatus())) {
@@ -445,6 +447,20 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         intent.putExtra("order", order);
                         context.startActivity(intent);
                     });
+                    setupButton(binding.btnActionRight, "Mua lại", "filled");
+                    binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
+                    break;
+                case "completed":
+                    if (order.getReturnHandling() != null) {
+                        setupButton(binding.btnActionMiddle, "Xem chi tiết hoàn tiền", "outline");
+                        binding.btnActionMiddle.setOnClickListener(v -> {
+                            android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
+                            intent.putExtra("order", order);
+                            context.startActivity(intent);
+                        });
+                    } else {
+                        setupButton(binding.btnActionMiddle, "Đánh giá", "outline");
+                    }
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
                     binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;

@@ -4,14 +4,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.models.Order;
-import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -55,10 +54,10 @@ public class OrderRepository {
                         orders.add(mapOrder(doc));
                     }
                     Collections.sort(orders, (a, b) -> {
-                        Timestamp ta = a.getCreatedAt();
-                        Timestamp tb = b.getCreatedAt();
-                        long aMillis = ta != null ? ta.toDate().getTime() : 0L;
-                        long bMillis = tb != null ? tb.toDate().getTime() : 0L;
+                        Date ta = a.getCreatedAt();
+                        Date tb = b.getCreatedAt();
+                        long aMillis = ta != null ? ta.getTime() : 0L;
+                        long bMillis = tb != null ? tb.getTime() : 0L;
                         return Long.compare(bMillis, aMillis);
                     });
                     callback.onResult(orders);
@@ -91,11 +90,7 @@ public class OrderRepository {
         }
         order.setItemCount(itemCount != null ? itemCount.intValue() : 0);
 
-        Timestamp createdAt = doc.getTimestamp("createdAt");
-        if (createdAt == null && doc.getDate("createdAt") != null) {
-            createdAt = new Timestamp(doc.getDate("createdAt"));
-        }
-        order.setCreatedAt(createdAt);
+        order.setCreatedAt(doc.getDate("createdAt"));
         return order;
     }
 }

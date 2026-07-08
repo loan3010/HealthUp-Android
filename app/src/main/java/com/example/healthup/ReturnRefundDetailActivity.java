@@ -316,14 +316,23 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
     }
 
     private void showImageSourceDialog() {
-        String[] options = {"Chụp ảnh", "Chọn từ thư viện"};
-        new AlertDialog.Builder(this)
-                .setTitle("Thêm minh chứng")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) launchCamera();
-                    else launchGallery();
-                })
-                .show();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding dialogBinding =
+                com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
+
+        dialogBinding.btnCamera.setOnClickListener(v -> {
+            dialog.dismiss();
+            launchCamera();
+        });
+
+        dialogBinding.btnGallery.setOnClickListener(v -> {
+            dialog.dismiss();
+            launchGallery();
+        });
+
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     private void launchGallery() {
@@ -377,20 +386,21 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
         String refundMethod = paymentMethod;
         int iconRes = R.drawable.ic_payment_wallet;
         
+        String pm = paymentMethod.toLowerCase();
         // Cập nhật mapping code -> text đầy đủ
-        if ("cod".equalsIgnoreCase(paymentMethod) || "Thanh toán khi nhận hàng".equals(paymentMethod)) {
+        if (pm.contains("cod") || pm.contains("nhận hàng")) {
             refundMethod = "Tài khoản Ngân hàng liên kết";
             iconRes = R.drawable.ic_payment_card;
-        } else if ("momo".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("MoMo")) {
+        } else if (pm.contains("momo")) {
             refundMethod = "Ví MoMo";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("zalopay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("ZaloPay")) {
+        } else if (pm.contains("zalopay")) {
             refundMethod = "Ví ZaloPay";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("vnpay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("VNPAY")) {
+        } else if (pm.contains("vnpay")) {
             refundMethod = "Ví VNPAY";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("card".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")) {
+        } else if (pm.contains("card") || pm.contains("thẻ") || pm.contains("tài khoản")) {
             refundMethod = "Thẻ Tín dụng / Ghi nợ";
             iconRes = R.drawable.ic_payment_card;
         }
