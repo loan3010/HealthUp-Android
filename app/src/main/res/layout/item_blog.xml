@@ -1,4 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- FIX (khoảng trống bên phải card Blog): fragment_blog.xml dùng RecyclerView với
+     LinearLayoutManager theo chiều DỌC (1 cột), không phải carousel ngang. Trước đây root
+     layout_width bị đặt cứng "300dp" + layout_marginEnd="16dp" khiến mỗi card chỉ chiếm một
+     phần chiều ngang màn hình, chừa lại khoảng trống bên phải. Sửa: layout_width="match_parent"
+     và bỏ marginEnd (chỉ giữ marginBottom để giãn cách các card theo chiều dọc). -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
@@ -10,10 +15,14 @@
     app:strokeWidth="0dp">
 
 
+
+
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical">
+
+
 
 
         <ImageView
@@ -24,11 +33,15 @@
             android:src="@drawable/ic_launcher_background" />
 
 
+
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:padding="16dp">
+
+
 
 
             <TextView
@@ -44,6 +57,8 @@
                 android:textStyle="bold" />
 
 
+
+
             <TextView
                 android:id="@+id/tv_blog_title"
                 android:layout_width="match_parent"
@@ -55,6 +70,8 @@
                 android:textColor="@color/text_dark"
                 android:textSize="17sp"
                 android:textStyle="bold" />
+
+
 
 
             <TextView
@@ -70,6 +87,8 @@
                 android:textSize="14sp" />
 
 
+
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="1dp"
@@ -77,10 +96,14 @@
                 android:background="#EFEFEF" />
 
 
+
+
             <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp">
+
+
 
 
                 <TextView
@@ -91,6 +114,8 @@
                     android:text="12 tháng 10, 2023"
                     android:textColor="@color/text_gray"
                     android:textSize="12sp" />
+
+
 
 
                 <TextView

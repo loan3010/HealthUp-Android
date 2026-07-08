@@ -29,7 +29,15 @@ import java.util.List;
 
 
 
+
+
+
+
 public class WishlistFragment extends Fragment implements ProductAdapter.OnProductClickListener {
+
+
+
+
 
 
 
@@ -39,6 +47,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     private List<Product> wishlist = new ArrayList<>();
     private List<Product> filteredWishlist = new ArrayList<>();
     private List<Product> recommendationList = new ArrayList<>();
+    // FIX (yêu cầu #4): pool dự phòng các sản phẩm chưa được chọn vào danh sách gợi ý ban đầu,
+    // dùng để thay thế ngay khi 1 sản phẩm trong danh sách gợi ý được người dùng bấm yêu thích,
+    // tránh việc sản phẩm đó tiếp tục hiển thị trùng ở cả lưới "Yêu thích" lẫn "Có thể bạn quan tâm".
+    private List<Product> recommendationBackupPool = new ArrayList<>();
+
+
+
+
 
 
 
@@ -56,16 +72,28 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_wishlist, container, false);
         initViews(view);
         setupRecyclerViews();
+        // FIX (yêu cầu #4 - race condition): không còn gọi fetchRecommendations() song song ở
+        // đây nữa. fetchWishlist() giờ sẽ tự gọi fetchRecommendations() SAU KHI danh sách yêu
+        // thích đã tải xong, đảm bảo bước lọc trùng trong fetchRecommendations() luôn dùng đúng
+        // dữ liệu wishlist mới nhất (trước đây 2 lệnh gọi Firestore chạy độc lập, ai xong trước
+        // không xác định, khiến đôi khi lọc trùng bằng 1 wishlist rỗng -> sản phẩm hiện trùng).
         fetchWishlist();
-        fetchRecommendations();
         return view;
     }
+
+
+
+
 
 
 
@@ -74,8 +102,11 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     public void onResume() {
         super.onResume();
         fetchWishlist();
-        fetchRecommendations();
     }
+
+
+
+
 
 
 
@@ -96,10 +127,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         layoutHeaderActions = view.findViewById(R.id.layout_header_actions);
         layoutSearchBar = view.findViewById(R.id.layout_search_bar);
         etSearch = view.findViewById(R.id.et_search_wishlist);
         btnCancelSearch = view.findViewById(R.id.btn_cancel_search);
+
+
+
+
 
 
 
@@ -109,8 +148,16 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         btnSearch.setOnClickListener(v -> showSearchBar(true));
         btnCancelSearch.setOnClickListener(v -> showSearchBar(false));
+
+
+
+
 
 
 
@@ -128,11 +175,19 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         view.findViewById(R.id.btn_shop_now).setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).findViewById(R.id.nav_category).performClick();
             }
         });
+
+
+
+
 
 
 
@@ -148,9 +203,17 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         btnDelete.setOnClickListener(v -> {
             deleteSelected();
         });
+
+
+
+
 
 
 
@@ -159,6 +222,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             if (getActivity() != null) getActivity().onBackPressed();
         });
     }
+
+
+
+
 
 
 
@@ -172,11 +239,19 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         recommendationAdapter = new ProductAdapter(recommendationList, this);
         rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvRecommendations.setAdapter(recommendationAdapter);
         rvRecommendations.setNestedScrollingEnabled(false);
     }
+
+
+
+
 
 
 
@@ -187,8 +262,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             wishlist.clear();
             updateUI();
             applyFilters();
+            // FIX (yêu cầu #4): gọi gợi ý sau khi đã biết chắc wishlist rỗng (khách chưa đăng nhập).
+            fetchRecommendations();
             return;
         }
+
+
+
+
 
 
 
@@ -201,8 +282,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             wishlist.addAll(products);
             updateUI();
             applyFilters();
+            // FIX (yêu cầu #4): chỉ tải danh sách gợi ý SAU KHI wishlist đã có dữ liệu mới nhất,
+            // để bước lọc trùng bên dưới luôn chính xác.
+            fetchRecommendations();
         });
     }
+
+
+
+
 
 
 
@@ -218,6 +306,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         filteredWishlist = newList;
         wishlistAdapter.updateData(new ArrayList<>(filteredWishlist));
     }
+
+
+
+
 
 
 
@@ -243,8 +335,12 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     private void fetchRecommendations() {
-        FirestoreManager.getInstance().getProductsCollection().limit(20)
+        FirestoreManager.getInstance().getProductsCollection().limit(30)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!isAdded()) return;
@@ -253,15 +349,36 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                         Product product = doc.toObject(Product.class);
                         if (product != null) {
                             product.setId(doc.getId());
-                            pool.add(product);
+
+                            // Check if already in wishlist to avoid duplicates
+                            boolean alreadyInWishlist = false;
+                            for (Product wp : wishlist) {
+                                if (wp.getId() != null && wp.getId().equals(product.getId())) {
+                                    alreadyInWishlist = true;
+                                    break;
+                                }
+                            }
+
+                            if (!alreadyInWishlist) {
+                                pool.add(product);
+                            }
                         }
                     }
                     Collections.shuffle(pool);
+                    int pick = Math.min(6, pool.size());
                     recommendationList.clear();
-                    recommendationList.addAll(pool.subList(0, Math.min(4, pool.size())));
+                    recommendationList.addAll(pool.subList(0, pick));
+                    // FIX (yêu cầu #4): giữ lại phần còn dư của pool để dùng thay thế ngay khi
+                    // có sản phẩm trong danh sách gợi ý bị bấm yêu thích (xem replaceFavoritedRecommendation).
+                    recommendationBackupPool.clear();
+                    recommendationBackupPool.addAll(pool.subList(pick, pool.size()));
                     syncRecommendationFavoriteState();
                 });
     }
+
+
+
+
 
 
 
@@ -279,6 +396,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             recommendationAdapter.updateData(new ArrayList<>(recommendationList));
         });
     }
+
+
+
+
 
 
 
@@ -302,6 +423,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
             if (isEditMode) {
                 tvTitle.setText("Đã chọn (" + selectedProducts.size() + ")");
                 btnEdit.setText("Xong");
@@ -320,6 +445,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     private void toggleEditMode() {
         isEditMode = !isEditMode;
         wishlistAdapter.setSelectionMode(isEditMode);
@@ -333,6 +462,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     private void deleteSelected() {
         if (selectedProducts.isEmpty()) {
             Toast.makeText(getContext(), "Vui lòng chọn sản phẩm cần xóa", Toast.LENGTH_SHORT).show();
@@ -342,10 +475,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
         List<Product> toRemove = new ArrayList<>(selectedProducts);
         int total = toRemove.size();
         final int[] successCount = {0};
         final int[] failCount = {0};
+
+
+
+
 
 
 
@@ -375,8 +516,16 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
             wishlist.remove(p);
         }
+
+
+
+
 
 
 
@@ -387,6 +536,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         applyFilters();
         updateUI();
     }
+
+
+
+
 
 
 
@@ -404,10 +557,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     private void updateDeleteButtonText() {
         btnDelete.setText("Xóa (" + selectedProducts.size() + ")");
         tvTitle.setText("Đã chọn (" + selectedProducts.size() + ")");
     }
+
+
+
+
 
 
 
@@ -417,6 +578,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         if (isEditMode) {
             boolean isCurrentlySelected = product.isSelected();
             product.setSelected(!isCurrentlySelected);
+
+
+
+
 
 
 
@@ -443,6 +608,10 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại, bất kể có phân loại hay không.
     @Override
     public void onAddToCart(Product product) {
@@ -450,6 +619,7 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             showVariantSheet(product);
         }
     }
+
 
     private void showVariantSheet(Product product) {
         VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
@@ -460,9 +630,17 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
 
+
+
+
+
     @Override
     public void onFavoriteClick(Product product) {
         if (isEditMode) return;
+
+
+
+
 
 
 
@@ -482,6 +660,11 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                 if (!alreadyInList) {
                     wishlist.add(0, product);
                 }
+                // FIX (yêu cầu #4): sản phẩm vừa được yêu thích có thể đang nằm trong khu vực
+                // "Có thể bạn quan tâm" (ví dụ người dùng bấm ♥ ngay trên item gợi ý). Nếu không
+                // xử lý, sản phẩm này sẽ hiển thị trùng lặp ở cả lưới "Yêu thích" lẫn khu gợi ý.
+                // Gỡ nó khỏi danh sách gợi ý và thay bằng 1 sản phẩm khác từ pool dự phòng.
+                replaceFavoritedRecommendation(product);
             } else {
                 for (int i = 0; i < wishlist.size(); i++) {
                     if (wishlist.get(i).getId() != null && wishlist.get(i).getId().equals(product.getId())) {
@@ -493,5 +676,41 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             applyFilters();
             updateUI();
         });
+    }
+
+
+
+
+
+
+
+
+    // FIX (yêu cầu #4): xem chú thích tại nơi gọi (onFavoriteClick).
+    private void replaceFavoritedRecommendation(Product favorited) {
+        if (favorited == null || favorited.getId() == null || recommendationAdapter == null) {
+            return;
+        }
+
+
+        int index = -1;
+        for (int i = 0; i < recommendationList.size(); i++) {
+            Product p = recommendationList.get(i);
+            if (p.getId() != null && p.getId().equals(favorited.getId())) {
+                index = i;
+                break;
+            }
+        }
+        if (index == -1) {
+            return;
+        }
+
+
+        recommendationList.remove(index);
+        if (!recommendationBackupPool.isEmpty()) {
+            Product replacement = recommendationBackupPool.remove(0);
+            replacement.setFavorite(false);
+            recommendationList.add(index, replacement);
+        }
+        recommendationAdapter.updateData(new ArrayList<>(recommendationList));
     }
 }

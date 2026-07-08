@@ -1,8 +1,5 @@
 package com.example.healthup;
 
-
-
-
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Build;
@@ -10,7 +7,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
-
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
@@ -20,9 +16,9 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
-
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
+import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.NotificationPermissionHelper;
 import com.example.healthup.util.GuestCartManager;
@@ -42,14 +38,11 @@ import androidx.core.content.ContextCompat;
 import java.io.Serializable;
 import java.util.List;
 
-
-
-
 public class MainActivity extends AppCompatActivity {
+
 
     /** Bỏ qua một lần load ProductListFragment mặc định khi HomeFragment đã tự navigate. */
     static boolean skipNextCategoryNavLoad = false;
-
 
     private final ActivityResultLauncher<String> notificationPermissionLauncher =
             registerForActivityResult(
@@ -61,7 +54,6 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }
             );
-
 
     private BottomNavigationView navView;
     private FloatingActionButton fabChat;
@@ -75,15 +67,12 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
         navView = findViewById(R.id.bottom_navigation);
-
 
         fabChat = findViewById(R.id.fabChat);
         if (fabChat != null) {
@@ -91,9 +80,7 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(ChatActivity.buyerIntent(MainActivity.this)));
         }
 
-
         applySystemBarInsets();
-
 
         navView.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -126,7 +113,6 @@ public class MainActivity extends AppCompatActivity {
             return false;
         });
 
-
         setupKeyboardVisibilityListener();
         maybeShowNotificationPermissionDialog();
 
@@ -158,20 +144,10 @@ public class MainActivity extends AppCompatActivity {
                         if (value != null) {
                             int count = 0;
                             for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
-                                // Đồng bộ logic đếm với CartFragment: Phải có productId và name
-                                String pId = doc.getString("productId");
-                                String name = doc.getString("name");
-                                
-                                // Nếu không có name ở top-level, thử tìm trong map 'product' giống CartFragment
-                                if (name == null || name.isEmpty()) {
-                                    Object pObj = doc.get("product");
-                                    if (pObj instanceof java.util.Map) {
-                                        Object pName = ((java.util.Map<?, ?>) pObj).get("name");
-                                        if (pName instanceof String) name = (String) pName;
-                                    }
-                                }
-
-                                if (pId != null && !pId.isEmpty() && name != null && !name.isEmpty()) {
+                                // Đồng bộ logic đếm với CartFragment: chấp nhận cả field "name"
+                                // ở top-level hoặc lồng trong map "product", để badge khớp với
+                                // tiêu đề "Giỏ hàng (n)".
+                                if (CartHelper.isValidCartDocument(doc)) {
                                     count++;
                                 }
                             }
@@ -196,7 +172,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void refreshGuestCartBadge() {
         if (FirebaseAuth.getInstance().getCurrentUser() != null) return;
-        
+
         List<CartItem> items = GuestCartManager.getInstance(this).getItems();
         int count = 0;
         for (CartItem item : items) {
@@ -212,7 +188,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh listener in case user logged in/out
         setupCartBadgeListener();
-        
+
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
         ContextCompat.registerReceiver(this, guestCartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
     }
@@ -231,7 +207,6 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-
     private void maybeShowWelcomePromo() {
         if (getIntent() != null && getIntent().hasExtra("navigate_to")) {
             return;
@@ -240,12 +215,10 @@ public class MainActivity extends AppCompatActivity {
         WelcomePromoBottomSheet.showIfNeeded(getSupportFragmentManager(), this);
     }
 
-
     private void maybeShowNotificationPermissionDialog() {
         if (!NotificationPermissionHelper.shouldShowPrompt(this)) {
             return;
         }
-
 
         NotifyPermissionDialogFragment.show(
                 getSupportFragmentManager(),
@@ -255,7 +228,6 @@ public class MainActivity extends AppCompatActivity {
                         NotificationPermissionHelper.request(notificationPermissionLauncher);
                     }
 
-
                     @Override
                     public void onDecline() {
                         NotificationPermissionHelper.markDeclined(MainActivity.this);
@@ -263,7 +235,6 @@ public class MainActivity extends AppCompatActivity {
                 }
         );
     }
-
 
     private void setupKeyboardVisibilityListener() {
         rootLayout = findViewById(android.R.id.content);
@@ -273,9 +244,7 @@ public class MainActivity extends AppCompatActivity {
             int screenHeight = rootLayout.getRootView().getHeight();
             int keypadHeight = screenHeight - r.bottom;
 
-
             boolean keyboardNowShowing = keypadHeight > screenHeight * 0.15;
-
 
             if (keyboardNowShowing != isKeyboardShowing) {
                 isKeyboardShowing = keyboardNowShowing;
@@ -284,19 +253,16 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         handleIntent(intent);
     }
 
-
     @SuppressWarnings("unchecked")
     private void handleIntent(Intent intent) {
         if (intent != null && intent.hasExtra("navigate_to")) {
             String target = intent.getStringExtra("navigate_to");
-
 
             // FIX: điều hướng nhanh sang tab Giỏ hàng (sau khi "Mua ngay") hoặc tab Danh mục
             // (sau khi bấm "Xem tất cả"), không cần tạo OrderHistoryFragment cho các case này.
@@ -334,10 +300,8 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-
             OrderHistoryFragment fragment = new OrderHistoryFragment();
             Bundle args = new Bundle();
-
 
             if ("returned_tab".equals(target)) {
                 args.putInt("initial_tab", 5);
@@ -361,7 +325,6 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-
             fragment.setArguments(args);
             loadFragment(fragment);
             updateFabVisibility(false);
@@ -371,7 +334,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     private void applySystemBarInsets() {
         View root = findViewById(R.id.main_root);
         // Cho phép app vẽ tràn viền (Edge-to-edge)
@@ -379,14 +341,14 @@ public class MainActivity extends AppCompatActivity {
 
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            
+
             // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
-            
+
             // Fix Fragment Container: không để content lọt xuống dưới Nav Bar của app
             // Chúng ta không cần padding bottom ở đây vì fragment_container đã được constraint
             // vào TOP của bottom_navigation (đã được dãn chiều cao ở trên).
-            
+
             if (fabChat != null) {
                 ViewGroup.MarginLayoutParams params =
                         (ViewGroup.MarginLayoutParams) fabChat.getLayoutParams();
@@ -397,14 +359,12 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-
     private void updateFabVisibility(boolean hideOnCart) {
         if (fabChat == null) {
             return;
         }
         fabChat.setVisibility(hideOnCart ? View.GONE : View.VISIBLE);
     }
-
 
     private void loadFragment(Fragment fragment) {
         getSupportFragmentManager().beginTransaction()
@@ -442,4 +402,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return null;
     }
+
+
 }
