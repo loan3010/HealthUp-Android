@@ -50,9 +50,11 @@ public class FAQFragment extends Fragment {
         });
 
 
+        // FIX: đổi sang số điện thoại hỗ trợ được yêu cầu, và luôn mở giao diện quay số
+        // với số đã được nhập sẵn thay vì gọi trực tiếp.
         view.findViewById(R.id.btn_contact_support).setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(Uri.parse("tel:19001234"));
+            intent.setData(Uri.parse("tel:0769845728"));
             startActivity(intent);
         });
 
@@ -61,9 +63,6 @@ public class FAQFragment extends Fragment {
     }
 
 
-    // FIX: các icon mạng xã hội trước đây đều dùng chung ic_notifications (icon mặc định,
-    // không đúng ý nghĩa). Đổi sang tái sử dụng đúng bộ icon mạng xã hội thật (Facebook,
-    // Instagram, Threads, TikTok) giống hệt đang dùng ở trang Tài khoản.
     private void setupSocialButtons(View view) {
         View btnFb = view.findViewById(R.id.btn_fb);
         View btnIg = view.findViewById(R.id.btn_ig);
@@ -96,10 +95,6 @@ public class FAQFragment extends Fragment {
     }
 
 
-    // FIX: trước đây lọc theo Danh mục trợ giúp + từ khóa tìm kiếm, nhưng câu hỏi chưa được
-    // gắn đúng danh mục trong Firestore -> bấm vào danh mục nào cũng ra danh sách trống.
-    // Theo yêu cầu: bỏ luôn Danh mục trợ giúp và thanh tìm kiếm, hiển thị toàn bộ
-    // Câu hỏi thường gặp ngay khi vào trang.
     private void fetchFaqs() {
         FirestoreManager.getInstance().getFirestore().collection("faqs")
                 .get()

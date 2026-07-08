@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
+    android:background="@color/neutral_cream">
 
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
+        android:background="@color/neutral_cream"
         app:elevation="0dp">
 
 
@@ -43,9 +43,6 @@
         </RelativeLayout>
 
 
-        <!-- FIX: đã bỏ thanh tìm kiếm ở trang này theo yêu cầu -->
-
-
     </com.google.android.material.appbar.AppBarLayout>
 
 
@@ -62,8 +59,6 @@
             android:paddingBottom="32dp">
 
 
-            <!-- FIX: đã bỏ mục "Danh mục trợ giúp" theo yêu cầu, hiển thị luôn toàn bộ
-                 Câu hỏi thường gặp mà không cần phân loại -->
             <TextView
                 android:id="@+id/tv_faq_list_title"
                 android:layout_width="wrap_content"

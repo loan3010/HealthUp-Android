@@ -7,6 +7,7 @@
     android:layout_height="match_parent"
     android:background="@color/bg_cream">
 
+
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
@@ -14,11 +15,13 @@
         android:background="@color/bg_cream"
         app:elevation="0dp">
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="30dp"
             android:orientation="vertical">
+
 
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
@@ -27,9 +30,11 @@
                 android:background="@color/bg_cream"
                 app:contentInsetStart="0dp">
 
+
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="match_parent">
+
 
                     <ImageButton
                         android:id="@+id/btnBack"
@@ -41,21 +46,21 @@
                         android:src="@drawable/ic_back"
                         app:tint="@color/text_main" />
 
+
+                    <!-- FIX (yêu cầu): tiêu đề chỉ cần "Đánh giá", không hiện tên sản phẩm nữa -->
                     <TextView
                         android:id="@+id/tvToolbarTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_centerInParent="true"
-                        android:text="Đánh giá sản phẩm"
+                        android:text="Đánh giá"
                         android:textColor="@color/text_main"
                         android:textSize="18sp"
                         android:textStyle="bold" />
                 </RelativeLayout>
             </androidx.appcompat.widget.Toolbar>
 
-            <!-- FIX: bọc phần tóm tắt đánh giá (điểm TB + sao + số lượng) vào 1 card
-                 trắng riêng biệt, bo góc, tách bạch rõ với phần tìm kiếm/lọc bên dưới
-                 bằng khoảng cách nhất quán, thay vì mọi thứ dồn liền mạch như trước. -->
+
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -65,6 +70,7 @@
                 app:cardCornerRadius="16dp"
                 app:cardElevation="0dp">
 
+
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -72,26 +78,32 @@
                     android:orientation="horizontal"
                     android:padding="16dp">
 
+
+                    <!-- FIX: đồng bộ màu với primary_default (màu chủ đạo dùng cho nút/icon
+                         toàn app), thay vì primary_green lệch tông so với các trang khác -->
                     <TextView
                         android:id="@+id/tv_avg_rating"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="4.9"
-                        android:textColor="@color/primary_green"
+                        android:textColor="@color/primary_default"
                         android:textSize="32sp"
                         android:textStyle="bold" />
+
 
                     <View
                         android:layout_width="1dp"
                         android:layout_height="36dp"
                         android:layout_marginHorizontal="16dp"
-                        android:background="#E0E0E0" />
+                        android:background="@color/border_color" />
+
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:orientation="vertical">
+
 
                         <RatingBar
                             android:id="@+id/rating_bar_avg"
@@ -102,6 +114,7 @@
                             android:numStars="5"
                             android:progressTint="#FFB300"
                             android:rating="5" />
+
 
                         <TextView
                             android:id="@+id/tv_total_reviews"
@@ -115,6 +128,7 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+
             <!-- Search -->
             <RelativeLayout
                 android:layout_width="match_parent"
@@ -125,6 +139,7 @@
                 android:background="@drawable/bg_search_input"
                 android:paddingHorizontal="12dp">
 
+
                 <ImageView
                     android:id="@+id/ic_search_review"
                     android:layout_width="18dp"
@@ -132,6 +147,7 @@
                     android:layout_centerVertical="true"
                     android:src="@drawable/ic_search"
                     app:tint="@color/text_gray" />
+
 
                 <EditText
                     android:id="@+id/et_search_review"
@@ -146,11 +162,13 @@
                     android:textSize="13sp" />
             </RelativeLayout>
 
+
             <!-- Filter chips -->
             <HorizontalScrollView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:scrollbars="none">
+
 
                 <com.google.android.material.chip.ChipGroup
                     android:id="@+id/chip_group_filter"
@@ -162,6 +180,7 @@
                     app:singleLine="true"
                     app:singleSelection="true">
 
+
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_all"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
@@ -171,6 +190,7 @@
                         android:checked="true"
                         android:text="Tất cả" />
 
+
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_has_image"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
@@ -178,6 +198,7 @@
                         android:layout_height="wrap_content"
                         android:checkable="true"
                         android:text="Có hình ảnh" />
+
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_5star"
@@ -187,6 +208,7 @@
                         android:checkable="true"
                         android:text="5 sao" />
 
+
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_4star"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
@@ -194,6 +216,7 @@
                         android:layout_height="wrap_content"
                         android:checkable="true"
                         android:text="4 sao" />
+
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_3star"
@@ -203,6 +226,7 @@
                         android:checkable="true"
                         android:text="3 sao" />
 
+
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_2star"
                         style="@style/Widget.MaterialComponents.Chip.Filter"
@@ -210,6 +234,7 @@
                         android:layout_height="wrap_content"
                         android:checkable="true"
                         android:text="2 sao" />
+
 
                     <com.google.android.material.chip.Chip
                         android:id="@+id/chip_1star"
@@ -221,28 +246,22 @@
                 </com.google.android.material.chip.ChipGroup>
             </HorizontalScrollView>
 
-            <!-- FIX: thêm dải phân cách mỏng để tách rõ khối header (tóm tắt + tìm kiếm +
-                 lọc) với danh sách đánh giá bên dưới, giúp mắt dễ phân biệt từng khu vực -->
+
             <View
                 android:layout_width="match_parent"
                 android:layout_height="8dp"
                 android:background="@color/bg_light" />
 
+
         </LinearLayout>
     </com.google.android.material.appbar.AppBarLayout>
 
-    <!-- FIX ROOT CAUSE: trước đây RecyclerView và tv_no_reviews là 2 view con độc lập của
-         CoordinatorLayout, trong đó tv_no_reviews dùng layout_marginTop="120dp" CỐ ĐỊNH để
-         né phần header phía trên. Vì header có chiều cao thay đổi được (dải chip lọc có thể
-         xuống dòng ở màn hình hẹp), con số 120dp cố định khiến dòng "Chưa có đánh giá nào"
-         dễ bị chồng lên phần tìm kiếm/lọc -> đây chính là phần "lộn xộn" người dùng phản ánh.
-         Sửa: gộp cả 2 vào chung 1 FrameLayout dùng app:layout_behavior chuẩn của
-         CoordinatorLayout, để luôn tự động nằm đúng bên dưới AppBarLayout bất kể chiều cao
-         header co giãn thế nào. -->
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvReviews"
@@ -251,6 +270,7 @@
             android:clipToPadding="false"
             android:padding="16dp"
             tools:listitem="@layout/item_review" />
+
 
         <TextView
             android:id="@+id/tv_no_reviews"
@@ -264,5 +284,6 @@
             android:textSize="14sp"
             android:visibility="gone" />
     </FrameLayout>
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

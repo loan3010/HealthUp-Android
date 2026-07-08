@@ -1,8 +1,5 @@
 package com.example.healthup;
 
-
-
-
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -34,15 +31,7 @@ import java.util.Locale;
 import java.util.Set;
 
 
-
-
-
-
-
-
 public class ProductDetailActivity extends AppCompatActivity {
-
-
 
 
     private Product product;
@@ -58,21 +47,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     private Product.ProductVariant selectedVariant;
 
 
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product_detail);
 
-
-
-
         String productId = getIntent().getStringExtra("productId");
         product = (Product) getIntent().getSerializableExtra("product");
-
-
-
 
         if (productId != null) {
             fetchProductDetails(productId);
@@ -83,8 +64,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             finish();
         }
     }
-
-
 
 
     private void fetchProductDetails(String productId) {
@@ -99,8 +78,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> finish());
     }
-
-
 
 
     private void showProductUi() {
@@ -126,8 +103,6 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void initViews() {
         btnBack = findViewById(R.id.btn_back);
         viewPagerImages = findViewById(R.id.view_pager_images);
@@ -142,9 +117,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvSavings = findViewById(R.id.tv_savings);
         tvStock = findViewById(R.id.tv_detail_stock);
 
-
-
-
         layoutVariants = findViewById(R.id.layout_variants);
         dividerVariants = findViewById(R.id.divider_variants);
         chipGroupVariants = findViewById(R.id.chip_group_variants);
@@ -154,16 +126,10 @@ public class ProductDetailActivity extends AppCompatActivity {
         btnBuyNow = findViewById(R.id.btn_buy_now);
         View btnChat = findViewById(R.id.btn_chat);
 
-
-
-
         rvRecommendations = findViewById(R.id.rv_detail_recommendations);
         rvReviews = findViewById(R.id.rv_reviews);
         tvViewAllReviews = findViewById(R.id.tv_view_all_reviews);
         tvViewAllRecommend = findViewById(R.id.tv_view_all_recommend);
-
-
-
 
         btnBack.setOnClickListener(v -> finish());
         btnWishlist.setOnClickListener(v -> toggleFavorite());
@@ -173,13 +139,9 @@ public class ProductDetailActivity extends AppCompatActivity {
             btnChat.setOnClickListener(v -> openProductChat());
         }
 
-
-
-
         if (tvViewAllReviews != null) {
             tvViewAllReviews.setOnClickListener(v -> openAllReviews());
         }
-
 
         if (tvViewAllRecommend != null) {
             tvViewAllRecommend.setOnClickListener(v -> {
@@ -190,8 +152,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             });
         }
     }
-
-
 
 
     private void openAllReviews() {
@@ -205,8 +165,6 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void openProductChat() {
         if (product == null || product.getName() == null) {
             Toast.makeText(this, "Đang tải thông tin sản phẩm...", Toast.LENGTH_SHORT).show();
@@ -218,27 +176,16 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void setupProductInfo() {
         tvName.setText(product.getName());
         updatePriceDisplay();
-
-
-
 
         tvRating.setText(String.valueOf(product.getRating()));
         tvReviewCount.setText(product.getReviewCount() + " đánh giá");
         tvSold.setText("Đã bán " + product.getSoldCount() + "+");
 
-
-
-
         updateWishlistIcon();
         setupVariants();
-
-
-
 
         List<String> images = product.getImages();
         if (images == null || images.isEmpty()) {
@@ -246,14 +193,8 @@ public class ProductDetailActivity extends AppCompatActivity {
             images.add(product.getImageUrl());
         }
 
-
-
-
         final List<String> finalImages = images;
         viewPagerImages.setAdapter(new ImageSliderAdapter(finalImages));
-
-
-
 
         tvImageIndex.setText("1/" + finalImages.size());
         viewPagerImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -263,8 +204,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         });
     }
-
-
 
 
     private void setupVariants() {
@@ -320,34 +259,20 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void updatePriceDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
         double displayPrice = (selectedVariant != null) ? selectedVariant.getPrice() : product.getPrice();
         int stock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
 
-
-
-
         tvPrice.setText(formatter.format(displayPrice) + "đ");
-
-
-
 
         if (product.getOriginalPrice() > displayPrice) {
             tvOriginalPrice.setVisibility(View.VISIBLE);
             tvDiscount.setVisibility(View.VISIBLE);
             tvSavings.setVisibility(View.VISIBLE);
 
-
-
-
             tvOriginalPrice.setText(formatter.format(product.getOriginalPrice()) + "đ");
             tvOriginalPrice.setPaintFlags(tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-
-
-
 
             int discountPercent = (int) (((product.getOriginalPrice() - displayPrice) / product.getOriginalPrice()) * 100);
             tvDiscount.setText("-" + discountPercent + "%");
@@ -358,9 +283,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             tvSavings.setVisibility(View.GONE);
         }
 
-
-
-
         if (tvStock != null) {
             tvStock.setText(getString(R.string.stock_prefix, stock));
             btnAddCart.setEnabled(stock > 0);
@@ -369,13 +291,8 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void setupExpandableSections() {
         setupSection(findViewById(R.id.section_ingredients), "Thành phần chính", product.getIngredients());
-
-
-
 
         StringBuilder nutritionText = new StringBuilder();
         if (product.getNutrition() != null) {
@@ -391,35 +308,21 @@ public class ProductDetailActivity extends AppCompatActivity {
         setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng",
                 nutritionText.length() > 0 ? nutritionText.toString().trim() : null);
 
-
-
-
         setupSection(findViewById(R.id.section_usage), "Hướng dẫn sử dụng", product.getUsage());
         setupSection(findViewById(R.id.section_origin), "Nguồn gốc xuất xứ", product.getOrigin());
     }
 
 
-
-
     private void setupSection(View sectionView, String title, String content) {
         if (sectionView == null) return;
-
-
-
 
         TextView tvTitle = sectionView.findViewById(R.id.tv_section_title);
         TextView tvContent = sectionView.findViewById(R.id.tv_section_content);
         View btnExpand = sectionView.findViewById(R.id.btn_expand);
         ImageView ivArrow = sectionView.findViewById(R.id.iv_expand_arrow);
 
-
-
-
         if (tvTitle != null) tvTitle.setText(title);
         if (tvContent != null) tvContent.setText(content != null ? content : "Thông tin đang được cập nhật...");
-
-
-
 
         if (btnExpand != null) {
             btnExpand.setOnClickListener(v -> {
@@ -437,11 +340,16 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
+    // FIX ROOT CAUSE (bug "Có thể bạn quan tâm không hiển thị sản phẩm"):
+    // ProductAdapter luôn tự COPY list truyền vào constructor ra 1 list nội bộ riêng
+    // (xem ProductAdapter constructor). Code cũ tạo list rỗng, đưa cho adapter (adapter copy
+    // ra 1 list rỗng riêng), rồi lại mutate (clear+addAll) đúng cái list rỗng BAN ĐẦU đó và
+    // gọi notifyDataSetChanged() — nhưng adapter đang cầm 1 list hoàn toàn khác nên không có
+    // gì thay đổi để vẽ lại => RecyclerView mãi mãi trống.
+    // Sửa: không giữ list dùng chung nữa, luôn gọi recommendationAdapter.updateData(list mới)
+    // để thay đúng list mà adapter đang cầm.
     private void setupRecommendations() {
-        List<Product> recommendations = new ArrayList<>();
-        recommendationAdapter = new ProductAdapter(recommendations, new ProductAdapter.OnProductClickListener() {
+        recommendationAdapter = new ProductAdapter(new ArrayList<>(), new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product p) {
                 if (p == null || p.getId() == null) return;
@@ -465,23 +373,15 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         });
 
-
-
-
         rvRecommendations.setLayoutManager(new GridLayoutManager(this, 2));
         rvRecommendations.setAdapter(recommendationAdapter);
 
-
-
-
-        fetchRandomRecommendations(recommendations);
+        fetchRandomRecommendations();
         fetchReviews();
     }
 
 
-
-
-    private void fetchRandomRecommendations(List<Product> recommendations) {
+    private void fetchRandomRecommendations() {
         FirestoreManager.getInstance().getProductsCollection()
                 .limit(30).get()
                 .addOnSuccessListener(snapshot -> {
@@ -493,32 +393,27 @@ public class ProductDetailActivity extends AppCompatActivity {
                         }
                     }
                     Collections.shuffle(pool);
-                    recommendations.clear();
-                    recommendations.addAll(pool.subList(0, Math.min(6, pool.size())));
-                    syncRecommendationFavoriteState(recommendations);
+                    List<Product> selected = new ArrayList<>(pool.subList(0, Math.min(6, pool.size())));
+                    syncRecommendationFavoriteState(selected);
                 })
                 .addOnFailureListener(e ->
                         Log.e("ProductDetail", "Lỗi tải gợi ý: " + e.getMessage()));
     }
 
 
-
-
     private void syncRecommendationFavoriteState(List<Product> recommendations) {
         String uid = WishlistManager.currentUserId();
         if (uid == null) {
             for (Product p : recommendations) p.setFavorite(false);
-            recommendationAdapter.notifyDataSetChanged();
+            recommendationAdapter.updateData(recommendations);
             return;
         }
         WishlistManager.loadFavoriteIds(uid, (Set<String> ids) -> {
             if (isFinishing()) return;
             WishlistManager.applyFavoriteState(recommendations, ids);
-            recommendationAdapter.notifyDataSetChanged();
+            recommendationAdapter.updateData(recommendations);
         });
     }
-
-
 
 
     private void fetchReviews() {
@@ -526,9 +421,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         ProductReviewEntryAdapter reviewAdapter = new ProductReviewEntryAdapter(reviews);
         rvReviews.setLayoutManager(new LinearLayoutManager(this));
         rvReviews.setAdapter(reviewAdapter);
-
-
-
 
         FirestoreManager.getInstance().getProductsCollection()
                 .document(product.getId())
@@ -550,20 +442,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void toggleFavorite() {
         toggleFavoriteForProduct(product);
     }
 
 
-
-
     private void toggleFavoriteForProduct(Product p) {
         if (p == null || p.getId() == null) return;
-
-
-
 
         WishlistManager.toggle(this, p, success -> {
             if (!success) {
@@ -580,16 +465,12 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void updateWishlistIcon() {
         boolean isFavorite = product.isFavorite();
         btnWishlist.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
         int tintColor = ContextCompat.getColor(this, isFavorite ? R.color.error : R.color.primary_default);
         btnWishlist.setImageTintList(ColorStateList.valueOf(tintColor));
     }
-
-
 
 
     private void showVariantSelection(boolean isBuyNow) {
@@ -605,17 +486,6 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
-    // FIX ROOT CAUSE (yêu cầu #2): trước đây performBuyNow() chỉ gọi addToCart(quantity) rồi
-    // điều hướng sang tab Giỏ hàng -> hành vi giống hệt nút "Thêm vào giỏ hàng", không có gì
-    // khác biệt. "Mua ngay" đúng nghĩa phải bỏ qua bước lưu giỏ hàng và đi thẳng đến trang
-    // Thanh toán với đúng 1 sản phẩm (kèm phân loại + số lượng) vừa chọn.
-    //
-    // LƯU Ý QUAN TRỌNG: đoạn điều hướng bên dưới cần MainActivity xử lý thêm 1 case mới
-    // ("checkout") trong nơi nó đang đọc extra "navigate_to", để mở CheckoutFragment với
-    // đúng danh sách "checkout_items" này. Vui lòng gửi nội dung MainActivity.java để tôi
-    // viết nốt phần đó (xem hướng dẫn/snippet mẫu ở cuối câu trả lời).
     private void performBuyNow(int quantity) {
         com.example.models.CartItem buyNowItem = new com.example.models.CartItem(
                 product.getId(), product, quantity, null);
@@ -647,13 +517,9 @@ public class ProductDetailActivity extends AppCompatActivity {
     }
 
 
-
-
     private void addToCart(int quantity) {
         addToCartForProduct(product, selectedVariant, quantity);
     }
-
-
 
 
     private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity) {

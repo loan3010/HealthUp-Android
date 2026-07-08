@@ -4,63 +4,82 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:background="@color/bg_cream"
+    android:background="@drawable/bg_bottom_sheet"
     android:padding="16dp">
 
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:background="@drawable/bg_rounded_rect"
-        android:backgroundTint="@color/track_gray" />
+        android:layout_marginBottom="16dp"
+        android:background="@color/neutral_light_grey" />
 
-    <LinearLayout
+    <RelativeLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:orientation="horizontal">
+        android:layout_height="wrap_content">
 
         <ImageView
             android:id="@+id/imgProduct"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:background="@color/track_gray"
+            android:layout_width="100dp"
+            android:layout_height="100dp"
+            android:background="@color/neutral_light_grey"
             android:scaleType="centerCrop"
-            android:contentDescription="Product Image" />
+            android:contentDescription="@string/app_name" />
+
+        <ImageButton
+            android:id="@+id/btnCloseEditCart"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentTop="true"
+            android:layout_alignParentEnd="true"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_close"
+            app:tint="@color/neutral_grey" />
 
         <LinearLayout
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:layout_marginStart="12dp"
+            android:layout_centerVertical="true"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="32dp"
+            android:layout_toStartOf="@id/btnCloseEditCart"
+            android:layout_toEndOf="@id/imgProduct"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tvName"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:maxLines="2"
                 android:ellipsize="end"
+                android:maxLines="2"
+                android:textColor="@color/neutral_black"
                 android:textSize="14sp"
-                android:textColor="@color/text_dark" />
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvPrice"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:textStyle="bold"
-                android:textSize="15sp"
-                android:textColor="@color/green_button" />
+                android:layout_marginTop="6dp"
+                android:textColor="@color/primary_default"
+                android:textSize="20sp"
+                android:textStyle="bold" />
 
             <TextView
                 android:id="@+id/tvStockWarning"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="11sp"
-                android:textColor="@color/yellow_progress" />
+                android:layout_marginTop="4dp"
+                android:textColor="@color/yellow_progress"
+                android:textSize="11sp" />
         </LinearLayout>
-    </LinearLayout>
+    </RelativeLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginTop="16dp"
+        android:background="@color/neutral_light_grey" />
 
     <TextView
         android:id="@+id/tvLabelWeight"
@@ -68,9 +87,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="20dp"
         android:text="KHỐI LƯỢNG"
-        android:textSize="12sp"
+        android:textColor="@color/neutral_black"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray"
         android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
@@ -87,9 +106,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="HƯƠNG VỊ"
-        android:textSize="12sp"
+        android:textColor="@color/neutral_black"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray"
         android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
@@ -106,9 +125,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="16dp"
         android:text="LOẠI ĐÓNG GÓI"
-        android:textSize="12sp"
+        android:textColor="@color/neutral_black"
+        android:textSize="13sp"
         android:textStyle="bold"
-        android:textColor="@color/text_gray"
         android:visibility="gone" />
 
     <com.google.android.flexbox.FlexboxLayout
@@ -119,66 +138,66 @@
         android:visibility="gone"
         app:flexWrap="wrap" />
 
-    <TextView
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="SỐ LƯỢNG"
-        android:textSize="12sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_gray" />
-
-    <LinearLayout
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:layout_marginTop="8dp"
-        android:orientation="horizontal"
-        android:gravity="center_vertical"
-        android:background="@drawable/bg_rounded_rect"
-        android:backgroundTint="@color/bg_cream"
-        android:paddingHorizontal="8dp">
+        android:layout_marginTop="24dp">
 
         <TextView
-            android:id="@+id/btnDecrease"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="−"
-            android:textSize="18sp"
-            android:textColor="@color/text_dark" />
-
-        <TextView
-            android:id="@+id/tvQuantity"
-            android:layout_width="40dp"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:text="1"
-            android:textSize="16sp"
-            android:textColor="@color/text_dark" />
+            android:layout_centerVertical="true"
+            android:text="Số lượng"
+            android:textColor="@color/neutral_black"
+            android:textSize="16sp" />
 
-        <TextView
-            android:id="@+id/btnIncrease"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:gravity="center"
-            android:text="+"
-            android:textSize="18sp"
-            android:textColor="@color/text_dark" />
-    </LinearLayout>
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:background="@drawable/bg_quantity_selector"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-    <TextView
+            <ImageView
+                android:id="@+id/btnDecrease"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_minus" />
+
+            <TextView
+                android:id="@+id/tvQuantity"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:text="1"
+                android:textColor="@color/neutral_black"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <ImageView
+                android:id="@+id/btnIncrease"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_plus" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/btnConfirm"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginTop="24dp"
-        android:gravity="center"
+        android:layout_height="56dp"
+        android:layout_marginTop="32dp"
+        android:backgroundTint="@color/primary_default"
         android:text="Xác nhận"
+        android:textAllCaps="false"
         android:textColor="@color/white"
-        android:textStyle="bold"
         android:textSize="16sp"
-        android:background="@drawable/bg_rounded_rect"
-        android:backgroundTint="@color/green_button"
-        android:clickable="true"
-        android:focusable="true" />
+        android:textStyle="bold"
+        app:cornerRadius="14dp" />
 
 </LinearLayout>

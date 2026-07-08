@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -15,15 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
+
 public class ProductReviewsActivity extends AppCompatActivity {
     private ActivityProductReviewsBinding binding;
     private String productId;
     private ProductReviewEntryAdapter reviewAdapter;
 
-    // FIX: giữ 2 danh sách - allReviews (dữ liệu gốc từ Firestore) và reviewList (dữ liệu
-    // đã lọc theo chip + từ khóa search, được adapter hiển thị)
     private final List<Review> allReviews = new ArrayList<>();
     private final List<Review> reviewList = new ArrayList<>();
+
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -31,7 +32,7 @@ public class ProductReviewsActivity extends AppCompatActivity {
         binding = ActivityProductReviewsBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
+
         View root = findViewById(R.id.product_reviews_root);
         if (root != null) {
             root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
@@ -42,24 +43,28 @@ public class ProductReviewsActivity extends AppCompatActivity {
             });
         }
 
+
         productId = getIntent().getStringExtra("productId");
-        String productName = getIntent().getStringExtra("product_name");
         float avgRating = getIntent().getFloatExtra("avgRating", 0f);
         int reviewCountExtra = getIntent().getIntExtra("reviewCount", -1);
 
-        if (productName != null) {
-            binding.tvToolbarTitle.setText("Đánh giá " + productName);
-        }
+        // FIX (yêu cầu): tiêu đề trang chỉ cần "Đánh giá" (ngắn gọn), không hiển thị
+        // lại đầy đủ tên sản phẩm nữa — giữ nguyên giá trị mặc định đã đặt sẵn trong XML,
+        // không override bằng tên sản phẩm như trước.
+
 
         if (avgRating > 0) {
             updateSummary(avgRating, reviewCountExtra >= 0 ? reviewCountExtra : 0);
         }
 
+
         binding.btnBack.setOnClickListener(v -> finish());
+
 
         setupList();
         setupFilterChips();
         setupSearch();
+
 
         if (productId != null) {
             fetchReviewsFromFirestore();
@@ -68,23 +73,28 @@ public class ProductReviewsActivity extends AppCompatActivity {
         }
     }
 
+
     private void setupList() {
         reviewAdapter = new ProductReviewEntryAdapter(reviewList);
         binding.rvReviews.setLayoutManager(new LinearLayoutManager(this));
         binding.rvReviews.setAdapter(reviewAdapter);
     }
 
+
     private void setupFilterChips() {
         binding.chipGroupFilter.setOnCheckedStateChangeListener((group, checkedIds) -> applyFilters());
     }
+
 
     private void setupSearch() {
         binding.etSearchReview.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
+
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {}
+
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -92,6 +102,7 @@ public class ProductReviewsActivity extends AppCompatActivity {
             }
         });
     }
+
 
     private void fetchReviewsFromFirestore() {
         FirestoreManager.getInstance().getProductsCollection()
@@ -106,12 +117,13 @@ public class ProductReviewsActivity extends AppCompatActivity {
                         if (r != null) allReviews.add(r);
                     }
 
-                    // Nếu không truyền avgRating/reviewCount từ trang chi tiết -> tự tính từ dữ liệu thật
+
                     if (getIntent().getFloatExtra("avgRating", 0f) <= 0 && !allReviews.isEmpty()) {
                         float sum = 0;
                         for (Review r : allReviews) sum += r.getRating();
                         updateSummary(sum / allReviews.size(), allReviews.size());
                     }
+
 
                     applyFilters();
                 })
@@ -120,30 +132,36 @@ public class ProductReviewsActivity extends AppCompatActivity {
                 });
     }
 
+
     private void updateSummary(float avgRating, int totalCount) {
         binding.tvAvgRating.setText(String.format(Locale.getDefault(), "%.1f", avgRating));
         binding.ratingBarAvg.setRating(avgRating);
         binding.tvTotalReviews.setText(totalCount + " đánh giá");
     }
 
-    // FIX: lọc theo chip đang chọn (sao / có hình ảnh) + từ khóa tìm kiếm trong nội dung comment
+
     private void applyFilters() {
         String keyword = binding.etSearchReview.getText().toString().trim().toLowerCase(Locale.getDefault());
         int checkedChipId = binding.chipGroupFilter.getCheckedChipId();
 
+
         reviewList.clear();
+
 
         for (Review r : allReviews) {
             if (!matchesChip(r, checkedChipId)) continue;
             if (!keyword.isEmpty() && (r.getComment() == null
                     || !r.getComment().toLowerCase(Locale.getDefault()).contains(keyword))) continue;
 
+
             reviewList.add(r);
         }
+
 
         reviewAdapter.notifyDataSetChanged();
         binding.tvNoReviews.setVisibility(reviewList.isEmpty() ? View.VISIBLE : View.GONE);
     }
+
 
     private boolean matchesChip(Review r, int checkedChipId) {
         if (checkedChipId == binding.chipHasImage.getId()) {
@@ -159,7 +177,6 @@ public class ProductReviewsActivity extends AppCompatActivity {
         } else if (checkedChipId == binding.chip1star.getId()) {
             return Math.round(r.getRating()) == 1;
         }
-        // chip_all hoặc không chọn gì -> hiện tất cả
         return true;
     }
 }

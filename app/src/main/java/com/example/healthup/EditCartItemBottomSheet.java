@@ -19,7 +19,7 @@ import com.google.android.material.chip.Chip;
 import com.example.healthup.util.ImageLoadHelper;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.text.NumberFormat;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -46,7 +46,9 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private TextView tvPrice;
     private Product loadedProduct;
 
-    private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+    // FIX: dùng cùng định dạng "#,###đ" (đ ở CUỐI) giống hệt popup "Thêm vào giỏ hàng"
+    // (ProductOptionsBottomSheetFragment) thay vì "đ " ở đầu như trước.
+    private final DecimalFormat currencyFormat = new DecimalFormat("#,###đ");
 
     public EditCartItemBottomSheet(CartItem item, OnConfirmListener listener) {
         this.item = item;
@@ -73,6 +75,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         View btnDecrease = rootView.findViewById(R.id.btnDecrease);
         View btnIncrease = rootView.findViewById(R.id.btnIncrease);
         View btnConfirm = rootView.findViewById(R.id.btnConfirm);
+        View btnClose = rootView.findViewById(R.id.btnCloseEditCart);
 
         groupWeight = rootView.findViewById(R.id.groupWeight);
         groupFlavor = rootView.findViewById(R.id.groupFlavor);
@@ -105,13 +108,16 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
             dismiss();
         });
 
+        if (btnClose != null) {
+            btnClose.setOnClickListener(v -> dismiss());
+        }
+
         ImageLoadHelper.loadInto(imgProduct, item.getImageUrl());
 
         return rootView;
     }
 
     private void loadProductOptions() {
-        // Luôn load ảnh từ CartItem trước
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
         ImageLoadHelper.loadInto(imgProduct, item.getImageUrl());
 
@@ -127,7 +133,6 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                         Product p = Product.fromDocument(doc);
                         if (p != null) {
                             loadedProduct = p;
-                            // Chỉ cập nhật ảnh từ Product nếu CartItem không có ảnh
                             if (item.getImageUrl() == null || item.getImageUrl().isEmpty()) {
                                 String productImage = p.getImageUrl();
                                 if (productImage != null && !productImage.isEmpty()) {
@@ -167,7 +172,8 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private void updatePriceDisplay() {
         if (tvPrice == null) return;
-        tvPrice.setText("đ " + currencyFormat.format(resolveSelectedPrice()));
+        // FIX: bỏ "đ " ở đầu, dùng currencyFormat (đ ở cuối) để giống hệt popup "Thêm vào giỏ hàng"
+        tvPrice.setText(currencyFormat.format(resolveSelectedPrice()));
     }
 
     private double resolveSelectedPrice() {
@@ -202,28 +208,27 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         void onSelected(String value);
     }
 
+    // FIX: bỏ toàn bộ việc tô màu chip thủ công (setChipBackgroundColorResource/setTextColor).
+    // Để Material Design Chip tự xử lý màu theo trạng thái checked/unchecked mặc định của theme,
+    // giống hệt cách ProductOptionsBottomSheetFragment.addChipToGroup() đang làm ở popup
+    // "Thêm vào giỏ hàng" — nhờ vậy 2 popup sẽ có chip giống hệt nhau về màu sắc/kiểu dáng.
     private void buildOptionGroup(FlexboxLayout container, List<String> options, String currentValue, OnOptionSelected callback) {
         container.removeAllViews();
+        String normalizedCurrent = normalize(currentValue);
+
         for (String rawOption : options) {
-            // Fix: Trích xuất nhãn từ cấu trúc Map nếu cần (ví dụ: {label=100g})
             String displayLabel = extractLabel(rawOption);
-            
+
             Chip chip = new Chip(requireContext());
             chip.setText(displayLabel);
             chip.setCheckable(true);
-            
-            // So sánh dựa trên giá trị gốc (rawOption) để giữ logic đồng bộ với Firestore
-            boolean isSelected = rawOption.equals(currentValue) || displayLabel.equals(currentValue);
+            chip.setClickable(true);
+
+            // FIX: so khớp không phân biệt hoa/thường và bỏ khoảng trắng thừa,
+            // tránh trường hợp không chip nào được chọn do lệch định dạng dữ liệu.
+            boolean isSelected = normalize(rawOption).equals(normalizedCurrent)
+                    || normalize(displayLabel).equals(normalizedCurrent);
             chip.setChecked(isSelected);
-            
-            // Cập nhật style
-            if (isSelected) {
-                chip.setChipBackgroundColorResource(R.color.green_button);
-                chip.setTextColor(getResources().getColor(R.color.white));
-            } else {
-                chip.setChipBackgroundColorResource(R.color.track_gray);
-                chip.setTextColor(getResources().getColor(R.color.text_dark));
-            }
 
             FlexboxLayout.LayoutParams params = new FlexboxLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -234,13 +239,8 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 for (int i = 0; i < container.getChildCount(); i++) {
                     Chip child = (Chip) container.getChildAt(i);
                     child.setChecked(false);
-                    child.setChipBackgroundColorResource(R.color.track_gray);
-                    child.setTextColor(getResources().getColor(R.color.text_dark));
                 }
                 chip.setChecked(true);
-                chip.setChipBackgroundColorResource(R.color.green_button);
-                chip.setTextColor(getResources().getColor(R.color.white));
-                // Trả về giá trị hiển thị để cập nhật lên UI
                 callback.onSelected(displayLabel);
             });
 
@@ -248,10 +248,13 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         }
     }
 
+    private String normalize(String s) {
+        return s == null ? "" : s.trim().toLowerCase(Locale.ROOT);
+    }
+
     private String extractLabel(String input) {
         if (input == null) return "";
         if (input.contains("label=")) {
-            // Thử trích xuất từ chuỗi dạng {outOfStock=false, label=100g}
             try {
                 int start = input.indexOf("label=") + 6;
                 int end = input.indexOf(",", start);

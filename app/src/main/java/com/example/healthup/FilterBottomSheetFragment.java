@@ -1,19 +1,26 @@
 package com.example.healthup;
 
+
+import android.app.Dialog;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
+import android.widget.FrameLayout;
 import android.widget.RadioGroup;
 import android.widget.TextView;
+
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
@@ -22,26 +29,30 @@ import com.google.android.material.slider.RangeSlider;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Product;
 
+
 import java.text.NumberFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 
+
 public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
+
 
     public interface OnFilterAppliedListener {
         void onFilterApplied(String category, String sort, double minPrice, double maxPrice, float rating);
     }
 
-    // Giá tối đa của cả bộ lọc: 1.000.000đ (trước là 10.000.000đ)
+
     private static final float PRICE_MAX = 1000000f;
-    // Bước nhảy khi kéo thanh trượt giá, tránh số thập phân lẻ
     private static final float PRICE_STEP = 5000f;
+
 
     private OnFilterAppliedListener listener;
     private String selectedCategory, selectedSort;
     private double minPrice, maxPrice;
     private float minRating;
+
 
     private ChipGroup chipGroupSort;
     private RecyclerView rvCategories;
@@ -50,9 +61,11 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
     private RadioGroup rgRating;
     private CategoryAdapter categoryAdapter;
 
+
     private final List<String> categories = Arrays.asList(
             "Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"
     );
+
 
     public static FilterBottomSheetFragment newInstance(String category, String sort, double min, double max, float rating) {
         FilterBottomSheetFragment fragment = new FilterBottomSheetFragment();
@@ -66,6 +79,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         return fragment;
     }
 
+
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -76,11 +90,12 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             maxPrice = getArguments().getDouble("max");
             minRating = getArguments().getFloat("rating");
 
-            // Bảo vệ: nếu giá trị truyền vào vượt mức tối đa mới, ép về giới hạn mới
+
             if (maxPrice > PRICE_MAX) maxPrice = PRICE_MAX;
             if (minPrice > PRICE_MAX) minPrice = PRICE_MAX;
         }
     }
+
 
     @Nullable
     @Override
@@ -88,11 +103,34 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         return inflater.inflate(R.layout.bottom_sheet_filter, container, false);
     }
 
+
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         initViews(view);
     }
+
+
+    // FIX (yêu cầu: "mới click vào Bộ lọc thì không thấy nút Áp dụng đâu"):
+    // BottomSheetDialogFragment mặc định mở ở trạng thái COLLAPSED (chỉ hiện 1 phần theo
+    // peekHeight), người dùng phải kéo lên mới thấy hết nội dung kể cả khi layout đã ghim
+    // nút Áp dụng ở đáy. Ép trạng thái EXPANDED ngay khi dialog xuất hiện để toàn bộ bottom
+    // sheet (bao gồm nút Áp dụng) hiển thị đầy đủ ngay từ đầu, không cần kéo.
+    @Override
+    public void onStart() {
+        super.onStart();
+        Dialog dialog = getDialog();
+        if (dialog instanceof BottomSheetDialog) {
+            FrameLayout bottomSheet = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheet != null) {
+                BottomSheetBehavior<FrameLayout> behavior = BottomSheetBehavior.from(bottomSheet);
+                behavior.setState(BottomSheetBehavior.STATE_EXPANDED);
+                behavior.setSkipCollapsed(true);
+                bottomSheet.getLayoutParams().height = ViewGroup.LayoutParams.MATCH_PARENT;
+            }
+        }
+    }
+
 
     private void initViews(View view) {
         chipGroupSort = view.findViewById(R.id.chip_group_sort);
@@ -102,13 +140,16 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         tvMaxPrice = view.findViewById(R.id.tv_max_price);
         rgRating = view.findViewById(R.id.rg_rating);
 
+
         setupSortChips();
         setupCategoryList();
         setupPriceSlider(view);
         setupRatingGroup();
 
+
         view.findViewById(R.id.btn_close).setOnClickListener(v -> dismiss());
         view.findViewById(R.id.btn_reset).setOnClickListener(v -> resetFilters());
+
 
         MaterialButton btnApply = view.findViewById(R.id.btn_apply);
         if (btnApply != null) {
@@ -120,8 +161,10 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             });
         }
 
+
         updateApplyButton(view);
     }
+
 
     private void setupSortChips() {
         if (chipGroupSort == null) return;
@@ -139,6 +182,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         }
     }
 
+
     private void setupCategoryList() {
         categoryAdapter = new CategoryAdapter(categories, selectedCategory, category -> {
             selectedCategory = category;
@@ -148,18 +192,16 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         rvCategories.setAdapter(categoryAdapter);
     }
 
+
     private void setupPriceSlider(View view) {
-        // Đặt giá trị tạm an toàn (0,0) trước khi đổi valueFrom/valueTo/stepSize.
-        // Bắt buộc phải làm vậy vì RangeSlider sẽ crash nếu giá trị hiện tại (từ XML, có thể là 10.000.000)
-        // vượt quá valueTo mới (1.000.000) tại bất kỳ thời điểm nào.
         priceSlider.setValues(0f, 0f);
+
 
         priceSlider.setValueFrom(0f);
         priceSlider.setValueTo(PRICE_MAX);
         priceSlider.setStepSize(PRICE_STEP);
 
-        // Làm tròn giá trị min/max hiện có về đúng bước 5.000đ và giới hạn 0 - 1.000.000đ,
-        // phòng trường hợp giá trị cũ không khớp bước nhảy mới -> tránh crash
+
         float safeMin = roundToStep(minPrice);
         float safeMax = roundToStep(maxPrice);
         if (safeMax <= safeMin) {
@@ -168,8 +210,10 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         minPrice = safeMin;
         maxPrice = safeMax;
 
+
         priceSlider.setValues(safeMin, safeMax);
         updatePriceTexts();
+
 
         priceSlider.addOnChangeListener((slider, value, fromUser) -> {
             List<Float> values = slider.getValues();
@@ -178,6 +222,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             updatePriceTexts();
             updateApplyButton(getView());
         });
+
 
         View.OnClickListener priceQuickAction = v -> {
             int id = v.getId();
@@ -191,13 +236,13 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             updateApplyButton(getView());
         };
 
+
         view.findViewById(R.id.btn_price_under_100).setOnClickListener(priceQuickAction);
         view.findViewById(R.id.btn_price_100_200).setOnClickListener(priceQuickAction);
         view.findViewById(R.id.btn_price_above_200).setOnClickListener(priceQuickAction);
     }
 
-    // Hàm hỗ trợ làm tròn giá trị về đúng bội số của PRICE_STEP (5.000đ),
-    // đồng thời giới hạn trong khoảng [0, PRICE_MAX] để tránh crash RangeSlider
+
     private float roundToStep(double value) {
         float v = (float) value;
         if (v < 0) v = 0;
@@ -205,15 +250,18 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         return Math.round(v / PRICE_STEP) * PRICE_STEP;
     }
 
+
     private void updatePriceTexts() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
         tvMinPrice.setText(String.format("%sđ", formatter.format(minPrice)));
         tvMaxPrice.setText(String.format("%sđ", formatter.format(maxPrice)));
     }
 
+
     private void setupRatingGroup() {
         if (minRating >= 5) rgRating.check(R.id.rb_5_stars);
         else if (minRating >= 4) rgRating.check(R.id.rb_4_stars);
+
 
         rgRating.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rb_5_stars) minRating = 5.0f;
@@ -222,6 +270,7 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             updateApplyButton(getView());
         });
     }
+
 
     private void updateApplyButton(View view) {
         if (view == null) return;
@@ -247,12 +296,14 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
                 });
     }
 
+
     private void resetFilters() {
         selectedCategory = "Tất cả";
         selectedSort = "Phổ biến";
         minPrice = 0;
         maxPrice = PRICE_MAX;
         minRating = 0;
+
 
         if (chipGroupSort != null) chipGroupSort.check(R.id.chip_popular);
         priceSlider.setValues(0f, PRICE_MAX);
@@ -262,18 +313,22 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
         updateApplyButton(getView());
     }
 
+
     public void setFilterListener(OnFilterAppliedListener listener) {
         this.listener = listener;
     }
+
 
     private static class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.ViewHolder> {
         private final List<String> items;
         private String selectedCategory;
         private final OnCategorySelectedListener listener;
 
+
         interface OnCategorySelectedListener {
             void onSelected(String category);
         }
+
 
         CategoryAdapter(List<String> items, String selected, OnCategorySelectedListener listener) {
             this.items = items;
@@ -281,10 +336,12 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             this.listener = listener;
         }
 
+
         void setSelectedCategory(String category) {
             this.selectedCategory = category;
             notifyDataSetChanged();
         }
+
 
         @NonNull
         @Override
@@ -293,12 +350,14 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             return new ViewHolder(view);
         }
 
+
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             String categoryName = items.get(position);
             holder.tvName.setText(categoryName);
-            holder.tvCount.setVisibility(View.GONE); // Ẩn số lượng cho đơn giản
+            holder.tvCount.setVisibility(View.GONE);
             holder.checkBox.setChecked(categoryName.equals(selectedCategory));
+
 
             View.OnClickListener clickListener = v -> {
                 selectedCategory = categoryName;
@@ -309,8 +368,10 @@ public class FilterBottomSheetFragment extends BottomSheetDialogFragment {
             holder.checkBox.setOnClickListener(clickListener);
         }
 
+
         @Override
         public int getItemCount() { return items.size(); }
+
 
         static class ViewHolder extends RecyclerView.ViewHolder {
             CheckBox checkBox;
