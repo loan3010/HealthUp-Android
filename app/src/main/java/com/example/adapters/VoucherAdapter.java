@@ -46,7 +46,17 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
         Voucher voucher = voucherList.get(position);
 
         holder.tvTitle.setText(voucher.getTitle());
-        holder.tvDescription.setText(voucher.getDescription());
+        
+        // Hiển thị giá trị giảm giá nếu có
+        String desc = voucher.getDescription();
+        if (voucher.getDiscountAmount() > 0) {
+            String valStr = voucher.getDiscountAmount() < 100 ? 
+                (int)voucher.getDiscountAmount() + "%" : 
+                String.format("%,.0fđ", voucher.getDiscountAmount()).replace(",", ".");
+            holder.tvTitle.setText(voucher.getTitle() + " - Giảm " + valStr);
+        }
+        
+        holder.tvDescription.setText(desc);
         holder.tvExpiry.setText(voucher.getExpiryDate());
         holder.rbSelected.setChecked(voucher.isSelected());
 

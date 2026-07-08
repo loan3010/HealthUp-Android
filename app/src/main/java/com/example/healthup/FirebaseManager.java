@@ -55,6 +55,33 @@ public class FirebaseManager {
         return db.collection("products").get();
     }
 
+    // --- VOUCHERS ---
+    public Task<QuerySnapshot> getVouchers() {
+        return db.collection("promoCodes").get();
+    }
+
+    public void seedVouchersIfEmpty() {
+        db.collection("promoCodes").limit(1).get().addOnSuccessListener(queryDocumentSnapshots -> {
+            if (queryDocumentSnapshots.isEmpty()) {
+                // Chỉ seed nếu bộ sưu tập promoCodes hoàn toàn trống
+                List<Map<String, Object>> list = new ArrayList<>();
+                
+                Map<String, Object> v1 = new HashMap<>();
+                v1.put("code", "HEALTHUP5");
+                v1.put("description", "Giảm 5% cho mọi đơn hàng từ 0đ");
+                v1.put("discountPercent", 5);
+                v1.put("minOrderValue", 0);
+                v1.put("isActive", true);
+                v1.put("expiryDate", Timestamp.now());
+                list.add(v1);
+
+                for (Map<String, Object> v : list) {
+                    db.collection("promoCodes").document(String.valueOf(v.get("code"))).set(v);
+                }
+            }
+        });
+    }
+
     public void seedProductsIfEmpty() {
         db.collection("products").limit(1).get().addOnSuccessListener(queryDocumentSnapshots -> {
             if (queryDocumentSnapshots.isEmpty()) {

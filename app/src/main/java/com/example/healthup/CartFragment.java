@@ -172,8 +172,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             return;
         }
 
+        // Bỏ orderBy ở query Firestore vì nếu 1 document thiếu field 'updatedAt', 
+        // nó sẽ bị Firestore loại bỏ khỏi kết quả trả về, gây lệch số lượng với Badge.
         db.collection("users").document(userId).collection("cart")
-                .orderBy("updatedAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener(snapshot -> {
                     if (isAdded()) {
@@ -181,16 +182,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     }
                 })
                 .addOnFailureListener(e -> {
-                    if (!isAdded()) {
-                        return;
+                    if (isAdded()) {
+                        Toast.makeText(getContext(), "Lỗi tải giỏ hàng", Toast.LENGTH_SHORT).show();
                     }
-                    db.collection("users").document(userId).collection("cart")
-                            .get()
-                            .addOnSuccessListener(snapshot -> {
-                                if (isAdded()) {
-                                    applyFirestoreCartSnapshot(snapshot);
-                                }
-                            });
                 });
     }
 
@@ -204,7 +198,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         boolean isRebuyFlow = getArguments() != null && getArguments().getBoolean("is_rebuy_flow", false);
 
-        cartItems.clear();
+        List<CartItem> loadedItems = new ArrayList<>();
         if (snapshot != null && !snapshot.isEmpty()) {
             for (QueryDocumentSnapshot doc : snapshot) {
                 CartItem item = parseCartItem(doc);
@@ -216,10 +210,23 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         Boolean wasSelected = selection.get(item.getId());
                         item.setSelected(wasSelected != null ? wasSelected : true);
                     }
-                    cartItems.add(item);
+                    loadedItems.add(item);
                 }
             }
         }
+
+        // Sắp xếp theo updatedAt giảm dần trong bộ nhớ (để document không có field này vẫn hiện ở cuối)
+        java.util.Collections.sort(loadedItems, (o1, o2) -> {
+            com.google.firebase.Timestamp t1 = o1.getUpdatedAt();
+            com.google.firebase.Timestamp t2 = o2.getUpdatedAt();
+            if (t1 == null && t2 == null) return 0;
+            if (t1 == null) return 1;
+            if (t2 == null) return -1;
+            return t2.compareTo(t1);
+        });
+
+        cartItems.clear();
+        cartItems.addAll(loadedItems);
         renderList();
         updateFooter();
     }

@@ -130,6 +130,9 @@ public class MainActivity extends AppCompatActivity {
         setupKeyboardVisibilityListener();
         maybeShowNotificationPermissionDialog();
 
+        // ✅ Tự động tạo dữ liệu Voucher và Sản phẩm nếu chưa có
+        FirebaseManager.getInstance().seedVouchersIfEmpty();
+        FirebaseManager.getInstance().seedProductsIfEmpty();
 
         if (savedInstanceState == null) {
             handleIntent(getIntent());
@@ -155,8 +158,19 @@ public class MainActivity extends AppCompatActivity {
                         if (value != null) {
                             int count = 0;
                             for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                                // Đồng bộ logic đếm với CartFragment: Phải có productId và name
                                 String pId = doc.getString("productId");
                                 String name = doc.getString("name");
+                                
+                                // Nếu không có name ở top-level, thử tìm trong map 'product' giống CartFragment
+                                if (name == null || name.isEmpty()) {
+                                    Object pObj = doc.get("product");
+                                    if (pObj instanceof java.util.Map) {
+                                        Object pName = ((java.util.Map<?, ?>) pObj).get("name");
+                                        if (pName instanceof String) name = (String) pName;
+                                    }
+                                }
+
                                 if (pId != null && !pId.isEmpty() && name != null && !name.isEmpty()) {
                                     count++;
                                 }

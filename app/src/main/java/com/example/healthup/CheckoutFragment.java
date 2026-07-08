@@ -121,9 +121,126 @@ public class CheckoutFragment extends Fragment {
         renderProductList();
         renderVouchers();
         loadDefaultAddress();
+        loadVouchers(); // ✅ Tự động lấy voucher từ Firebase
         calculateSummary();
 
         return view;
+    }
+
+    private void loadVouchers() {
+        FirebaseManager.getInstance().getVouchers().addOnSuccessListener(snapshot -> {
+            if (snapshot == null || snapshot.isEmpty()) return;
+            
+            double itemsTotal = getItemsTotal();
+            Voucher bestShipping = null;
+            double maxShipSaving = 0;
+            
+            Voucher bestDiscount = null;
+            double maxDiscountSaving = 0;
+
+            for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                Voucher v = parseVoucherFromDoc(doc);
+                if (v == null) continue;
+                
+                // Kiểm tra điều kiện áp dụng
+                if (itemsTotal < v.getMinOrderAmount()) continue;
+
+                double saving = calculateSaving(v, itemsTotal);
+
+                if (v.getType() == Voucher.Type.SHIPPING) {
+                    if (saving > maxShipSaving) {
+                        maxShipSaving = saving;
+                        bestShipping = v;
+                    }
+                } else {
+                    if (saving > maxDiscountSaving) {
+                        maxDiscountSaving = saving;
+                        bestDiscount = v;
+                    }
+                }
+            }
+
+            // Chỉ tự động chọn nếu danh sách hiện tại đang trống (lần đầu vào)
+            if (selectedVouchers.isEmpty()) {
+                if (bestShipping != null) {
+                    bestShipping.setSelected(true);
+                    selectedVouchers.add(bestShipping);
+                }
+                if (bestDiscount != null) {
+                    bestDiscount.setSelected(true);
+                    selectedVouchers.add(bestDiscount);
+                }
+            }
+            
+            if (isAdded()) {
+                renderVouchers();
+                calculateSummary();
+            }
+        }).addOnFailureListener(e -> {
+            if (isAdded()) {
+                calculateSummary();
+            }
+        });
+    }
+
+    private Voucher parseVoucherFromDoc(DocumentSnapshot doc) {
+        Boolean active = doc.getBoolean("isActive");
+        if (active != null && !active) return null;
+
+        Voucher v = new Voucher();
+        v.setId(doc.getId());
+        v.setCode(doc.getString("code"));
+        v.setTitle(v.getCode());
+        v.setDescription(doc.getString("description"));
+        
+        // Trích xuất minOrderValue an toàn
+        Double minVal = doc.getDouble("minOrderValue");
+        v.setMinOrderAmount(minVal != null ? minVal : 0);
+        
+        // Nhận diện loại giảm giá (Percent ưu tiên)
+        Double percent = doc.getDouble("discountPercent");
+        if (percent != null && percent > 0) {
+            v.setDiscountAmount(percent);
+        } else {
+            Double amount = doc.getDouble("discountAmount");
+            v.setDiscountAmount(amount != null ? amount : 0);
+        }
+
+        String code = (v.getCode() != null ? v.getCode() : "").toUpperCase();
+        if (code.contains("SHIP") || code.contains("FREE")) {
+            v.setType(Voucher.Type.SHIPPING);
+        } else {
+            v.setType(Voucher.Type.DISCOUNT);
+        }
+
+        return v;
+    }
+
+    private double calculateSaving(Voucher v, double itemsTotal) {
+        double val = v.getDiscountAmount();
+        // Giả định nếu giá trị < 100 thì đó là % (ví dụ 5, 10, 15...)
+        if (val > 0 && val < 100) {
+            if (v.getType() == Voucher.Type.SHIPPING) {
+                return (val / 100.0) * shippingFee;
+            } else {
+                return (val / 100.0) * itemsTotal;
+            }
+        }
+        return val;
+    }
+
+    private void requestPaymentPermission(String providerName, int rbId) {
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setTitle("Cấp quyền truy cập " + providerName)
+                .setMessage("Để thực hiện thanh toán qua " + providerName + ", HealthUp cần quyền truy cập thông tin định danh để bảo mật giao dịch.")
+                .setPositiveButton("Cho phép", (dialog, which) -> {
+                    Toast.makeText(getContext(), "Đã cấp quyền truy cập " + providerName, Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("Từ chối", (dialog, which) -> {
+                    Toast.makeText(getContext(), "Bạn cần cấp quyền để sử dụng phương thức này", Toast.LENGTH_SHORT).show();
+                    radioGroupPayment.check(R.id.rbCod);
+                })
+                .show();
     }
 
     private void bindViews(View view) {
@@ -192,11 +309,28 @@ public class CheckoutFragment extends Fragment {
         btnPlaceOrder.setOnClickListener(v -> placeOrder());
 
         radioGroupPayment.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.rbVnpay) selectedPaymentMethod = "vnpay";
-            else if (checkedId == R.id.rbCard) selectedPaymentMethod = "card";
-            else if (checkedId == R.id.rbZaloPay) selectedPaymentMethod = "zalopay";
-            else if (checkedId == R.id.rbMomo) selectedPaymentMethod = "momo";
-            else selectedPaymentMethod = "cod";
+            if (checkedId == R.id.rbCod) {
+                selectedPaymentMethod = "cod";
+                return;
+            }
+            
+            // Xử lý tất cả các phương thức Online
+            String provider = "Ví điện tử / Thẻ";
+            if (checkedId == R.id.rbVnpay) {
+                selectedPaymentMethod = "vnpay";
+                provider = "VNPAY";
+            } else if (checkedId == R.id.rbCard) {
+                selectedPaymentMethod = "card";
+                provider = "Thẻ ngân hàng";
+            } else if (checkedId == R.id.rbZaloPay) {
+                selectedPaymentMethod = "zalopay";
+                provider = "ZaloPay";
+            } else if (checkedId == R.id.rbMomo) {
+                selectedPaymentMethod = "momo";
+                provider = "MoMo";
+            }
+            
+            requestPaymentPermission(provider, checkedId);
         });
     }
 
@@ -246,7 +380,8 @@ public class CheckoutFragment extends Fragment {
         PromoCouponFragment fragment = new PromoCouponFragment();
         Bundle bundle = new Bundle();
         bundle.putSerializable("selected_vouchers", (Serializable) selectedVouchers);
-        bundle.putBoolean("has_visited", true); // Đánh dấu là đã vào rồi để tránh auto-reset
+        bundle.putDouble("order_total", getItemsTotal()); // ✅ Truyền tổng tiền để kiểm tra điều kiện mã
+        bundle.putBoolean("has_visited", !selectedVouchers.isEmpty()); // Chỉ coi là đã thăm nếu thực sự đã có chọn mã
         fragment.setArguments(bundle);
 
         requireActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null).commit();
@@ -307,10 +442,20 @@ public class CheckoutFragment extends Fragment {
         shippingDiscount = 0;
 
         for (Voucher v : selectedVouchers) {
+            double saving = v.getDiscountAmount();
+            // Nếu giá trị < 100 thì tính theo %
+            if (saving > 0 && saving < 100) {
+                if (v.getType() == Voucher.Type.SHIPPING) {
+                    saving = (saving / 100.0) * shippingFee;
+                } else {
+                    saving = (saving / 100.0) * itemsTotal;
+                }
+            }
+
             if (v.getType() == Voucher.Type.SHIPPING) {
-                shippingDiscount = Math.min(v.getDiscountAmount(), shippingFee);
+                shippingDiscount += Math.min(saving, shippingFee);
             } else {
-                totalDiscount += v.getDiscountAmount();
+                totalDiscount += saving;
             }
         }
 

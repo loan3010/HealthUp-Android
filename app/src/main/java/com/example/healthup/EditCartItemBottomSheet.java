@@ -90,12 +90,14 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         btnIncrease.setOnClickListener(v -> {
             quantity++;
             tvQuantity.setText(String.valueOf(quantity));
+            updatePriceDisplay();
         });
 
         btnDecrease.setOnClickListener(v -> {
             if (quantity > 1) {
                 quantity--;
                 tvQuantity.setText(String.valueOf(quantity));
+                updatePriceDisplay();
             }
         });
 
@@ -149,14 +151,17 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private void showFallbackOptions() {
         updateUISection(tvLabelWeight, cgWeight, Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> {
             selectedWeight = v;
+            updatePriceDisplay();
             updateSelectedSummary();
         });
         updateUISection(tvLabelFlavor, cgFlavor, Arrays.asList("Vị Socola", "Vị Mật Ong", "Nguyên Bản"), selectedFlavor, v -> {
             selectedFlavor = v;
+            updatePriceDisplay();
             updateSelectedSummary();
         });
         updateUISection(tvLabelPackage, cgPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> {
             selectedPackage = v;
+            updatePriceDisplay();
             updateSelectedSummary();
         });
     }
@@ -170,17 +175,19 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         });
         updateUISection(tvLabelFlavor, cgFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> {
             selectedFlavor = v;
+            updatePriceDisplay();
             updateSelectedSummary();
         });
         updateUISection(tvLabelPackage, cgPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> {
             selectedPackage = v;
+            updatePriceDisplay();
             updateSelectedSummary();
         });
     }
 
     private void updatePriceDisplay() {
         if (tvPrice == null) return;
-        tvPrice.setText(currencyFormat.format(resolveSelectedPrice()));
+        tvPrice.setText(currencyFormat.format(resolveSelectedPrice() * quantity));
     }
 
     private void updateSelectedSummary() {
@@ -199,7 +206,29 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private double resolveSelectedPrice() {
         if (loadedProduct != null) {
-            return loadedProduct.getPriceForOption(selectedWeight);
+            // 1. Kiểm tra khối lượng (selectedWeight)
+            if (selectedWeight != null && !selectedWeight.trim().isEmpty()) {
+                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedWeight);
+                if (variant != null && variant.getPrice() > 0) {
+                    return variant.getPrice();
+                }
+            }
+            // 2. Kiểm tra hương vị (selectedFlavor)
+            if (selectedFlavor != null && !selectedFlavor.trim().isEmpty()) {
+                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedFlavor);
+                if (variant != null && variant.getPrice() > 0) {
+                    return variant.getPrice();
+                }
+            }
+            // 3. Kiểm tra quy cách đóng gói (selectedPackage)
+            if (selectedPackage != null && !selectedPackage.trim().isEmpty()) {
+                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedPackage);
+                if (variant != null && variant.getPrice() > 0) {
+                    return variant.getPrice();
+                }
+            }
+            // Mặc định trả về giá cơ bản của sản phẩm
+            return loadedProduct.getPrice();
         }
         return item.getPrice();
     }

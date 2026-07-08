@@ -1,8 +1,13 @@
 package com.example.healthup;
 
+import android.Manifest;
 import android.app.DatePickerDialog;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Rect;
+import android.net.Uri;
 import android.os.Bundle;
+import android.provider.MediaStore;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.MotionEvent;
@@ -10,12 +15,23 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.Toast;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityAccountInfoBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
+import java.io.File;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 public class AccountInfoActivity extends AppCompatActivity {
@@ -24,6 +40,45 @@ public class AccountInfoActivity extends AppCompatActivity {
     private FirebaseAuth mAuth;
     private String userId;
     private boolean isShowPassword = false;
+
+    private Uri selectedAvatarUri;
+    private Uri cameraPhotoUri;
+
+    private final ActivityResultLauncher<PickVisualMediaRequest> pickAvatarLauncher =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                if (uri != null) {
+                    selectedAvatarUri = uri;
+                    Glide.with(this)
+                            .load(uri)
+                            .circleCrop()
+                            .into(binding.ivAvatar);
+                    binding.ivAvatar.setImageTintList(null);
+                    binding.ivAvatar.setPadding(0, 0, 0, 0);
+                }
+            });
+
+    private final ActivityResultLauncher<Intent> cameraLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    selectedAvatarUri = cameraPhotoUri;
+                    Glide.with(this)
+                            .load(selectedAvatarUri)
+                            .circleCrop()
+                            .into(binding.ivAvatar);
+                    binding.ivAvatar.setImageTintList(null);
+                    binding.ivAvatar.setPadding(0, 0, 0, 0);
+                }
+            });
+
+    private final ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    launchCameraIntent();
+                } else {
+                    Toast.makeText(this, "Bạn cần cấp quyền Camera để chụp ảnh", Toast.LENGTH_SHORT).show();
+                }
+            });
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,6 +149,14 @@ public class AccountInfoActivity extends AppCompatActivity {
             }
             binding.etPassword.setSelection(binding.etPassword.getText().length());
         });
+
+        // Set up avatar click listeners
+        View.OnClickListener avatarPickerListener = v -> {
+            showImageSourceDialog();
+        };
+        binding.containerAvatar.setOnClickListener(avatarPickerListener);
+        binding.ivAvatar.setOnClickListener(avatarPickerListener);
+        binding.ivEditAvatar.setOnClickListener(avatarPickerListener);
     }
 
     private void setupKeyboardHandling() {
@@ -175,6 +238,16 @@ public class AccountInfoActivity extends AppCompatActivity {
                         if ("Nam".equals(gender)) binding.rbMale.setChecked(true);
                         else if ("Nữ".equals(gender)) binding.rbFemale.setChecked(true);
                         else if ("Khác".equals(gender)) binding.rbOther.setChecked(true);
+
+                        String avatarUrl = documentSnapshot.getString("avatarUrl");
+                        if (avatarUrl != null && !avatarUrl.isEmpty()) {
+                            Glide.with(this)
+                                    .load(avatarUrl)
+                                    .circleCrop()
+                                    .into(binding.ivAvatar);
+                            binding.ivAvatar.setImageTintList(null);
+                            binding.ivAvatar.setPadding(0, 0, 0, 0);
+                        }
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -202,6 +275,29 @@ public class AccountInfoActivity extends AppCompatActivity {
         updates.put("gender", gender);
         updates.put("dob", dob);
 
+        if (selectedAvatarUri != null) {
+            uploadAvatarAndSave(updates);
+        } else {
+            updateFirestore(updates);
+        }
+    }
+
+    private void uploadAvatarAndSave(Map<String, Object> updates) {
+        com.google.firebase.storage.StorageReference storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().getReference()
+                .child("avatars/" + userId + ".jpg");
+
+        storageRef.putFile(selectedAvatarUri)
+                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                    updates.put("avatarUrl", uri.toString());
+                    updateFirestore(updates);
+                }))
+                .addOnFailureListener(e -> {
+                    binding.progressBar.setVisibility(View.GONE);
+                    Toast.makeText(this, "Lỗi tải ảnh đại diện: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void updateFirestore(Map<String, Object> updates) {
         db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     binding.progressBar.setVisibility(View.GONE);
@@ -211,5 +307,51 @@ public class AccountInfoActivity extends AppCompatActivity {
                     binding.progressBar.setVisibility(View.GONE);
                     Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void showImageSourceDialog() {
+        String[] options = {"Chụp ảnh mới", "Chọn từ thư viện"};
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Thay đổi ảnh đại diện")
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        launchCamera();
+                    } else {
+                        pickAvatarLauncher.launch(new PickVisualMediaRequest.Builder()
+                                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                                .build());
+                    }
+                })
+                .show();
+    }
+
+    private void launchCamera() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            launchCameraIntent();
+        } else {
+            requestPermissionLauncher.launch(Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchCameraIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        File photoFile = null;
+        try {
+            photoFile = createImageFile();
+        } catch (IOException ex) {
+            Toast.makeText(this, "Lỗi tạo file ảnh: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+        if (photoFile != null) {
+            cameraPhotoUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", photoFile);
+            takePictureIntent.putExtra(MediaStore.EXTRA_OUTPUT, cameraPhotoUri);
+            takePictureIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            takePictureIntent.addFlags(Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            cameraLauncher.launch(takePictureIntent);
+        }
+    }
+
+    private File createImageFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        return File.createTempFile("AVATAR_" + timeStamp + "_", ".jpg", getExternalFilesDir(null));
     }
 }
