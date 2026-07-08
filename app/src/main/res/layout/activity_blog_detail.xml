@@ -9,21 +9,22 @@
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/app_bar"
         android:layout_width="match_parent"
-        android:layout_height="280dp"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        android:layout_height="wrap_content"
+        android:background="@color/neutral_cream"
+        app:elevation="0dp">
 
         <com.google.android.material.appbar.CollapsingToolbarLayout
             android:id="@+id/collapsing_toolbar"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            app:contentScrim="?attr/colorPrimary"
+            app:contentScrim="@color/neutral_cream"
             app:layout_scrollFlags="scroll|exitUntilCollapsed"
-            app:toolbarId="@+id/toolbar">
+            app:titleEnabled="false">
 
             <ImageView
                 android:id="@+id/iv_detail_image"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="300dp"
                 android:scaleType="centerCrop"
                 app:layout_collapseMode="parallax"
                 app:layout_collapseParallaxMultiplier="0.7"
@@ -31,18 +32,16 @@
 
             <View
                 android:layout_width="match_parent"
-                android:layout_height="130dp"
-                android:layout_gravity="bottom"
-                android:background="@drawable/gradient_shadow" />
+                android:layout_height="100dp"
+                android:layout_gravity="top"
+                android:background="@drawable/gradient_shadow_reverse" />
 
             <androidx.appcompat.widget.Toolbar
                 android:id="@+id/toolbar"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:minHeight="?attr/actionBarSize"
-                android:paddingTop="30dp"
+                android:layout_height="?attr/actionBarSize"
                 app:layout_collapseMode="pin"
-                app:navigationIcon="@drawable/ic_back_white" />
+                app:navigationIcon="@drawable/ic_back" />
 
         </com.google.android.material.appbar.CollapsingToolbarLayout>
     </com.google.android.material.appbar.AppBarLayout>
@@ -51,29 +50,30 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:clipToPadding="false"
-        android:paddingBottom="@dimen/spacing_2xl"
+        android:overScrollMode="never"
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical"
+            android:paddingBottom="32dp">
 
-            <!-- Card nội dung bài viết, đè lên phần dưới ảnh header -->
+            <!-- Card nội dung chính -->
             <com.google.android.material.card.MaterialCardView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="-28dp"
+                android:layout_marginTop="-30dp"
                 app:cardBackgroundColor="@color/neutral_white"
-                app:cardCornerRadius="@dimen/radius_2xl"
-                app:cardElevation="@dimen/shadow_card_elevation"
+                app:cardCornerRadius="28dp"
+                app:cardElevation="4dp"
                 app:strokeWidth="0dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="@dimen/spacing_xl">
+                    android:padding="24dp">
 
                     <TextView
                         android:id="@+id/tv_detail_category"
@@ -81,8 +81,8 @@
                         android:layout_height="wrap_content"
                         android:background="@drawable/bg_category_chip"
                         android:backgroundTint="@color/primary_tint_5"
-                        android:paddingHorizontal="@dimen/spacing_m"
-                        android:paddingVertical="5dp"
+                        android:paddingHorizontal="12dp"
+                        android:paddingVertical="6dp"
                         android:textColor="@color/primary_default"
                         android:textSize="12sp"
                         android:textStyle="bold"
@@ -92,17 +92,17 @@
                         android:id="@+id/tv_detail_title"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_m"
-                        android:lineSpacingExtra="4dp"
-                        android:textColor="@color/text_dark"
-                        android:textSize="22sp"
+                        android:layout_marginTop="16dp"
+                        android:lineSpacingExtra="6dp"
+                        android:textColor="@color/neutral_black"
+                        android:textSize="24sp"
                         android:textStyle="bold"
                         tools:text="10 Lợi ích của việc uống nước mỗi ngày" />
 
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_m"
+                        android:layout_marginTop="16dp"
                         android:gravity="center_vertical"
                         android:orientation="horizontal">
 
@@ -110,35 +110,35 @@
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@drawable/ic_chat_person"
-                            app:tint="@color/text_gray" />
+                            app:tint="@color/neutral_grey" />
 
                         <TextView
                             android:id="@+id/tv_detail_author"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:textColor="@color/text_gray"
+                            android:layout_marginStart="6dp"
+                            android:textColor="@color/neutral_grey"
                             android:textSize="13sp"
-                            tools:text="Admin" />
+                            tools:text="Bởi Admin" />
 
                         <View
                             android:layout_width="4dp"
                             android:layout_height="4dp"
-                            android:layout_marginHorizontal="@dimen/spacing_s"
-                            android:background="@color/text_gray" />
+                            android:layout_marginHorizontal="12dp"
+                            android:background="@color/neutral_light_grey" />
 
                         <ImageView
                             android:layout_width="16dp"
                             android:layout_height="16dp"
                             android:src="@drawable/ic_schedule"
-                            app:tint="@color/text_gray" />
+                            app:tint="@color/neutral_grey" />
 
                         <TextView
                             android:id="@+id/tv_detail_date"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:textColor="@color/text_gray"
+                            android:layout_marginStart="6dp"
+                            android:textColor="@color/neutral_grey"
                             android:textSize="13sp"
                             tools:text="20 tháng 10, 2023" />
                     </LinearLayout>
@@ -146,56 +146,40 @@
                     <View
                         android:layout_width="match_parent"
                         android:layout_height="1dp"
-                        android:layout_marginVertical="@dimen/spacing_xl"
-                        android:background="@color/divider" />
+                        android:layout_marginVertical="24dp"
+                        android:background="@color/neutral_light_grey" />
 
                     <TextView
                         android:id="@+id/tv_detail_content"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:lineSpacingExtra="7dp"
-                        android:textColor="@color/text_dark"
-                        android:textSize="15sp"
+                        android:lineSpacingExtra="8dp"
+                        android:textColor="@color/neutral_black"
+                        android:textSize="16sp"
                         tools:text="Nội dung bài viết sẽ hiển thị ở đây..." />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Bài viết liên quan -->
-            <com.google.android.material.card.MaterialCardView
+            <!-- Phần Bài viết liên quan -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="24dp"
+                android:layout_marginTop="32dp"
+                android:layout_marginBottom="16dp"
+                android:text="Bài viết liên quan"
+                android:textColor="@color/neutral_black"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rv_related_blogs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/spacing_l"
-                app:cardBackgroundColor="@color/neutral_white"
-                app:cardCornerRadius="@dimen/radius_2xl"
-                app:cardElevation="@dimen/shadow_card_elevation"
-                app:strokeWidth="0dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:orientation="vertical"
-                    android:padding="@dimen/spacing_xl">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Bài viết liên quan"
-                        android:textColor="@color/text_dark"
-                        android:textSize="18sp"
-                        android:textStyle="bold" />
-
-                    <androidx.recyclerview.widget.RecyclerView
-                        android:id="@+id/rv_related_blogs"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="@dimen/spacing_m"
-                        android:clipToPadding="false"
-                        android:overScrollMode="never"
-                        tools:listitem="@layout/item_blog" />
-
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+                android:clipToPadding="false"
+                android:paddingHorizontal="16dp"
+                tools:listitem="@layout/item_blog" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
