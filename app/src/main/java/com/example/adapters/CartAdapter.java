@@ -25,6 +25,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         void onQuantityChanged(CartItem item, int newQuantity);
         void onRemove(CartItem item);
         void onEditVariant(CartItem item);
+        void onItemClick(CartItem item);
     }
 
     private final List<CartItem> items;
@@ -104,6 +105,11 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
             } else {
                 holder.imgProduct.setImageResource(R.color.neutral_light_grey);
             }
+            holder.imgProduct.setOnClickListener(v -> listener.onItemClick(item));
+        }
+
+        if (holder.tvName != null) {
+            holder.tvName.setOnClickListener(v -> listener.onItemClick(item));
         }
 
         if (holder.tvVariant != null) {

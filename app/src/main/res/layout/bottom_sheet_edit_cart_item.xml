@@ -13,7 +13,7 @@
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="20dp"
-        android:background="@color/neutral_light_grey" />
+        android:background="#E0E0E0" />
 
     <RelativeLayout
         android:layout_width="match_parent"
@@ -24,7 +24,6 @@
             android:id="@+id/imgProduct"
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:background="@color/neutral_light_grey"
             android:scaleType="centerCrop"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.SmallComponent" />
 
@@ -56,13 +55,11 @@
                 android:textSize="14sp" />
 
             <TextView
-                android:id="@+id/tvName"
-                android:layout_width="match_parent"
+                android:id="@+id/tvSelectedOptions"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:ellipsize="end"
-                android:maxLines="1"
-                android:text="Tên sản phẩm"
+                android:text="Phân loại: Chưa chọn"
                 android:textColor="@color/neutral_black"
                 android:textSize="14sp" />
         </LinearLayout>
@@ -71,26 +68,19 @@
             android:id="@+id/btnCloseEditCart"
             android:layout_width="24dp"
             android:layout_height="24dp"
-            android:layout_alignParentTop="true"
             android:layout_alignParentEnd="true"
             android:src="@drawable/ic_close"
             app:tint="@color/neutral_grey" />
     </RelativeLayout>
-
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="1dp"
-        android:background="@color/divider" />
 
     <!-- Các lựa chọn phân loại -->
     <TextView
         android:id="@+id/tvLabelWeight"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="KHỐI LƯỢNG"
+        android:text="Khối lượng"
         android:textColor="@color/neutral_black"
-        android:textSize="13sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
@@ -98,18 +88,20 @@
         android:id="@+id/cgWeight"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="16dp"
         android:visibility="gone"
+        app:chipSpacingHorizontal="12dp"
+        app:selectionRequired="true"
         app:singleSelection="true" />
 
     <TextView
         android:id="@+id/tvLabelFlavor"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="HƯƠNG VỊ"
+        android:text="Hương vị"
         android:textColor="@color/neutral_black"
-        android:textSize="13sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
@@ -117,18 +109,20 @@
         android:id="@+id/cgFlavor"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="16dp"
         android:visibility="gone"
+        app:chipSpacingHorizontal="12dp"
+        app:selectionRequired="true"
         app:singleSelection="true" />
 
     <TextView
         android:id="@+id/tvLabelPackage"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="LOẠI ĐÓNG GÓI"
+        android:text="Loại đóng gói"
         android:textColor="@color/neutral_black"
-        android:textSize="13sp"
+        android:textSize="16sp"
         android:textStyle="bold"
         android:visibility="gone" />
 
@@ -136,15 +130,24 @@
         android:id="@+id/cgPackage"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="16dp"
         android:visibility="gone"
+        app:chipSpacingHorizontal="12dp"
+        app:selectionRequired="true"
         app:singleSelection="true" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:layout_marginBottom="20dp"
+        android:background="#F5F5F5" />
 
     <!-- Chọn số lượng -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp">
+        android:layout_marginBottom="28dp">
 
         <TextView
             android:layout_width="wrap_content"
@@ -159,16 +162,19 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
-            android:background="@drawable/bg_quantity_selector"
+            android:background="@drawable/bg_rounded_white"
             android:gravity="center_vertical"
-            android:orientation="horizontal">
+            android:orientation="horizontal"
+            android:padding="2dp">
 
             <ImageView
                 android:id="@+id/btnDecrease"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                android:src="@drawable/ic_minus" />
+                android:src="@drawable/ic_minus"
+                app:tint="@color/neutral_black" />
 
             <TextView
                 android:id="@+id/tvQuantity"
@@ -184,8 +190,10 @@
                 android:id="@+id/btnIncrease"
                 android:layout_width="36dp"
                 android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:padding="10dp"
-                android:src="@drawable/ic_plus" />
+                android:src="@drawable/ic_plus"
+                app:tint="@color/neutral_black" />
         </LinearLayout>
     </RelativeLayout>
 
@@ -193,13 +201,12 @@
         android:id="@+id/btnConfirm"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:layout_marginTop="32dp"
         android:backgroundTint="@color/primary_default"
         android:text="Xác nhận"
         android:textAllCaps="false"
         android:textColor="@color/white"
         android:textSize="16sp"
         android:textStyle="bold"
-        app:cornerRadius="14dp" />
+        app:cornerRadius="12dp" />
 
 </LinearLayout>

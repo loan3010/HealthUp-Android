@@ -80,11 +80,23 @@
     </RelativeLayout>
 
 
-    <LinearLayout
-        android:id="@+id/layout_variant_groups"
+    <TextView
+        android:id="@+id/tv_variant_section_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Phân loại"
+        android:textColor="@color/text_dark"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+
+
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/chip_group_variants_sheet"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="vertical" />
+        android:layout_marginTop="8dp"
+        app:selectionRequired="true"
+        app:singleSelection="true" />
 
 
     <View

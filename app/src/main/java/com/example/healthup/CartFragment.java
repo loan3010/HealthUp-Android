@@ -485,6 +485,15 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         sheet.show(getChildFragmentManager(), "edit_cart_item");
     }
 
+    @Override
+    public void onItemClick(CartItem item) {
+        if (item.getProductId() != null) {
+            android.content.Intent intent = new android.content.Intent(requireContext(), ProductDetailActivity.class);
+            intent.putExtra("productId", item.getProductId());
+            startActivity(intent);
+        }
+    }
+
     private void updateFooter() {
         if (!isAdded() || tvTotalPrice == null || btnCheckout == null) {
             return;

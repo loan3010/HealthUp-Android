@@ -42,10 +42,9 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private View rootView;
     private ChipGroup cgWeight, cgFlavor, cgPackage;
     private TextView tvLabelWeight, tvLabelFlavor, tvLabelPackage;
-    private TextView tvPrice;
+    private TextView tvPrice, tvSelectedOptions;
     private Product loadedProduct;
 
-    // FIX: dùng cùng định dạng "#,###đ" (đ ở CUỐI) giống hệt popup "Thêm vào giỏ hàng"
     private final DecimalFormat currencyFormat = new DecimalFormat("#,###đ");
 
     public EditCartItemBottomSheet(CartItem item, OnConfirmListener listener) {
@@ -66,9 +65,8 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         db = FirebaseFirestore.getInstance();
 
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
-        TextView tvName = rootView.findViewById(R.id.tvName);
         tvPrice = rootView.findViewById(R.id.tvPrice);
-        TextView tvStockWarning = rootView.findViewById(R.id.tvStockWarning);
+        tvSelectedOptions = rootView.findViewById(R.id.tvSelectedOptions);
         TextView tvQuantity = rootView.findViewById(R.id.tvQuantity);
         View btnDecrease = rootView.findViewById(R.id.btnDecrease);
         View btnIncrease = rootView.findViewById(R.id.btnIncrease);
@@ -83,8 +81,8 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         tvLabelFlavor = rootView.findViewById(R.id.tvLabelFlavor);
         tvLabelPackage = rootView.findViewById(R.id.tvLabelPackage);
 
-        tvName.setText(item.getName());
         updatePriceDisplay();
+        updateSelectedSummary();
         tvQuantity.setText(String.valueOf(quantity));
 
         loadProductOptions();
@@ -149,9 +147,18 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void showFallbackOptions() {
-        updateUISection(tvLabelWeight, cgWeight, Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> selectedWeight = v);
-        updateUISection(tvLabelFlavor, cgFlavor, Arrays.asList("Vị Socola", "Vị Mật Ong", "Nguyên Bản"), selectedFlavor, v -> selectedFlavor = v);
-        updateUISection(tvLabelPackage, cgPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> selectedPackage = v);
+        updateUISection(tvLabelWeight, cgWeight, Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> {
+            selectedWeight = v;
+            updateSelectedSummary();
+        });
+        updateUISection(tvLabelFlavor, cgFlavor, Arrays.asList("Vị Socola", "Vị Mật Ong", "Nguyên Bản"), selectedFlavor, v -> {
+            selectedFlavor = v;
+            updateSelectedSummary();
+        });
+        updateUISection(tvLabelPackage, cgPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> {
+            selectedPackage = v;
+            updateSelectedSummary();
+        });
     }
 
     private void updateOptionsUI(Product product) {
@@ -159,14 +166,35 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         updateUISection(tvLabelWeight, cgWeight, convertToStringList(product.getWeights()), selectedWeight, v -> {
             selectedWeight = v;
             updatePriceDisplay();
+            updateSelectedSummary();
         });
-        updateUISection(tvLabelFlavor, cgFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> selectedFlavor = v);
-        updateUISection(tvLabelPackage, cgPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> selectedPackage = v);
+        updateUISection(tvLabelFlavor, cgFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> {
+            selectedFlavor = v;
+            updateSelectedSummary();
+        });
+        updateUISection(tvLabelPackage, cgPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> {
+            selectedPackage = v;
+            updateSelectedSummary();
+        });
     }
 
     private void updatePriceDisplay() {
         if (tvPrice == null) return;
         tvPrice.setText(currencyFormat.format(resolveSelectedPrice()));
+    }
+
+    private void updateSelectedSummary() {
+        if (tvSelectedOptions == null) return;
+        List<String> parts = new ArrayList<>();
+        if (selectedWeight != null && !selectedWeight.isEmpty()) parts.add(selectedWeight);
+        if (selectedFlavor != null && !selectedFlavor.isEmpty()) parts.add(selectedFlavor);
+        if (selectedPackage != null && !selectedPackage.isEmpty()) parts.add(selectedPackage);
+
+        if (parts.isEmpty()) {
+            tvSelectedOptions.setText("Phân loại: Chưa chọn");
+        } else {
+            tvSelectedOptions.setText("Phân loại: " + String.join(", ", parts));
+        }
     }
 
     private double resolveSelectedPrice() {
@@ -208,25 +236,41 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         for (String rawOption : options) {
             String displayLabel = extractLabel(rawOption);
 
-            Chip chip = new Chip(requireContext());
+            // FIX: Inflate từ item_variant_chip.xml để lấy style giống popup gốc (green selected state)
+            Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, container, false);
             chip.setText(displayLabel);
             chip.setCheckable(true);
-            chip.setClickable(true);
 
             boolean isSelected = normalize(rawOption).equals(normalizedCurrent)
                     || normalize(displayLabel).equals(normalizedCurrent);
             chip.setChecked(isSelected);
+            updateChipStyle(chip, isSelected);
 
             chip.setOnClickListener(v -> {
                 for (int i = 0; i < container.getChildCount(); i++) {
                     Chip child = (Chip) container.getChildAt(i);
                     child.setChecked(false);
+                    updateChipStyle(child, false);
                 }
                 chip.setChecked(true);
+                updateChipStyle(chip, true);
                 callback.onSelected(displayLabel);
             });
 
             container.addView(chip);
+        }
+    }
+
+    private void updateChipStyle(Chip chip, boolean isSelected) {
+        if (isSelected) {
+            chip.setChipBackgroundColorResource(R.color.primary_green);
+            chip.setTextColor(getResources().getColor(R.color.white));
+            chip.setChipStrokeWidth(0f);
+        } else {
+            chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
+            chip.setTextColor(getResources().getColor(R.color.text_dark));
+            chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
+            chip.setChipStrokeColorResource(R.color.primary_green);
         }
     }
 
