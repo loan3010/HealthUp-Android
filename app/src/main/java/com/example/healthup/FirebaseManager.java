@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 import android.net.Uri;
+import android.util.Log;
 import com.example.models.Address;
 import com.example.models.Order;
 import com.example.models.OrderItem;
@@ -61,6 +62,62 @@ public class FirebaseManager {
                 for (Product p : dummyProducts) {
                     db.collection("products").document(p.getId()).set(p);
                 }
+            }
+        });
+    }
+
+    /**
+     * SCRIPT NÂNG CẤP DỮ LIỆU:
+     * Quét tất cả sản phẩm và chuyển đổi các phân loại từ Array sang Map để hỗ trợ giá riêng.
+     */
+    public void upgradeAllProductsDataStructure() {
+        db.collection("products").get().addOnSuccessListener(queryDocumentSnapshots -> {
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+            int count = 0;
+
+            for (com.google.firebase.firestore.DocumentSnapshot doc : queryDocumentSnapshots) {
+                Map<String, Object> updates = new HashMap<>();
+                double basePrice = doc.getDouble("price") != null ? doc.getDouble("price") : 0;
+
+                // 1. Chuyển đổi weights
+                Object w = doc.get("weights");
+                if (w instanceof List) {
+                    Map<String, Double> newWeightMap = new HashMap<>();
+                    for (Object item : (List<?>) w) {
+                        newWeightMap.put(String.valueOf(item), basePrice);
+                    }
+                    updates.put("weights", newWeightMap);
+                }
+
+                // 2. Chuyển đổi flavors
+                Object f = doc.get("flavors");
+                if (f instanceof List) {
+                    Map<String, Double> newFlavorMap = new HashMap<>();
+                    for (Object item : (List<?>) f) {
+                        newFlavorMap.put(String.valueOf(item), basePrice);
+                    }
+                    updates.put("flavors", newFlavorMap);
+                }
+
+                // 3. Chuyển đổi packagingTypes
+                Object p = doc.get("packagingTypes");
+                if (p instanceof List) {
+                    Map<String, Double> newPkgMap = new HashMap<>();
+                    for (Object item : (List<?>) p) {
+                        newPkgMap.put(String.valueOf(item), basePrice);
+                    }
+                    updates.put("packagingTypes", newPkgMap);
+                }
+
+                if (!updates.isEmpty()) {
+                    batch.update(doc.getReference(), updates);
+                    count++;
+                }
+            }
+
+            if (count > 0) {
+                int finalCount = count;
+                batch.commit().addOnSuccessListener(v -> Log.d("Migration", "Đã nâng cấp cấu trúc cho " + finalCount + " sản phẩm."));
             }
         });
     }

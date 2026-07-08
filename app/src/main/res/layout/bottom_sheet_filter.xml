@@ -75,7 +75,7 @@
                     android:text="Phổ biến"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp"
-                    android:fontFamily="@font/be_vietnam" />
+                    android:fontFamily="@font/be_vietnam_pro" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_newest"
@@ -85,7 +85,7 @@
                     android:text="Mới nhất"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp"
-                    android:fontFamily="@font/be_vietnam" />
+                    android:fontFamily="@font/be_vietnam_pro" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_price_asc"
@@ -95,7 +95,7 @@
                     android:text="Giá Thấp-Cao"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp"
-                    android:fontFamily="@font/be_vietnam" />
+                    android:fontFamily="@font/be_vietnam_pro" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_price_desc"
@@ -105,7 +105,7 @@
                     android:text="Giá Cao-Thấp"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp"
-                    android:fontFamily="@font/be_vietnam" />
+                    android:fontFamily="@font/be_vietnam_pro" />
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_favorite"
@@ -115,7 +115,7 @@
                     android:text="Được yêu thích"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp"
-                    android:fontFamily="@font/be_vietnam" />
+                    android:fontFamily="@font/be_vietnam_pro" />
             </com.google.android.material.chip.ChipGroup>
 
             <TextView

@@ -45,8 +45,9 @@ public class SplashActivity extends AppCompatActivity {
                 .setStartDelay(2000)
                 .start();
 
-        // Firebase seeding
+        // Firebase seeding & migration
         FirebaseManager.getInstance().seedProductsIfEmpty();
+        FirebaseManager.getInstance().upgradeAllProductsDataStructure();
 
         // Chuyển màn hình nhanh; seed Firebase chạy nền, không chặn navigation
         new Handler(Looper.getMainLooper()).postDelayed(() -> {

@@ -7,6 +7,7 @@ import com.google.firebase.firestore.PropertyName;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -39,8 +40,8 @@ public class Product implements Serializable {
     private String origin;
 
     private Object weights;
-    private List<Object> packagingTypes;
-    private List<Object> flavors;
+    private Object packagingTypes;
+    private Object flavors;
     private Object sale;
     private int stock;
     private Object reviews;
@@ -183,16 +184,14 @@ public class Product implements Serializable {
     public void setWeights(Object weights) { this.weights = weights; }
 
     public List<Object> getFlavors() {
-        if (flavors != null) return flavors;
-        return new ArrayList<>();
+        return toObjectList(flavors);
     }
-    public void setFlavors(List<Object> flavors) { this.flavors = flavors; }
+    public void setFlavors(Object flavors) { this.flavors = flavors; }
 
     public List<Object> getPackagingTypes() {
-        if (packagingTypes != null) return packagingTypes;
-        return new ArrayList<>();
+        return toObjectList(packagingTypes);
     }
-    public void setPackagingTypes(List<Object> packagingTypes) { this.packagingTypes = packagingTypes; }
+    public void setPackagingTypes(Object packagingTypes) { this.packagingTypes = packagingTypes; }
 
     public String getImageUrl() {
         if (images != null && !images.isEmpty()) {
@@ -284,8 +283,49 @@ public class Product implements Serializable {
         return resolvedVariantsCache;
     }
 
+    /** Returns a map of category names to their respective variants (Weights, Flavors, etc.) */
+    public Map<String, List<ProductVariant>> getGroupedVariants() {
+        Map<String, List<ProductVariant>> groups = new LinkedHashMap<>();
+        
+        List<ProductVariant> w = normalizeVariants(parseVariantsField(weights, this));
+        if (!w.isEmpty()) groups.put("Khối lượng", w);
+        
+        List<ProductVariant> f = normalizeVariants(parseVariantsField(flavors, this));
+        if (!f.isEmpty()) groups.put("Hương vị", f);
+        
+        List<ProductVariant> p = normalizeVariants(parseVariantsField(packagingTypes, this));
+        if (!p.isEmpty()) groups.put("Quy cách", p);
+        
+        // If there's a main variants list, only add it as "Phân loại" if it's not a duplicate of legacy fields
+        if (variants != null && !variants.isEmpty()) {
+            List<ProductVariant> v = normalizeVariants(variants);
+            boolean isDuplicate = false;
+            for (List<ProductVariant> existing : groups.values()) {
+                if (isSameVariantList(existing, v)) {
+                    isDuplicate = true;
+                    break;
+                }
+            }
+            if (!isDuplicate) {
+                groups.put("Phân loại", v);
+            }
+        }
+        
+        return groups;
+    }
+
+    private boolean isSameVariantList(List<ProductVariant> list1, List<ProductVariant> list2) {
+        if (list1.size() != list2.size()) return false;
+        for (int i = 0; i < list1.size(); i++) {
+            String n1 = list1.get(i).getName();
+            String n2 = list2.get(i).getName();
+            if (n1 == null || !n1.equals(n2)) return false;
+        }
+        return true;
+    }
+
     public boolean hasResolvableVariants() {
-        return !getResolvableVariants().isEmpty();
+        return !getResolvableVariants().isEmpty() || !getGroupedVariants().isEmpty();
     }
 
     /** Finds a variant by display name (e.g. "100g", "200g"). */
@@ -381,16 +421,19 @@ public class Product implements Serializable {
         keyed.setName(name);
         if (value instanceof Number) {
             keyed.setPrice(((Number) value).doubleValue());
+            keyed.setOriginalPrice(keyed.getPrice());
             keyed.setStock(parent.getStockCount());
             return keyed;
         }
         if (value instanceof String) {
             try {
                 keyed.setPrice(Double.parseDouble(((String) value).trim()));
+                keyed.setOriginalPrice(keyed.getPrice());
                 keyed.setStock(parent.getStockCount());
                 return keyed;
             } catch (NumberFormatException ignored) {
                 keyed.setPrice(parent.getPrice());
+                keyed.setOriginalPrice(parent.getOriginalPrice());
                 keyed.setStock(parent.getStockCount());
                 return keyed;
             }
@@ -427,6 +470,7 @@ public class Product implements Serializable {
             if (v.getId() == null) v.setId("variant_" + index);
             v.setName(name);
             v.setPrice(firstDouble(map, parent.getPrice(), "price", "salePrice", "variantPrice", "amount"));
+            v.setOriginalPrice(firstDouble(map, v.getPrice(), "originalPrice", "oldPrice", "marketPrice"));
             v.setStock(firstInt(map, "stock", "stockCount", parent.getStockCount()));
             Object outOfStock = map.get("outOfStock");
             if (outOfStock instanceof Boolean && (Boolean) outOfStock) {
@@ -455,6 +499,7 @@ public class Product implements Serializable {
             if (v != null && v.getName() != null && !v.getName().isEmpty()) {
                 if (v.getId() == null || v.getId().isEmpty()) v.setId("variant_" + i);
                 if (v.getPrice() <= 0) v.setPrice(getPrice());
+                if (v.getOriginalPrice() <= 0) v.setOriginalPrice(getOriginalPrice());
                 if (v.getStock() <= 0) v.setStock(getStockCount());
                 result.add(v);
             }
@@ -463,9 +508,11 @@ public class Product implements Serializable {
     }
 
     private List<ProductVariant> buildVariantsFromLegacyOptions() {
-        List<ProductVariant> result = parseVariantsField(weights, this);
-        if (result.isEmpty()) result = parseVariantsField(flavors, this);
-        if (result.isEmpty()) result = parseVariantsField(packagingTypes, this);
+        List<ProductVariant> result = new ArrayList<>();
+        result.addAll(parseVariantsField(weights, this));
+        result.addAll(parseVariantsField(flavors, this));
+        result.addAll(parseVariantsField(packagingTypes, this));
+
         for (int i = 0; i < result.size(); i++) {
             ProductVariant variant = result.get(i);
             if (variant.getId() == null || variant.getId().isEmpty()) {
@@ -544,6 +591,7 @@ public class Product implements Serializable {
         private String id;
         private String name;
         private double price;
+        private double originalPrice;
         private int stock;
         public ProductVariant() {}
         public String getId() { return id; }
@@ -552,6 +600,8 @@ public class Product implements Serializable {
         public void setName(String name) { this.name = name; }
         public double getPrice() { return price; }
         public void setPrice(double price) { this.price = price; }
+        public double getOriginalPrice() { return originalPrice; }
+        public void setOriginalPrice(double originalPrice) { this.originalPrice = originalPrice; }
         public int getStock() { return stock; }
         public void setStock(int stock) { this.stock = stock; }
     }
