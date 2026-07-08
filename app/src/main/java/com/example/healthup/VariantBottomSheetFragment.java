@@ -1,57 +1,51 @@
 package com.example.healthup;
 
-
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import com.bumptech.glide.Glide;
+import com.example.models.Product;
+import com.example.models.Product.ProductVariant;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
-import com.example.healthup.R;
-import com.example.models.Product;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
-
+import java.util.Map;
 
 public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
-
     public interface OnVariantSelectedListener {
-        void onConfirm(Product.ProductVariant variant, int quantity);
+        void onConfirm(ProductVariant variant, int quantity);
     }
-
 
     private Product product;
     private OnVariantSelectedListener listener;
-    private Product.ProductVariant selectedVariant;
+    private ProductVariant selectedVariant;
+    private Map<String, ProductVariant> selectedVariantsMap = new java.util.HashMap<>();
     private int quantity = 1;
-    // FIX: thêm cờ để biết đang mở popup từ nút "Mua ngay" hay "Thêm vào giỏ hàng",
-    // dùng để hiển thị đúng chữ trên nút xác nhận thay vì luôn cố định "Thêm vào giỏ hàng".
     private boolean isBuyNow = false;
 
-
     private ImageView ivProduct;
-    private TextView tvPrice, tvStock, tvSelectedName, tvQuantity, tvVariantSectionLabel;
-    private ChipGroup chipGroup;
+    private TextView tvPrice, tvStock, tvSelectedName, tvQuantity;
+    private LinearLayout layoutGroups;
     private MaterialButton btnConfirm;
     private ImageButton btnMinus, btnPlus, btnClose;
 
-
-    /** Giữ overload cũ để không phải sửa các nơi đang gọi (mặc định là "Thêm vào giỏ hàng"). */
     public static VariantBottomSheetFragment newInstance(Product product, OnVariantSelectedListener listener) {
         return newInstance(product, false, listener);
     }
-
 
     public static VariantBottomSheetFragment newInstance(Product product, boolean isBuyNow, OnVariantSelectedListener listener) {
         VariantBottomSheetFragment fragment = new VariantBottomSheetFragment();
@@ -61,90 +55,78 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         return fragment;
     }
 
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.bottom_sheet_variant_selection, container, false);
     }
 
-
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
 
         ivProduct = view.findViewById(R.id.iv_variant_product);
         tvPrice = view.findViewById(R.id.tv_variant_price);
         tvStock = view.findViewById(R.id.tv_variant_stock);
         tvSelectedName = view.findViewById(R.id.tv_variant_selected_name);
-        tvVariantSectionLabel = view.findViewById(R.id.tv_variant_section_label);
         tvQuantity = view.findViewById(R.id.tv_quantity);
-        chipGroup = view.findViewById(R.id.chip_group_variants_sheet);
+        layoutGroups = view.findViewById(R.id.layout_variant_groups);
         btnConfirm = view.findViewById(R.id.btn_confirm_variant);
         btnMinus = view.findViewById(R.id.btn_minus_qty);
         btnPlus = view.findViewById(R.id.btn_plus_qty);
         btnClose = view.findViewById(R.id.btn_close_variant);
 
-
         setupUI();
     }
-
 
     private void setupUI() {
         if (product == null) return;
 
-
-        // FIX ROOT CAUSE: trước đây LUÔN nối "images/products/" vào trước imageUrl, kể cả khi
-        // imageUrl đã có sẵn tiền tố này (ví dụ "images/products/granola.png") -> đường dẫn bị
-        // lặp thành "images/products/images/products/granola.png" -> Glide không tìm thấy file
-        // -> ảnh hiển thị trống. Sửa lại theo đúng cách các Adapter khác trong app đang xử lý.
-        String imageUrl = product.getImageUrl();
+        String imagePath = product.getImageUrl();
         Object loadTarget;
-        if (imageUrl == null || imageUrl.isEmpty()) {
-            loadTarget = R.drawable.ic_launcher_background;
-        } else if (imageUrl.startsWith("http") || imageUrl.startsWith("file://") || imageUrl.startsWith("content://")) {
-            loadTarget = imageUrl;
-        } else {
-            String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+        if (imagePath != null && !imagePath.isEmpty()) {
+            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
             if (cleanPath.startsWith("images/")) {
                 loadTarget = "file:///android_asset/" + cleanPath;
+            } else if (imagePath.startsWith("http")) {
+                loadTarget = imagePath;
             } else {
                 loadTarget = "file:///android_asset/images/products/" + cleanPath;
             }
+        } else {
+            loadTarget = R.drawable.ic_launcher_background;
         }
+
         Glide.with(this)
                 .load(loadTarget)
                 .placeholder(R.drawable.ic_launcher_background)
-                .error(R.drawable.ic_launcher_background)
                 .into(ivProduct);
+
         updateDisplay();
 
+        Map<String, List<ProductVariant>> grouped = product.getGroupedVariants();
+        layoutGroups.removeAllViews();
 
-        // FIX: nếu sản phẩm không có variant, ẩn hẳn khối "Phân loại" thay vì để trống trơ trọi.
-        if (product.hasResolvableVariants()) {
-            if (tvVariantSectionLabel != null) tvVariantSectionLabel.setVisibility(View.VISIBLE);
-            chipGroup.setVisibility(View.VISIBLE);
-            chipGroup.removeAllViews();
-            chipGroup.setSelectionRequired(true);
-            List<Product.ProductVariant> variants = product.getResolvableVariants();
-            for (Product.ProductVariant variant : variants) {
-                Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, chipGroup, false);
-                chip.setText(variant.getName());
-                chip.setTag(variant.getId());
-                chip.setOnClickListener(v -> selectVariantChip(variant));
-                chipGroup.addView(chip);
+        if (!grouped.isEmpty()) {
+            for (Map.Entry<String, List<ProductVariant>> entry : grouped.entrySet()) {
+                View groupView = getLayoutInflater().inflate(R.layout.layout_variant_group, layoutGroups, false);
+                TextView tvLabel = groupView.findViewById(R.id.tv_group_label);
+                ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
+
+                tvLabel.setText(entry.getKey());
+                cg.removeAllViews();
+
+                List<ProductVariant> variants = entry.getValue();
+                for (ProductVariant v : variants) {
+                    Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, cg, false);
+                    chip.setText(v.getName());
+                    chip.setOnClickListener(view -> selectVariantInGroup(entry.getKey(), cg, v));
+                    cg.addView(chip);
+                }
+                layoutGroups.addView(groupView);
+                if (!variants.isEmpty()) selectVariantInGroup(entry.getKey(), cg, variants.get(0));
             }
-            if (!variants.isEmpty()) {
-                selectVariantChip(variants.get(0));
-            }
-        } else {
-            if (tvVariantSectionLabel != null) tvVariantSectionLabel.setVisibility(View.GONE);
-            chipGroup.setVisibility(View.GONE);
-            selectedVariant = null;
-            updateDisplay();
         }
-
 
         btnMinus.setOnClickListener(v -> {
             if (quantity > 1) {
@@ -153,24 +135,21 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
             }
         });
 
-
         btnPlus.setOnClickListener(v -> {
             int maxStock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
             if (quantity < maxStock) {
                 quantity++;
                 tvQuantity.setText(String.valueOf(quantity));
             } else {
-                Toast.makeText(getContext(), getString(R.string.max_stock_reached), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Đã đạt giới hạn kho hàng", Toast.LENGTH_SHORT).show();
             }
         });
 
-
         btnClose.setOnClickListener(v -> dismiss());
-
 
         btnConfirm.setOnClickListener(v -> {
             if (product.hasResolvableVariants() && selectedVariant == null) {
-                Toast.makeText(getContext(), getString(R.string.please_select_variant), Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), "Vui lòng chọn phân loại", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (listener != null) {
@@ -180,28 +159,39 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         });
     }
 
-
-    private void selectVariantChip(Product.ProductVariant variant) {
-        selectedVariant = variant;
-        for (int i = 0; i < chipGroup.getChildCount(); i++) {
-            Chip chip = (Chip) chipGroup.getChildAt(i);
-            boolean isSelected = variant.getId() != null && variant.getId().equals(chip.getTag());
-            chip.setChecked(isSelected);
-            updateVariantChipStyle(chip, isSelected);
+    private void selectVariantInGroup(String groupName, ChipGroup group, ProductVariant variant) {
+        for (int i = 0; i < group.getChildCount(); i++) {
+            Chip chip = (Chip) group.getChildAt(i);
+            boolean isThis = chip.getText().toString().equals(variant.getName());
+            updateVariantChipStyle(chip, isThis);
+            if (isThis) chip.setChecked(true);
         }
+        
+        selectedVariantsMap.put(groupName, variant);
+        
+        // Tính toán lại selectedVariant dựa trên tất cả các nhóm đã chọn
+        ProductVariant bestVariant = null;
+        for (ProductVariant v : selectedVariantsMap.values()) {
+            if (bestVariant == null) {
+                bestVariant = v;
+            } else if (v.getPrice() != product.getPrice() && v.getPrice() > 0) {
+                bestVariant = v;
+            }
+        }
+        selectedVariant = bestVariant;
         updateDisplay();
     }
 
     private void updateVariantChipStyle(Chip chip, boolean isSelected) {
         if (isSelected) {
             chip.setChipBackgroundColorResource(R.color.primary_green);
-            chip.setTextColor(getResources().getColor(R.color.white));
+            chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
             chip.setChipStrokeWidth(0f);
         } else {
-            chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
-            chip.setTextColor(getResources().getColor(R.color.text_dark));
-            chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
-            chip.setChipStrokeColorResource(R.color.primary_green);
+            chip.setChipBackgroundColorResource(R.color.white);
+            chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_dark));
+            chip.setChipStrokeWidth(1f);
+            chip.setChipStrokeColorResource(android.R.color.darker_gray);
         }
     }
 
@@ -210,13 +200,23 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         double price = (selectedVariant != null) ? selectedVariant.getPrice() : product.getPrice();
         int stock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
 
-
         tvPrice.setText(formatter.format(price) + "đ");
-        tvStock.setText(getString(R.string.stock_prefix, stock));
-        // FIX: viết trực tiếp thay vì phụ thuộc hoàn toàn vào string resource để đảm bảo
-        // dòng "Phân loại" không bao giờ hiển thị trống.
-        tvSelectedName.setText("Phân loại: " + (selectedVariant != null ? selectedVariant.getName() : "Mặc định"));
-
+        tvStock.setText("Kho: " + stock);
+        
+        // Hiển thị tất cả các phân loại đã chọn
+        StringBuilder label = new StringBuilder("Phân loại: ");
+        if (selectedVariantsMap.isEmpty()) {
+            label.append("Chưa chọn");
+        } else {
+            boolean first = true;
+            // Dùng LinkedHashMap hoặc sort key nếu muốn thứ tự cố định, ở đây ta cứ lặp qua
+            for (Map.Entry<String, ProductVariant> entry : selectedVariantsMap.entrySet()) {
+                if (!first) label.append(", ");
+                label.append(entry.getValue().getName());
+                first = false;
+            }
+        }
+        tvSelectedName.setText(label.toString());
 
         if (quantity > stock && stock > 0) {
             quantity = stock;
@@ -225,11 +225,9 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
             quantity = 0;
             tvQuantity.setText("0");
             btnConfirm.setEnabled(false);
-            btnConfirm.setText(getString(R.string.out_of_stock));
+            btnConfirm.setText("Hết hàng");
         } else {
             btnConfirm.setEnabled(true);
-            // FIX: hiển thị đúng "Mua ngay" hoặc "Thêm vào giỏ hàng" tùy theo nút mà người dùng
-            // đã bấm ở trang Chi tiết sản phẩm, thay vì luôn cố định là "Thêm vào giỏ hàng".
             btnConfirm.setText(isBuyNow ? "Mua ngay" : "Thêm vào giỏ hàng");
         }
     }

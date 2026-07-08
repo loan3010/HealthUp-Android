@@ -25,9 +25,19 @@ import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.NotificationPermissionHelper;
+import com.example.healthup.util.GuestCartManager;
 import com.example.models.CartItem;
+import com.google.android.material.badge.BadgeDrawable;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
+import androidx.core.content.ContextCompat;
 
 import java.io.Serializable;
 import java.util.List;
@@ -57,6 +67,13 @@ public class MainActivity extends AppCompatActivity {
     private FloatingActionButton fabChat;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
+    private ListenerRegistration cartListener;
+    private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            refreshGuestCartBadge();
+        }
+    };
 
 
     @Override
@@ -118,6 +135,86 @@ public class MainActivity extends AppCompatActivity {
             handleIntent(getIntent());
             maybeShowWelcomePromo();
         }
+
+        setupCartBadgeListener();
+    }
+
+    private void setupCartBadgeListener() {
+        if (cartListener != null) {
+            cartListener.remove();
+            cartListener = null;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            cartListener = FirebaseFirestore.getInstance()
+                    .collection("users")
+                    .document(user.getUid())
+                    .collection("cart")
+                    .addSnapshotListener((value, error) -> {
+                        if (value != null) {
+                            int count = 0;
+                            for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                                String pId = doc.getString("productId");
+                                String name = doc.getString("name");
+                                if (pId != null && !pId.isEmpty() && name != null && !name.isEmpty()) {
+                                    count++;
+                                }
+                            }
+                            updateCartBadge(count);
+                        }
+                    });
+        } else {
+            refreshGuestCartBadge();
+        }
+    }
+
+    private void updateCartBadge(int count) {
+        if (navView == null) return;
+        BadgeDrawable badge = navView.getOrCreateBadge(R.id.nav_cart);
+        if (count > 0) {
+            badge.setVisible(true);
+            badge.setNumber(count);
+        } else {
+            badge.setVisible(false);
+        }
+    }
+
+    public void refreshGuestCartBadge() {
+        if (FirebaseAuth.getInstance().getCurrentUser() != null) return;
+        
+        List<CartItem> items = GuestCartManager.getInstance(this).getItems();
+        int count = 0;
+        for (CartItem item : items) {
+            if (item.getProductId() != null && !item.getProductId().isEmpty()) {
+                count++;
+            }
+        }
+        updateCartBadge(count);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        // Refresh listener in case user logged in/out
+        setupCartBadgeListener();
+        
+        IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
+        ContextCompat.registerReceiver(this, guestCartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onPause() {
+        unregisterReceiver(guestCartReceiver);
+        super.onPause();
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (cartListener != null) {
+            cartListener.remove();
+        }
+        super.onDestroy();
     }
 
 
@@ -189,7 +286,7 @@ public class MainActivity extends AppCompatActivity {
 
             // FIX: điều hướng nhanh sang tab Giỏ hàng (sau khi "Mua ngay") hoặc tab Danh mục
             // (sau khi bấm "Xem tất cả"), không cần tạo OrderHistoryFragment cho các case này.
-            if ("cart_tab".equals(target)) {
+            if ("cart_tab".equals(target) || "cart".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_cart);
                 boolean isRebuy = intent.getBooleanExtra("is_rebuy", false);
                 CartFragment fragment = new CartFragment();

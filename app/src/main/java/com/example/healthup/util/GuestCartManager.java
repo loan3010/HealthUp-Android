@@ -1,6 +1,7 @@
 package com.example.healthup.util;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.text.TextUtils;
 
@@ -23,13 +24,16 @@ import java.util.UUID;
 
 public final class GuestCartManager {
 
+    public static final String ACTION_GUEST_CART_CHANGED = "com.example.healthup.ACTION_GUEST_CART_CHANGED";
     private static final String PREFS_NAME = "guest_cart_prefs";
     private static final String KEY_ITEMS_JSON = "guest_cart_items";
 
+    private final Context context;
     private final SharedPreferences prefs;
 
     private GuestCartManager(Context context) {
-        prefs = context.getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        this.context = context.getApplicationContext();
+        this.prefs = this.context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     public static GuestCartManager getInstance(Context context) {
@@ -42,6 +46,7 @@ public final class GuestCartManager {
 
     public void saveItems(List<CartItem> items) {
         prefs.edit().putString(KEY_ITEMS_JSON, itemsToJson(items)).apply();
+        context.sendBroadcast(new Intent(ACTION_GUEST_CART_CHANGED));
     }
 
     public void addItem(Product product, Product.ProductVariant variant, int quantity) {
@@ -144,6 +149,7 @@ public final class GuestCartManager {
 
     public void clear() {
         prefs.edit().remove(KEY_ITEMS_JSON).apply();
+        context.sendBroadcast(new Intent(ACTION_GUEST_CART_CHANGED));
     }
 
     public boolean hasItems() {

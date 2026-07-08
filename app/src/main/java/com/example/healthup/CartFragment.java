@@ -314,6 +314,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         hydrateImageUrl(item, doc);
+
+        // Kiểm tra tính hợp lệ: Phải có productId và name
+        if (item.getProductId() == null || item.getProductId().isEmpty() ||
+            item.getName() == null || item.getName().isEmpty()) {
+            return null;
+        }
+
         return item;
     }
 

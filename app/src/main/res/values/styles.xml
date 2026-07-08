@@ -14,13 +14,13 @@
         <item name="android:textColor">#2E7D32</item>
         <item name="android:textSize">11sp</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:fontFamily">@font/be_vietnam</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
     </style>
 
     <style name="TextAppearance.HealthUp.BottomNav.Inactive" parent="TextAppearance.MaterialComponents.Caption">
         <item name="android:textColor">#757575</item>
         <item name="android:textSize">11sp</item>
-        <item name="android:fontFamily">@font/be_vietnam</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
     </style>
 
     <style name="Widget.HealthUp.BottomNav.Indicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">

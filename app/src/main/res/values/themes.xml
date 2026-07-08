@@ -47,7 +47,7 @@
         <item name="textAllCaps">false</item>
         <item name="android:textAllCaps">false</item>
         <item name="android:textStyle">bold</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">@font/be_vietnam_pro</item>
     </style>
 
     <style name="ButtonSmallFilled" parent="Widget.MaterialComponents.Button">

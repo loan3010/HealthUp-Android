@@ -89,7 +89,8 @@
             android:theme="@style/Theme.HealthUp"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.SellerChatListActivity" />
-        <activity android:name="com.example.healthup.AddressFormActivity" />
+        <activity android:name="com.example.healthup.AddressFormActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.AboutActivity" />
         <activity android:name="com.example.healthup.BlogDetailActivity" />
 
@@ -116,7 +117,8 @@
         <activity android:name="com.example.healthup.ViewReviewsActivity" />
         <activity android:name="com.example.healthup.ProductReviewsActivity" />
         <activity android:name="com.example.healthup.OrderSearchActivity" />
-        <activity android:name="com.example.healthup.AddressBookActivity" />
+        <activity android:name="com.example.healthup.AddressBookActivity"
+            android:windowSoftInputMode="adjustResize" />
 
 
         <provider

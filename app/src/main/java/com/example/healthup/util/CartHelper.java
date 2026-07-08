@@ -18,15 +18,29 @@ public final class CartHelper {
     private CartHelper() {
     }
 
+    public interface CartCallback {
+        void onSuccess();
+        void onFailure(Exception e);
+    }
+
     public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity) {
+        addToCart(context, product, variant, quantity, null);
+    }
+
+    public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity, CartCallback callback) {
         if (context == null || product == null || quantity <= 0) {
+            if (callback != null) callback.onFailure(new Exception("Invalid input"));
             return;
         }
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             GuestCartManager.getInstance(context).addItem(product, variant, quantity);
-            Toast.makeText(context, R.string.added_to_cart, Toast.LENGTH_SHORT).show();
+            if (callback != null) {
+                callback.onSuccess();
+            } else {
+                Toast.makeText(context, R.string.added_to_cart, Toast.LENGTH_SHORT).show();
+            }
             return;
         }
 
@@ -45,7 +59,11 @@ public final class CartHelper {
                         DocumentSnapshot doc = queryDocumentSnapshots.getDocuments().get(0);
                         Long currentQtyLong = doc.getLong("quantity");
                         long currentQty = currentQtyLong != null ? currentQtyLong : 0;
-                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", Timestamp.now());
+                        doc.getReference().update("quantity", currentQty + quantity, "updatedAt", Timestamp.now())
+                                .addOnSuccessListener(v -> {
+                                    if (callback != null) callback.onSuccess();
+                                    else Toast.makeText(context, R.string.added_to_cart, Toast.LENGTH_SHORT).show();
+                                });
                     } else {
                         CartItem newItem = new CartItem(productId, product, quantity, userId);
                         if (variant != null) {
@@ -58,12 +76,16 @@ public final class CartHelper {
                             newItem.setOriginalPrice(product.getOriginalPrice());
                         }
                         newItem.setUpdatedAt(Timestamp.now());
-                        cartRef.add(newItem);
+                        cartRef.add(newItem)
+                                .addOnSuccessListener(v -> {
+                                    if (callback != null) callback.onSuccess();
+                                    else Toast.makeText(context, R.string.added_to_cart, Toast.LENGTH_SHORT).show();
+                                });
                     }
-                    Toast.makeText(context, R.string.added_to_cart, Toast.LENGTH_SHORT).show();
                 })
-                .addOnFailureListener(e ->
-                        Toast.makeText(context, context.getString(R.string.register_error_generic), Toast.LENGTH_SHORT).show()
-                );
+                .addOnFailureListener(e -> {
+                    if (callback != null) callback.onFailure(e);
+                    else Toast.makeText(context, context.getString(R.string.register_error_generic), Toast.LENGTH_SHORT).show();
+                });
     }
 }

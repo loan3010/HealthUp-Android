@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.app.Activity;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -73,7 +74,7 @@ public class AddressFormFragment extends Fragment {
 
         bindViews(view);
         setupLocationAdapters();
-        setupListeners();
+        setupListeners(view);
 
         if (editingAddress != null) {
             tvTitle.setText("Chỉnh sửa thông tin");
@@ -112,6 +113,11 @@ public class AddressFormFragment extends Fragment {
         switchDefault = view.findViewById(R.id.switchDefault);
         btnSubmit = view.findViewById(R.id.btnSubmit);
         btnDelete = view.findViewById(R.id.btnDelete);
+
+        view.findViewById(R.id.scrollView).setOnTouchListener((v, event) -> {
+            UIUtils.hideKeyboard(getActivity());
+            return false;
+        });
     }
 
     private void setupLocationAdapters() {
@@ -152,7 +158,17 @@ public class AddressFormFragment extends Fragment {
         });
     }
 
-    private void setupListeners() {
+    private void setupListeners(View view) {
+        view.findViewById(R.id.btnBack).setOnClickListener(v -> getParentFragmentManager().popBackStack());
+
+        view.findViewById(R.id.scrollView).setOnTouchListener((v, event) -> {
+            Activity activity = getActivity();
+            if (activity != null) {
+                UIUtils.hideKeyboard(activity);
+            }
+            return false;
+        });
+
         TextWatcher watcher = new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
