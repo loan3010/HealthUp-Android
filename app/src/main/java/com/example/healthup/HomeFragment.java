@@ -172,7 +172,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvNewProducts.setAdapter(newProductAdapter);
 
         rvBlogs = view.findViewById(R.id.rvBlogs);
-        blogAdapter = new BlogAdapter(blogList, this);
+        blogAdapter = new BlogAdapter(blogList, this, true);
         rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
         rvBlogs.setAdapter(blogAdapter);
 
