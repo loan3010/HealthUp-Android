@@ -10,8 +10,24 @@ import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 public class UIUtils {
+    /** Áp dụng khoảng trống thanh trạng thái (Status Bar) cho view để không bị che content. */
+    public static void applyStatusBarInsets(View view) {
+        if (view == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(view, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return windowInsets;
+        });
+        if (view.isAttachedToWindow()) {
+            ViewCompat.requestApplyInsets(view);
+        }
+    }
+
     public static void hideKeyboard(Activity activity) {
         InputMethodManager imm = (InputMethodManager) activity.getSystemService(Context.INPUT_METHOD_SERVICE);
         if (imm == null) {

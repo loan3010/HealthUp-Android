@@ -10,6 +10,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.R;
 import com.example.models.CartItem;
@@ -40,11 +42,25 @@ public class CheckoutProductAdapter extends RecyclerView.Adapter<CheckoutProduct
         CartItem item = items.get(position);
         holder.tvName.setText(item.getName());
 
+        String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+        if ("en".equals(currentLang)) {
+            if (item.getName() != null) {
+                TranslationManager.translate(item.getName(), "en", translated -> {
+                    if (translated != null) holder.tvName.setText(translated);
+                });
+            }
+        }
+
         // ✅ đổi từ getVariant() sang getVariantLabel()
         String variantLabel = item.getVariantLabel();
         if (variantLabel != null && !variantLabel.isEmpty()) {
             holder.tvVariant.setVisibility(View.VISIBLE);
             holder.tvVariant.setText(variantLabel);
+            if ("en".equals(currentLang)) {
+                TranslationManager.translate(variantLabel, "en", translated -> {
+                    if (translated != null) holder.tvVariant.setText(translated);
+                });
+            }
         } else {
             holder.tvVariant.setVisibility(View.GONE);
         }

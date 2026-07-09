@@ -1,6 +1,5 @@
 package com.example.healthup;
 
-
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -25,6 +24,8 @@ import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
 import com.example.models.Product;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,13 +33,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-
-
-
 public class ProductDetailActivity extends AppCompatActivity {
-
-
-
 
     private Product product;
     private ViewPager2 viewPagerImages;
@@ -51,18 +46,13 @@ public class ProductDetailActivity extends AppCompatActivity {
     private Product.ProductVariant selectedVariant;
     private com.google.firebase.firestore.ListenerRegistration cartListener;
 
-
-
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_product_detail);
 
-
         String productId = getIntent().getStringExtra("productId");
         product = (Product) getIntent().getSerializableExtra("product");
-
 
         if (productId != null) {
             fetchProductDetails(productId);
@@ -73,9 +63,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             finish();
         }
     }
-
-
-
 
     private void fetchProductDetails(String productId) {
         FirestoreManager.getInstance().getProductsCollection().document(productId).get()
@@ -89,9 +76,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> finish());
     }
-
-
-
 
     private void showProductUi() {
         initViews();
@@ -115,9 +99,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
-
-
     private void initViews() {
         btnBack = findViewById(R.id.btn_back);
         viewPagerImages = findViewById(R.id.view_pager_images);
@@ -132,23 +113,19 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvSavings = findViewById(R.id.tv_savings);
         tvStock = findViewById(R.id.tv_detail_stock);
 
-
         btnShare = findViewById(R.id.btn_share);
         btnWishlist = findViewById(R.id.btn_wishlist);
         btnCartHeader = findViewById(R.id.btn_cart_header);
         tvCartBadgeHeader = findViewById(R.id.tv_cart_badge_header);
 
-
         btnAddCart = findViewById(R.id.btn_detail_add_cart);
         btnBuyNow = findViewById(R.id.btn_buy_now);
         View btnChat = findViewById(R.id.btn_chat);
-
 
         rvRecommendations = findViewById(R.id.rv_detail_recommendations);
         rvReviews = findViewById(R.id.rv_reviews);
         tvViewAllReviews = findViewById(R.id.tv_view_all_reviews);
         tvViewAllRecommend = findViewById(R.id.tv_view_all_recommend);
-
 
         btnBack.setOnClickListener(v -> finish());
         btnWishlist.setOnClickListener(v -> toggleFavorite());
@@ -166,11 +143,9 @@ public class ProductDetailActivity extends AppCompatActivity {
             btnChat.setOnClickListener(v -> openProductChat());
         }
 
-
         if (tvViewAllReviews != null) {
             tvViewAllReviews.setOnClickListener(v -> openAllReviews());
         }
-
 
         if (tvViewAllRecommend != null) {
             tvViewAllRecommend.setOnClickListener(v -> {
@@ -182,9 +157,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
-
-
     private void openAllReviews() {
         if (product == null || product.getId() == null) return;
         android.content.Intent intent = new android.content.Intent(this, ProductReviewsActivity.class);
@@ -194,9 +166,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         intent.putExtra("reviewCount", product.getReviewCount());
         startActivity(intent);
     }
-
-
-
 
     private void openProductChat() {
         if (product == null || product.getName() == null) {
@@ -208,22 +177,24 @@ public class ProductDetailActivity extends AppCompatActivity {
                 this, product.getName(), variant, product.getId()));
     }
 
-
-
-
     private void setupProductInfo() {
         tvName.setText(product.getName());
+        
+        String currentLang = LocaleHelper.getLanguage(this);
+        if ("en".equals(currentLang)) {
+            TranslationManager.translate(product.getName(), "en", translated -> {
+                if (translated != null) tvName.setText(translated);
+            });
+        }
+        
         updatePriceDisplay();
         setupCartBadgeListener();
-
 
         tvRating.setText(String.valueOf(product.getRating()));
         tvReviewCount.setText(product.getReviewCount() + " đánh giá");
         tvSold.setText("Đã bán " + product.getSoldCount() + "+");
 
-
         updateWishlistIcon();
-
 
         List<String> images = product.getImages();
         if (images == null || images.isEmpty()) {
@@ -231,10 +202,8 @@ public class ProductDetailActivity extends AppCompatActivity {
             images.add(product.getImageUrl());
         }
 
-
         final List<String> finalImages = images;
         viewPagerImages.setAdapter(new ImageSliderAdapter(finalImages));
-
 
         tvImageIndex.setText("1/" + finalImages.size());
         viewPagerImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
@@ -245,27 +214,20 @@ public class ProductDetailActivity extends AppCompatActivity {
         });
     }
 
-
-
-
     private void updatePriceDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
         double displayPrice = product.getPrice();
         int stock = product.getStockCount();
 
-
         tvPrice.setText(formatter.format(displayPrice) + "đ");
-
 
         if (product.getOriginalPrice() > displayPrice) {
             tvOriginalPrice.setVisibility(View.VISIBLE);
             tvDiscount.setVisibility(View.VISIBLE);
             tvSavings.setVisibility(View.VISIBLE);
 
-
             tvOriginalPrice.setText(formatter.format(product.getOriginalPrice()) + "đ");
             tvOriginalPrice.setPaintFlags(tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-
 
             int discountPercent = (int) (((product.getOriginalPrice() - displayPrice) / product.getOriginalPrice()) * 100);
             tvDiscount.setText("-" + discountPercent + "%");
@@ -276,7 +238,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             tvSavings.setVisibility(View.GONE);
         }
 
-
         if (tvStock != null) {
             tvStock.setText(getString(R.string.stock_prefix, stock));
             btnAddCart.setEnabled(stock > 0);
@@ -284,15 +245,11 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
-
-
     private void setupCartBadgeListener() {
         if (cartListener != null) {
             cartListener.remove();
             cartListener = null;
         }
-
 
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
@@ -304,9 +261,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                         if (value != null && tvCartBadgeHeader != null) {
                             int count = 0;
                             for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
-                                // FIX: dùng chung logic hợp lệ hoá với CartFragment.parseCartItem()
-                                // và với badge ở Thanh điều hướng (MainActivity), để số lượng hiển
-                                // thị ở đây luôn khớp với tiêu đề "Giỏ hàng (n)".
                                 if (CartHelper.isValidCartDocument(doc)) {
                                     count++;
                                 }
@@ -319,7 +273,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
     private void updateCartBadge(int count) {
         if (tvCartBadgeHeader == null) return;
         if (count > 0) {
@@ -330,7 +283,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
     @Override
     protected void onDestroy() {
         if (cartListener != null) {
@@ -339,10 +291,26 @@ public class ProductDetailActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-
     private void setupExpandableSections() {
-        setupSection(findViewById(R.id.section_ingredients), "Thành phần chính", product.getIngredients());
+        String currentLang = LocaleHelper.getLanguage(this);
+        
+        // Dịch nội dung chi tiết
+        if ("en".equals(currentLang)) {
+            TranslationManager.translate("Thành phần chính", "en", t -> setupSection(findViewById(R.id.section_ingredients), t, null));
+            TranslationManager.translate(product.getIngredients(), "en", t -> setupSection(findViewById(R.id.section_ingredients), null, t));
 
+            TranslationManager.translate("Giá trị dinh dưỡng", "en", t -> setupSection(findViewById(R.id.section_nutrition), t, null));
+            
+            TranslationManager.translate("Hướng dẫn sử dụng", "en", t -> setupSection(findViewById(R.id.section_usage), t, null));
+            TranslationManager.translate(product.getUsage(), "en", t -> setupSection(findViewById(R.id.section_usage), null, t));
+
+            TranslationManager.translate("Nguồn gốc xuất xứ", "en", t -> setupSection(findViewById(R.id.section_origin), t, null));
+            TranslationManager.translate(product.getOrigin(), "en", t -> setupSection(findViewById(R.id.section_origin), null, t));
+        } else {
+            setupSection(findViewById(R.id.section_ingredients), "Thành phần chính", product.getIngredients());
+            setupSection(findViewById(R.id.section_usage), "Hướng dẫn sử dụng", product.getUsage());
+            setupSection(findViewById(R.id.section_origin), "Nguồn gốc xuất xứ", product.getOrigin());
+        }
 
         StringBuilder nutritionText = new StringBuilder();
         if (product.getNutrition() != null) {
@@ -355,30 +323,29 @@ public class ProductDetailActivity extends AppCompatActivity {
                 nutritionText.append("\n");
             }
         }
-        setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng",
-                nutritionText.length() > 0 ? nutritionText.toString().trim() : null);
-
-
-        setupSection(findViewById(R.id.section_usage), "Hướng dẫn sử dụng", product.getUsage());
-        setupSection(findViewById(R.id.section_origin), "Nguồn gốc xuất xứ", product.getOrigin());
+        
+        String nContent = nutritionText.length() > 0 ? nutritionText.toString().trim() : null;
+        if ("en".equals(currentLang) && nContent != null) {
+            TranslationManager.translate(nContent, "en", t -> setupSection(findViewById(R.id.section_nutrition), null, t));
+        } else {
+            setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng", nContent);
+        }
     }
-
-
-
 
     private void setupSection(View sectionView, String title, String content) {
         if (sectionView == null) return;
-
 
         TextView tvTitle = sectionView.findViewById(R.id.tv_section_title);
         TextView tvContent = sectionView.findViewById(R.id.tv_section_content);
         View btnExpand = sectionView.findViewById(R.id.btn_expand);
         ImageView ivArrow = sectionView.findViewById(R.id.iv_expand_arrow);
 
-
-        if (tvTitle != null) tvTitle.setText(title);
-        if (tvContent != null) tvContent.setText(content != null ? content : "Thông tin đang được cập nhật...");
-
+        if (title != null && tvTitle != null) tvTitle.setText(title);
+        if (content != null && tvContent != null) tvContent.setText(content);
+        else if (tvContent != null && tvContent.getText().length() == 0) {
+            String currentLang = LocaleHelper.getLanguage(this);
+            tvContent.setText(currentLang.equals("en") ? "Information is being updated..." : "Thông tin đang được cập nhật...");
+        }
 
         if (btnExpand != null) {
             btnExpand.setOnClickListener(v -> {
@@ -395,17 +362,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         }
     }
 
-
-
-
-    // FIX ROOT CAUSE (bug "Có thể bạn quan tâm không hiển thị sản phẩm"):
-    // ProductAdapter luôn tự COPY list truyền vào constructor ra 1 list nội bộ riêng
-    // (xem ProductAdapter constructor). Code cũ tạo list rỗng, đưa cho adapter (adapter copy
-    // ra 1 list rỗng riêng), rồi lại mutate (clear+addAll) đúng cái list rỗng BAN ĐẦU đó và
-    // gọi notifyDataSetChanged() — nhưng adapter đang cầm 1 list hoàn toàn khác nên không có
-    // gì thay đổi để vẽ lại => RecyclerView mãi mãi trống.
-    // Sửa: không giữ list dùng chung nữa, luôn gọi recommendationAdapter.updateData(list mới)
-    // để thay đúng list mà adapter đang cầm.
     private void setupRecommendations() {
         recommendationAdapter = new ProductAdapter(new ArrayList<>(), new ProductAdapter.OnProductClickListener() {
             @Override
@@ -418,9 +374,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
             @Override
             public void onAddToCart(Product p) {
-                // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại, kể cả khi
-                // sản phẩm không có phân loại, để đồng nhất với nút "Thêm vào giỏ hàng" chính
-                // và không còn tình trạng bấm "+" là cộng thẳng 1 sản phẩm không cho chọn gì.
                 VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(p, (variant, quantity) ->
                         addToCartForProduct(p, variant, quantity));
                 bottomSheet.show(getSupportFragmentManager(), "VariantSelectionRecommend");
@@ -431,17 +384,12 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         });
 
-
         rvRecommendations.setLayoutManager(new GridLayoutManager(this, 2));
         rvRecommendations.setAdapter(recommendationAdapter);
-
 
         fetchRandomRecommendations();
         fetchReviews();
     }
-
-
-
 
     private void fetchRandomRecommendations() {
         FirestoreManager.getInstance().getProductsCollection()
@@ -462,9 +410,6 @@ public class ProductDetailActivity extends AppCompatActivity {
                         Log.e("ProductDetail", "Lỗi tải gợi ý: " + e.getMessage()));
     }
 
-
-
-
     private void syncRecommendationFavoriteState(List<Product> recommendations) {
         String uid = WishlistManager.currentUserId();
         if (uid == null) {
@@ -479,15 +424,11 @@ public class ProductDetailActivity extends AppCompatActivity {
         });
     }
 
-
-
-
     private void fetchReviews() {
         List<com.example.models.Review> reviews = new ArrayList<>();
         ProductReviewEntryAdapter reviewAdapter = new ProductReviewEntryAdapter(reviews);
         rvReviews.setLayoutManager(new LinearLayoutManager(this));
         rvReviews.setAdapter(reviewAdapter);
-
 
         FirestoreManager.getInstance().getProductsCollection()
                 .document(product.getId())
@@ -503,41 +444,38 @@ public class ProductDetailActivity extends AppCompatActivity {
                     }
                     reviewAdapter.notifyDataSetChanged();
                     if (reviews.isEmpty()) {
-                        findViewById(R.id.tv_no_reviews).setVisibility(View.VISIBLE);
+                        View noReviews = findViewById(R.id.tv_no_reviews);
+                        if (noReviews != null) noReviews.setVisibility(View.VISIBLE);
                     }
                 });
     }
-
-
-
 
     private void toggleFavorite() {
         toggleFavoriteForProduct(product);
     }
 
-
-
-
     private void toggleFavoriteForProduct(Product p) {
         if (p == null || p.getId() == null) return;
 
-
         WishlistManager.toggle(this, p, success -> {
             if (!success) {
-                return;
-            }
-            if (p.getId().equals(product.getId())) {
-                product.setFavorite(p.isFavorite());
-                updateWishlistIcon();
-            }
-            if (recommendationAdapter != null) {
-                recommendationAdapter.notifyDataSetChanged();
+                if (p.getId().equals(product.getId())) {
+                    updateWishlistIcon();
+                }
+                if (recommendationAdapter != null) {
+                    recommendationAdapter.notifyDataSetChanged();
+                }
             }
         });
+
+        if (p.getId().equals(product.getId())) {
+            product.setFavorite(p.isFavorite());
+            updateWishlistIcon();
+        }
+        if (recommendationAdapter != null) {
+            recommendationAdapter.notifyDataSetChanged();
+        }
     }
-
-
-
 
     private void updateWishlistIcon() {
         boolean isFavorite = product.isFavorite();
@@ -545,9 +483,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         int tintColor = ContextCompat.getColor(this, isFavorite ? R.color.error : R.color.primary_default);
         btnWishlist.setImageTintList(ColorStateList.valueOf(tintColor));
     }
-
-
-
 
     private void showVariantSelection(boolean isBuyNow) {
         VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(product, isBuyNow, (variant, quantity) -> {
@@ -561,9 +496,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         bottomSheet.show(getSupportFragmentManager(), "VariantSelection");
     }
 
-
-
-
     private void performBuyNow(int quantity) {
         com.example.models.CartItem buyNowItem = new com.example.models.CartItem(
                 product.getId(), product, quantity, null);
@@ -575,15 +507,12 @@ public class ProductDetailActivity extends AppCompatActivity {
             buyNowItem.setPrice(product.getPrice());
         }
 
-
         ArrayList<com.example.models.CartItem> checkoutItems = new ArrayList<>();
         checkoutItems.add(buyNowItem);
-
 
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-
 
         if (user != null) {
             buyNowItem.setUserId(user.getUid());
@@ -594,19 +523,12 @@ public class ProductDetailActivity extends AppCompatActivity {
             intent.putExtra("navigate_to", "phone_verification");
         }
 
-
         startActivity(intent);
     }
-
-
-
 
     private void addToCart(int quantity) {
         addToCartForProduct(product, selectedVariant, quantity);
     }
-
-
-
 
     private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity) {
         CartHelper.addToCart(this, targetProduct, variant, quantity);

@@ -18,8 +18,11 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.example.healthup.R;
 import com.example.healthup.ProductAdapter;
@@ -28,16 +31,27 @@ import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Blog;
 import com.example.models.Category;
 import com.example.models.Product;
+import com.google.mlkit.vision.common.InputImage;
+import com.google.mlkit.vision.label.ImageLabel;
+import com.google.mlkit.vision.label.ImageLabeler;
+import com.google.mlkit.vision.label.ImageLabeling;
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions;
+
+import java.io.IOException;
+import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class HomeFragment extends Fragment implements ProductAdapter.OnProductClickListener, CategoryAdapter.OnCategoryClickListener, BlogAdapter.OnBlogClickListener {
 
     private static final int REQUEST_CODE_SPEECH_INPUT = 1001;
     private static final int REQUEST_CODE_CAMERA_INPUT = 1002;
+    private static final int REQUEST_CODE_GALLERY_INPUT = 1003;
 
     private RecyclerView rvNewProducts, rvCategories, rvFlashSale, rvBlogs;
     private ProductAdapter newProductAdapter, flashSaleAdapter;
@@ -51,6 +65,32 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     private List<Product> allProductsForSearch = new ArrayList<>();
     private List<String> bannerImages = new ArrayList<>();
     private int currentBannerIndex = 0;
+    private android.net.Uri photoUri;
+    private boolean isImageSearch = false;
+
+    private final androidx.activity.result.ActivityResultLauncher<androidx.activity.result.PickVisualMediaRequest> pickImageLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia(), uri -> {
+                if (uri != null) {
+                    processImageForSearch(uri);
+                }
+            });
+
+    private final androidx.activity.result.ActivityResultLauncher<Intent> cameraLauncher = registerForActivityResult(
+            new androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == android.app.Activity.RESULT_OK) {
+                    processImageForSearch(photoUri);
+                }
+            });
+
+    private final androidx.activity.result.ActivityResultLauncher<String> requestPermissionLauncher =
+            registerForActivityResult(new androidx.activity.result.contract.ActivityResultContracts.RequestPermission(), isGranted -> {
+                if (isGranted) {
+                    launchCamera();
+                } else {
+                    Toast.makeText(getContext(), "Cần quyền Camera để tìm kiếm bằng hình ảnh", Toast.LENGTH_SHORT).show();
+                }
+            });
 
     private android.os.Handler timerHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private long endTime;
@@ -172,7 +212,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvNewProducts.setAdapter(newProductAdapter);
 
         rvBlogs = view.findViewById(R.id.rvBlogs);
-        blogAdapter = new BlogAdapter(blogList, this);
+        blogAdapter = new BlogAdapter(blogList, this, true);
         rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
         rvBlogs.setAdapter(blogAdapter);
 
@@ -206,10 +246,17 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 "Đồ ăn vặt", "Trà thảo mộc", "Combo"
         };
 
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+
         for (int i = 0; i < chipIds.length; i++) {
             final String categoryName = categoryNames[i];
-            View chip = view.findViewById(chipIds[i]);
+            TextView chip = view.findViewById(chipIds[i]);
             if (chip != null) {
+                if ("en".equals(currentLang)) {
+                    TranslationManager.translate(categoryName, "en", translated -> {
+                        if (translated != null) chip.setText(translated);
+                    });
+                }
                 chip.setOnClickListener(v -> navigateToCategory(categoryName));
             }
         }
@@ -217,23 +264,35 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     private void setupSearch(View view) {
         EditText etSearch = view.findViewById(R.id.etSearch);
+        View containerImageSearch = view.findViewById(R.id.containerImageSearch);
+        View ivClearSearch = view.findViewById(R.id.ivClearSearch);
+        View mainContent = view.findViewById(R.id.mainContent);
+        View rvRealtimeSearch = view.findViewById(R.id.rvRealtimeSearch);
+
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                String query = s.toString().trim().toLowerCase();
+                if (isImageSearch) return;
+
+                String query = s.toString().trim();
+                if (ivClearSearch != null) {
+                    ivClearSearch.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                }
+
                 if (query.isEmpty()) {
-                    view.findViewById(R.id.mainContent).setVisibility(View.VISIBLE);
-                    view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.GONE);
+                    mainContent.setVisibility(View.VISIBLE);
+                    rvRealtimeSearch.setVisibility(View.GONE);
                 } else {
-                    view.findViewById(R.id.mainContent).setVisibility(View.GONE);
-                    view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.VISIBLE);
+                    mainContent.setVisibility(View.GONE);
+                    rvRealtimeSearch.setVisibility(View.VISIBLE);
 
                     List<Product> searchResults = new ArrayList<>();
+                    String lowQuery = query.toLowerCase();
                     for (Product p : allProductsForSearch) {
-                        if (p.getName().toLowerCase().contains(query)) {
+                        if (p.getName().toLowerCase().contains(lowQuery)) {
                             searchResults.add(p);
                         }
                     }
@@ -249,6 +308,20 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             public void afterTextChanged(Editable s) {}
         });
 
+        if (ivClearSearch != null) {
+            ivClearSearch.setOnClickListener(v -> {
+                isImageSearch = false;
+                if (containerImageSearch != null) containerImageSearch.setVisibility(View.GONE);
+                if (etSearch != null) {
+                    etSearch.setText("");
+                    etSearch.setVisibility(View.VISIBLE);
+                }
+                ivClearSearch.setVisibility(View.GONE);
+                mainContent.setVisibility(View.VISIBLE);
+                rvRealtimeSearch.setVisibility(View.GONE);
+            });
+        }
+
         // Voice search click
         view.findViewById(R.id.ivMic).setOnClickListener(v -> startVoiceRecognition());
 
@@ -257,6 +330,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     }
 
     private void startVoiceRecognition() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.RECORD_AUDIO)
+                != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, 100);
+            return;
+        }
+
         Intent intent = new Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                 android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
@@ -271,11 +350,67 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     }
 
     private void startCameraSearch() {
-        Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
-        try {
-            startActivityForResult(intent, REQUEST_CODE_CAMERA_INPUT);
-        } catch (Exception e) {
-            Toast.makeText(getContext(), "Máy bạn không hỗ trợ camera", Toast.LENGTH_SHORT).show();
+        BottomSheetDialog dialog = new BottomSheetDialog(requireContext(), R.style.BottomSheetDialogTheme);
+        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_image_source, null);
+        dialog.setContentView(view);
+
+        TextView tvHeader = view.findViewById(R.id.tvHeader);
+        if (tvHeader != null) tvHeader.setText("Tìm kiếm bằng hình ảnh");
+
+        view.findViewById(R.id.btnCamera).setOnClickListener(v -> {
+            dialog.dismiss();
+            launchCamera();
+        });
+
+        view.findViewById(R.id.btnGallery).setOnClickListener(v -> {
+            dialog.dismiss();
+            launchGallery();
+        });
+
+        View btnCancel = view.findViewById(R.id.btnCancel);
+        if (btnCancel != null) btnCancel.setOnClickListener(v -> dialog.dismiss());
+        
+        dialog.show();
+    }
+
+    private void launchCamera() {
+        if (androidx.core.content.ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.CAMERA)
+                == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            
+            Intent intent = new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            java.io.File photoFile = null;
+            try {
+                String timeStamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new java.util.Date());
+                photoFile = java.io.File.createTempFile("SEARCH_" + timeStamp + "_", ".jpg", requireContext().getExternalFilesDir(null));
+            } catch (IOException ex) {
+                Log.e("HomeFragment", "Lỗi tạo file ảnh: " + ex.getMessage());
+            }
+
+            if (photoFile != null) {
+                photoUri = androidx.core.content.FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".fileprovider", photoFile);
+                intent.putExtra(android.provider.MediaStore.EXTRA_OUTPUT, photoUri);
+                cameraLauncher.launch(intent);
+            }
+        } else {
+            requestPermissionLauncher.launch(android.Manifest.permission.CAMERA);
+        }
+    }
+
+    private void launchGallery() {
+        pickImageLauncher.launch(new androidx.activity.result.PickVisualMediaRequest.Builder()
+                .setMediaType(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                .build());
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == 100 && grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            startVoiceRecognition();
+        } else if (requestCode == 200 && grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            launchCamera();
+        } else if (requestCode == 100) {
+            Toast.makeText(getContext(), "Bạn cần cấp quyền Micro để sử dụng tính năng này", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -287,14 +422,256 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             ArrayList<String> result = data.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS);
             if (result != null && !result.isEmpty()) {
                 String voiceQuery = result.get(0);
-                EditText etSearch = getView().findViewById(R.id.etSearch);
-                if (etSearch != null) {
-                    etSearch.setText(voiceQuery);
-                }
+                performSearch(voiceQuery);
             }
         } else if (requestCode == REQUEST_CODE_CAMERA_INPUT && resultCode == android.app.Activity.RESULT_OK) {
-            Toast.makeText(getContext(), "Đang phân tích hình ảnh để tìm sản phẩm...", Toast.LENGTH_LONG).show();
+            processImageForSearch(photoUri);
+        } else if (requestCode == REQUEST_CODE_GALLERY_INPUT && resultCode == android.app.Activity.RESULT_OK && data != null) {
+            processImageForSearch(data.getData());
         }
+    }
+
+    private void performSearch(String query) {
+        EditText etSearch = getView().findViewById(R.id.etSearch);
+        if (etSearch != null) {
+            etSearch.setText(query);
+        }
+    }
+
+    private void processImageForSearch(android.net.Uri uri) {
+        if (uri == null || getContext() == null) return;
+        Toast.makeText(getContext(), "Đang phân tích dấu vân tay thị giác...", Toast.LENGTH_SHORT).show();
+
+        try {
+            // Hiển thị ảnh xem trước TRONG thanh search (thay thế text)
+            View view = getView();
+            if (view != null) {
+                View containerImageSearch = view.findViewById(R.id.containerImageSearch);
+                ImageView ivSearchPreview = view.findViewById(R.id.ivSearchPreview);
+                EditText etSearch = view.findViewById(R.id.etSearch);
+                View ivClearSearch = view.findViewById(R.id.ivClearSearch);
+                
+                if (containerImageSearch != null && ivSearchPreview != null && etSearch != null) {
+                    isImageSearch = true;
+                    etSearch.setVisibility(View.GONE); // Ẩn ô nhập liệu
+                    containerImageSearch.setVisibility(View.VISIBLE); // Hiện ảnh
+                    Glide.with(this).load(uri).into(ivSearchPreview);
+                    
+                    if (ivClearSearch != null) ivClearSearch.setVisibility(View.VISIBLE);
+                }
+            }
+
+            // 1. Phân tích Dấu vân tay màu sắc đa điểm (Multi-point Color Fingerprint)
+            android.graphics.Bitmap bitmap = android.provider.MediaStore.Images.Media.getBitmap(requireContext().getContentResolver(), uri);
+            VisualFingerprint inputFingerprint = extractVisualFingerprint(bitmap);
+            
+            // 2. Sử dụng ML Kit để trích xuất Vector đặc trưng cấu trúc
+            InputImage image = InputImage.fromBitmap(bitmap, 0);
+            ImageLabeler labeler = ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS);
+
+            labeler.process(image)
+                    .addOnSuccessListener(labels -> {
+                        if (labels.isEmpty()) {
+                            Toast.makeText(getContext(), "Không nhận diện được đặc trưng vật thể", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        // 3. Tính toán độ tương đồng dựa trên tổ hợp Màu sắc + Cấu trúc + Đặc tính
+                        List<ProductScore> scoredProducts = new ArrayList<>();
+                        for (Product p : allProductsForSearch) {
+                            double similarity = calculateAdvancedVisualSimilarity(p, labels, inputFingerprint);
+                            if (similarity > 0.3) { // Ngưỡng tương đồng tinh chỉnh
+                                scoredProducts.add(new ProductScore(p, similarity));
+                            }
+                        }
+
+                        Collections.sort(scoredProducts, (a, b) -> Double.compare(b.score, a.score));
+
+                        List<Product> results = new ArrayList<>();
+                        for (ProductScore ps : scoredProducts) {
+                            results.add(ps.product);
+                        }
+
+                        displayVisualSearchResults(results);
+                    })
+                    .addOnFailureListener(e -> {
+                        if (getContext() != null)
+                            Toast.makeText(getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+        } catch (IOException e) {
+            Log.e("HomeFragment", "Visual search error", e);
+        }
+    }
+
+    private VisualFingerprint extractVisualFingerprint(android.graphics.Bitmap bitmap) {
+        if (bitmap == null) return new VisualFingerprint(0, 0);
+        
+        // Lấy màu tại tâm (vật thể chính)
+        int centerX = bitmap.getWidth() / 2;
+        int centerY = bitmap.getHeight() / 2;
+        int centerColor = bitmap.getPixel(centerX, centerY);
+        
+        // Lấy màu trung bình tổng thể
+        android.graphics.Bitmap small = android.graphics.Bitmap.createScaledBitmap(bitmap, 1, 1, true);
+        int avgColor = small.getPixel(0, 0);
+        small.recycle();
+        
+        return new VisualFingerprint(centerColor, avgColor);
+    }
+
+    private double calculateAdvancedVisualSimilarity(Product p, List<ImageLabel> labels, VisualFingerprint inputFP) {
+        double score = 0;
+        String pName = removeAccents(p.getName().toLowerCase());
+        String pCat = removeAccents(p.getCategory().toLowerCase());
+
+        // A. Khớp màu sắc (Color Matching - 40% trọng số)
+        int pTargetColor = getCategoryColor(p.getCategory());
+        if (isColorSimilar(inputFP.centerColor, pTargetColor)) score += 0.8;
+        if (isColorSimilar(inputFP.avgColor, pTargetColor)) score += 0.4;
+
+        // B. Khớp đặc trưng cấu trúc (Structural Matching - 60% trọng số)
+        for (ImageLabel label : labels) {
+            String concept = translateLabel(label.getText()).toLowerCase();
+            String conceptNorm = removeAccents(concept);
+            float confidence = label.getConfidence();
+
+            if (pName.contains(conceptNorm) || pCat.contains(conceptNorm)) {
+                score += (confidence * 1.5);
+            }
+            
+            // So khớp đặc tính vật lý (Texture/Container)
+            if (isPhysicalMatch(label.getText(), pName)) {
+                score += (confidence * 0.5);
+            }
+        }
+
+        return score;
+    }
+
+    private boolean isPhysicalMatch(String label, String pName) {
+        // Ánh xạ các nhãn thị giác sang đặc tính vật lý của sản phẩm
+        if (label.contains("Liquid") && (pName.contains("nuoc") || pName.contains("mat ong"))) return true;
+        if (label.contains("Granular") && (pName.contains("hat") || pName.contains("ngu coc"))) return true;
+        if (label.contains("Leaf") && pName.contains("tra")) return true;
+        if (label.contains("Container") && (pName.contains("chai") || pName.contains("hu") || pName.contains("tui"))) return true;
+        return false;
+    }
+
+    private static class VisualFingerprint {
+        int centerColor;
+        int avgColor;
+        VisualFingerprint(int centerColor, int avgColor) {
+            this.centerColor = centerColor;
+            this.avgColor = avgColor;
+        }
+    }
+
+    private int getCategoryColor(String category) {
+        if (category == null) return 0;
+        String cat = category.toLowerCase();
+        if (cat.contains("tra") || cat.contains("rau") || cat.contains("thao moc")) return android.graphics.Color.GREEN;
+        if (cat.contains("hat") || cat.contains("granola") || cat.contains("ngu coc")) return android.graphics.Color.parseColor("#8B4513"); 
+        if (cat.contains("trai cay") || cat.contains("do an vat")) return android.graphics.Color.RED;
+        return 0;
+    }
+
+    private boolean isColorSimilar(int c1, int c2) {
+        if (c1 == 0 || c2 == 0) return false;
+        float[] hsv1 = new float[3];
+        float[] hsv2 = new float[3];
+        android.graphics.Color.colorToHSV(c1, hsv1);
+        android.graphics.Color.colorToHSV(c2, hsv2);
+        return Math.abs(hsv1[0] - hsv2[0]) < 45;
+    }
+
+    private void displayVisualSearchResults(List<Product> results) {
+        if (!isAdded() || getView() == null) return;
+        View view = getView();
+
+        view.findViewById(R.id.mainContent).setVisibility(View.GONE);
+        view.findViewById(R.id.rvRealtimeSearch).setVisibility(View.VISIBLE);
+
+        RecyclerView rvSearch = view.findViewById(R.id.rvRealtimeSearch);
+        ProductAdapter searchAdapter = new ProductAdapter(results, this);
+        rvSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        rvSearch.setAdapter(searchAdapter);
+
+        if (results.isEmpty()) {
+            Toast.makeText(getContext(), "Không tìm thấy sản phẩm tương đồng", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "Đã tìm thấy " + results.size() + " sản phẩm phù hợp nhất", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String removeAccents(String str) {
+        if (str == null) return "";
+        return str.toLowerCase()
+                .replaceAll("[àáạảãâầấậẩẫăằắặẳẵ]", "a")
+                .replaceAll("[èéẹẻẽêềếệểễ]", "e")
+                .replaceAll("[ìíịỉĩ]", "i")
+                .replaceAll("[òóọỏõôồốộổỗơờớợởỡ]", "o")
+                .replaceAll("[ùúụủũưừứựửữ]", "u")
+                .replaceAll("[ỳýỵỷỹ]", "y")
+                .replaceAll("đ", "d")
+                .trim();
+    }
+
+    private static class ProductScore {
+        Product product;
+        double score;
+        ProductScore(Product product, double score) {
+            this.product = product;
+            this.score = score;
+        }
+    }
+
+    private String translateLabel(String label) {
+        Map<String, String> mapping = new HashMap<>();
+        // Cập nhật từ điển chuyên sâu cho HealthUp
+        mapping.put("nut", "Hạt");
+        mapping.put("seed", "Hạt");
+        mapping.put("cashew", "Điều");
+        mapping.put("almond", "Hạnh nhân");
+        mapping.put("walnut", "Óc chó");
+        mapping.put("macadamia", "Macca");
+        mapping.put("peanut", "Lạc");
+        mapping.put("pistachio", "Dẻ cười");
+        mapping.put("hazelnut", "Phỉ");
+        
+        mapping.put("fruit", "Trái cây");
+        mapping.put("dried fruit", "Sấy");
+        mapping.put("raisin", "Nho khô");
+        mapping.put("berry", "Dâu");
+        mapping.put("strawberry", "Dâu tây");
+        mapping.put("date fruit", "Chà là");
+        mapping.put("apricot", "Mơ");
+        
+        mapping.put("granola", "Granola");
+        mapping.put("cereal", "Ngũ cốc");
+        mapping.put("muesli", "Ngũ cốc");
+        mapping.put("oat", "Yến mạch");
+        mapping.put("honey", "Mật ong");
+        
+        mapping.put("tea", "Trà");
+        mapping.put("matcha", "Trà xanh");
+        mapping.put("drink", "Nước");
+        mapping.put("beverage", "Đồ uống");
+        mapping.put("bottle", "Chai");
+        mapping.put("jar", "Hũ");
+        
+        mapping.put("snack", "Ăn vặt");
+        mapping.put("cookie", "Bánh");
+        mapping.put("biscuit", "Bánh");
+        mapping.put("food", "Thực phẩm");
+        mapping.put("cuisine", "Món ăn");
+        mapping.put("produce", "Nông sản");
+        mapping.put("vegetable", "Rau");
+        
+        String lowLabel = label.toLowerCase();
+        for (Map.Entry<String, String> entry : mapping.entrySet()) {
+            if (lowLabel.contains(entry.getKey())) return entry.getValue();
+        }
+        return label;
     }
 
     private void fetchCategories() {
@@ -509,7 +886,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                             String name = doc.getString("fullName");
                             if (name == null || name.isEmpty()) name = doc.getString("name");
                             if (name != null && !name.isEmpty()) {
-                                tvWelcome.setText("Chào mừng trở lại, " + name + "!");
+                                String welcomeText = getString(R.string.welcome_back) + ", " + name + "!";
+                                tvWelcome.setText(welcomeText);
                             }
                         }
                     });

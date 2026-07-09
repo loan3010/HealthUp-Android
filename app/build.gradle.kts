@@ -112,6 +112,9 @@ dependencies {
 
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.1.0")
 
+    // ML Kit for Image Search
+    implementation("com.google.mlkit:image-labeling:17.0.9")
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)

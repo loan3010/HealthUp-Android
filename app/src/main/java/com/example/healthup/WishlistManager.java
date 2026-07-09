@@ -1,10 +1,13 @@
 package com.example.healthup;
 
+
 import android.content.Context;
 import android.widget.Toast;
 
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
 
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Product;
@@ -14,32 +17,46 @@ import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+
 /** Per-user wishlist stored at users/{uid}/wishlist/{productId}. */
 public final class WishlistManager {
 
+
     private static final String COL_USERS = "users";
     private static final String COL_WISHLIST = "wishlist";
+
+    // FIX (toast bị "mất"): Android xếp hàng (queue) các Toast. Nếu người dùng bấm liên
+    // tiếp hoặc có toast trước đó chưa kịp tắt, toast mới bị xếp hàng chờ mới hiện, khiến
+    // người dùng tưởng "không có toast". Giữ tham chiếu tới toast gần nhất và cancel() nó
+    // trước khi show() toast mới để đảm bảo phản hồi luôn hiện NGAY LẬP TỨC.
+    private static Toast currentToast;
+
 
     public interface SimpleCallback {
         void onComplete(boolean success);
     }
 
+
     public interface ProductsCallback {
         void onLoaded(@NonNull List<Product> products);
     }
+
 
     public interface IdsCallback {
         void onLoaded(@NonNull Set<String> productIds);
     }
 
+
     private WishlistManager() {
     }
+
 
     @Nullable
     public static String currentUserId() {
@@ -47,20 +64,25 @@ public final class WishlistManager {
         return user != null ? user.getUid() : null;
     }
 
+
     public static void toggle(@NonNull Context context, @NonNull Product product,
                               @Nullable SimpleCallback callback) {
         String uid = currentUserId();
         if (uid == null) {
-            Toast.makeText(context, "Vui lòng đăng nhập để sử dụng chức năng yêu thích",
-                    Toast.LENGTH_SHORT).show();
+            showToast(context, "Vui lòng đăng nhập để sử dụng chức năng yêu thích");
             return;
         }
         if (product.getId() == null) {
             return;
         }
 
+
         boolean add = !product.isFavorite();
+        // FIX: đổi trạng thái NGAY LẬP TỨC (optimistic update) trên object đang được các
+        // UI/ProductAdapter giữ tham chiếu, để icon và danh sách có thể được cập nhật ngay
+        // khi người dùng bấm, không cần chờ Firestore trả về.
         product.setFavorite(add);
+
 
         FirebaseFirestore db = FirebaseFirestore.getInstance();
         if (add) {
@@ -71,12 +93,12 @@ public final class WishlistManager {
                     .collection(COL_WISHLIST).document(product.getId())
                     .set(data)
                     .addOnSuccessListener(unused -> {
-                        Toast.makeText(context, "Đã thêm vào yêu thích", Toast.LENGTH_SHORT).show();
+                        showToast(context, "Đã thêm vào yêu thích");
                         if (callback != null) callback.onComplete(true);
                     })
                     .addOnFailureListener(e -> {
                         product.setFavorite(!add);
-                        Toast.makeText(context, "Không thể cập nhật yêu thích", Toast.LENGTH_SHORT).show();
+                        showToast(context, "Không thể cập nhật yêu thích");
                         if (callback != null) callback.onComplete(false);
                     });
         } else {
@@ -84,16 +106,26 @@ public final class WishlistManager {
                     .collection(COL_WISHLIST).document(product.getId())
                     .delete()
                     .addOnSuccessListener(unused -> {
-                        Toast.makeText(context, "Đã xóa khỏi yêu thích", Toast.LENGTH_SHORT).show();
+                        showToast(context, "Đã xóa khỏi yêu thích");
                         if (callback != null) callback.onComplete(true);
                     })
                     .addOnFailureListener(e -> {
                         product.setFavorite(!add);
-                        Toast.makeText(context, "Không thể cập nhật yêu thích", Toast.LENGTH_SHORT).show();
+                        showToast(context, "Không thể cập nhật yêu thích");
                         if (callback != null) callback.onComplete(false);
                     });
         }
     }
+
+
+    private static void showToast(@NonNull Context context, @NonNull String message) {
+        if (currentToast != null) {
+            currentToast.cancel();
+        }
+        currentToast = Toast.makeText(context, message, Toast.LENGTH_SHORT);
+        currentToast.show();
+    }
+
 
     public static void loadFavoriteIds(@NonNull String uid, @NonNull IdsCallback callback) {
         FirebaseFirestore.getInstance()
@@ -109,6 +141,7 @@ public final class WishlistManager {
                 })
                 .addOnFailureListener(e -> callback.onLoaded(new HashSet<>()));
     }
+
 
     public static void loadWishlistProducts(@NonNull String uid, @NonNull ProductsCallback callback) {
         FirebaseFirestore.getInstance()
@@ -128,6 +161,7 @@ public final class WishlistManager {
                 })
                 .addOnFailureListener(e -> callback.onLoaded(new ArrayList<>()));
     }
+
 
     private static void fetchProductsByIds(@NonNull List<String> ids,
                                            @NonNull ProductsCallback callback) {
@@ -156,6 +190,7 @@ public final class WishlistManager {
                     });
         }
     }
+
 
     public static void applyFavoriteState(@NonNull List<Product> products,
                                           @NonNull Set<String> favoriteIds) {

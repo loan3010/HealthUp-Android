@@ -82,7 +82,7 @@
                                 android:layout_height="36dp"
                                 android:background="@drawable/bg_circle_translucent"
                                 android:src="@drawable/ic_cart"
-                                app:tint="@color/text_dark" />
+                                app:tint="@color/primary_default" />
 
 
                             <TextView
