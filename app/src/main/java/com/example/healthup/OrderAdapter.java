@@ -16,6 +16,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
 import com.example.healthup.databinding.DialogLoadingBinding;
 import com.example.healthup.databinding.DialogSuccessBinding;
 import com.example.healthup.databinding.ItemOrderBinding;
@@ -27,7 +28,6 @@ import com.example.models.ReturnReason;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.appcompat.app.AlertDialog;
-import androidx.core.content.ContextCompat;
 import android.content.Intent;
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -136,7 +136,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     }
 
 
-    class OrderViewHolder extends RecyclerView.ViewHolder {
+    public class OrderViewHolder extends RecyclerView.ViewHolder {
         private ItemOrderBinding binding;
 
         public OrderViewHolder(ItemOrderBinding binding) {
@@ -159,7 +159,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                             // Update local data to reflect change immediately
                             order.setShopConfirmedDelivery(true);
                             order.setDeliveredAt(new java.util.Date());
-                            notifyItemChanged(getAdapterPosition());
+                            notifyItemChanged(getBindingAdapterPosition());
                         })
                         .addOnFailureListener(e -> {
                             loading.dismiss();
@@ -278,7 +278,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
             pBinding.tvPriceOld.setVisibility(View.VISIBLE);
             pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
-            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
             pBinding.tvPriceOld.setVisibility(View.GONE);
         }
