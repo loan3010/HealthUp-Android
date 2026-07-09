@@ -499,7 +499,7 @@
                 </LinearLayout>
 
                 <LinearLayout style="@style/SummaryRowStyle">
-                    <TextView style="@style/SummaryLabelStyle" android:text="Tổng cộng Voucher giảm giá" />
+                    <TextView style="@style/SummaryLabelStyle" android:text="Voucher giảm giá sản phẩm" />
                     <TextView android:id="@+id/tvVoucherDiscount" style="@style/SummaryValueStyle"
                         android:textColor="@color/red_price" android:text="-0đ" />
                 </LinearLayout>

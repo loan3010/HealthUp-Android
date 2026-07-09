@@ -86,28 +86,22 @@ public class MainActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 loadFragment(new HomeFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_category) {
                 if (skipNextCategoryNavLoad) {
                     skipNextCategoryNavLoad = false;
-                    updateFabVisibility(false);
                     return true;
                 }
                 loadFragment(new ProductListFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_cart) {
                 loadFragment(new CartFragment());
-                updateFabVisibility(true);
                 return true;
             } else if (id == R.id.nav_notifications) {
                 loadFragment(new NotificationsFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_profile) {
                 loadFragment(new ProfileFragment());
-                updateFabVisibility(false);
                 return true;
             }
             return false;
@@ -248,9 +242,23 @@ public class MainActivity extends AppCompatActivity {
 
             if (keyboardNowShowing != isKeyboardShowing) {
                 isKeyboardShowing = keyboardNowShowing;
-                navView.setVisibility(isKeyboardShowing ? View.GONE : View.VISIBLE);
+                
+                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                boolean isHideFlow = isKeyboardShowing || isCheckoutFlow(currentFragment);
+                navView.setVisibility(isHideFlow ? View.GONE : View.VISIBLE);
             }
         });
+    }
+
+    private boolean isCheckoutFlow(Fragment fragment) {
+        return (fragment instanceof CartFragment ||
+                fragment instanceof CheckoutFragment ||
+                fragment instanceof PhoneVerificationFragment ||
+                fragment instanceof AddressBookFragment ||
+                fragment instanceof PromoCouponFragment ||
+                fragment instanceof OrderHistoryFragment ||
+                fragment instanceof PolicyFragment ||
+                fragment instanceof FAQFragment);
     }
 
     @Override
@@ -283,7 +291,6 @@ public class MainActivity extends AppCompatActivity {
             } else if ("phone_verification".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_cart);
                 loadFragment(new PhoneVerificationFragment());
-                updateFabVisibility(true);
                 return;
             } else if ("checkout".equals(target)) {
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
@@ -293,7 +300,6 @@ public class MainActivity extends AppCompatActivity {
                     args.putSerializable("selected_items", (Serializable) checkoutItems);
                     fragment.setArguments(args);
                     loadFragment(fragment);
-                    updateFabVisibility(false);
                 } else {
                     navView.setSelectedItemId(R.id.nav_cart);
                 }
@@ -317,20 +323,16 @@ public class MainActivity extends AppCompatActivity {
                 args.putInt("initial_tab", 1);
             } else if ("faq".equals(target)) {
                 loadFragment(new FAQFragment());
-                updateFabVisibility(false);
                 return;
             } else if ("policy".equals(target)) {
                 loadFragment(new PolicyFragment());
-                updateFabVisibility(false);
                 return;
             }
 
             fragment.setArguments(args);
             loadFragment(fragment);
-            updateFabVisibility(false);
         } else {
             loadFragment(new HomeFragment());
-            updateFabVisibility(false);
         }
     }
 
@@ -365,14 +367,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void updateFabVisibility(boolean hideOnCart) {
-        if (fabChat == null) {
-            return;
-        }
-        fabChat.setVisibility(hideOnCart ? View.GONE : View.VISIBLE);
-    }
 
     private void loadFragment(Fragment fragment) {
+        // ✅ QUY TẮC: Ẩn BottomNav và FAB khi vào quy trình mua hàng hoặc các trang con sâu
+        boolean hideNavigation = isCheckoutFlow(fragment);
+
+        if (navView != null) {
+            navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
+        }
+        if (fabChat != null) {
+            fabChat.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
+        }
+
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
@@ -381,13 +387,11 @@ public class MainActivity extends AppCompatActivity {
     public void showCartTab() {
         navView.setSelectedItemId(R.id.nav_cart);
         loadFragment(new CartFragment());
-        updateFabVisibility(true);
     }
 
     public void showHomeTab() {
         navView.setSelectedItemId(R.id.nav_home);
         loadFragment(new HomeFragment());
-        updateFabVisibility(false);
     }
 
     @SuppressWarnings("unchecked")
