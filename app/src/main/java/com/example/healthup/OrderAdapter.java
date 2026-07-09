@@ -16,6 +16,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.ContextCompat;
 import com.example.healthup.databinding.DialogLoadingBinding;
 import com.example.healthup.databinding.DialogSuccessBinding;
 import com.example.healthup.databinding.ItemOrderBinding;
@@ -135,7 +136,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     }
 
 
-    class OrderViewHolder extends RecyclerView.ViewHolder {
+    public class OrderViewHolder extends RecyclerView.ViewHolder {
         private ItemOrderBinding binding;
 
         public OrderViewHolder(ItemOrderBinding binding) {
@@ -158,7 +159,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                             // Update local data to reflect change immediately
                             order.setShopConfirmedDelivery(true);
                             order.setDeliveredAt(new java.util.Date());
-                            notifyItemChanged(getAdapterPosition());
+                            notifyItemChanged(getBindingAdapterPosition());
                         })
                         .addOnFailureListener(e -> {
                             loading.dismiss();
@@ -277,7 +278,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
             pBinding.tvPriceOld.setVisibility(View.VISIBLE);
             pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
-            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
             pBinding.tvPriceOld.setVisibility(View.GONE);
         }
@@ -324,25 +325,37 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         private void setStatusUI(Order order) {
             String status = order.getStatus();
             String displayStatus = "";
-            int color = 0xFF36873A;
+            int color = ContextCompat.getColor(context, R.color.status_delivered);
 
             switch (status.toLowerCase()) {
                 case "pending":
-                    displayStatus = "Chờ xác nhận"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ xác nhận";
+                    color = ContextCompat.getColor(context, R.color.status_pending);
+                    break;
                 case "confirmed":
-                    displayStatus = "Chờ lấy hàng"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ lấy hàng";
+                    color = ContextCompat.getColor(context, R.color.status_pending);
+                    break;
                 case "shipping":
-                    displayStatus = "Chờ giao hàng"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ giao hàng";
+                    color = ContextCompat.getColor(context, R.color.status_shipping);
+                    break;
                 case "delivered":
-                    displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
+                    displayStatus = "Hoàn thành";
+                    color = ContextCompat.getColor(context, R.color.status_delivered);
+                    break;
                 case "cancelled":
-                    displayStatus = "Đã hủy"; color = 0xFFE53835; break;
+                    displayStatus = "Đã hủy";
+                    color = ContextCompat.getColor(context, R.color.status_cancelled);
+                    break;
                 case "returned":
                 case "refunded":
                     if ("refunded".equalsIgnoreCase(order.getPaymentStatus())) {
-                        displayStatus = "Đã hoàn tiền"; color = 0xFF36873A;
+                        displayStatus = "Đã hoàn tiền";
+                        color = ContextCompat.getColor(context, R.color.status_delivered);
                     } else {
-                        displayStatus = "Đang xử lý"; color = 0xFFFF8F00;
+                        displayStatus = "Đang xử lý trả hàng";
+                        color = ContextCompat.getColor(context, R.color.status_returned);
                     }
                     break;
             }

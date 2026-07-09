@@ -11,6 +11,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
@@ -316,14 +317,26 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
     }
 
     private void showImageSourceDialog() {
-        String[] options = {"Chụp ảnh", "Chọn từ thư viện"};
-        new AlertDialog.Builder(this)
-                .setTitle("Thêm minh chứng")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) launchCamera();
-                    else launchGallery();
-                })
-                .show();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_image_source, null);
+        dialog.setContentView(view);
+
+        TextView tvHeader = view.findViewById(R.id.tvHeader);
+        if (tvHeader != null) tvHeader.setText("Thêm minh chứng");
+
+        view.findViewById(R.id.btnCamera).setOnClickListener(v -> {
+            dialog.dismiss();
+            launchCamera();
+        });
+
+        view.findViewById(R.id.btnGallery).setOnClickListener(v -> {
+            dialog.dismiss();
+            launchGallery();
+        });
+
+        view.findViewById(R.id.btnCancelSource).setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void launchGallery() {
@@ -518,16 +531,19 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
             }
 
             itemBinding.btnPlus.setOnClickListener(v -> {
-                if (selectedItemsMap.get(item) < item.getQuantity()) {
-                    selectedItemsMap.put(item, selectedItemsMap.get(item) + 1);
+                Integer current = selectedItemsMap.get(item);
+                if (current != null && current < item.getQuantity()) {
+                    selectedItemsMap.put(item, current + 1);
                     updateSelectedProductsUI();
                 }
             });
             itemBinding.btnMinus.setOnClickListener(v -> {
-                int currentQty = selectedItemsMap.get(item);
-                if (currentQty > 1) selectedItemsMap.put(item, currentQty - 1);
-                else selectedItemsMap.remove(item);
-                updateSelectedProductsUI();
+                Integer current = selectedItemsMap.get(item);
+                if (current != null) {
+                    if (current > 1) selectedItemsMap.put(item, current - 1);
+                    else selectedItemsMap.remove(item);
+                    updateSelectedProductsUI();
+                }
             });
             binding.lnSelectedProductsContainer.addView(itemBinding.getRoot());
         }

@@ -2,6 +2,7 @@ package com.example.healthup;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import androidx.appcompat.app.AppCompatActivity;
 import com.example.models.Address;
 
@@ -11,6 +12,9 @@ public class AddressBookActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_address_book);
+        
+        View container = findViewById(R.id.fragment_container);
+        UIUtils.applyStatusBarInsets(container);
 
         if (savedInstanceState == null) {
             AddressBookFragment fragment = new AddressBookFragment();

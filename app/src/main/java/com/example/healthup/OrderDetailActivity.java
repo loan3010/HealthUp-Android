@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityOrderDetailBinding;
@@ -357,24 +358,28 @@ public class OrderDetailActivity extends AppCompatActivity {
         
         if ("pending".equals(status)) {
             binding.tvStatusBanner.setText("CHỜ XÁC NHẬN");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_pending)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
         } else if ("confirmed".equals(status)) {
             binding.tvStatusBanner.setText("CHỜ LẤY HÀNG");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_pending)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
         } else if ("shipping".equals(status)) {
             binding.tvStatusBanner.setText("CHỜ GIAO HÀNG");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_shipping)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
         } else if ("delivered".equals(status)) {
             binding.tvStatusBanner.setText("ĐÃ GIAO HÀNG");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_delivered);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_delivered)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
         } else if ("cancelled".equals(status)) {
             binding.tvStatusBanner.setText("ĐÃ HỦY");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_cancelled);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_cancelled)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
+        } else if ("returned".equals(status) || "refunded".equals(status)) {
+            binding.tvStatusBanner.setText("TRẢ HÀNG / HOÀN TIỀN");
+            binding.tvStatusBanner.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(this, R.color.status_returned)));
+            binding.tvStatusBanner.setTextColor(ContextCompat.getColor(this, R.color.white));
         }
 
         String paymentMethod = order.getPaymentMethod();
