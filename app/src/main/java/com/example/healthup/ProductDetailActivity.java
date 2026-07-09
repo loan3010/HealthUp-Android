@@ -524,16 +524,26 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         WishlistManager.toggle(this, p, success -> {
             if (!success) {
-                return;
-            }
-            if (p.getId().equals(product.getId())) {
-                product.setFavorite(p.isFavorite());
-                updateWishlistIcon();
-            }
-            if (recommendationAdapter != null) {
-                recommendationAdapter.notifyDataSetChanged();
+                // Rollback: WishlistManager đã tự trả p.isFavorite() về giá trị cũ khi thất bại,
+                // chỉ cần vẽ lại icon/gợi ý theo đúng trạng thái đã rollback.
+                if (p.getId().equals(product.getId())) {
+                    updateWishlistIcon();
+                }
+                if (recommendationAdapter != null) {
+                    recommendationAdapter.notifyDataSetChanged();
+                }
             }
         });
+
+
+        // Cập nhật icon NGAY LẬP TỨC (optimistic), không đợi Firestore trả kết quả.
+        if (p.getId().equals(product.getId())) {
+            product.setFavorite(p.isFavorite());
+            updateWishlistIcon();
+        }
+        if (recommendationAdapter != null) {
+            recommendationAdapter.notifyDataSetChanged();
+        }
     }
 
 

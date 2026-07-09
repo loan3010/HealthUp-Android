@@ -55,10 +55,10 @@ public class OrderRepository {
                         orders.add(mapOrder(doc));
                     }
                     Collections.sort(orders, (a, b) -> {
-                        Timestamp ta = a.getCreatedAt();
-                        Timestamp tb = b.getCreatedAt();
-                        long aMillis = ta != null ? ta.toDate().getTime() : 0L;
-                        long bMillis = tb != null ? tb.toDate().getTime() : 0L;
+                        java.util.Date ta = a.getCreatedAt();
+                        java.util.Date tb = b.getCreatedAt();
+                        long aMillis = ta != null ? ta.getTime() : 0L;
+                        long bMillis = tb != null ? tb.getTime() : 0L;
                         return Long.compare(bMillis, aMillis);
                     });
                     callback.onResult(orders);
@@ -91,10 +91,8 @@ public class OrderRepository {
         }
         order.setItemCount(itemCount != null ? itemCount.intValue() : 0);
 
-        Timestamp createdAt = doc.getTimestamp("createdAt");
-        if (createdAt == null && doc.getDate("createdAt") != null) {
-            createdAt = new Timestamp(doc.getDate("createdAt"));
-        }
+        Timestamp ts = doc.getTimestamp("createdAt");
+        java.util.Date createdAt = ts != null ? ts.toDate() : doc.getDate("createdAt");
         order.setCreatedAt(createdAt);
         return order;
     }

@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -14,11 +15,13 @@ import android.widget.RadioGroup;
 import android.widget.TextView;
 import android.widget.Toast;
 
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
 
 import com.example.adapters.CheckoutProductAdapter;
 import com.example.models.Address;
@@ -28,11 +31,13 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.QuerySnapshot;
 import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
+
 
 import java.io.Serializable;
 import java.text.NumberFormat;
@@ -42,15 +47,19 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+
 public class CheckoutFragment extends Fragment {
+
 
     private List<CartItem> selectedItems = new ArrayList<>();
     private Address selectedAddress;
     private List<Voucher> selectedVouchers = new ArrayList<>();
     private String selectedPaymentMethod = "cod";
 
+
     private double shippingFee = 21000;
-    private double shippingDiscount = 0; 
+    private double shippingDiscount = 0;
+
 
     private TextView tvRecipientInfo, tvAddressDetail, tvVoucherInfo;
     private TextView tvTotalItemPrice, tvShippingFee, tvShippingDiscount, tvVoucherDiscount, tvGrandTotal, tvFooterTotal;
@@ -63,6 +72,7 @@ public class CheckoutFragment extends Fragment {
     private RadioGroup radioGroupPayment;
     private CheckBox cbAgreeTerms;
 
+
     // Lời nhắn cho shop
     private View rowShopNote;
     private TextView tvShopNotePreview;
@@ -70,12 +80,14 @@ public class CheckoutFragment extends Fragment {
     private EditText etShopNote;
     private boolean isShopNoteExpanded = false;
 
+
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
         // Nhận kết quả chọn địa chỉ từ AddressBookFragment
         getParentFragmentManager().setFragmentResultListener("address_result", this, (requestKey, result) -> {
             Address address = (Address) result.getSerializable("selected_address");
@@ -84,6 +96,7 @@ public class CheckoutFragment extends Fragment {
                 renderAddress();
             }
         });
+
 
         // Nhận kết quả chọn voucher
         getParentFragmentManager().setFragmentResultListener("voucher_result", this, (requestKey, result) -> {
@@ -96,12 +109,14 @@ public class CheckoutFragment extends Fragment {
         });
     }
 
+
     @SuppressWarnings("unchecked")
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_checkout, container, false);
+
 
         if (getArguments() != null) {
             Serializable data;
@@ -115,6 +130,7 @@ public class CheckoutFragment extends Fragment {
             }
         }
 
+
         bindViews(view);
         setupListeners();
         hydrateSelectedItemImages();
@@ -124,28 +140,33 @@ public class CheckoutFragment extends Fragment {
         loadVouchers(); // ✅ Tự động lấy voucher từ Firebase
         calculateSummary();
 
+
         return view;
     }
+
 
     private void loadVouchers() {
         FirebaseManager.getInstance().getVouchers().addOnSuccessListener(snapshot -> {
             if (snapshot == null || snapshot.isEmpty()) return;
-            
+
             double itemsTotal = getItemsTotal();
             Voucher bestShipping = null;
             double maxShipSaving = 0;
-            
+
             Voucher bestDiscount = null;
             double maxDiscountSaving = 0;
+
 
             for (DocumentSnapshot doc : snapshot.getDocuments()) {
                 Voucher v = parseVoucherFromDoc(doc);
                 if (v == null) continue;
-                
+
                 // Kiểm tra điều kiện áp dụng
                 if (itemsTotal < v.getMinOrderAmount()) continue;
 
+
                 double saving = calculateSaving(v, itemsTotal);
+
 
                 if (v.getType() == Voucher.Type.SHIPPING) {
                     if (saving > maxShipSaving) {
@@ -160,6 +181,7 @@ public class CheckoutFragment extends Fragment {
                 }
             }
 
+
             // Chỉ tự động chọn nếu danh sách hiện tại đang trống (lần đầu vào)
             if (selectedVouchers.isEmpty()) {
                 if (bestShipping != null) {
@@ -171,7 +193,7 @@ public class CheckoutFragment extends Fragment {
                     selectedVouchers.add(bestDiscount);
                 }
             }
-            
+
             if (isAdded()) {
                 renderVouchers();
                 calculateSummary();
@@ -183,20 +205,22 @@ public class CheckoutFragment extends Fragment {
         });
     }
 
+
     private Voucher parseVoucherFromDoc(DocumentSnapshot doc) {
         Boolean active = doc.getBoolean("isActive");
         if (active != null && !active) return null;
+
 
         Voucher v = new Voucher();
         v.setId(doc.getId());
         v.setCode(doc.getString("code"));
         v.setTitle(v.getCode());
         v.setDescription(doc.getString("description"));
-        
+
         // Trích xuất minOrderValue an toàn
         Double minVal = doc.getDouble("minOrderValue");
         v.setMinOrderAmount(minVal != null ? minVal : 0);
-        
+
         // Nhận diện loại giảm giá (Percent ưu tiên)
         Double percent = doc.getDouble("discountPercent");
         if (percent != null && percent > 0) {
@@ -206,6 +230,7 @@ public class CheckoutFragment extends Fragment {
             v.setDiscountAmount(amount != null ? amount : 0);
         }
 
+
         String code = (v.getCode() != null ? v.getCode() : "").toUpperCase();
         if (code.contains("SHIP") || code.contains("FREE")) {
             v.setType(Voucher.Type.SHIPPING);
@@ -213,8 +238,10 @@ public class CheckoutFragment extends Fragment {
             v.setType(Voucher.Type.DISCOUNT);
         }
 
+
         return v;
     }
+
 
     private double calculateSaving(Voucher v, double itemsTotal) {
         double val = v.getDiscountAmount();
@@ -228,6 +255,7 @@ public class CheckoutFragment extends Fragment {
         }
         return val;
     }
+
 
     private void requestPaymentPermission(String providerName, int rbId) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
@@ -243,13 +271,16 @@ public class CheckoutFragment extends Fragment {
                 .show();
     }
 
+
     private void bindViews(View view) {
         view.findViewById(R.id.btnBack).setOnClickListener(v ->
                 requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
+
         tvRecipientInfo = view.findViewById(R.id.tvRecipientInfo);
         tvAddressDetail = view.findViewById(R.id.tvAddressDetail);
         tvVoucherInfo = view.findViewById(R.id.tvVoucherInfo);
+
 
         tvTotalItemPrice = view.findViewById(R.id.tvTotalItemPrice);
         tvShippingFee = view.findViewById(R.id.tvShippingFee);
@@ -258,35 +289,43 @@ public class CheckoutFragment extends Fragment {
         tvGrandTotal = view.findViewById(R.id.tvGrandTotal);
         tvFooterTotal = view.findViewById(R.id.tvFooterTotal);
 
+
         tvAppliedVoucherTitle = view.findViewById(R.id.tvAppliedVoucherTitle);
         tvAppliedVoucherDesc = view.findViewById(R.id.tvAppliedVoucherDesc);
         btnRemoveVoucher = view.findViewById(R.id.btnRemoveVoucher);
         btnViewAllVoucher = view.findViewById(R.id.btnViewAllVoucher);
 
+
         rowAddress = view.findViewById(R.id.rowAddress);
         rowVoucherNoSelect = view.findViewById(R.id.rowVoucherNoSelect);
         layoutVoucherApplied = view.findViewById(R.id.layoutVoucherApplied);
 
+
         layoutShippingStandard = view.findViewById(R.id.layoutShippingStandard);
         layoutShippingFast = view.findViewById(R.id.layoutShippingFast);
+
 
         rvCheckoutProducts = view.findViewById(R.id.rvCheckoutProducts);
         btnPlaceOrder = view.findViewById(R.id.btnPlaceOrder);
         radioGroupPayment = view.findViewById(R.id.radioGroupPayment);
         cbAgreeTerms = view.findViewById(R.id.cbAgreeTerms);
 
+
         rowShopNote = view.findViewById(R.id.rowShopNote);
         tvShopNotePreview = view.findViewById(R.id.tvShopNotePreview);
         ivShopNoteArrow = view.findViewById(R.id.ivShopNoteArrow);
         etShopNote = view.findViewById(R.id.etShopNote);
 
+
         rvCheckoutProducts.setLayoutManager(new LinearLayoutManager(getContext()));
     }
+
 
     private void setupListeners() {
         rowAddress.setOnClickListener(v -> openAddressBook());
         rowVoucherNoSelect.setOnClickListener(v -> openVoucherList());
         btnViewAllVoucher.setOnClickListener(v -> openVoucherList());
+
 
         btnRemoveVoucher.setOnClickListener(v -> {
             selectedVouchers.clear();
@@ -294,26 +333,31 @@ public class CheckoutFragment extends Fragment {
             calculateSummary();
         });
 
+
         rowShopNote.setOnClickListener(v -> toggleShopNote());
+
 
         layoutShippingStandard.setOnClickListener(v -> {
             shippingFee = 21000;
             updateShippingSelection();
         });
 
+
         layoutShippingFast.setOnClickListener(v -> {
             shippingFee = 45000;
             updateShippingSelection();
         });
 
+
         btnPlaceOrder.setOnClickListener(v -> placeOrder());
+
 
         radioGroupPayment.setOnCheckedChangeListener((group, checkedId) -> {
             if (checkedId == R.id.rbCod) {
                 selectedPaymentMethod = "cod";
                 return;
             }
-            
+
             // Xử lý tất cả các phương thức Online
             String provider = "Ví điện tử / Thẻ";
             if (checkedId == R.id.rbVnpay) {
@@ -329,15 +373,16 @@ public class CheckoutFragment extends Fragment {
                 selectedPaymentMethod = "momo";
                 provider = "MoMo";
             }
-            
+
             requestPaymentPermission(provider, checkedId);
         });
     }
 
+
     private void loadDefaultAddress() {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         String effectiveUserId = (user != null) ? user.getUid() : "guest_user";
-        
+
         FirebaseFirestore.getInstance()
                 .collection("users").document(effectiveUserId)
                 .collection("addresses")
@@ -357,6 +402,7 @@ public class CheckoutFragment extends Fragment {
                 });
     }
 
+
     private void toggleShopNote() {
         isShopNoteExpanded = !isShopNoteExpanded;
         etShopNote.setVisibility(isShopNoteExpanded ? View.VISIBLE : View.GONE);
@@ -369,12 +415,14 @@ public class CheckoutFragment extends Fragment {
         }
     }
 
+
     private void updateShippingSelection() {
         boolean isStandard = shippingFee == 21000;
         layoutShippingStandard.setBackgroundResource(isStandard ? R.drawable.bg_shipping_selected : R.drawable.bg_shipping_unselected);
         layoutShippingFast.setBackgroundResource(isStandard ? R.drawable.bg_shipping_unselected : R.drawable.bg_shipping_selected);
         calculateSummary();
     }
+
 
     private void openVoucherList() {
         PromoCouponFragment fragment = new PromoCouponFragment();
@@ -384,8 +432,10 @@ public class CheckoutFragment extends Fragment {
         bundle.putBoolean("has_visited", !selectedVouchers.isEmpty()); // Chỉ coi là đã thăm nếu thực sự đã có chọn mã
         fragment.setArguments(bundle);
 
+
         requireActivity().getSupportFragmentManager().beginTransaction().replace(R.id.fragment_container, fragment).addToBackStack(null).commit();
     }
+
 
     private void renderVouchers() {
         if (selectedVouchers.isEmpty()) {
@@ -394,10 +444,10 @@ public class CheckoutFragment extends Fragment {
         } else {
             rowVoucherNoSelect.setVisibility(View.GONE);
             layoutVoucherApplied.setVisibility(View.VISIBLE);
-            
+
             Voucher mainVch = selectedVouchers.get(0);
             for (Voucher v : selectedVouchers) if (v.getType() != Voucher.Type.SHIPPING) mainVch = v;
-            
+
             tvAppliedVoucherTitle.setText(mainVch.getTitle());
             if (selectedVouchers.size() > 1) {
                 tvAppliedVoucherDesc.setText("Đã áp dụng " + selectedVouchers.size() + " mã khuyến mãi");
@@ -407,11 +457,13 @@ public class CheckoutFragment extends Fragment {
         }
     }
 
+
     private void hydrateSelectedItemImages() {
         for (CartItem item : selectedItems) {
             hydrateImageUrl(item);
         }
     }
+
 
     private void hydrateImageUrl(CartItem item) {
         if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
@@ -422,9 +474,11 @@ public class CheckoutFragment extends Fragment {
         }
     }
 
+
     private void renderProductList() {
         rvCheckoutProducts.setAdapter(new CheckoutProductAdapter(selectedItems));
     }
+
 
     private double getItemsTotal() {
         double total = 0;
@@ -432,14 +486,17 @@ public class CheckoutFragment extends Fragment {
         return total;
     }
 
+
     private String formatVnd(double amount) {
         return currencyFormat.format(amount) + "đ";
     }
+
 
     private void calculateSummary() {
         double itemsTotal = getItemsTotal();
         double totalDiscount = 0;
         shippingDiscount = 0;
+
 
         for (Voucher v : selectedVouchers) {
             double saving = v.getDiscountAmount();
@@ -452,6 +509,7 @@ public class CheckoutFragment extends Fragment {
                 }
             }
 
+
             if (v.getType() == Voucher.Type.SHIPPING) {
                 shippingDiscount += Math.min(saving, shippingFee);
             } else {
@@ -459,7 +517,9 @@ public class CheckoutFragment extends Fragment {
             }
         }
 
+
         double grandTotal = Math.max(0, itemsTotal + shippingFee - shippingDiscount - totalDiscount);
+
 
         tvTotalItemPrice.setText(formatVnd(itemsTotal));
         tvShippingFee.setText(formatVnd(shippingFee));
@@ -469,11 +529,13 @@ public class CheckoutFragment extends Fragment {
         tvFooterTotal.setText(formatVnd(grandTotal));
     }
 
+
     private void openAddressBook() {
         AddressBookFragment fragment = new AddressBookFragment();
         Bundle bundle = new Bundle();
         bundle.putBoolean("select_mode", true);
         fragment.setArguments(bundle);
+
 
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
@@ -481,6 +543,7 @@ public class CheckoutFragment extends Fragment {
                 .addToBackStack(null)
                 .commit();
     }
+
 
     private void renderAddress() {
         if (selectedAddress == null) {
@@ -491,6 +554,7 @@ public class CheckoutFragment extends Fragment {
         tvRecipientInfo.setText(selectedAddress.getRecipientName() + "   (" + selectedAddress.getPhone() + ")");
         tvAddressDetail.setText(selectedAddress.getFullAddress());
     }
+
 
     private void placeOrder() {
         if (selectedAddress == null) {
@@ -506,6 +570,7 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
+
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
@@ -516,11 +581,14 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
+
         btnPlaceOrder.setEnabled(false);
         btnPlaceOrder.setText("Đang xử lý...");
 
+
         String userId = user.getUid();
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+
 
         double itemsTotal = getItemsTotal();
         double totalDiscount = 0;
@@ -533,6 +601,7 @@ public class CheckoutFragment extends Fragment {
             }
         }
         double finalAmount = Math.max(0, itemsTotal + shippingFee - currentShippingDiscount - totalDiscount);
+
 
         List<com.example.models.OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : selectedItems) {
@@ -548,6 +617,7 @@ public class CheckoutFragment extends Fragment {
             ));
         }
 
+
         com.example.models.Order order = new com.example.models.Order();
         order.setOrderCode("ORD" + System.currentTimeMillis());
         order.setUserId(userId);
@@ -557,7 +627,7 @@ public class CheckoutFragment extends Fragment {
         order.setShippingFee(shippingFee - currentShippingDiscount);
         order.setDiscountAmount(totalDiscount);
         order.setTotalPrice(finalAmount);
-        
+
         // Map payment method code to display name
         String paymentDisplay = selectedPaymentMethod;
         if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
@@ -565,13 +635,15 @@ public class CheckoutFragment extends Fragment {
         else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
         else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
         else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
-        
+
         order.setPaymentMethod(paymentDisplay);
         order.setStatus(com.example.models.Order.STATUS_PENDING);
         order.setCreatedAt(new java.util.Date()); // Use java.util.Date
 
+
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
         order.setId(orderRef.getId());
+
 
         db.collection("users").document(userId).collection("cart")
                 .get()
@@ -580,21 +652,44 @@ public class CheckoutFragment extends Fragment {
                         return;
                     }
 
+
                     db.collection("users").document(userId).get()
                             .addOnSuccessListener(userDoc -> {
                                 if (!isAdded()) return;
 
+
                                 WriteBatch batch = db.batch();
                                 batch.set(orderRef, order);
+
+
+                                // FIX (yêu cầu #3 - "đặt hàng thành công nhưng không có thông báo"):
+                                // Trước đây sau khi đặt hàng thành công, code chỉ hiện dialog chúc mừng
+                                // (showSuccessDialog) mà KHÔNG hề ghi document vào
+                                // users/{uid}/notifications -> NotificationsFragment không có gì để
+                                // đọc, nên trang Thông báo luôn trống đối với đơn hàng vừa đặt.
+                                DocumentReference notificationRef = db.collection("users").document(userId)
+                                        .collection("notifications").document();
+                                Map<String, Object> notification = new HashMap<>();
+                                notification.put("type", "ORDER_SHIPPING");
+                                notification.put("title", "Đặt hàng thành công");
+                                notification.put("body", "Đơn hàng #" + order.getOrderCode()
+                                        + " đã được đặt thành công. Tổng tiền: " + formatVnd(finalAmount) + ".");
+                                notification.put("refId", orderRef.getId());
+                                notification.put("createdAt", FieldValue.serverTimestamp());
+                                notification.put("read", false);
+                                batch.set(notificationRef, notification);
+
 
                                 Map<String, Object> userUpdates = new HashMap<>();
                                 userUpdates.put("spentAmount",
                                         com.google.firebase.firestore.FieldValue.increment(finalAmount));
 
+
                                 long currentSpent = readSpentAmount(userDoc);
                                 if (currentSpent + (long) finalAmount >= 5_000_000L) {
                                     userUpdates.put("tier", "VIP");
                                 }
+
 
                                 batch.set(
                                         db.collection("users").document(userId),
@@ -602,12 +697,14 @@ public class CheckoutFragment extends Fragment {
                                         SetOptions.merge()
                                 );
 
+
                                 for (CartItem ci : selectedItems) {
                                     DocumentReference cartDocRef = resolveCartDocument(cartSnapshot, ci);
                                     if (cartDocRef != null) {
                                         batch.delete(cartDocRef);
                                     }
                                 }
+
 
                                 batch.commit().addOnSuccessListener(aVoid -> {
                                     if (isAdded()) {
@@ -638,6 +735,7 @@ public class CheckoutFragment extends Fragment {
                 });
     }
 
+
     private long readSpentAmount(DocumentSnapshot document) {
         if (document == null || !document.exists()) return 0;
         Long spentLong = document.getLong("spentAmount");
@@ -646,10 +744,12 @@ public class CheckoutFragment extends Fragment {
         return spentDouble != null ? spentDouble.longValue() : 0;
     }
 
+
     private DocumentReference resolveCartDocument(QuerySnapshot cartSnapshot, CartItem item) {
         if (cartSnapshot == null || item == null) {
             return null;
         }
+
 
         for (QueryDocumentSnapshot doc : cartSnapshot) {
             if (TextUtils.equals(item.getProductId(), doc.getString("productId"))
@@ -657,6 +757,7 @@ public class CheckoutFragment extends Fragment {
                 return doc.getReference();
             }
         }
+
 
         if (!TextUtils.isEmpty(item.getId())) {
             for (QueryDocumentSnapshot doc : cartSnapshot) {
@@ -666,8 +767,10 @@ public class CheckoutFragment extends Fragment {
             }
         }
 
+
         return null;
     }
+
 
     private void showSuccessDialog() {
         View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_order_success, null);
@@ -676,20 +779,23 @@ public class CheckoutFragment extends Fragment {
                 .setCancelable(false)
                 .create();
 
+
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         }
+
 
         dialogView.findViewById(R.id.btnTrackOrder).setOnClickListener(v -> {
             dialog.dismiss();
             loadFragment(new OrderHistoryFragment());
         });
 
+
         dialogView.findViewById(R.id.btnContinueShopping).setOnClickListener(v -> {
             dialog.dismiss();
             // Xóa toàn bộ stack để quay về trạng thái gốc
             getParentFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
-            
+
             // Chuyển tab BottomNavigation sang Trang chủ
             View navView = requireActivity().findViewById(R.id.bottom_navigation);
             if (navView instanceof com.google.android.material.bottomnavigation.BottomNavigationView) {
@@ -697,8 +803,10 @@ public class CheckoutFragment extends Fragment {
             }
         });
 
+
         dialog.show();
     }
+
 
     private void loadFragment(androidx.fragment.app.Fragment fragment) {
         getParentFragmentManager().beginTransaction()
