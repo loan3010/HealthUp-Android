@@ -139,7 +139,18 @@ public class AddressFormFragment extends Fragment {
         });
 
         autoProvince.setOnClickListener(v -> autoProvince.showDropDown());
+        autoProvince.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && autoProvince.getAdapter() != null) {
+                autoProvince.showDropDown();
+            }
+        });
+
         autoWard.setOnClickListener(v -> autoWard.showDropDown());
+        autoWard.setOnFocusChangeListener((v, hasFocus) -> {
+            if (hasFocus && autoWard.getAdapter() != null) {
+                autoWard.showDropDown();
+            }
+        });
     }
 
     private void updateWardAdapter(@Nullable String province) {
@@ -320,13 +331,20 @@ public class AddressFormFragment extends Fragment {
     private void performSave(WriteBatch batch, Address address, String effectiveUserId) {
         batch.set(db.collection("users").document(effectiveUserId).collection("addresses").document(address.getId()), address);
         batch.commit().addOnSuccessListener(aVoid -> {
-            if (isAdded()) {
-                Toast.makeText(getContext(), "Đã lưu địa chỉ thành công", Toast.LENGTH_SHORT).show();
-                Bundle result = new Bundle();
-                result.putSerializable("saved_address", address);
-                getParentFragmentManager().setFragmentResult("address_form_result", result);
-                getParentFragmentManager().popBackStack();
+            // Kiểm tra fragment còn tồn tại không trước khi thực hiện UI logic
+            if (!isAdded()) return;
+
+            Toast.makeText(getContext(), "Đã lưu địa chỉ thành công", Toast.LENGTH_SHORT).show();
+            
+            Bundle result = new Bundle();
+            result.putSerializable("saved_address", address);
+            getParentFragmentManager().setFragmentResult("address_form_result", result);
+            
+            // Cách đóng màn hình chắc chắn nhất
+            if (isAdded() && getActivity() != null) {
+                getActivity().getOnBackPressedDispatcher().onBackPressed();
             }
+
         }).addOnFailureListener(e -> {
             if (isAdded()) {
                 btnSubmit.setEnabled(true);
