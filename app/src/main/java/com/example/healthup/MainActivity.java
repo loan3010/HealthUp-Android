@@ -342,6 +342,12 @@ public class MainActivity extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
 
+            // Fix Top: Tránh bị thanh trạng thái che (Status Bar)
+            View container = findViewById(R.id.fragment_container);
+            if (container != null) {
+                container.setPadding(0, systemBars.top, 0, 0);
+            }
+
             // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
 

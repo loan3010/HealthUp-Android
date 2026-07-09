@@ -23,6 +23,7 @@ import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityAccountInfoBinding;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
@@ -283,17 +284,17 @@ public class AccountInfoActivity extends AppCompatActivity {
     }
 
     private void uploadAvatarAndSave(Map<String, Object> updates) {
-        com.google.firebase.storage.StorageReference storageRef = com.google.firebase.storage.FirebaseStorage.getInstance().getReference()
-                .child("avatars/" + userId + ".jpg");
-
-        storageRef.putFile(selectedAvatarUri)
-                .addOnSuccessListener(taskSnapshot -> storageRef.getDownloadUrl().addOnSuccessListener(uri -> {
-                    updates.put("avatarUrl", uri.toString());
+        // Tham khảo cách up ảnh từ ReturnRefundDetailActivity: 
+        // Sử dụng FirebaseManager.uploadImage để nén và chuyển sang Base64 Data URI
+        // giúp tránh lỗi Permission Denied từ Firebase Storage.
+        FirebaseManager.getInstance().uploadImage(selectedAvatarUri)
+                .addOnSuccessListener(downloadUri -> {
+                    updates.put("avatarUrl", downloadUri.toString());
                     updateFirestore(updates);
-                }))
+                })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Lỗi tải ảnh đại diện: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Lỗi xử lý ảnh: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
@@ -310,19 +311,25 @@ public class AccountInfoActivity extends AppCompatActivity {
     }
 
     private void showImageSourceDialog() {
-        String[] options = {"Chụp ảnh mới", "Chọn từ thư viện"};
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Thay đổi ảnh đại diện")
-                .setItems(options, (dialog, which) -> {
-                    if (which == 0) {
-                        launchCamera();
-                    } else {
-                        pickAvatarLauncher.launch(new PickVisualMediaRequest.Builder()
-                                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
-                                .build());
-                    }
-                })
-                .show();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_image_source, null);
+        dialog.setContentView(view);
+
+        view.findViewById(R.id.btnCamera).setOnClickListener(v -> {
+            dialog.dismiss();
+            launchCamera();
+        });
+
+        view.findViewById(R.id.btnGallery).setOnClickListener(v -> {
+            dialog.dismiss();
+            pickAvatarLauncher.launch(new PickVisualMediaRequest.Builder()
+                    .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                    .build());
+        });
+
+        view.findViewById(R.id.btnCancelSource).setOnClickListener(v -> dialog.dismiss());
+
+        dialog.show();
     }
 
     private void launchCamera() {
