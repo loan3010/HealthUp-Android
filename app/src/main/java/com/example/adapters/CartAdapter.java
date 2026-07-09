@@ -18,6 +18,8 @@ import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.CartItem;
 
 
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import java.text.NumberFormat;
 import java.util.List;
 import java.util.Locale;
@@ -82,12 +84,26 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         if (holder.tvName != null) {
             String name = item.getName();
             holder.tvName.setText(name != null ? name : "");
+
+            String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+            if ("en".equals(currentLang) && name != null) {
+                TranslationManager.translate(name, "en", translated -> {
+                    if (translated != null) holder.tvName.setText(translated);
+                });
+            }
         }
 
 
         if (holder.tvVariant != null) {
             String variantLabel = item.getVariantLabel();
             holder.tvVariant.setText(variantLabel != null ? variantLabel : "");
+
+            String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+            if ("en".equals(currentLang) && variantLabel != null) {
+                TranslationManager.translate(variantLabel, "en", translated -> {
+                    if (translated != null) holder.tvVariant.setText(translated);
+                });
+            }
         }
 
 

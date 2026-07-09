@@ -8,6 +8,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.R;
 import com.example.models.Blog;
@@ -80,6 +82,16 @@ public class BlogAdapter extends RecyclerView.Adapter<BlogAdapter.ViewHolder> {
         holder.tvTitle.setText(blog.getTitle());
         holder.tvCategory.setText(blog.getCategory());
 
+        String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+        if ("en".equals(currentLang)) {
+            TranslationManager.translate(blog.getTitle(), "en", translated -> {
+                if (translated != null) holder.tvTitle.setText(translated);
+            });
+            TranslationManager.translate(blog.getCategory(), "en", translated -> {
+                if (translated != null) holder.tvCategory.setText(translated);
+            });
+        }
+
         // Extract excerpt from content
         String content = blog.getContent();
         if (content != null && content.length() > 100) {
@@ -90,7 +102,10 @@ public class BlogAdapter extends RecyclerView.Adapter<BlogAdapter.ViewHolder> {
 
 
         // Format date
-        SimpleDateFormat sdf = new SimpleDateFormat("dd 'tháng' MM, yyyy", new Locale("vi", "VN"));
+        String currentLangDate = LocaleHelper.getLanguage(holder.itemView.getContext());
+        Locale locale = currentLangDate.equals("en") ? Locale.ENGLISH : new Locale("vi", "VN");
+        String pattern = currentLangDate.equals("en") ? "MMM dd, yyyy" : "dd 'tháng' MM, yyyy";
+        SimpleDateFormat sdf = new SimpleDateFormat(pattern, locale);
         holder.tvDate.setText(sdf.format(new Date(blog.getTimestamp())));
 
 

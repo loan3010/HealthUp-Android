@@ -9,6 +9,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.example.models.Category;
 import java.util.List;
@@ -37,6 +39,16 @@ public class CategoryAdapter extends RecyclerView.Adapter<CategoryAdapter.Catego
     public void onBindViewHolder(@NonNull CategoryViewHolder holder, int position) {
         Category category = categories.get(position);
         holder.tvName.setText(category.getName());
+
+        // Tự động dịch tên danh mục
+        String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+        if ("en".equals(currentLang)) {
+            TranslationManager.translate(category.getName(), "en", translatedText -> {
+                if (translatedText != null && !translatedText.isEmpty()) {
+                    holder.tvName.setText(translatedText);
+                }
+            });
+        }
         
         // Glide for category icon
         String iconUrl = category.getIconUrl();

@@ -34,6 +34,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Source;
 
 
+import com.example.healthup.util.LocaleHelper;
 import java.text.NumberFormat;
 import java.util.Locale;
 
@@ -414,29 +415,42 @@ public class ProfileFragment extends Fragment {
     private void bindUserToUi(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
         bindHeaderName(document, firebaseUser);
 
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+        String defaultTier = currentLang.equals("en") ? "Member" : "Thành viên";
+
         if (document == null || !document.exists()) {
-            tvTier.setText("Thành viên");
+            tvTier.setText(defaultTier);
             updateStaffInboxVisibility(false);
             return;
         }
 
         String avatarUrl = document.getString(FIELD_AVATAR_URL);
         long spent = readSpentAmount(document);
-        String tier = spent >= MUC_VIP ? "VIP" : "Thành viên";
+        boolean isVip = spent >= MUC_VIP;
+        String tier = isVip ? "VIP" : defaultTier;
 
         tvTier.setText(tier);
+        tvTier.setBackgroundResource(isVip ? R.drawable.bg_badge_vip : R.drawable.bg_badge_tier);
 
 
         NumberFormat vnFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
-        tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
+        if (currentLang.equals("en")) {
+            tvSpent.setText("Spent: " + vnFormat.format(spent) + " VND");
+        } else {
+            tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
+        }
 
 
         long conLai = MUC_VIP - spent;
         if (conLai > 0) {
-            tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
+            if (currentLang.equals("en")) {
+                tvProgressHint.setText("Buy " + vnFormat.format(conLai) + " VND more to get VIP!");
+            } else {
+                tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
+            }
             progressTichLuy.setProgress((int) ((spent * 100) / MUC_VIP));
         } else {
-            tvProgressHint.setText("Bạn đã đạt hạng VIP!");
+            tvProgressHint.setText(currentLang.equals("en") ? "You are a VIP member!" : "Bạn đã đạt hạng VIP!");
             progressTichLuy.setProgress(100);
         }
 

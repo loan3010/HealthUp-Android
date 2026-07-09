@@ -24,6 +24,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.example.adapters.CheckoutProductAdapter;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.example.models.Address;
 import com.example.models.CartItem;
 import com.example.models.Voucher;
@@ -605,8 +607,9 @@ public class CheckoutFragment extends Fragment {
 
     private void renderAddress() {
         if (selectedAddress == null) {
-            tvRecipientInfo.setText("Chưa có địa chỉ");
-            tvAddressDetail.setText("Bấm để chọn địa chỉ giao hàng");
+            String currentLang = LocaleHelper.getLanguage(requireContext());
+            tvRecipientInfo.setText(currentLang.equals("en") ? "No address" : "Chưa có địa chỉ");
+            tvAddressDetail.setText(currentLang.equals("en") ? "Click to choose delivery address" : "Bấm để chọn địa chỉ giao hàng");
             return;
         }
         tvRecipientInfo.setText(selectedAddress.getRecipientName() + "   (" + selectedAddress.getPhone() + ")");
@@ -641,7 +644,8 @@ public class CheckoutFragment extends Fragment {
 
 
         btnPlaceOrder.setEnabled(false);
-        btnPlaceOrder.setText("Đang xử lý...");
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+        btnPlaceOrder.setText(currentLang.equals("en") ? "Processing..." : "Đang xử lý...");
 
 
         String userId = user.getUid();
@@ -693,11 +697,19 @@ public class CheckoutFragment extends Fragment {
 
         // Map payment method code to display name
         String paymentDisplay = selectedPaymentMethod;
-        if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
-        else if ("momo".equals(selectedPaymentMethod)) paymentDisplay = "Ví MoMo";
-        else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
-        else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
-        else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
+        if ("en".equals(currentLang)) {
+            if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Cash on Delivery (COD)";
+            else if ("momo".equals(selectedPaymentMethod)) paymentDisplay = "MoMo Wallet";
+            else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "ZaloPay Wallet";
+            else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "VNPAY Wallet";
+            else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Credit / Debit Card";
+        } else {
+            if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
+            else if ("momo".equals(selectedPaymentMethod)) paymentDisplay = "Ví MoMo";
+            else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
+            else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
+            else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
+        }
 
         order.setPaymentMethod(paymentDisplay);
         order.setStatus(com.example.models.Order.STATUS_PENDING);
@@ -734,9 +746,15 @@ public class CheckoutFragment extends Fragment {
                                         .collection("notifications").document();
                                 Map<String, Object> notification = new HashMap<>();
                                 notification.put("type", "ORDER_SHIPPING");
-                                notification.put("title", "Đặt hàng thành công");
-                                notification.put("body", "Đơn hàng #" + order.getOrderCode()
-                                        + " đã được đặt thành công. Tổng tiền: " + formatVnd(finalAmount) + ".");
+                                if ("en".equals(currentLang)) {
+                                    notification.put("title", "Order successful");
+                                    notification.put("body", "Order #" + order.getOrderCode()
+                                            + " has been placed successfully. Total amount: " + formatVnd(finalAmount) + ".");
+                                } else {
+                                    notification.put("title", "Đặt hàng thành công");
+                                    notification.put("body", "Đơn hàng #" + order.getOrderCode()
+                                            + " đã được đặt thành công. Tổng tiền: " + formatVnd(finalAmount) + ".");
+                                }
                                 notification.put("refId", orderRef.getId());
                                 notification.put("createdAt", FieldValue.serverTimestamp());
                                 notification.put("read", false);

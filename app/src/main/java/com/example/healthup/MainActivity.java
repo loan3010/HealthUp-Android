@@ -33,6 +33,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import com.example.healthup.util.LocaleHelper;
 import androidx.core.content.ContextCompat;
 
 import java.io.Serializable;
@@ -66,6 +67,11 @@ public class MainActivity extends AppCompatActivity {
             refreshGuestCartBadge();
         }
     };
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

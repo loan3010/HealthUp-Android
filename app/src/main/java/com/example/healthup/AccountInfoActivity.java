@@ -327,7 +327,7 @@ public class AccountInfoActivity extends AppCompatActivity {
                     .build());
         });
 
-        view.findViewById(R.id.btnCancelSource).setOnClickListener(v -> dialog.dismiss());
+        view.findViewById(R.id.btnCancel).setOnClickListener(v -> dialog.dismiss());
 
         dialog.show();
     }

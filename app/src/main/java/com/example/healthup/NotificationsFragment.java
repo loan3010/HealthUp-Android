@@ -20,6 +20,8 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.example.adapters.NotificationAdapter;
 import com.example.models.NotificationItem;
 import com.example.models.NotificationType;
@@ -270,10 +272,28 @@ public class NotificationsFragment extends Fragment {
             return;
         }
         items.clear();
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+
         for (QueryDocumentSnapshot doc : snapshot) {
             NotificationItem item = parseNotification(doc);
             if (item.getTitle() != null && !item.getTitle().isEmpty()) {
                 items.add(item);
+                
+                // Tự động dịch tiêu đề và nội dung thông báo
+                if ("en".equals(currentLang)) {
+                    TranslationManager.translate(item.getTitle(), "en", t -> {
+                        if (t != null) {
+                            item.setTitle(t);
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+                    TranslationManager.translate(item.getDisplayBody(), "en", t -> {
+                        if (t != null) {
+                            item.setBody(t);
+                            adapter.notifyDataSetChanged();
+                        }
+                    });
+                }
             }
         }
 

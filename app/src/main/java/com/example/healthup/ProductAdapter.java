@@ -15,6 +15,8 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.example.models.Product;
 import java.text.DecimalFormat;
@@ -171,6 +173,16 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
         public void bind(Product product, OnProductClickListener listener, boolean selectionMode, boolean isHorizontal) {
             tvName.setText(product.getName());
+            
+            // Tự động dịch tên sản phẩm nếu đang ở chế độ Tiếng Anh
+            String currentLang = LocaleHelper.getLanguage(itemView.getContext());
+            if ("en".equals(currentLang)) {
+                TranslationManager.translate(product.getName(), "en", translatedText -> {
+                    if (translatedText != null && !translatedText.isEmpty()) {
+                        tvName.setText(translatedText);
+                    }
+                });
+            }
 
 
             DecimalFormat df = new DecimalFormat("#,###đ");

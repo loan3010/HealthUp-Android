@@ -25,6 +25,8 @@ import com.example.healthup.databinding.LayoutBottomSheetCancelOrderBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnReason;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.appcompat.app.AlertDialog;
@@ -37,6 +39,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     private Context context;
     private List<Order> orders;
     private DecimalFormat df = new DecimalFormat("#,###đ");
+    private final java.util.Set<String> expandedOrders = new java.util.HashSet<>();
 
     public OrderAdapter(Context context, List<Order> orders) {
         this.context = context;
@@ -231,21 +234,29 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             
             binding.tvTotalPrice.setText(spannable);
 
+            String orderIdStr = order.getId();
+            boolean isExpanded = expandedOrders.contains(orderIdStr);
+
             binding.lnItemsContainer.removeAllViews();
             int maxInitial = 1;
             List<OrderItem> items = order.getItems();
-            for (int i = 0; i < Math.min(items.size(), maxInitial); i++) {
+            int displayCount = isExpanded ? items.size() : Math.min(items.size(), maxInitial);
+            
+            for (int i = 0; i < displayCount; i++) {
                 addProductView(items.get(i));
             }
 
             if (items.size() > maxInitial) {
                 binding.tvShowMoreContainer.setVisibility(View.VISIBLE);
-                binding.tvShowMore.setText("Xem thêm " + (items.size() - maxInitial) + " sản phẩm");
+                binding.tvShowMore.setText(isExpanded ? "Thu gọn" : "Xem thêm " + (items.size() - maxInitial) + " sản phẩm");
+                binding.ivShowMoreArrow.setImageResource(isExpanded ? R.drawable.ic_arrow_up : R.drawable.ic_arrow_down);
                 binding.tvShowMoreContainer.setOnClickListener(v -> {
-                    binding.tvShowMoreContainer.setVisibility(View.GONE);
-                    for (int i = maxInitial; i < items.size(); i++) {
-                        addProductView(items.get(i));
+                    if (isExpanded) {
+                        expandedOrders.remove(orderIdStr);
+                    } else {
+                        expandedOrders.add(orderIdStr);
                     }
+                    notifyItemChanged(getBindingAdapterPosition());
                 });
             } else {
                 binding.tvShowMoreContainer.setVisibility(View.GONE);
@@ -271,7 +282,21 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
                 LayoutInflater.from(context), binding.lnItemsContainer, false);
         pBinding.tvProductName.setText(item.getName());
+        
+        String currentLang = LocaleHelper.getLanguage(context);
+        if ("en".equals(currentLang) && item.getName() != null) {
+            TranslationManager.translate(item.getName(), "en", translated -> {
+                if (translated != null) pBinding.tvProductName.setText(translated);
+            });
+        }
+        
         pBinding.tvVariant.setText(item.getVariantLabel());
+        
+        if ("en".equals(currentLang) && item.getVariantLabel() != null) {
+            TranslationManager.translate(item.getVariantLabel(), "en", translated -> {
+                if (translated != null) pBinding.tvVariant.setText(translated);
+            });
+        }
         pBinding.tvPrice.setText(df.format(item.getPrice()));
         pBinding.tvQuantity.setText("x" + item.getQuantity());
 
@@ -341,6 +366,10 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     color = ContextCompat.getColor(context, R.color.status_shipping);
                     break;
                 case "delivered":
+                    displayStatus = "Hoàn thành";
+                    color = ContextCompat.getColor(context, R.color.status_delivered);
+                    break;
+                case "completed":
                     displayStatus = "Hoàn thành";
                     color = ContextCompat.getColor(context, R.color.status_delivered);
                     break;
