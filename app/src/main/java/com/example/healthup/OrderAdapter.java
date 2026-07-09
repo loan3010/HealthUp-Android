@@ -27,6 +27,7 @@ import com.example.models.ReturnReason;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.ContextCompat;
 import android.content.Intent;
 import java.text.DecimalFormat;
 import java.util.Arrays;
@@ -324,25 +325,37 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         private void setStatusUI(Order order) {
             String status = order.getStatus();
             String displayStatus = "";
-            int color = 0xFF36873A;
+            int color = ContextCompat.getColor(context, R.color.status_delivered);
 
             switch (status.toLowerCase()) {
                 case "pending":
-                    displayStatus = "Chờ xác nhận"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ xác nhận";
+                    color = ContextCompat.getColor(context, R.color.status_pending);
+                    break;
                 case "confirmed":
-                    displayStatus = "Chờ lấy hàng"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ lấy hàng";
+                    color = ContextCompat.getColor(context, R.color.status_pending);
+                    break;
                 case "shipping":
-                    displayStatus = "Chờ giao hàng"; color = 0xFFFF8F00; break;
+                    displayStatus = "Chờ giao hàng";
+                    color = ContextCompat.getColor(context, R.color.status_shipping);
+                    break;
                 case "delivered":
-                    displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
+                    displayStatus = "Hoàn thành";
+                    color = ContextCompat.getColor(context, R.color.status_delivered);
+                    break;
                 case "cancelled":
-                    displayStatus = "Đã hủy"; color = 0xFFE53835; break;
+                    displayStatus = "Đã hủy";
+                    color = ContextCompat.getColor(context, R.color.status_cancelled);
+                    break;
                 case "returned":
                 case "refunded":
                     if ("refunded".equalsIgnoreCase(order.getPaymentStatus())) {
-                        displayStatus = "Đã hoàn tiền"; color = 0xFF36873A;
+                        displayStatus = "Đã hoàn tiền";
+                        color = ContextCompat.getColor(context, R.color.status_delivered);
                     } else {
-                        displayStatus = "Đang xử lý"; color = 0xFFFF8F00;
+                        displayStatus = "Đang xử lý trả hàng";
+                        color = ContextCompat.getColor(context, R.color.status_returned);
                     }
                     break;
             }
