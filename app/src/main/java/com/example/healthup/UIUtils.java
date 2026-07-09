@@ -5,11 +5,15 @@ import android.app.Dialog;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.Rect;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
+import android.widget.EditText;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -37,6 +41,29 @@ public class UIUtils {
         if (view != null) {
             imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
             view.clearFocus();
+        }
+    }
+
+    /** Dismisses the keyboard when the user taps outside the focused text field. */
+    public static void maybeHideKeyboardOnTouchOutside(Activity activity, MotionEvent event) {
+        if (event.getAction() != MotionEvent.ACTION_DOWN) {
+            return;
+        }
+        View focused = activity.getCurrentFocus();
+        if (!(focused instanceof EditText)) {
+            return;
+        }
+        if (focused instanceof AutoCompleteTextView) {
+            AutoCompleteTextView autoComplete = (AutoCompleteTextView) focused;
+            if (autoComplete.isPopupShowing()) {
+                return;
+            }
+        }
+        Rect rect = new Rect();
+        focused.getGlobalVisibleRect(rect);
+        if (!rect.contains((int) event.getRawX(), (int) event.getRawY())) {
+            focused.clearFocus();
+            hideKeyboard(activity);
         }
     }
 

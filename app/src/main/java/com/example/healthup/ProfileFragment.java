@@ -242,6 +242,12 @@ public class ProfileFragment extends Fragment {
                     startActivity(new Intent(requireContext(), AboutActivity.class)));
         }
 
+        View dietRow = view.findViewById(R.id.row_diet_recommendation);
+        if (dietRow != null) {
+            dietRow.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), DietLandingActivity.class)));
+        }
+
 
         View faqRow = findRowByText(view, "Trung tâm trợ giúp - FAQs");
         if (faqRow != null) {

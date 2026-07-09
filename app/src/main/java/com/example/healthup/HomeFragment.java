@@ -224,6 +224,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
 
         setupChipListeners(view);
+
+        View dietCard = view.findViewById(R.id.cardDietEntry);
+        if (dietCard != null) {
+            dietCard.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), DietLandingActivity.class)));
+        }
     }
 
     private void openBlogList() {

@@ -194,10 +194,16 @@ public class AdminRepository {
             order.setId(doc.getId());
 
             if (order.getCreatedAt() == null) {
-                order.setCreatedAt(doc.getTimestamp("createdAt"));
+                Timestamp createdAt = doc.getTimestamp("createdAt");
+                if (createdAt != null) {
+                    order.setCreatedAt(createdAt.toDate());
+                }
             }
             if (order.getUpdatedAt() == null) {
-                order.setUpdatedAt(doc.getTimestamp("updatedAt"));
+                Timestamp updatedAt = doc.getTimestamp("updatedAt");
+                if (updatedAt != null) {
+                    order.setUpdatedAt(updatedAt.toDate());
+                }
             }
             if (order.getUserId() == null) {
                 String userId = doc.getString("userId");
@@ -229,10 +235,10 @@ public class AdminRepository {
 
     private static long getOrderSortTime(@NonNull Order order) {
         if (order.getUpdatedAt() != null) {
-            return order.getUpdatedAt().getSeconds();
+            return order.getUpdatedAt().getTime();
         }
         if (order.getCreatedAt() != null) {
-            return order.getCreatedAt().getSeconds();
+            return order.getCreatedAt().getTime();
         }
         return 0L;
     }

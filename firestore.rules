@@ -84,6 +84,16 @@ service cloud.firestore {
       match /addresses/{addressId} {
         allow read, write: if (isSignedIn() && request.auth.uid == userId) || userId == "guest_user";
       }
+
+      // Diet: per-dish saves (current feature)
+      match /savedDishes/{dishId} {
+        allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Diet: legacy whole-day meal plans (backward compat — read/delete old data only)
+      match /savedMealPlans/{planId} {
+        allow read, delete: if isSignedIn() && request.auth.uid == userId;
+      }
     }
 
     // --- Pre-auth OTP (registration + password reset, Spark / no Cloud Functions) ---

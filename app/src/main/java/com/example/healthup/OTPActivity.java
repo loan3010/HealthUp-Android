@@ -15,6 +15,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.auth.UserProfileBuilder;
+import com.example.healthup.data.repository.FirebaseAuthRepository;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
@@ -60,6 +61,7 @@ public class OTPActivity extends AppCompatActivity {
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
     private RegistrationRepository registrationRepository;
+    private FirebaseAuthRepository firebaseAuthRepository;
     private CountDownTimer resendTimer;
 
     @Override
@@ -70,6 +72,7 @@ public class OTPActivity extends AppCompatActivity {
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
         registrationRepository = new RegistrationRepository();
+        firebaseAuthRepository = new FirebaseAuthRepository();
 
         if (!readExtras()) {
             finish();
@@ -254,7 +257,7 @@ public class OTPActivity extends AppCompatActivity {
                         return;
                     }
 
-                    saveUserProfile(user.getUid(), authEmail);
+                    linkPhoneThenContinue(() -> saveUserProfile(user.getUid(), authEmail));
                 });
     }
 
@@ -274,6 +277,21 @@ public class OTPActivity extends AppCompatActivity {
         saveSocialUserProfile(user.getUid(), authEmail);
     }
 
+    private void linkPhoneThenContinue(@NonNull Runnable onComplete) {
+        String phoneE164 = PhoneNumberUtils.toE164(localPhone);
+        if (TextUtils.isEmpty(phoneE164)) {
+            onComplete.run();
+            return;
+        }
+
+        firebaseAuthRepository.linkPhoneToCurrentUser(
+                this,
+                phoneE164,
+                onComplete,
+                onComplete
+        );
+    }
+
     private void saveSocialUserProfile(String uid, String authEmail) {
         UsernameGenerator.generateUnique(fullName, new UsernameGenerator.Callback() {
             @Override
@@ -286,7 +304,7 @@ public class OTPActivity extends AppCompatActivity {
                         authProvider,
                         username
                 );
-                persistUserProfile(uid, userData);
+                linkPhoneThenContinue(() -> persistUserProfile(uid, userData));
             }
 
             @Override
@@ -308,7 +326,7 @@ public class OTPActivity extends AppCompatActivity {
                         email,
                         username
                 );
-                persistUserProfile(uid, userData);
+                linkPhoneThenContinue(() -> persistUserProfile(uid, userData));
             }
 
             @Override

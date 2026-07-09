@@ -47,7 +47,7 @@ public class AdminOrderAdapter extends RecyclerView.Adapter<AdminOrderAdapter.Vi
         holder.tvTotal.setText("Tổng: " + priceFormat.format(order.getTotalPrice()) + " đ");
         holder.tvCustomer.setText("Khách: …");
         if (order.getCreatedAt() != null) {
-            holder.tvDate.setText(dateFormat.format(order.getCreatedAt().toDate()));
+            holder.tvDate.setText(dateFormat.format(order.getCreatedAt()));
         } else {
             holder.tvDate.setText("");
         }

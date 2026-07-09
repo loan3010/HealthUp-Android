@@ -154,6 +154,8 @@
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:listitem="@layout/item_category" />
 
+            <include layout="@layout/include_diet_home_card" />
+
         <!-- Main Banner -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
