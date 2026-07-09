@@ -109,14 +109,19 @@ public class BlogFragment extends Fragment {
 
     private void filterBlogs() {
         filteredList.clear();
-        String allCats = getString(R.string.all_categories);
+        String allCats = normalize(getString(R.string.all_categories));
+        String normalizedCurrent = normalize(currentCategory);
         for (Blog blog : blogList) {
-            String category = blog.getCategory();
-            // FIX: thêm kiểm tra null để tránh NPE nếu bài viết nào đó thiếu field "category"
-            if (currentCategory.equals(allCats) || (category != null && category.equals(currentCategory))) {
+            String category = normalize(blog.getCategory());
+            if (normalizedCurrent.equals(allCats) || (category != null && category.equals(normalizedCurrent))) {
                 filteredList.add(blog);
             }
         }
         blogAdapter.notifyDataSetChanged();
+    }
+
+    private String normalize(String value) {
+        if (value == null) return null;
+        return java.text.Normalizer.normalize(value.trim(), java.text.Normalizer.Form.NFC);
     }
 }

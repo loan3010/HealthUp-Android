@@ -6,20 +6,17 @@
     android:layout_height="match_parent"
     android:background="@color/neutral_cream">
 
-
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/neutral_cream"
         app:elevation="0dp">
 
-
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="36dp"
             android:paddingHorizontal="16dp">
-
 
             <ImageButton
                 android:id="@+id/btn_back"
@@ -28,7 +25,6 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_back"
                 app:tint="@color/text_dark" />
-
 
             <TextView
                 android:layout_width="wrap_content"
@@ -41,7 +37,6 @@
                 android:textStyle="bold" />
         </RelativeLayout>
 
-
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -49,15 +44,14 @@
             android:paddingTop="4dp"
             android:scrollbars="none">
 
-
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group_blog"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 app:singleLine="true"
-                app:singleSelection="true">
-
+                app:singleSelection="true"
+                app:selectionRequired="true">
 
                 <com.google.android.material.chip.Chip
                     android:id="@+id/chip_all_blog"
@@ -69,33 +63,50 @@
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp" />
 
-
+                <!-- FIX (bug chính - tab không bấm được): 4 chip bên dưới trước đây KHÔNG
+                     có style="@style/Widget.MaterialComponents.Chip.Choice" như chip "Tất cả",
+                     nên chúng mặc định rơi vào style Chip.Action (android:checkable="false").
+                     Vì không checkable, chạm vào các chip này KHÔNG đổi trạng thái chọn ->
+                     ChipGroup.OnCheckedChangeListener không bao giờ được gọi -> currentCategory
+                     không cập nhật -> danh sách không lọc, người dùng thấy như "không bấm được".
+                     Sửa: thêm đúng style Choice cho cả 4 chip để chúng checkable/selectable
+                     giống hệt chip "Tất cả". Đồng thời thêm app:selectionRequired="true" cho
+                     ChipGroup để tránh trường hợp bấm lại chip đang chọn làm nó bị bỏ chọn hết
+                     (checkedId thành NO_ID), khiến listener nhận null và không làm gì. -->
                 <com.google.android.material.chip.Chip
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Dinh dưỡng"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp" />
 
-
                 <com.google.android.material.chip.Chip
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Tập luyện"
+                    android:text="Sức khỏe"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp" />
 
-
                 <com.google.android.material.chip.Chip
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Sống khỏe"
+                    android:text="Công thức"
+                    app:chipBackgroundColor="@color/bg_chip_filter"
+                    app:chipStrokeWidth="0dp" />
+
+                <com.google.android.material.chip.Chip
+                    style="@style/Widget.MaterialComponents.Chip.Choice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Kiến thức"
                     app:chipBackgroundColor="@color/bg_chip_filter"
                     app:chipStrokeWidth="0dp" />
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
     </com.google.android.material.appbar.AppBarLayout>
-
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_blogs"
@@ -107,6 +118,5 @@
         android:paddingBottom="24dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_blog" />
-
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
