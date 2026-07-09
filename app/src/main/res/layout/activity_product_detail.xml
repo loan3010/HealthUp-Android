@@ -300,7 +300,24 @@
                 android:background="@color/neutral_cream" />
 
 
+            <!-- Container cho nhiều nhóm phân loại (Khối lượng, Hương vị...) -->
+            <LinearLayout
+                android:id="@+id/layout_variants"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
+
+            <View
+                android:id="@+id/divider_variants"
+                android:layout_width="match_parent"
+                android:layout_height="8dp"
+                android:background="@color/neutral_cream"
+                android:visibility="gone"
+                tools:visibility="visible" />
 
 
             <include
