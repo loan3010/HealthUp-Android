@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.admin.AdminLoginActivity;
 import com.example.healthup.auth.SocialAuthHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
@@ -151,6 +152,12 @@ public class LoginActivity extends AppCompatActivity {
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
         googleButton.setOnClickListener(v -> socialAuthHelper.signInWithGoogle());
         facebookButton.setOnClickListener(v -> socialAuthHelper.signInWithFacebook());
+
+        TextView adminLoginLink = findViewById(R.id.tvAdminLoginLink);
+        if (adminLoginLink != null) {
+            adminLoginLink.setOnClickListener(v ->
+                    startActivity(new Intent(LoginActivity.this, AdminLoginActivity.class)));
+        }
     }
 
     private void setupLegalLinks() {

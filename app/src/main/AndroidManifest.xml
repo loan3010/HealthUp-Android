@@ -121,6 +121,11 @@
         <activity android:name="com.example.healthup.AddressBookActivity"
             android:windowSoftInputMode="adjustResize" />
 
+        <activity android:name="com.example.healthup.admin.AdminLoginActivity" />
+        <activity android:name="com.example.healthup.admin.AdminActivity" />
+        <activity android:name="com.example.healthup.admin.AdminProductEditActivity" />
+        <activity android:name="com.example.healthup.admin.AdminOrderDetailActivity" />
+
 
         <provider
             android:name="androidx.core.content.FileProvider"

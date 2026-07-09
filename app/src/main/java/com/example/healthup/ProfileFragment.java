@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.healthup.admin.AdminActivity;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UserProfileResolver;
@@ -57,6 +58,7 @@ public class ProfileFragment extends Fragment {
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
     private View rowSellerInbox;
     private View cardStaffInbox;
+    private View rowAdminPanel;
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping;
     private ProgressBar progressTichLuy;
@@ -75,6 +77,7 @@ public class ProfileFragment extends Fragment {
         cardTichLuy = view.findViewById(R.id.card_tich_luy);
         rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
         cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
+        rowAdminPanel = view.findViewById(R.id.row_admin_panel);
         tvName = view.findViewById(R.id.tv_name);
         tvUsername = view.findViewById(R.id.tv_username);
         tvTier = view.findViewById(R.id.tv_tier);
@@ -274,6 +277,11 @@ public class ProfileFragment extends Fragment {
         if (cardStaffInbox != null) {
             cardStaffInbox.setOnClickListener(v -> openSellerInbox());
         }
+
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), AdminActivity.class)));
+        }
     }
 
 
@@ -338,6 +346,7 @@ public class ProfileFragment extends Fragment {
 
         if (currentUser == null) {
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             resetBadges();
             return;
         }
@@ -421,6 +430,7 @@ public class ProfileFragment extends Fragment {
         if (document == null || !document.exists()) {
             tvTier.setText(defaultTier);
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             return;
         }
 
@@ -465,6 +475,14 @@ public class ProfileFragment extends Fragment {
 
 
         updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
+        updateAdminPanelVisibility(StaffRoleHelper.isAdmin(StaffRoleHelper.resolveRole(document)));
+    }
+
+
+    private void updateAdminPanelVisibility(boolean visible) {
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
 

@@ -1,12 +1,9 @@
 rules_version = '2';
 
 // ---------------------------------------------------------------------------
-// HealthUp – suggested Firestore security rules for the chat feature.
-//
-// These rules are DOCUMENTATION / a starting point. Review and deploy them from
-// the Firebase Console (Firestore Database -> Rules) or via the Firebase CLI:
-//     firebase deploy --only firestore:rules
-// No Cloud Functions are required; everything here runs on the free Spark plan.
+// HealthUp – Firestore security rules (merged)
+// Deploy: Firebase Console → Firestore → Rules → Publish
+//     hoặc: firebase deploy --only firestore:rules
 // ---------------------------------------------------------------------------
 
 service cloud.firestore {
@@ -67,7 +64,9 @@ service cloud.firestore {
                   || resource.data.phone is string;
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if (isSignedIn() && request.auth.uid == userId)
-                    || isPasswordResetEmailRotation(userId);
+                    || isPasswordResetEmailRotation(userId)
+                    || (currentRole() == 'admin'
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled', 'updatedAt']));
       allow delete: if isSignedIn() && request.auth.uid == userId;
 
       match /cart/{cartItemId} {
@@ -80,6 +79,10 @@ service cloud.firestore {
 
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
+      }
+
+      match /addresses/{addressId} {
+        allow read, write: if (isSignedIn() && request.auth.uid == userId) || userId == "guest_user";
       }
     }
 
@@ -137,6 +140,12 @@ service cloud.firestore {
       allow write: if isStaff();
     }
 
+    // Voucher / mã giảm giá (CheckoutFragment, PromoCouponFragment, FirebaseManager.getVouchers)
+    match /promoCodes/{promoCodeId} {
+      allow read: if true;
+      allow write: if isStaff();
+    }
+
     function isOrderOwner() {
       return isSignedIn()
         && (resource.data.buyerId == request.auth.uid
@@ -152,6 +161,18 @@ service cloud.firestore {
               == get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId);
     }
 
+    function ownsOrderId(orderId) {
+      let order = get(/databases/$(database)/documents/orders/$(orderId)).data;
+      return isSignedIn()
+        && (order.buyerId == request.auth.uid
+            || order.userId == request.auth.uid
+            || (exists(/databases/$(database)/documents/user_sessions/$(request.auth.uid))
+                && (order.buyerId
+                      == get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId
+                    || order.userId
+                      == get(/databases/$(database)/documents/user_sessions/$(request.auth.uid)).data.profileDocId)));
+    }
+
     // --- User sessions ------------------------------------------------------
     match /user_sessions/{authUid} {
       allow read, write: if isSignedIn() && request.auth.uid == authUid;
@@ -165,20 +186,6 @@ service cloud.firestore {
                             && resource.data.userId == request.auth.uid;
     }
 
-    // --- Addresses (subcollection dưới users/{userId}) ---------------------
-    // ⚠️ TESTING ONLY: "guest_user" nhánh bên dưới KHÔNG yêu cầu đăng nhập,
-    // nghĩa là bất kỳ ai (kể cả ngoài app) cũng đọc/ghi được đường dẫn
-    // /users/guest_user/addresses/*. Nếu nhiều khách cùng dùng chung
-    // "guest_user", địa chỉ của họ sẽ lẫn vào nhau. TUYỆT ĐỐI không để
-    // nguyên rule này khi lên production — hãy thay bằng Firebase
-    // Anonymous Auth trước khi phát hành app.
-    match /users/{userId}/addresses/{addressId} {
-      // Cho phép nếu:
-      // 1. Đã đăng nhập và là chính chủ
-      // 2. HOẶC là tài khoản khách (guest_user) để demo tính năng
-      allow read, write: if (isSignedIn() && request.auth.uid == userId) || userId == "guest_user";
-    }
-
     // --- Orders -----------------------------------------------------------
     match /orders/{orderId} {
       allow read: if isOrderOwner() || isStaff();
@@ -189,6 +196,12 @@ service cloud.firestore {
       allow update: if isOrderOwner() || isStaff();
       // Chỉ nhân viên mới được xóa đơn hàng khỏi database
       allow delete: if isStaff();
+
+      // Lịch sử duyệt đơn (admin ghi khi đổi trạng thái)
+      match /history/{historyId} {
+        allow read: if isStaff() || ownsOrderId(orderId);
+        allow create: if isStaff();
+      }
     }
 
     // --- Conversations ----------------------------------------------------
@@ -216,7 +229,7 @@ service cloud.firestore {
                       && request.resource.data.senderId == request.auth.uid;
 
         allow update: if (isParticipant(convData()) || isStaff());
-        allow delete: if isParticipant(convData()) || isStaff();
+        allow delete: if false;
       }
     }
   }
