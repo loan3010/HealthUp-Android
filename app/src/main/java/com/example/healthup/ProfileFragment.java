@@ -177,8 +177,12 @@ public class ProfileFragment extends Fragment {
                 loadFragment(new SettingsFragment()));
 
 
-        view.findViewById(R.id.btn_chat).setOnClickListener(v ->
-                startActivity(ChatActivity.buyerIntent(requireContext())));
+        view.findViewById(R.id.btn_chat).setOnClickListener(v -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).restoreFloatingChatBubble();
+            }
+            startActivity(ChatActivity.buyerIntent(requireContext()));
+        });
 
 
         view.findViewById(R.id.btn_dang_ky).setOnClickListener(v ->
@@ -263,8 +267,12 @@ public class ProfileFragment extends Fragment {
 
         View chatRow = findRowByText(view, "Trò chuyện cùng HealthUp");
         if (chatRow != null) {
-            chatRow.setOnClickListener(v ->
-                    startActivity(ChatActivity.buyerIntent(requireContext())));
+            chatRow.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).restoreFloatingChatBubble();
+                }
+                startActivity(ChatActivity.buyerIntent(requireContext()));
+            });
         }
 
 

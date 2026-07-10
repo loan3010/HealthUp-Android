@@ -66,7 +66,8 @@ service cloud.firestore {
       allow update: if (isSignedIn() && request.auth.uid == userId)
                     || isPasswordResetEmailRotation(userId)
                     || (currentRole() == 'admin'
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['disabled', 'updatedAt']));
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['disabled', 'updatedAt', 'disabledReason', 'disabledAt', 'unlockedReason', 'unlockedAt']));
       allow delete: if isSignedIn() && request.auth.uid == userId;
 
       match /cart/{cartItemId} {
@@ -79,6 +80,7 @@ service cloud.firestore {
 
       match /notifications/{notificationId} {
         allow read, write: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isStaff();
       }
 
       match /addresses/{addressId} {

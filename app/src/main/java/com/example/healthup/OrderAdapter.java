@@ -97,12 +97,13 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             AlertDialog loadingDialog = showLoadingDialog();
             FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle(), order.getTotalPrice())
                 .addOnSuccessListener(aVoid -> {
-                    // Chờ 1.5s cho cảm giác đang xử lý như yêu cầu
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                         loadingDialog.dismiss();
-                        // Chuyển thẳng về tab đã hủy trong MainActivity
+                        android.widget.Toast.makeText(context,
+                                "Đã gửi yêu cầu hủy. Shop sẽ xác nhận trong thời gian sớm nhất.",
+                                android.widget.Toast.LENGTH_LONG).show();
                         Intent intent = new Intent(context, MainActivity.class);
-                        intent.putExtra("navigate_to", "cancelled_tab");
+                        intent.putExtra("navigate_to", "pending_tab");
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                         context.startActivity(intent);
                     }, 1500);
@@ -328,7 +329,14 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
 
             switch (status.toLowerCase()) {
                 case "pending":
-                    displayStatus = "Chờ xác nhận"; color = 0xFFFF8F00; break;
+                    if (order.isCancelRequested()) {
+                        displayStatus = "Chờ xác nhận hủy";
+                        color = 0xFFE53835;
+                    } else {
+                        displayStatus = "Chờ xác nhận";
+                        color = 0xFFFF8F00;
+                    }
+                    break;
                 case "confirmed":
                     displayStatus = "Chờ lấy hàng"; color = 0xFFFF8F00; break;
                 case "shipping":
@@ -362,8 +370,10 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                 case "pending":
                     setupButton(binding.btnActionMiddle, "Liên hệ", "outline");
                     binding.btnActionMiddle.setOnClickListener(v -> showContactOptions(order));
-                    setupButton(binding.btnActionRight, "Hủy", "outline_error");
-                    binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
+                    if (!order.isCancelRequested()) {
+                        setupButton(binding.btnActionRight, "Hủy", "outline_error");
+                        binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
+                    }
                     break;
                 case "confirmed":
                     setupButton(binding.btnActionRight, "Liên hệ", "outline");

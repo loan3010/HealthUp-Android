@@ -1,69 +1,354 @@
 <?xml version="1.0" encoding="utf-8"?>
+
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+
     xmlns:app="http://schemas.android.com/apk/res-auto"
+
     android:layout_width="match_parent"
+
     android:layout_height="match_parent">
 
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/chipGroupOrderStatus"
+
+
+    <com.google.android.material.textfield.TextInputLayout
+
+        android:id="@+id/tilSearchOrders"
+
         android:layout_width="0dp"
+
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        app:layout_constraintEnd_toEndOf="parent"
+
+        android:layout_marginStart="16dp"
+
+        android:layout_marginTop="16dp"
+
+        android:layout_marginEnd="8dp"
+
+        android:hint="@string/admin_search_orders"
+
+        app:layout_constraintEnd_toStartOf="@id/spinnerOrderSort"
+
         app:layout_constraintStart_toStartOf="parent"
+
         app:layout_constraintTop_toTopOf="parent"
-        app:singleSelection="true">
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipAllOrders"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            android:layout_width="wrap_content"
+        app:startIconDrawable="@drawable/ic_search">
+
+
+
+        <com.google.android.material.textfield.TextInputEditText
+
+            android:id="@+id/etSearchOrders"
+
+            android:layout_width="match_parent"
+
             android:layout_height="wrap_content"
-            android:checked="true"
-            android:text="@string/all_categories" />
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipPendingOrders"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/admin_status_pending" />
+            android:inputType="text" />
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipShippingOrders"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/admin_status_shipping" />
+    </com.google.android.material.textfield.TextInputLayout>
 
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipDeliveredOrders"
-            style="@style/Widget.MaterialComponents.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/admin_status_delivered" />
-    </com.google.android.material.chip.ChipGroup>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvAdminOrders"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+
+    <Spinner
+
+        android:id="@+id/spinnerOrderSort"
+
+        android:layout_width="130dp"
+
+        android:layout_height="48dp"
+
+        android:layout_marginEnd="16dp"
+
+        app:layout_constraintBottom_toBottomOf="@id/tilSearchOrders"
+
         app:layout_constraintEnd_toEndOf="parent"
+
+        app:layout_constraintTop_toTopOf="@id/tilSearchOrders" />
+
+
+
+    <com.google.android.material.card.MaterialCardView
+
+        android:id="@+id/cardOrderAlert"
+
+        android:layout_width="0dp"
+
+        android:layout_height="wrap_content"
+
+        android:layout_marginHorizontal="16dp"
+
+        android:layout_marginTop="8dp"
+
+        android:visibility="gone"
+
+        app:cardBackgroundColor="#FFF3E0"
+
+        app:cardCornerRadius="10dp"
+
+        app:cardElevation="0dp"
+
+        app:layout_constraintEnd_toEndOf="parent"
+
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/chipGroupOrderStatus" />
+
+        app:layout_constraintTop_toBottomOf="@id/tilSearchOrders">
+
+
+
+        <TextView
+
+            android:id="@+id/tvOrderAlert"
+
+            android:layout_width="match_parent"
+
+            android:layout_height="wrap_content"
+
+            android:padding="12dp"
+
+            android:textColor="@color/status_amber"
+
+            android:textSize="13sp" />
+
+    </com.google.android.material.card.MaterialCardView>
+
+
 
     <TextView
-        android:id="@+id/tvEmptyOrders"
-        android:layout_width="wrap_content"
+
+        android:id="@+id/tvOrderResultSummary"
+
+        android:layout_width="0dp"
+
         android:layout_height="wrap_content"
-        android:text="@string/admin_empty_orders"
+
+        android:layout_marginHorizontal="16dp"
+
+        android:layout_marginTop="8dp"
+
         android:textColor="@color/text_secondary"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+
+        android:textSize="13sp"
+
         app:layout_constraintEnd_toEndOf="parent"
+
         app:layout_constraintStart_toStartOf="parent"
+
+        app:layout_constraintTop_toBottomOf="@id/cardOrderAlert" />
+
+
+
+    <HorizontalScrollView
+
+        android:id="@+id/scrollOrderChips"
+
+        android:layout_width="0dp"
+
+        android:layout_height="wrap_content"
+
+        android:layout_marginTop="6dp"
+
+        android:clipToPadding="false"
+
+        android:paddingHorizontal="16dp"
+
+        android:scrollbars="none"
+
+        app:layout_constraintEnd_toEndOf="parent"
+
+        app:layout_constraintStart_toStartOf="parent"
+
+        app:layout_constraintTop_toBottomOf="@id/tvOrderResultSummary">
+
+
+
+        <com.google.android.material.chip.ChipGroup
+
+            android:id="@+id/chipGroupOrderStatus"
+
+            android:layout_width="wrap_content"
+
+            android:layout_height="wrap_content"
+
+            app:singleSelection="true">
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipAllOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:checked="true"
+
+                android:text="@string/admin_filter_all" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipPendingOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_pending" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipCancelRequestedOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_cancel_requested" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipOverdueOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_filter_overdue" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipConfirmedOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_confirmed" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipShippingOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_shipping" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipDeliveredOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_delivered" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipReturnedOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_returned" />
+
+
+
+            <com.google.android.material.chip.Chip
+
+                android:id="@+id/chipCancelledOrders"
+
+                style="@style/Widget.MaterialComponents.Chip.Choice"
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="@string/admin_status_cancelled" />
+
+        </com.google.android.material.chip.ChipGroup>
+
+    </HorizontalScrollView>
+
+
+
+    <androidx.recyclerview.widget.RecyclerView
+
+        android:id="@+id/rvAdminOrders"
+
+        android:layout_width="0dp"
+
+        android:layout_height="0dp"
+
+        android:clipToPadding="false"
+
+        android:paddingBottom="16dp"
+
+        app:layout_constraintBottom_toBottomOf="parent"
+
+        app:layout_constraintEnd_toEndOf="parent"
+
+        app:layout_constraintStart_toStartOf="parent"
+
+        app:layout_constraintTop_toBottomOf="@id/scrollOrderChips" />
+
+
+
+    <TextView
+
+        android:id="@+id/tvEmptyOrders"
+
+        android:layout_width="wrap_content"
+
+        android:layout_height="wrap_content"
+
+        android:text="@string/admin_empty_orders"
+
+        android:textColor="@color/text_secondary"
+
+        android:visibility="gone"
+
+        app:layout_constraintBottom_toBottomOf="parent"
+
+        app:layout_constraintEnd_toEndOf="parent"
+
+        app:layout_constraintStart_toStartOf="parent"
+
         app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
+

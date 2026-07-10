@@ -18,8 +18,10 @@ import androidx.fragment.app.Fragment;
 
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
+import com.example.healthup.util.AccountDisabledWatcher;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.FloatingChatBubbleController;
 import com.example.healthup.util.NotificationPermissionHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.models.CartItem;
@@ -58,9 +60,11 @@ public class MainActivity extends AppCompatActivity {
 
     private BottomNavigationView navView;
     private FloatingActionButton fabChat;
+    private FloatingChatBubbleController floatingChatBubble;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
     private ListenerRegistration cartListener;
+    private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -81,9 +85,15 @@ public class MainActivity extends AppCompatActivity {
         navView = findViewById(R.id.bottom_navigation);
 
         fabChat = findViewById(R.id.fabChat);
-        if (fabChat != null) {
-            fabChat.setOnClickListener(v ->
-                    startActivity(ChatActivity.buyerIntent(MainActivity.this)));
+        View mainRoot = findViewById(R.id.main_root);
+        if (fabChat != null && mainRoot instanceof ViewGroup) {
+            floatingChatBubble = new FloatingChatBubbleController(
+                    this,
+                    fabChat,
+                    (ViewGroup) mainRoot,
+                    () -> openBuyerChat());
+            floatingChatBubble.attach();
+            fabChat.setOnClickListener(v -> openBuyerChat());
         }
 
         applySystemBarInsets();
@@ -188,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh listener in case user logged in/out
         setupCartBadgeListener();
+        accountDisabledWatcher.attach(this);
 
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
         ContextCompat.registerReceiver(this, guestCartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -195,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        accountDisabledWatcher.detach();
         unregisterReceiver(guestCartReceiver);
         super.onPause();
     }
@@ -359,18 +371,31 @@ public class MainActivity extends AppCompatActivity {
             // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
 
-            // Fix Fragment Container: không để content lọt xuống dưới Nav Bar của app
-            // Chúng ta không cần padding bottom ở đây vì fragment_container đã được constraint
-            // vào TOP của bottom_navigation (đã được dãn chiều cao ở trên).
-
-            if (fabChat != null) {
-                ViewGroup.MarginLayoutParams params =
-                        (ViewGroup.MarginLayoutParams) fabChat.getLayoutParams();
-                params.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density) + systemBars.bottom;
-                fabChat.setLayoutParams(params);
-            }
+            updateFloatingChatReservedSpace(systemBars.bottom);
             return windowInsets;
         });
+    }
+
+    private void updateFloatingChatReservedSpace(int systemBottomInset) {
+        if (floatingChatBubble == null || navView == null) {
+            return;
+        }
+        navView.post(() -> {
+            int margin = (int) (16 * getResources().getDisplayMetrics().density);
+            int reserved = navView.getHeight() + systemBottomInset + margin;
+            floatingChatBubble.updateBottomReservedPx(reserved);
+        });
+    }
+
+    public void restoreFloatingChatBubble() {
+        if (floatingChatBubble != null) {
+            floatingChatBubble.restoreAfterChatEntry();
+        }
+    }
+
+    private void openBuyerChat() {
+        restoreFloatingChatBubble();
+        startActivity(ChatActivity.buyerIntent(MainActivity.this));
     }
 
 
@@ -382,7 +407,9 @@ public class MainActivity extends AppCompatActivity {
             navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
         }
         if (fabChat != null) {
-            fabChat.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
+            boolean showBubble = !hideNavigation
+                    && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
+            fabChat.setVisibility(showBubble ? View.VISIBLE : View.GONE);
         }
 
         getSupportFragmentManager().beginTransaction()

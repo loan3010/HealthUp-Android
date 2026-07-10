@@ -305,7 +305,7 @@ public class OrderDetailActivity extends AppCompatActivity {
 
         if ("cancelled".equals(targetStatus)) {
             updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason, currentOrder.getTotalPrice());
-            targetTab = "cancelled_tab";
+            targetTab = "pending_tab";
         } else {
             // Update to delivered
             java.util.Map<String, Object> updates = new java.util.HashMap<>();
@@ -317,11 +317,15 @@ public class OrderDetailActivity extends AppCompatActivity {
             targetTab = "delivered_tab";
         }
 
+        final String navigateTab = targetTab;
         updateTask.addOnSuccessListener(aVoid -> {
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                 loadingDialog.dismiss();
+                if ("cancelled".equals(targetStatus)) {
+                    Toast.makeText(this, "Đã gửi yêu cầu hủy. Shop sẽ xác nhận trong thời gian sớm nhất.", Toast.LENGTH_LONG).show();
+                }
                 Intent intent = new Intent(this, MainActivity.class);
-                intent.putExtra("navigate_to", targetTab);
+                intent.putExtra("navigate_to", navigateTab);
                 intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                 startActivity(intent);
                 finish();
@@ -368,9 +372,15 @@ public class OrderDetailActivity extends AppCompatActivity {
         String status = order.getStatus().toLowerCase();
         
         if ("pending".equals(status)) {
-            binding.tvStatusBanner.setText("CHỜ XÁC NHẬN");
-            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
-            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
+            if (order.isCancelRequested()) {
+                binding.tvStatusBanner.setText("CHỜ XÁC NHẬN HỦY");
+                binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_cancelled);
+                binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
+            } else {
+                binding.tvStatusBanner.setText("CHỜ XÁC NHẬN");
+                binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
+                binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
+            }
         } else if ("confirmed".equals(status)) {
             binding.tvStatusBanner.setText("CHỜ LẤY HÀNG");
             binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_pending);
@@ -510,7 +520,11 @@ public class OrderDetailActivity extends AppCompatActivity {
         binding.btnRebuyFull.setVisibility(View.GONE);
 
         if ("pending".equals(status)) {
-            binding.btnCancelOrder.setVisibility(View.VISIBLE);
+            if (order.isCancelRequested()) {
+                binding.btnCancelOrder.setVisibility(View.GONE);
+            } else {
+                binding.btnCancelOrder.setVisibility(View.VISIBLE);
+            }
         } else if ("shipping".equals(status)) {
             binding.btnConfirmReceived.setVisibility(View.VISIBLE);
             if (order.isShopConfirmedDelivery()) {
