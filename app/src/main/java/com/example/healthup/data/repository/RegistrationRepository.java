@@ -44,7 +44,7 @@ public class RegistrationRepository {
         String otp = otpRepository.generateOtp();
         otpRepository.saveRegistrationOtp(phone, otp)
                 .addOnSuccessListener(unused -> callback.onResult(SendOtpResult.SUCCESS, otp))
-                .addOnFailureListener(e -> callback.onResult(SendOtpResult.ERROR, ""));
+                .addOnFailureListener(e -> callback.onResult(SendOtpResult.ERROR, e.getMessage() != null ? e.getMessage() : "Unknown error"));
     }
 
     public void resendOtp(@NonNull String phone, @NonNull SendOtpCallback callback) {
