@@ -173,7 +173,8 @@ public class OTPActivity extends AppCompatActivity {
                         Toast.LENGTH_SHORT
                 ).show();
             } else {
-                showSnackbar(getString(R.string.otp_send_failed));
+                String errorMsg = TextUtils.isEmpty(otpForDebug) ? getString(R.string.otp_send_failed) : otpForDebug;
+                showSnackbar(errorMsg);
             }
         };
 
@@ -257,7 +258,7 @@ public class OTPActivity extends AppCompatActivity {
                         return;
                     }
 
-                    linkPhoneThenContinue(() -> saveUserProfile(user.getUid(), authEmail));
+                    saveUserProfile(user.getUid(), authEmail);
                 });
     }
 
@@ -296,45 +297,52 @@ public class OTPActivity extends AppCompatActivity {
         UsernameGenerator.generateUnique(fullName, new UsernameGenerator.Callback() {
             @Override
             public void onSuccess(@NonNull String username) {
-                Map<String, Object> userData = UserProfileBuilder.buildSocialRegistration(
-                        fullName,
-                        localPhone,
-                        authEmail,
-                        email,
-                        authProvider,
-                        username
-                );
-                linkPhoneThenContinue(() -> persistUserProfile(uid, userData));
+                proceedToPersistSocial(uid, authEmail, username);
             }
 
             @Override
             public void onFailure(@NonNull Exception error) {
-                setLoading(false);
-                showSnackbar(getString(R.string.register_error_generic));
+                proceedToPersistSocial(uid, authEmail, localPhone);
             }
         });
+    }
+
+    private void proceedToPersistSocial(String uid, String authEmail, String username) {
+        Map<String, Object> userData = UserProfileBuilder.buildSocialRegistration(
+                fullName,
+                localPhone,
+                authEmail,
+                email,
+                authProvider,
+                username
+        );
+        persistUserProfile(uid, userData);
     }
 
     private void saveUserProfile(String uid, String authEmail) {
         UsernameGenerator.generateUnique(fullName, new UsernameGenerator.Callback() {
             @Override
             public void onSuccess(@NonNull String username) {
-                Map<String, Object> userData = UserProfileBuilder.buildPasswordRegistration(
-                        fullName,
-                        localPhone,
-                        authEmail,
-                        email,
-                        username
-                );
-                linkPhoneThenContinue(() -> persistUserProfile(uid, userData));
+                proceedToPersist(uid, authEmail, username);
             }
 
             @Override
             public void onFailure(@NonNull Exception error) {
-                setLoading(false);
-                showSnackbar(getString(R.string.register_error_generic));
+                // Nếu lỗi quyền (Permission), dùng username mặc định là số điện thoại để đăng ký luôn
+                proceedToPersist(uid, authEmail, localPhone);
             }
         });
+    }
+
+    private void proceedToPersist(String uid, String authEmail, String username) {
+        Map<String, Object> userData = UserProfileBuilder.buildPasswordRegistration(
+                fullName,
+                localPhone,
+                authEmail,
+                email,
+                username
+        );
+        persistUserProfile(uid, userData);
     }
 
     private void persistUserProfile(String uid, Map<String, Object> userData) {

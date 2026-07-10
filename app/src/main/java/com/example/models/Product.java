@@ -465,13 +465,14 @@ public class Product implements Serializable {
         ProductVariant variant = toVariant(value, parent, index);
         if (variant != null) {
             if ((variant.getName() == null || variant.getName().isEmpty()) && key != null) {
-                variant.setName(String.valueOf(key).trim());
+                variant.setName(extractOptionLabel(key));
             }
             return variant;
         }
         if (key == null) return null;
-        String name = String.valueOf(key).trim();
+        String name = extractOptionLabel(key);
         if (name.isEmpty()) return null;
+
         ProductVariant keyed = new ProductVariant();
         keyed.setId("variant_" + index);
         keyed.setName(name);
@@ -537,14 +538,50 @@ public class Product implements Serializable {
             return v;
         }
         if (item instanceof String) {
-            String name = ((String) item).trim();
-            if (name.isEmpty()) return null;
+            String raw = ((String) item).trim();
+            if (raw.isEmpty()) return null;
+
+            // Kiểm tra nếu chuỗi bị lỗi định dạng Map "{...}"
+            if (raw.startsWith("{") && raw.endsWith("}")) {
+                String label = extractVal(raw, "label");
+                if (label == null) label = extractVal(raw, "name");
+                
+                if (label != null) {
+                    ProductVariant v = new ProductVariant();
+                    v.setId("variant_" + index);
+                    v.setName(label);
+                    // Cố gắng lấy giá từ chuỗi, nếu không có dùng giá của sản phẩm cha
+                    String priceStr = extractVal(raw, "price");
+                    try {
+                        v.setPrice(priceStr != null ? Double.parseDouble(priceStr) : parent.getPrice());
+                    } catch (Exception e) {
+                        v.setPrice(parent.getPrice());
+                    }
+                    v.setStock(parent.getStockCount());
+                    return v;
+                }
+            }
+
+            // Trường hợp chuỗi văn bản bình thường
             ProductVariant v = new ProductVariant();
             v.setId("variant_" + index);
-            v.setName(name);
+            v.setName(raw);
             v.setPrice(parent.getPrice());
             v.setStock(parent.getStockCount());
             return v;
+        }
+        return null;
+    }
+
+    private static String extractVal(String s, String key) {
+        String target = key + "=";
+        if (!s.contains(target)) return null;
+        int start = s.indexOf(target) + target.length();
+        int end = s.indexOf(",", start);
+        if (end == -1) end = s.indexOf("}", start);
+        if (end != -1) {
+            String val = s.substring(start, end).trim();
+            return "null".equalsIgnoreCase(val) ? null : val;
         }
         return null;
     }
@@ -597,6 +634,14 @@ public class Product implements Serializable {
         }
         if (item == null) return "";
         String label = String.valueOf(item).trim();
+
+        // Fix: Nếu chuỗi là một Map đã bị stringify, trích xuất lấy label
+        if (label.startsWith("{") && label.endsWith("}")) {
+            String extracted = extractVal(label, "label");
+            if (extracted == null) extracted = extractVal(label, "name");
+            if (extracted != null) return extracted;
+        }
+
         return "null".equalsIgnoreCase(label) ? "" : label;
     }
 
