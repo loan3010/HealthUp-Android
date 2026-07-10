@@ -14,6 +14,8 @@ import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityReturnRefundHistoryDetailBinding;
 import com.example.healthup.databinding.ItemOrderProductBinding;
 import com.example.healthup.databinding.ItemTimelineStepBinding;
+import com.example.healthup.util.FullscreenImagePager;
+import com.example.healthup.util.ReturnProgressHelper;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
@@ -29,7 +31,6 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
     private DecimalFormat df = new DecimalFormat("#,###đ");
     private SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault());
     private Order order;
-    private int currentStep = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -37,7 +38,6 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         binding = ActivityReturnRefundHistoryDetailBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung
         View root = findViewById(R.id.return_refund_history_root);
         if (root != null) {
             root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
@@ -52,33 +52,25 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         String orderIdFallback = getIntent().getStringExtra("extra_order_id");
 
         if (order != null) {
-            currentStep = order.getReturnStep() > 0 ? order.getReturnStep() : 1;
             populateUI();
-        } else {
-            String orderId = orderIdFallback;
-            if (orderId != null) {
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("orders")
-                        .document(orderId)
-                        .get()
-                        .addOnSuccessListener(doc -> {
-                            if (doc.exists()) {
-                                order = doc.toObject(Order.class);
-                                if (order != null) {
-                                    order.setId(doc.getId());
-                                    currentStep = order.getReturnStep() > 0 ? order.getReturnStep() : 1;
-                                    populateUI();
-                                }
+        } else if (orderIdFallback != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("orders")
+                    .document(orderIdFallback)
+                    .get()
+                    .addOnSuccessListener(doc -> {
+                        if (doc.exists()) {
+                            order = doc.toObject(Order.class);
+                            if (order != null) {
+                                order.setId(doc.getId());
+                                populateUI();
                             }
-                        });
-            }
+                        }
+                    });
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
         setupSupportAndContactListeners();
-        
-        // Cho phép bấm vào vùng tiến trình để giả lập bước tiếp theo (Demo mode)
-        binding.lnTimeline.setOnClickListener(v -> advanceStepDemo());
     }
 
     private void setupSupportAndContactListeners() {
@@ -97,13 +89,13 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
 
         binding.rowContactPhone.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            intent.setData(Uri.parse("tel:0769845728"));
             startActivity(intent);
         });
 
         binding.rowContactEmail.setOnClickListener(v -> {
             Intent intent = new Intent(Intent.ACTION_SENDTO);
-            intent.setData(android.net.Uri.parse("mailto:healthup@gmail.com"));
+            intent.setData(Uri.parse("mailto:healthup@gmail.com"));
             intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ yêu cầu trả hàng đơn #" + (order != null ? order.getOrderCode() : ""));
             try {
                 startActivity(intent);
@@ -115,7 +107,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
 
     private void showContactOptions(Order order) {
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
-        com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding dialogBinding = 
+        com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding dialogBinding =
             com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding.inflate(getLayoutInflater());
         dialog.setContentView(dialogBinding.getRoot());
 
@@ -127,7 +119,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         dialogBinding.btnCall.setOnClickListener(v -> {
             dialog.dismiss();
             Intent intent = new Intent(Intent.ACTION_DIAL);
-            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            intent.setData(Uri.parse("tel:0769845728"));
             startActivity(intent);
         });
 
@@ -135,35 +127,22 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    private void advanceStepDemo() {
-        String handling = order.getReturnHandling() != null ? order.getReturnHandling() : "Trả hàng & Hoàn tiền";
-        int maxStep = handling.equals("Trả hàng & Hoàn tiền") ? 4 : 3;
-
-        if (currentStep < maxStep) {
-            final int nextStep = currentStep + 1;
-            final boolean isFinal = (nextStep == maxStep);
-            
-            FirebaseManager.getInstance().advanceReturnStep(order.getId(), nextStep, isFinal)
-                    .addOnSuccessListener(aVoid -> {
-                        currentStep = nextStep;
-                        order.setReturnStep(currentStep);
-                        if (isFinal) {
-                            order.setStatus("completed");
-                        }
-                        populateUI();
-                    });
-        }
-    }
-
     private void populateUI() {
-        String handling = order.getReturnHandling() != null ? order.getReturnHandling() : "Trả hàng & Hoàn tiền";
-        boolean isReship = handling.contains("Nhận bổ sung");
-        
-        // Cập nhật thẻ trạng thái ở góc phải (Banner)
-        int maxStep = handling.equals("Trả hàng & Hoàn tiền") ? 4 : 3;
-        boolean isCompleted = currentStep >= maxStep || "completed".equalsIgnoreCase(order.getStatus());
-        
-        if (isCompleted) {
+        String handling = ReturnProgressHelper.normalizeHandling(order.getReturnHandling());
+        boolean isReship = ReturnProgressHelper.isReship(handling);
+        boolean isRejected = Order.RETURN_REJECTED.equals(order.getReturnStatus());
+        int maxStep = ReturnProgressHelper.maxStep(handling);
+        int step = Math.max(0, order.getReturnStep());
+        boolean isCompleted = !isRejected && (
+                step >= maxStep
+                        || Order.RETURN_COMPLETED.equals(order.getReturnStatus())
+                        || "completed".equalsIgnoreCase(order.getStatus()));
+
+        if (isRejected) {
+            binding.tvStatusBanner.setText("KHÔNG THÀNH CÔNG");
+            binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_cancelled);
+            binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
+        } else if (isCompleted) {
             binding.tvStatusBanner.setText("ĐÃ HOÀN THÀNH");
             binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_delivered);
             binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
@@ -173,44 +152,61 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.text_main));
         }
 
-        // Timeline
-        setupTimeline(currentStep, handling);
+        setupTimeline(handling, step, isRejected, isCompleted);
 
-        // Request Info
         binding.tvRequestType.setText(handling);
         binding.tvReason.setText(order.getReturnReason() != null ? order.getReturnReason() : "Hàng bị lỗi/hư hỏng");
-        
+
         String desc = order.getReturnDescription();
         binding.tvDescription.setText(desc != null && !desc.isEmpty() ? desc : "Bạn chưa cung cấp mô tả.");
-        
-        if (isReship) {
+
+        if (isRejected && order.getReturnRejectReason() != null && !order.getReturnRejectReason().isEmpty()) {
+            binding.lnRejectReasonRow.setVisibility(View.VISIBLE);
+            binding.tvRejectReason.setText(order.getReturnRejectReason());
+        } else {
+            binding.lnRejectReasonRow.setVisibility(View.GONE);
+        }
+
+        // Rejected: hide refund success fields. Reship: address instead of refund.
+        if (isRejected) {
+            binding.dividerRefundSection.setVisibility(View.GONE);
+            binding.lnRefundAmountRow.setVisibility(View.GONE);
+            binding.lnRefundMethodRow.setVisibility(View.GONE);
+            binding.lnShippingAddressRow.setVisibility(View.GONE);
+        } else if (isReship) {
+            binding.dividerRefundSection.setVisibility(View.VISIBLE);
             binding.lnRefundAmountRow.setVisibility(View.GONE);
             binding.lnRefundMethodRow.setVisibility(View.GONE);
             binding.lnShippingAddressRow.setVisibility(View.VISIBLE);
-            binding.tvShippingAddress.setText(order.getAddress().getAddressDetail());
+            if (order.getAddress() != null) {
+                binding.tvShippingAddress.setText(order.getAddress().getAddressDetail());
+            }
         } else {
+            binding.dividerRefundSection.setVisibility(View.VISIBLE);
             binding.lnRefundAmountRow.setVisibility(View.VISIBLE);
             binding.lnRefundMethodRow.setVisibility(View.VISIBLE);
             binding.lnShippingAddressRow.setVisibility(View.GONE);
-            
-            String displayRefundMethod = getDisplayRefundMethod(order.getPaymentMethod());
             binding.tvRefundAmount.setText(df.format(order.getTotalPrice()));
-            binding.tvRefundMethod.setText(displayRefundMethod);
+            binding.tvRefundMethod.setText(getDisplayRefundMethod(order.getPaymentMethod()));
         }
 
-        // Evidence
         List<String> mediaStrings = order.getReturnMediaUris();
         if (mediaStrings != null && !mediaStrings.isEmpty()) {
             List<Uri> mediaUris = new ArrayList<>();
-            for (String s : mediaStrings) mediaUris.add(Uri.parse(s));
-            
+            List<String> urlList = new ArrayList<>();
+            for (String s : mediaStrings) {
+                if (s == null || s.trim().isEmpty()) continue;
+                mediaUris.add(Uri.parse(s));
+                urlList.add(s);
+            }
             MediaAdapter mediaAdapter = new MediaAdapter(mediaUris, null);
             mediaAdapter.setViewOnly(true);
+            mediaAdapter.setOnImageClickListener((position, uri) ->
+                    FullscreenImagePager.show(this, urlList, position));
             binding.rvEvidence.setLayoutManager(new LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false));
             binding.rvEvidence.setAdapter(mediaAdapter);
         }
 
-        // Order Info
         binding.tvOrderCode.setText(order.getOrderCode());
         binding.btnCopyOrderCode.setOnClickListener(v -> {
             ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
@@ -218,8 +214,8 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             clipboard.setPrimaryClip(clip);
         });
 
-        // Items
         binding.lnItemsContainer.removeAllViews();
+        if (order.getItems() == null) return;
         for (OrderItem item : order.getItems()) {
             ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(getLayoutInflater(), binding.lnItemsContainer, false);
             pBinding.tvProductName.setText(item.getName());
@@ -235,12 +231,10 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
                 pBinding.tvPriceOld.setVisibility(View.GONE);
             }
 
-            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
             String imagePath = item.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
                 String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
                 Object loadTarget;
-
                 if (cleanPath.startsWith("images/")) {
                     loadTarget = "file:///android_asset/" + cleanPath;
                 } else if (imagePath.startsWith("http")) {
@@ -248,7 +242,6 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
                 } else {
                     loadTarget = "file:///android_asset/images/products/" + cleanPath;
                 }
-
                 Glide.with(this)
                         .load(loadTarget)
                         .placeholder(R.drawable.ic_launcher_background)
@@ -264,7 +257,6 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
 
             binding.lnItemsContainer.addView(pBinding.getRoot());
 
-            // Click product image or name to see product details
             View.OnClickListener toProductDetail = v -> {
                 if (item.getProductId() != null) {
                     Intent detailIntent = new Intent(this, ProductDetailActivity.class);
@@ -277,69 +269,66 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void setupTimeline(int currentStep, String handling) {
+    private void setupTimeline(String handling, int step, boolean isRejected, boolean isCompleted) {
         binding.lnTimeline.removeAllViews();
         long updatedAtMs = (order.getUpdatedAt() != null) ? order.getUpdatedAt().getTime() : System.currentTimeMillis();
         long hour = 3600000L;
         long day = 86400000L;
-
         String refundMethodDisplay = getDisplayRefundMethod(order.getPaymentMethod());
+        int maxStep = ReturnProgressHelper.maxStep(handling);
+        if (isCompleted) {
+            step = maxStep;
+        }
 
-        // Bước 0 & 1: Luôn màu xanh (Vì gửi và duyệt tự động)
-        addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAtMs - day)), false, false);
-        addTimelineStep("HealthUp đã duyệt yêu cầu", sdf.format(new Date(updatedAtMs - day + hour)), false, false);
+        // Always: request submitted
+        addTimelineStep("Yêu cầu đã được gửi",
+                sdf.format(new Date(updatedAtMs - day)), false, false);
 
-        if (handling.equals("Trả hàng & Hoàn tiền")) {
-            // maxStep = 4. Quy trình: 1 (Duyệt) -> 2 (Chờ gửi) -> 3 (Kiểm tra) -> 4 (Hoàn tiền xong)
-            
-            // Bước 2: Chờ gửi hàng
-            if (currentStep >= 2) {
-                addTimelineStep("Đang chờ khách hàng gửi trả hàng", 
-                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 5)), 
-                    currentStep == 2, false);
+        if (isRejected) {
+            String rejectTime = sdf.format(new Date(updatedAtMs));
+            String reason = order.getReturnRejectReason();
+            String subtitle = reason != null && !reason.isEmpty()
+                    ? rejectTime + " – " + reason
+                    : rejectTime;
+            addTimelineStep("Yêu cầu bị từ chối", subtitle, false, true);
+            return;
+        }
+
+        // Pending approval
+        if (Order.RETURN_REQUESTED.equals(order.getReturnStatus()) && step < 1) {
+            addTimelineStep("Chờ HealthUp duyệt yêu cầu", "Đang chờ...", true, true);
+            return;
+        }
+
+        // Approved
+        addTimelineStep("HealthUp đã duyệt yêu cầu",
+                sdf.format(new Date(updatedAtMs - day + hour)), false, step < 2 && !isCompleted);
+
+        if (step < 2 && !isCompleted) {
+            return;
+        }
+
+        for (int s = 2; s <= maxStep; s++) {
+            boolean reached = step >= s;
+            boolean isCurrent = !isCompleted && step == s;
+            boolean isLast = s == maxStep;
+            if (!reached && !isCurrent) break;
+
+            String title = ReturnProgressHelper.stepTitle(handling, s);
+            String time;
+            if (isCurrent) {
+                time = "Đang xử lý...";
+            } else if (s == maxStep && step >= maxStep) {
+                if (ReturnProgressHelper.isReship(handling)) {
+                    time = sdf.format(new Date(updatedAtMs));
+                } else {
+                    time = sdf.format(new Date(updatedAtMs)) + " – qua " + refundMethodDisplay;
+                }
+            } else {
+                time = sdf.format(new Date(updatedAtMs - hour * (maxStep - s + 1)));
             }
-            // Bước 3: Kiểm tra hàng
-            if (currentStep >= 3) {
-                addTimelineStep("Đang kiểm tra hàng trả", 
-                    currentStep == 3 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 2)), 
-                    currentStep == 3, false);
-            }
-            // Bước 4: Hoàn tiền thành công
-            if (currentStep >= 4) {
-                addTimelineStep("Hoàn tiền thành công", 
-                    sdf.format(new Date(updatedAtMs)) + " – qua " + refundMethodDisplay, 
-                    false, true);
-            }
-        } else if (handling.equals("Hoàn tiền sản phẩm bị thiếu")) {
-            // maxStep = 3. Quy trình: 1 (Duyệt) -> 2 (Đang xử lý hoàn tiền) -> 3 (Hoàn tiền xong)
-            
-            // Bước 2: Đang xử lý hoàn tiền
-            if (currentStep >= 2) {
-                addTimelineStep("Đang xử lý hoàn tiền", 
-                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 3)), 
-                    currentStep == 2, false);
-            }
-            // Bước 3: Hoàn tiền thành công
-            if (currentStep >= 3) {
-                addTimelineStep("Hoàn tiền thành công", 
-                    sdf.format(new Date(updatedAtMs)) + " – qua " + refundMethodDisplay,
-                    false, true);
-            }
-        } else if (handling.contains("bổ sung")) {
-            // maxStep = 3. Quy trình: 1 (Duyệt) -> 2 (Chuẩn bị hàng bù) -> 3 (Gửi bù xong)
-            
-            // Bước 2: Chuẩn bị hàng bù
-            if (currentStep >= 2) {
-                addTimelineStep("Đang chuẩn bị hàng gửi bù", 
-                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 4)), 
-                    currentStep == 2, false);
-            }
-            // Bước 3: Gửi bù thành công
-            if (currentStep >= 3) {
-                addTimelineStep("Đã gửi hàng bổ sung thành công", 
-                    sdf.format(new Date(updatedAtMs)), 
-                    false, true);
-            }
+            addTimelineStep(title, time, isCurrent, isLast && step >= maxStep);
+            if (isCurrent) break;
         }
     }
 
@@ -347,7 +336,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         ItemTimelineStepBinding stepBinding = ItemTimelineStepBinding.inflate(getLayoutInflater(), binding.lnTimeline, false);
         stepBinding.tvStepTitle.setText(title);
         stepBinding.tvStepTime.setText(time);
-        
+
         if (isPending) {
             stepBinding.imgStepIndicator.setImageResource(R.drawable.ic_pending_circle);
             stepBinding.imgStepIndicator.setImageTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(R.color.text_hint)));
@@ -355,15 +344,15 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             stepBinding.tvStepTitle.setTextColor(getResources().getColor(R.color.text_hint));
         } else {
             stepBinding.imgStepIndicator.setImageResource(R.drawable.ic_check_circle);
-            stepBinding.imgStepIndicator.setImageTintList(null); // Green from drawable
+            stepBinding.imgStepIndicator.setImageTintList(null);
             stepBinding.viewLine.setBackgroundColor(getResources().getColor(R.color.primary));
             stepBinding.tvStepTitle.setTextColor(getResources().getColor(R.color.text_main));
         }
-        
+
         if (isLast) {
             stepBinding.viewLine.setVisibility(View.GONE);
         }
-        
+
         binding.lnTimeline.addView(stepBinding.getRoot());
     }
 

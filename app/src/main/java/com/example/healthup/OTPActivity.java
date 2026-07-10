@@ -11,11 +11,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.auth.EmailVerificationHelper;
 import com.example.healthup.auth.UserProfileBuilder;
-import com.example.healthup.data.repository.FirebaseAuthRepository;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
@@ -39,6 +40,10 @@ public class OTPActivity extends AppCompatActivity {
     public static final String EXTRA_PASSWORD = "extra_password";
     public static final String EXTRA_IS_SOCIAL_AUTH = "extra_is_social_auth";
     public static final String EXTRA_AUTH_PROVIDER = "extra_auth_provider";
+    /** When true, after OTP ask for password to link Google to existing phone account. */
+    public static final String EXTRA_LINK_EXISTING_ACCOUNT = "extra_link_existing_account";
+    public static final String EXTRA_EXISTING_AUTH_EMAIL = "extra_existing_auth_email";
+    public static final String EXTRA_EXISTING_UID = "extra_existing_uid";
 
     private static final long OTP_TIMEOUT_SECONDS = 60L;
 
@@ -48,6 +53,9 @@ public class OTPActivity extends AppCompatActivity {
     private String password;
     private boolean isSocialAuth;
     private String authProvider;
+    private boolean linkExistingAccount;
+    private String existingAuthEmail;
+    private String existingUid;
 
     private OtpBoxesHelper otpBoxesHelper;
     private LinearLayout otpErrorLayout;
@@ -61,7 +69,6 @@ public class OTPActivity extends AppCompatActivity {
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
     private RegistrationRepository registrationRepository;
-    private FirebaseAuthRepository firebaseAuthRepository;
     private CountDownTimer resendTimer;
 
     @Override
@@ -72,7 +79,6 @@ public class OTPActivity extends AppCompatActivity {
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
         registrationRepository = new RegistrationRepository();
-        firebaseAuthRepository = new FirebaseAuthRepository();
 
         if (!readExtras()) {
             finish();
@@ -102,9 +108,18 @@ public class OTPActivity extends AppCompatActivity {
         password = getIntent().getStringExtra(EXTRA_PASSWORD);
         isSocialAuth = getIntent().getBooleanExtra(EXTRA_IS_SOCIAL_AUTH, false);
         authProvider = getIntent().getStringExtra(EXTRA_AUTH_PROVIDER);
+        linkExistingAccount = getIntent().getBooleanExtra(EXTRA_LINK_EXISTING_ACCOUNT, false);
+        existingAuthEmail = getIntent().getStringExtra(EXTRA_EXISTING_AUTH_EMAIL);
+        existingUid = getIntent().getStringExtra(EXTRA_EXISTING_UID);
 
         if (TextUtils.isEmpty(fullName) || TextUtils.isEmpty(localPhone)) {
             return false;
+        }
+
+        if (linkExistingAccount) {
+            return !TextUtils.isEmpty(existingAuthEmail)
+                    && !TextUtils.isEmpty(existingUid)
+                    && !TextUtils.isEmpty(PhoneNumberUtils.toE164(localPhone));
         }
 
         if (!isSocialAuth && TextUtils.isEmpty(password)) {
@@ -227,27 +242,21 @@ public class OTPActivity extends AppCompatActivity {
     }
 
     private void completeRegistration() {
+        if (linkExistingAccount) {
+            navigateToLinkPassword();
+            return;
+        }
         if (isSocialAuth) {
             completeSocialRegistration();
             return;
         }
 
         String authEmail = RegisterValidator.buildAuthEmail(localPhone, email);
-
         firebaseAuth.createUserWithEmailAndPassword(authEmail, password)
                 .addOnCompleteListener(this, task -> {
                     if (!task.isSuccessful()) {
                         setLoading(false);
-                        Exception exception = task.getException();
-                        if (exception instanceof FirebaseAuthUserCollisionException) {
-                            if (TextUtils.isEmpty(email)) {
-                                showSnackbar(getString(R.string.register_phone_exists));
-                            } else {
-                                showSnackbar(getString(R.string.register_email_exists));
-                            }
-                        } else {
-                            showSnackbar(getString(R.string.register_error_generic));
-                        }
+                        handleCreateUserFailure(task.getException());
                         return;
                     }
 
@@ -260,6 +269,42 @@ public class OTPActivity extends AppCompatActivity {
 
                     saveUserProfile(user.getUid(), authEmail);
                 });
+    }
+
+    private void handleCreateUserFailure(@Nullable Exception exception) {
+        if (exception instanceof FirebaseAuthUserCollisionException) {
+            // Fallback only — RegisterActivity must catch this before OTP.
+            String message = RegisterValidator.hasRealEmail(email)
+                    ? getString(R.string.register_email_exists)
+                    : getString(R.string.register_phone_exists);
+            Intent intent = new Intent(this, RegisterActivity.class);
+            intent.putExtra(RegisterActivity.EXTRA_PHONE, localPhone);
+            intent.putExtra(RegisterActivity.EXTRA_PREFILL_FULL_NAME, fullName);
+            if (RegisterValidator.hasRealEmail(email)) {
+                intent.putExtra(RegisterActivity.EXTRA_PREFILL_EMAIL, email);
+                intent.putExtra(RegisterActivity.EXTRA_EMAIL_EXISTS, true);
+            }
+            startActivity(intent);
+            finish();
+            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            return;
+        }
+        String detail = exception != null && exception.getMessage() != null
+                ? exception.getMessage()
+                : getString(R.string.register_error_generic);
+        android.util.Log.w("OTPActivity", "createUser failed", exception);
+        showSnackbar(detail);
+    }
+
+    private void navigateToLinkPassword() {
+        setLoading(false);
+        Intent intent = new Intent(this, com.example.healthup.auth.LinkGooglePasswordActivity.class);
+        intent.putExtra(com.example.healthup.auth.LinkGooglePasswordActivity.EXTRA_PHONE, localPhone);
+        intent.putExtra(com.example.healthup.auth.LinkGooglePasswordActivity.EXTRA_AUTH_EMAIL, existingAuthEmail);
+        intent.putExtra(com.example.healthup.auth.LinkGooglePasswordActivity.EXTRA_EXISTING_UID, existingUid);
+        intent.putExtra(com.example.healthup.auth.LinkGooglePasswordActivity.EXTRA_GOOGLE_EMAIL, email);
+        startActivity(intent);
+        finish();
     }
 
     private void completeSocialRegistration() {
@@ -276,21 +321,6 @@ public class OTPActivity extends AppCompatActivity {
         }
 
         saveSocialUserProfile(user.getUid(), authEmail);
-    }
-
-    private void linkPhoneThenContinue(@NonNull Runnable onComplete) {
-        String phoneE164 = PhoneNumberUtils.toE164(localPhone);
-        if (TextUtils.isEmpty(phoneE164)) {
-            onComplete.run();
-            return;
-        }
-
-        firebaseAuthRepository.linkPhoneToCurrentUser(
-                this,
-                phoneE164,
-                onComplete,
-                onComplete
-        );
     }
 
     private void saveSocialUserProfile(String uid, String authEmail) {
@@ -351,14 +381,61 @@ public class OTPActivity extends AppCompatActivity {
                 .set(userData)
                 .addOnSuccessListener(unused -> {
                     registrationRepository.deleteOtpDoc(localPhone);
-                    setLoading(false);
-                    Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
-                    navigateAfterRegistration(uid);
+                    boolean needsEmailVerify = !isSocialAuth && RegisterValidator.hasRealEmail(email);
+                    if (needsEmailVerify) {
+                        maybeSendEmailVerification(sent -> {
+                            setLoading(false);
+                            navigateToEmailVerification(uid, sent);
+                        });
+                    } else {
+                        setLoading(false);
+                        Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
+                        navigateAfterRegistration(uid);
+                    }
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
                     showSnackbar(getString(R.string.register_error_generic));
                 });
+    }
+
+    private void maybeSendEmailVerification(@NonNull java.util.function.Consumer<Boolean> onDone) {
+        if (isSocialAuth || !RegisterValidator.hasRealEmail(email)) {
+            onDone.accept(false);
+            return;
+        }
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user == null) {
+            onDone.accept(false);
+            return;
+        }
+        EmailVerificationHelper.sendToCurrentEmail(user, new EmailVerificationHelper.Callback() {
+            @Override
+            public void onSuccess() {
+                onDone.accept(true);
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                // Still open verify screen so user can resend / skip.
+                android.util.Log.w("OTPActivity", "Initial verify email failed: " + message);
+                onDone.accept(false);
+            }
+        });
+    }
+
+    private void navigateToEmailVerification(String uid, boolean mailSent) {
+        Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
+        if (!mailSent) {
+            Toast.makeText(this, R.string.change_email_send_failed, Toast.LENGTH_LONG).show();
+        }
+        GuestCartManager.getInstance(this).mergeToFirestore(uid, () -> runOnUiThread(() -> {
+            Intent intent = new Intent(OTPActivity.this, EmailVerificationPendingActivity.class);
+            intent.putExtra(EmailVerificationPendingActivity.EXTRA_EMAIL, email);
+            intent.putExtra(EmailVerificationPendingActivity.EXTRA_MAIL_ALREADY_SENT, mailSent);
+            startActivity(intent);
+            finish();
+        }));
     }
 
     private void navigateAfterRegistration(String uid) {

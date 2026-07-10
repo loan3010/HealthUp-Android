@@ -242,7 +242,7 @@ public class AdminProductEditActivity extends AppCompatActivity {
             variant.setOriginalPrice(variant.getPrice());
             variant.setStock(parseInt(textOf(etVariantStock), variant.getStock()));
             variant.setSku(textOf(etVariantSku));
-            variant.setImageUrl(textOf(etVariantImage));
+            // Image URL is set only via picker into variantRows — do not overwrite with short label text.
         }
     }
 

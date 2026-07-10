@@ -269,6 +269,8 @@ public class ResetPasswordActivity extends AppCompatActivity {
                 return getString(R.string.forgot_password_phone_not_registered);
             case "provider_disabled":
                 return getString(R.string.reset_password_provider_disabled);
+            case "function_not_deployed":
+                return getString(R.string.reset_password_function_not_deployed);
             case "phone_not_linked":
                 return getString(R.string.reset_password_phone_not_linked);
             case "invalid_sms_code":

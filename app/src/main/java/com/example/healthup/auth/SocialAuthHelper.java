@@ -172,6 +172,7 @@ public class SocialAuthHelper {
                 notifyError(activity.getString(R.string.social_auth_google_no_id_token));
                 return;
             }
+            PendingGoogleLink.set(account.getIdToken(), account.getEmail());
             signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
         } catch (ApiException e) {
             setLoading(false);
@@ -187,6 +188,11 @@ public class SocialAuthHelper {
                         setLoading(false);
                         Exception exception = task.getException();
                         logDebug("Firebase signInWithCredential failed", exception);
+                        if (isAccountExistsWithDifferentCredential(exception)) {
+                            PendingGoogleLink.clear();
+                            notifyError(activity.getString(R.string.social_auth_email_exists_use_password));
+                            return;
+                        }
                         notifyError(withDebugDetail(
                                 activity.getString(R.string.social_auth_failed),
                                 exception == null ? null : exception.getMessage()
@@ -201,6 +207,23 @@ public class SocialAuthHelper {
                     }
                     routeAfterSocialAuth(user);
                 });
+    }
+
+    private boolean isAccountExistsWithDifferentCredential(@Nullable Exception exception) {
+        if (exception == null) {
+            return false;
+        }
+        if (exception instanceof com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+            return true;
+        }
+        String message = exception.getMessage();
+        if (message == null) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        return lower.contains("account-exists-with-different-credential")
+                || lower.contains("already in use")
+                || lower.contains("email address is already");
     }
 
     private void routeAfterSocialAuth(@NonNull FirebaseUser user) {
@@ -228,6 +251,7 @@ public class SocialAuthHelper {
 
         String phone = doc.exists() ? doc.getString("phone") : null;
         if (doc.exists() && !TextUtils.isEmpty(phone)) {
+            PendingGoogleLink.clear();
             Toast.makeText(activity, R.string.login_success, Toast.LENGTH_SHORT).show();
             GuestCartManager.getInstance(activity).mergeToFirestore(user.getUid(), () ->
                     activity.runOnUiThread(() -> {

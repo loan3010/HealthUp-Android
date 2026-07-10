@@ -14,17 +14,25 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function userData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
     function currentRole() {
-      // users/{uid}.role is one of "buyer" | "seller" | "admin".
+      // users/{uid}.role (or legacy userRole) is one of "buyer" | "seller" | "admin" | "staff".
       return isSignedIn()
         && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role
+        ? ('role' in userData() && userData().role is string
+            ? userData().role
+            : ('userRole' in userData() && userData().userRole is string
+                ? userData().userRole
+                : null))
         : null;
     }
 
     function isStaff() {
-      // Sellers and admins can read/reply in any conversation.
-      return currentRole() in ['seller', 'admin'];
+      // Sellers, admins, and staff can manage orders / write buyer notifications.
+      return currentRole() in ['seller', 'admin', 'staff'];
     }
 
     function linkedProfileDocId() {
@@ -78,8 +86,10 @@ service cloud.firestore {
       }
 
       match /notifications/{notificationId} {
-        allow read, write: if isSignedIn() && request.auth.uid == userId;
-        allow create: if isStaff();
+        // Owner can read/update/delete; owner or staff can create (order status alerts).
+        allow read, update, delete: if isSignedIn() && request.auth.uid == userId;
+        allow create: if isStaff()
+                      || (isSignedIn() && request.auth.uid == userId);
       }
 
       match /addresses/{addressId} {
@@ -104,6 +114,12 @@ service cloud.firestore {
 
     match /password_reset/{phone} {
       allow read, write: if phone is string;
+    }
+
+    // Email OTP legacy (in-app OTP đã bỏ — Cài đặt dùng verifyBeforeUpdateEmail).
+    // Giữ rules để doc cũ không lỗi permission nếu còn sót.
+    match /email_verification/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
     // --- Catalog / demo content (student project) -------------------------
@@ -208,11 +224,18 @@ service cloud.firestore {
       // Chỉ nhân viên mới được xóa đơn hàng khỏi database
       allow delete: if isStaff();
 
-      // Lịch sử duyệt đơn (admin ghi khi đổi trạng thái)
+      // Lịch sử đơn hàng — staff hoặc chủ đơn (hủy / nhận hàng / trả hàng)
       match /history/{historyId} {
         allow read: if isStaff() || ownsOrderId(orderId);
-        allow create: if isStaff();
+        allow create: if isStaff() || ownsOrderId(orderId);
       }
+    }
+
+    // Admin inbox (customer cancel, etc.) — staff read; signed-in users can create
+    match /admin_notifications/{notificationId} {
+      allow read: if isStaff();
+      allow create: if isSignedIn();
+      allow update, delete: if isStaff();
     }
 
     // --- Conversations ----------------------------------------------------

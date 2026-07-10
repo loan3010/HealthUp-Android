@@ -21,9 +21,12 @@ import androidx.core.content.ContextCompat;
 import com.example.healthup.OTPActivity;
 import com.example.healthup.R;
 import com.example.healthup.RegisterValidator;
+import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UserPhoneLookup;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class SocialCompleteProfileActivity extends AppCompatActivity {
@@ -186,21 +189,29 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
         }
 
         String fullName = getInputValue(fullNameEditText);
-        String phone = getInputValue(phoneEditText);
-        String currentUid = firebaseAuth.getCurrentUser().getUid();
+        String phone = PhoneNormalizer.normalize(getInputValue(phoneEditText));
+        String currentUid = firebaseAuth.getCurrentUser() != null
+                ? firebaseAuth.getCurrentUser().getUid()
+                : "";
 
         setLoading(true);
-        firebaseFirestore.collection("users")
-                .whereEqualTo("phone", phone)
-                .limit(1)
-                .get()
+        UserPhoneLookup.queryUsers(phone)
                 .addOnSuccessListener(query -> {
-                    if (!query.isEmpty() && !currentUid.equals(query.getDocuments().get(0).getId())) {
-                        setLoading(false);
-                        showPhoneError(getString(R.string.register_phone_exists));
-                        return;
+                    if (!query.isEmpty()) {
+                        DocumentSnapshot existing = query.getDocuments().get(0);
+                        if (!currentUid.equals(existing.getId())) {
+                            // Phone already belongs to another account → OTP then password link (option B).
+                            String existingAuthEmail = existing.getString("email");
+                            if (TextUtils.isEmpty(existingAuthEmail)) {
+                                setLoading(false);
+                                showPhoneError(getString(R.string.register_phone_exists));
+                                return;
+                            }
+                            launchLinkExistingOtp(fullName, phone, existing.getId(), existingAuthEmail);
+                            return;
+                        }
                     }
-                    launchSocialOtp(fullName, phone);
+                    launchSocialOtp(fullName, phone, false, null, null);
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
@@ -208,7 +219,22 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
                 });
     }
 
-    private void launchSocialOtp(String fullName, String phone) {
+    private void launchLinkExistingOtp(
+            String fullName,
+            String phone,
+            String existingUid,
+            String existingAuthEmail
+    ) {
+        launchSocialOtp(fullName, phone, true, existingUid, existingAuthEmail);
+    }
+
+    private void launchSocialOtp(
+            String fullName,
+            String phone,
+            boolean linkExisting,
+            String existingUid,
+            String existingAuthEmail
+    ) {
         setLoading(false);
         Intent intent = new Intent(this, OTPActivity.class);
         intent.putExtra(OTPActivity.EXTRA_FULL_NAME, fullName);
@@ -217,7 +243,14 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
         intent.putExtra(OTPActivity.EXTRA_PASSWORD, "");
         intent.putExtra(OTPActivity.EXTRA_IS_SOCIAL_AUTH, true);
         intent.putExtra(OTPActivity.EXTRA_AUTH_PROVIDER, authProvider);
+        intent.putExtra(OTPActivity.EXTRA_LINK_EXISTING_ACCOUNT, linkExisting);
+        if (linkExisting) {
+            intent.putExtra(OTPActivity.EXTRA_EXISTING_UID, existingUid);
+            intent.putExtra(OTPActivity.EXTRA_EXISTING_AUTH_EMAIL, existingAuthEmail);
+        }
         startActivity(intent);
+        // Same as Register → OTP: don't leave incomplete profile under the back stack.
+        finish();
     }
 
     private boolean validateFullName(boolean showError) {

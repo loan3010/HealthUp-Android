@@ -81,21 +81,19 @@ public class OrderListFragment extends Fragment {
                     o.setId(doc.getId());
 
                     String orderStatus = o.getStatus().toLowerCase().trim();
-                    boolean isReturnOrder = o.getReturnHandling() != null;
-                    
+                    boolean isReturnOrder = o.hasActiveReturn();
+
                     if ("all".equals(filter)) {
                         filteredOrders.add(o);
                     } else if ("delivered".equals(filter)) {
-                        // Tab Đã giao là tab cha, bao gồm cả các đơn đang/đã trả hàng
-                        if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) || 
-                            "refunded".equals(orderStatus) || "reshipped".equals(orderStatus) || 
+                        // Đã giao: delivered (+ returns that stay delivered) and legacy return statuses
+                        if ("delivered".equals(orderStatus) || "returned".equals(orderStatus) ||
+                            "refunded".equals(orderStatus) || "reshipped".equals(orderStatus) ||
                             "completed".equals(orderStatus)) {
                             filteredOrders.add(o);
                         }
                     } else if ("returned".equals(filter)) {
-                        // Chỉ hiện đơn có yêu cầu trả hàng
-                        if ("returned".equals(orderStatus) || "refunded".equals(orderStatus) || 
-                            "reshipped".equals(orderStatus) || ("completed".equals(orderStatus) && isReturnOrder)) {
+                        if (isReturnOrder) {
                             filteredOrders.add(o);
                         }
                     } else {
@@ -139,7 +137,7 @@ public class OrderListFragment extends Fragment {
                 binding.rvOrders.setVisibility(View.VISIBLE);
                 binding.lnEmptyState.setVisibility(View.GONE);
                 binding.rvOrders.setLayoutManager(new LinearLayoutManager(getContext()));
-                binding.rvOrders.setAdapter(new OrderAdapter(getContext(), filteredOrders));
+                binding.rvOrders.setAdapter(new OrderAdapter(getContext(), filteredOrders, filter));
             }
 
             boolean showRecommend = "pending".equals(filter) || "confirmed".equals(filter) || "shipping".equals(filter) || filteredOrders.isEmpty();
@@ -184,6 +182,9 @@ public class OrderListFragment extends Fragment {
                             newItem.setVariantName(variant.getName());
                             newItem.setPrice(variant.getPrice());
                             newItem.setOriginalPrice(variant.getPrice());
+                            if (variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
+                                newItem.setImageUrl(variant.getImageUrl());
+                            }
                         } else {
                             newItem.setPrice(product.getPrice());
                             newItem.setOriginalPrice(product.getOriginalPrice());

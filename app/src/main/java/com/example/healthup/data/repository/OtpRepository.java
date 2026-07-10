@@ -14,6 +14,7 @@ public class OtpRepository {
 
     public static final String COLLECTION_PASSWORD_RESET = "password_reset";
     public static final String COLLECTION_REGISTRATION = "registration_otp";
+    public static final String COLLECTION_EMAIL_VERIFICATION = "email_verification";
     public static final long OTP_EXPIRY_MS = 5 * 60 * 1000L;
     public static final long RESET_SESSION_MS = 15 * 60 * 1000L;
 
@@ -39,6 +40,35 @@ public class OtpRepository {
 
     public Task<Void> saveRegistrationOtp(@NonNull String phone, @NonNull String otp) {
         return saveOtp(COLLECTION_REGISTRATION, phone, otp);
+    }
+
+    public Task<Void> saveEmailVerificationOtp(
+            @NonNull String uid,
+            @NonNull String email,
+            @NonNull String otp
+    ) {
+        long now = System.currentTimeMillis();
+        Map<String, Object> data = new HashMap<>();
+        data.put("email", email);
+        data.put("otp", otp);
+        data.put("createdAt", now);
+        data.put("expiredAt", now + OTP_EXPIRY_MS);
+        data.put("verified", false);
+        return firestore.collection(COLLECTION_EMAIL_VERIFICATION)
+                .document(uid)
+                .set(data);
+    }
+
+    public Task<DocumentSnapshot> getEmailVerificationDoc(@NonNull String uid) {
+        return firestore.collection(COLLECTION_EMAIL_VERIFICATION)
+                .document(uid)
+                .get();
+    }
+
+    public Task<Void> deleteEmailVerificationDoc(@NonNull String uid) {
+        return firestore.collection(COLLECTION_EMAIL_VERIFICATION)
+                .document(uid)
+                .delete();
     }
 
     private Task<Void> saveOtp(@NonNull String collection, @NonNull String phone, @NonNull String otp) {

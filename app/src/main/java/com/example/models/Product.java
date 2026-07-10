@@ -398,6 +398,7 @@ public class Product implements Serializable {
         if (p == null) return null;
         p.setId(doc.getId());
         p.resolvedVariantsCache = null;
+        p.images = normalizeImageList(doc.get("images"), p.imageUrl, p.image);
         List<ProductVariant> fromVariants = parseVariantsField(doc.get("variants"), p);
         List<ProductVariant> fromWeights = parseVariantsField(doc.get("weights"), p);
         p.variants = mergeVariantLists(fromVariants, fromWeights);
@@ -416,6 +417,31 @@ public class Product implements Serializable {
             p.setDraft(draftVal);
         }
         return p;
+    }
+
+    /** Normalizes Firestore image fields (list, single string, or legacy image/imageUrl). */
+    @NonNull
+    private static List<String> normalizeImageList(Object rawImages, String imageUrl, String image) {
+        List<String> result = new ArrayList<>();
+        if (rawImages instanceof List) {
+            for (Object item : (List<?>) rawImages) {
+                if (item == null) continue;
+                String url = String.valueOf(item).trim();
+                if (!url.isEmpty() && !"null".equalsIgnoreCase(url) && !result.contains(url)) {
+                    result.add(url);
+                }
+            }
+        } else if (rawImages instanceof String) {
+            String url = ((String) rawImages).trim();
+            if (!url.isEmpty()) result.add(url);
+        }
+        if (result.isEmpty() && imageUrl != null && !imageUrl.trim().isEmpty()) {
+            result.add(imageUrl.trim());
+        }
+        if (result.isEmpty() && image != null && !image.trim().isEmpty()) {
+            result.add(image.trim());
+        }
+        return result;
     }
 
     private static List<ProductVariant> mergeVariantLists(List<ProductVariant> primary, List<ProductVariant> secondary) {

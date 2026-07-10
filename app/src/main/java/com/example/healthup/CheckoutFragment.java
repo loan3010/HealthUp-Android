@@ -24,7 +24,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.example.adapters.CheckoutProductAdapter;
+import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.PhoneVerifiedHelper;
 import com.example.healthup.util.TranslationManager;
 import com.example.models.Address;
 import com.example.models.CartItem;
@@ -634,7 +636,7 @@ public class CheckoutFragment extends Fragment {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
+            CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
             requireActivity().getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragment_container, new PhoneVerificationFragment())
                     .addToBackStack(null)
@@ -642,7 +644,39 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
+        PhoneVerifiedHelper.requireForCheckout(new PhoneVerifiedHelper.Callback() {
+            @Override
+            public void onVerified() {
+                if (!isAdded()) {
+                    return;
+                }
+                continuePlaceOrder(user);
+            }
 
+            @Override
+            public void onNeedPhoneVerification() {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.checkout_need_phone_verified, Toast.LENGTH_LONG).show();
+                CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
+                requireActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragment_container, new PhoneVerificationFragment())
+                        .addToBackStack(null)
+                        .commit();
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.register_error_generic, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void continuePlaceOrder(@NonNull FirebaseUser user) {
         btnPlaceOrder.setEnabled(false);
         String currentLang = LocaleHelper.getLanguage(requireContext());
         btnPlaceOrder.setText(currentLang.equals("en") ? "Processing..." : "Đang xử lý...");
@@ -672,6 +706,10 @@ public class CheckoutFragment extends Fragment {
 
         List<com.example.models.OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : selectedItems) {
+            String imageUrl = ci.getImageUrl();
+            if ((imageUrl == null || imageUrl.isEmpty()) && ci.getProduct() != null) {
+                imageUrl = ci.getProduct().getImageUrl();
+            }
             orderItems.add(new com.example.models.OrderItem(
                     ci.getProductId(),
                     ci.getVariantId(),
@@ -680,7 +718,7 @@ public class CheckoutFragment extends Fragment {
                     ci.getPrice(),
                     ci.getOriginalPrice(),
                     ci.getQuantity(),
-                    ci.getImageUrl()
+                    imageUrl
             ));
         }
 
@@ -745,7 +783,7 @@ public class CheckoutFragment extends Fragment {
                                 DocumentReference notificationRef = db.collection("users").document(userId)
                                         .collection("notifications").document();
                                 Map<String, Object> notification = new HashMap<>();
-                                notification.put("type", "ORDER_SHIPPING");
+                                notification.put("type", "ORDER_UPDATE");
                                 if ("en".equals(currentLang)) {
                                     notification.put("title", "Order successful");
                                     notification.put("body", "Order #" + order.getOrderCode()
@@ -755,10 +793,27 @@ public class CheckoutFragment extends Fragment {
                                     notification.put("body", "Đơn hàng #" + order.getOrderCode()
                                             + " đã được đặt thành công. Tổng tiền: " + formatVnd(finalAmount) + ".");
                                 }
+                                notification.put("message", notification.get("body"));
                                 notification.put("refId", orderRef.getId());
+                                notification.put("orderId", orderRef.getId());
+                                notification.put("orderCode", order.getOrderCode());
                                 notification.put("createdAt", FieldValue.serverTimestamp());
                                 notification.put("read", false);
                                 batch.set(notificationRef, notification);
+
+                                DocumentReference adminNotifRef = db.collection("admin_notifications").document();
+                                Map<String, Object> adminNotif = new HashMap<>();
+                                adminNotif.put("type", "ORDER_UPDATE");
+                                adminNotif.put("title", "Đơn hàng mới");
+                                adminNotif.put("body", "Khách vừa đặt đơn #" + order.getOrderCode()
+                                        + ". Tổng tiền: " + formatVnd(finalAmount) + ".");
+                                adminNotif.put("message", adminNotif.get("body"));
+                                adminNotif.put("orderId", orderRef.getId());
+                                adminNotif.put("orderCode", order.getOrderCode());
+                                adminNotif.put("buyerId", userId);
+                                adminNotif.put("read", false);
+                                adminNotif.put("createdAt", FieldValue.serverTimestamp());
+                                batch.set(adminNotifRef, adminNotif);
 
 
                                 Map<String, Object> userUpdates = new HashMap<>();

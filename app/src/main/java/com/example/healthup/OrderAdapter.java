@@ -36,10 +36,17 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     private Context context;
     private List<Order> orders;
     private DecimalFormat df = new DecimalFormat("#,###đ");
+    /** Tab filter from OrderListFragment — used for return chip labels. */
+    private String tabFilter = "all";
 
     public OrderAdapter(Context context, List<Order> orders) {
+        this(context, orders, "all");
+    }
+
+    public OrderAdapter(Context context, List<Order> orders, String tabFilter) {
         this.context = context;
         this.orders = orders;
+        this.tabFilter = tabFilter != null ? tabFilter : "all";
     }
 
     @NonNull
@@ -95,15 +102,15 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             dialog.dismiss();
             
             AlertDialog loadingDialog = showLoadingDialog();
-            FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle(), order.getTotalPrice())
+            FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle(), order.getTotalPrice(), order.getOrderCode())
                 .addOnSuccessListener(aVoid -> {
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                         loadingDialog.dismiss();
                         android.widget.Toast.makeText(context,
-                                "Đã gửi yêu cầu hủy. Shop sẽ xác nhận trong thời gian sớm nhất.",
+                                "Đã hủy đơn hàng thành công.",
                                 android.widget.Toast.LENGTH_LONG).show();
                         Intent intent = new Intent(context, MainActivity.class);
-                        intent.putExtra("navigate_to", "pending_tab");
+                        intent.putExtra("navigate_to", "cancelled_tab");
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                         context.startActivity(intent);
                     }, 1500);
@@ -144,75 +151,27 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         }
 
         public void bind(Order order) {
-            // Demo logic: Click on status text to advance status (Admin simulation)
-            binding.tvStatus.setOnClickListener(v -> {
-                String currentStatus = order.getStatus().toLowerCase();
-                String orderId = order.getId();
-                
-                if ("shipping".equals(currentStatus)) {
-                    // Demo: Shop confirm delivery -> Activate "Received" button
-                    AlertDialog loading = showLoadingDialog();
-                    FirebaseManager.getInstance().simulateShopConfirmedDelivery(orderId)
-                        .addOnSuccessListener(aVoid -> {
-                            loading.dismiss();
-                            // Update local data to reflect change immediately
-                            order.setShopConfirmedDelivery(true);
-                            order.setDeliveredAt(new java.util.Date());
-                            notifyItemChanged(getAdapterPosition());
-                        })
-                        .addOnFailureListener(e -> {
-                            loading.dismiss();
-                            android.widget.Toast.makeText(context, "Lỗi: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
-                        });
-                    return;
-                }
-
-                String nextStatus = null;
-                String targetTab = null;
-
-                switch (currentStatus) {
-                    case "pending":
-                        nextStatus = "confirmed";
-                        targetTab = "confirmed_tab"; 
-                        break;
-                    case "confirmed":
-                        nextStatus = "shipping";
-                        targetTab = "shipping_tab";
-                        break;
-                }
-
-                if (nextStatus != null) {
-                    AlertDialog loading = showLoadingDialog();
-                    String finalTargetTab = targetTab;
-                    FirebaseManager.getInstance().updateOrderStatus(orderId, nextStatus)
-                        .addOnSuccessListener(aVoid -> {
-                            loading.dismiss();
-                            Intent intent = new Intent(context, MainActivity.class);
-                            intent.putExtra("navigate_to", finalTargetTab);
-                            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                            context.startActivity(intent);
-                        })
-                        .addOnFailureListener(e -> {
-                            loading.dismiss();
-                            android.widget.Toast.makeText(context, "Lỗi cập nhật: " + e.getMessage(), android.widget.Toast.LENGTH_SHORT).show();
-                        });
-                }
-            });
+            binding.tvStatus.setOnClickListener(null);
 
             itemView.setOnClickListener(v -> {
                 String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
                 String orderId = order.getId();
-                boolean isReturnFlow = order.getReturnHandling() != null;
-                
+                boolean isReturnFlow = order.hasActiveReturn();
+
                 android.content.Intent intent;
-                if ("returned".equals(status) || "refunded".equals(status) || ("completed".equals(status) && isReturnFlow)) {
+                if (isReturnFlow && ("returned".equals(tabFilter)
+                        || Order.RETURN_REQUESTED.equals(order.getReturnStatus())
+                        || Order.RETURN_REJECTED.equals(order.getReturnStatus())
+                        || Order.RETURN_COMPLETED.equals(order.getReturnStatus())
+                        || "returned".equals(status) || "refunded".equals(status)
+                        || ("completed".equals(status) && order.getReturnHandling() != null))) {
                     intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                 } else {
                     intent = new android.content.Intent(context, OrderDetailActivity.class);
                 }
-                
+
                 intent.putExtra("order", order);
-                intent.putExtra("extra_order_id", orderId); // Backup ID if serialization fails
+                intent.putExtra("extra_order_id", orderId);
                 context.startActivity(intent);
             });
 
@@ -221,14 +180,14 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             String priceStr = df.format(order.getTotalPrice());
             String labelStr = String.format("Tổng số tiền (%d sản phẩm): ", order.getItems().size());
             String fullStr = labelStr + priceStr;
-            
+
             SpannableString spannable = new SpannableString(fullStr);
             int start = labelStr.length();
             int end = fullStr.length();
-            
+
             spannable.setSpan(new ForegroundColorSpan(0xFF36873A), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             spannable.setSpan(new StyleSpan(Typeface.BOLD), start, end, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-            
+
             binding.tvTotalPrice.setText(spannable);
 
             binding.lnItemsContainer.removeAllViews();
@@ -253,15 +212,20 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
 
             setButtonsUI(order);
 
-            // Handle delivery info display for shipping state demo
             if ("shipping".equalsIgnoreCase(order.getStatus()) && order.isShopConfirmedDelivery()) {
                 binding.tvDeliveryInfo.setVisibility(View.VISIBLE);
                 String time = "vừa xong";
-                if (order.getDeliveredAt() != null) {
+                java.util.Date confirmedAt = order.getShopConfirmedAt() != null
+                        ? order.getShopConfirmedAt() : order.getDeliveredAt();
+                if (confirmedAt != null) {
                     java.text.SimpleDateFormat timeSdf = new java.text.SimpleDateFormat("HH:mm dd-MM", java.util.Locale.getDefault());
-                    time = timeSdf.format(order.getDeliveredAt());
+                    time = timeSdf.format(confirmedAt);
                 }
                 binding.tvDeliveryInfo.setText("Đơn hàng đã giao thành công vào " + time);
+            } else if ("shipping".equalsIgnoreCase(order.getStatus()) && order.isNeedsRedelivery()) {
+                binding.tvDeliveryInfo.setVisibility(View.VISIBLE);
+                binding.tvDeliveryInfo.setText("Giao không thành công. Shop sẽ giao lại lần "
+                        + (order.getDeliveryAttempts() + 1));
             } else {
                 binding.tvDeliveryInfo.setVisibility(View.GONE);
             }
@@ -284,27 +248,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         }
 
         // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
-        String imagePath = item.getImageUrl();
-        if (imagePath != null && !imagePath.isEmpty()) {
-            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-            Object loadTarget;
-
-            if (cleanPath.startsWith("images/")) {
-                loadTarget = "file:///android_asset/" + cleanPath;
-            } else if (imagePath.startsWith("http")) {
-                loadTarget = imagePath;
-            } else {
-                loadTarget = "file:///android_asset/images/products/" + cleanPath;
-            }
-
-            Glide.with(context)
-                    .load(loadTarget)
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background)
-                    .into(pBinding.imgProduct);
-        } else {
-            pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
-        }
+        com.example.healthup.util.ImageLoadHelper.loadInto(pBinding.imgProduct, item.getImageUrl());
 
         pBinding.btnAskProduct.setVisibility(View.GONE);
 
@@ -323,19 +267,31 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     }
 
         private void setStatusUI(Order order) {
-            String status = order.getStatus();
+            String status = order.getStatus() != null ? order.getStatus() : "";
             String displayStatus = "";
             int color = 0xFF36873A;
 
+            // On Trả hàng tab only: show return-specific chips
+            if ("returned".equals(tabFilter) && order.hasActiveReturn()) {
+                if (order.isReturnRejected()) {
+                    displayStatus = "Không thành công";
+                    color = 0xFFE53835;
+                } else if (order.isReturnCompleted()) {
+                    displayStatus = "Hoàn thành";
+                    color = 0xFF36873A;
+                } else {
+                    displayStatus = "Đang xử lý";
+                    color = 0xFFFF8F00;
+                }
+                binding.tvStatus.setText(displayStatus);
+                binding.tvStatus.setTextColor(color);
+                return;
+            }
+
             switch (status.toLowerCase()) {
                 case "pending":
-                    if (order.isCancelRequested()) {
-                        displayStatus = "Chờ xác nhận hủy";
-                        color = 0xFFE53835;
-                    } else {
-                        displayStatus = "Chờ xác nhận";
-                        color = 0xFFFF8F00;
-                    }
+                    displayStatus = "Chờ xác nhận";
+                    color = 0xFFFF8F00;
                     break;
                 case "confirmed":
                     displayStatus = "Chờ lấy hàng"; color = 0xFFFF8F00; break;
@@ -349,7 +305,8 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
                 case "returned":
                 case "refunded":
-                    if ("refunded".equalsIgnoreCase(order.getPaymentStatus())) {
+                    if ("refunded".equalsIgnoreCase(order.getPaymentStatus())
+                            || order.isReturnCompleted()) {
                         displayStatus = "Đã hoàn tiền"; color = 0xFF36873A;
                     } else {
                         displayStatus = "Đang xử lý"; color = 0xFFFF8F00;
@@ -361,7 +318,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         }
 
         private void setButtonsUI(Order order) {
-            String status = order.getStatus().toLowerCase();
+            String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
             binding.btnActionLeft.setVisibility(View.GONE);
             binding.btnActionMiddle.setVisibility(View.GONE);
             binding.btnActionRight.setVisibility(View.GONE);
@@ -370,10 +327,8 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                 case "pending":
                     setupButton(binding.btnActionMiddle, "Liên hệ", "outline");
                     binding.btnActionMiddle.setOnClickListener(v -> showContactOptions(order));
-                    if (!order.isCancelRequested()) {
-                        setupButton(binding.btnActionRight, "Hủy", "outline_error");
-                        binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
-                    }
+                    setupButton(binding.btnActionRight, "Hủy", "outline_error");
+                    binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
                     break;
                 case "confirmed":
                     setupButton(binding.btnActionRight, "Liên hệ", "outline");
@@ -407,18 +362,25 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     }
                     break;
                 case "delivered":
-                    boolean canReturn = !order.isReturnExpired();
+                    boolean hasReturn = order.hasActiveReturn();
                     boolean isAlreadyReviewed = order.isReviewed();
                     boolean canStillReview = !order.isReviewExpired();
-                    
-                    if (canReturn) {
-                        // CHỈ KHI có 3 nút: Trả hàng + XEM ĐÁNH GIÁ + Mua lại -> Mới rút ngắn text
+
+                    if (hasReturn) {
+                        setupButton(binding.btnActionLeft, "Xem trả hàng", "outline");
+                        binding.btnActionLeft.setOnClickListener(v -> {
+                            android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
+                            intent.putExtra("order", order);
+                            intent.putExtra("extra_order_id", order.getId());
+                            context.startActivity(intent);
+                        });
+                    } else if (!order.isReturnExpired()) {
                         if (isAlreadyReviewed) {
                             setupButton(binding.btnActionLeft, "Trả/Hoàn", "outline");
                         } else {
                             setupButton(binding.btnActionLeft, "Trả hàng/Hoàn tiền", "outline");
                         }
-                        
+
                         binding.btnActionLeft.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ReturnRefundActivity.class);
                             intent.putExtra("orderId", order.getId());

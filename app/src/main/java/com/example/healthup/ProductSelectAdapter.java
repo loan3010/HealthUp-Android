@@ -59,27 +59,7 @@ public class ProductSelectAdapter extends RecyclerView.Adapter<ProductSelectAdap
             binding.tvOrderInfo.setText("Đã đặt: " + item.getQuantity() + " · " + df.format(item.getPrice()));
             
             // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
-            String imagePath = item.getImageUrl();
-            if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                Object loadTarget;
-
-                if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (imagePath.startsWith("http")) {
-                    loadTarget = imagePath;
-                } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                }
-
-                Glide.with(itemView.getContext())
-                        .load(loadTarget)
-                        .placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .into(binding.imgProduct);
-            } else {
-                binding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
-            }
+            com.example.healthup.util.ImageLoadHelper.loadInto(binding.imgProduct, item.getImageUrl());
 
             boolean isSelected = selectedItems.containsKey(item);
             binding.cbSelect.setChecked(isSelected);

@@ -27,6 +27,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
@@ -35,6 +36,9 @@ import java.util.Map;
 public class RegisterActivity extends AppCompatActivity {
 
     public static final String EXTRA_PHONE = "extra_phone";
+    public static final String EXTRA_PREFILL_EMAIL = "extra_prefill_email";
+    public static final String EXTRA_PREFILL_FULL_NAME = "extra_prefill_full_name";
+    public static final String EXTRA_EMAIL_EXISTS = "extra_email_exists";
 
     private static final int BORDER_ANIMATION_MS = 200;
 
@@ -84,10 +88,25 @@ public class RegisterActivity extends AppCompatActivity {
 
         bindViews();
         applyPrefillPhone();
+        applyPrefillFromExtras();
         setupSocialAuth();
         setupInputBehavior();
         setupActions();
         updateRegisterButtonState();
+    }
+
+    private void applyPrefillFromExtras() {
+        String prefillName = getIntent().getStringExtra(EXTRA_PREFILL_FULL_NAME);
+        if (!TextUtils.isEmpty(prefillName)) {
+            fields.get(FieldType.FULL_NAME).editText.setText(prefillName);
+        }
+        String prefillEmail = getIntent().getStringExtra(EXTRA_PREFILL_EMAIL);
+        if (!TextUtils.isEmpty(prefillEmail)) {
+            fields.get(FieldType.EMAIL).editText.setText(prefillEmail);
+        }
+        if (getIntent().getBooleanExtra(EXTRA_EMAIL_EXISTS, false)) {
+            showFieldError(fields.get(FieldType.EMAIL), getString(R.string.register_email_exists));
+        }
     }
 
     private void applyPrefillPhone() {
@@ -263,17 +282,53 @@ public class RegisterActivity extends AppCompatActivity {
                         return;
                     }
 
+                    checkEmailAvailableThenContinue(fullName, phone, email.trim(), password);
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    handleApiError(RegisterApiErrorHandler.mapException(e));
+                });
+    }
+
+    /**
+     * Block OTP if email is already used in Firestore or Firebase Auth.
+     * Auth check uses a create+delete probe because {@code fetchSignInMethodsForEmail}
+     * is empty under email-enumeration protection — that was why duplicates only failed after OTP.
+     */
+    private void checkEmailAvailableThenContinue(
+            String fullName,
+            String phone,
+            String email,
+            String password
+    ) {
+        // Always lowercase — matches how profiles store displayEmail/email.
+        final String normalizedEmail = RegisterValidator.normalizeEmail(email);
+        if (TextUtils.isEmpty(normalizedEmail)) {
+            launchOtpScreen(fullName, phone, email, password);
+            return;
+        }
+
+        firebaseFirestore.collection("users")
+                .whereEqualTo("displayEmail", normalizedEmail)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(byDisplay -> {
+                    if (!byDisplay.isEmpty()) {
+                        setLoading(false);
+                        handleApiError(RegisterApiErrorHandler.ErrorType.EMAIL_ALREADY_EXISTS);
+                        return;
+                    }
                     firebaseFirestore.collection("users")
-                            .whereEqualTo("email", email)
+                            .whereEqualTo("email", normalizedEmail)
                             .limit(1)
                             .get()
-                            .addOnSuccessListener(emailQuery -> {
-                                if (!emailQuery.isEmpty()) {
+                            .addOnSuccessListener(byEmail -> {
+                                if (!byEmail.isEmpty()) {
                                     setLoading(false);
                                     handleApiError(RegisterApiErrorHandler.ErrorType.EMAIL_ALREADY_EXISTS);
                                     return;
                                 }
-                                launchOtpScreen(fullName, phone, email, password);
+                                probeAuthEmailThenContinue(fullName, phone, normalizedEmail, password);
                             })
                             .addOnFailureListener(e -> {
                                 setLoading(false);
@@ -283,6 +338,53 @@ public class RegisterActivity extends AppCompatActivity {
                 .addOnFailureListener(e -> {
                     setLoading(false);
                     handleApiError(RegisterApiErrorHandler.mapException(e));
+                });
+    }
+
+    /**
+     * Reliably detect Auth email collision on the Register screen (before OTP).
+     * Creates then immediately deletes the Auth user if the email is free.
+     * Uses a random probe password so a failed cleanup cannot leave an account
+     * with the user's real password.
+     */
+    private void probeAuthEmailThenContinue(
+            String fullName,
+            String phone,
+            String email,
+            String password
+    ) {
+        String probePassword = java.util.UUID.randomUUID() + "Aa1!";
+        firebaseAuth.createUserWithEmailAndPassword(email, probePassword)
+                .addOnCompleteListener(task -> {
+                    if (!task.isSuccessful()) {
+                        setLoading(false);
+                        Exception exception = task.getException();
+                        if (exception instanceof com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+                            handleApiError(RegisterApiErrorHandler.ErrorType.EMAIL_ALREADY_EXISTS);
+                        } else {
+                            handleApiError(RegisterApiErrorHandler.mapException(exception));
+                        }
+                        return;
+                    }
+
+                    FirebaseUser created = firebaseAuth.getCurrentUser();
+                    if (created == null) {
+                        setLoading(false);
+                        handleApiError(RegisterApiErrorHandler.ErrorType.INVALID_REQUEST);
+                        return;
+                    }
+
+                    created.delete()
+                            .addOnCompleteListener(deleteTask -> {
+                                firebaseAuth.signOut();
+                                if (!deleteTask.isSuccessful()) {
+                                    // Email was free but cleanup failed — still block to avoid orphan confusion.
+                                    setLoading(false);
+                                    showSnackbar(getString(R.string.register_error_generic));
+                                    return;
+                                }
+                                launchOtpScreen(fullName, phone, email, password);
+                            });
                 });
     }
 
@@ -296,6 +398,8 @@ public class RegisterActivity extends AppCompatActivity {
         intent.putExtra(CheckoutIntentHelper.EXTRA_RETURN_TO_CHECKOUT,
                 CheckoutIntentHelper.shouldReturnToCheckout(getIntent()));
         startActivity(intent);
+        // Don't leave Register under OTP — after success user must not land back on the form.
+        finish();
     }
 
     private boolean validateField(FieldType type, boolean showError) {

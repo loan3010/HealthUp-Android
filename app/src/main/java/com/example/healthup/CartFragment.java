@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.adapters.CartAdapter;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
+import com.example.healthup.util.PhoneVerifiedHelper;
 import com.example.models.CartItem;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -479,12 +480,20 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     updateFooter();
 
                     if (userId != null && item.getId() != null) {
+                        java.util.Map<String, Object> updates = new java.util.HashMap<>();
+                        updates.put("weight", weight);
+                        updates.put("flavor", flavor);
+                        updates.put("packageType", packageType);
+                        updates.put("quantity", quantity);
+                        updates.put("price", price);
+                        updates.put("originalPrice", price);
+                        updates.put("updatedAt", com.google.firebase.Timestamp.now());
+                        if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
+                            updates.put("imageUrl", item.getImageUrl());
+                        }
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
-                                .update("weight", weight, "flavor", flavor,
-                                        "packageType", packageType, "quantity", quantity,
-                                        "price", price, "originalPrice", price,
-                                        "updatedAt", com.google.firebase.Timestamp.now());
+                                .update(updates);
                     } else if (userId == null) {
                         GuestCartManager.getInstance(requireContext()).updateItem(item);
                     }
@@ -572,24 +581,53 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-            CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
-            requireActivity().getSupportFragmentManager()
-                    .beginTransaction()
-                    .replace(R.id.fragment_container, new PhoneVerificationFragment())
-                    .addToBackStack(null)
-                    .commit();
+            openPhoneVerification(selectedItems);
             return;
         }
 
-        Bundle bundle = new Bundle();
-        bundle.putSerializable("selected_items", (Serializable) selectedItems);
+        PhoneVerifiedHelper.requireForCheckout(new PhoneVerifiedHelper.Callback() {
+            @Override
+            public void onVerified() {
+                if (!isAdded()) {
+                    return;
+                }
+                Bundle bundle = new Bundle();
+                bundle.putSerializable("selected_items", (Serializable) selectedItems);
 
-        CheckoutFragment fragment = new CheckoutFragment();
-        fragment.setArguments(bundle);
+                CheckoutFragment fragment = new CheckoutFragment();
+                fragment.setArguments(bundle);
 
+                requireActivity().getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.fragment_container, fragment)
+                        .addToBackStack(null)
+                        .commit();
+            }
+
+            @Override
+            public void onNeedPhoneVerification() {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.checkout_need_phone_verified, Toast.LENGTH_LONG).show();
+                openPhoneVerification(selectedItems);
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.register_error_generic, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void openPhoneVerification(List<CartItem> selectedItems) {
+        CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, fragment)
+                .replace(R.id.fragment_container, new PhoneVerificationFragment())
                 .addToBackStack(null)
                 .commit();
     }

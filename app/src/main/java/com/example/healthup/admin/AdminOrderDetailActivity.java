@@ -2,10 +2,12 @@ package com.example.healthup.admin;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -13,51 +15,44 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.R;
 import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.Address;
+import com.example.models.DeliveryFailure;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
-import com.google.android.material.card.MaterialCardView;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class AdminOrderDetailActivity extends AppCompatActivity {
 
     public static final String EXTRA_ORDER_ID = "order_id";
 
-    private static final List<String> STATUSES = Arrays.asList(
-            Order.STATUS_PENDING,
-            Order.STATUS_CONFIRMED,
-            Order.STATUS_SHIPPING,
-            Order.STATUS_DELIVERED,
-            Order.STATUS_CANCELLED,
-            "returned"
-    );
-
     private final AdminRepository repository = new AdminRepository();
     private String orderId;
     private Order currentOrder;
     private String customerLabel = "—";
-    private Spinner spinnerStatus;
     private LinearLayout layoutHistory;
     private LinearLayout layoutOrderItems;
+    private LinearLayout layoutOrderActions;
+    private LinearLayout layoutDeliveryFailures;
+    private LinearLayout layoutReturnInfo;
+    private LinearLayout layoutReturnImages;
+    private View scrollReturnImages;
     private TextView tvCustomer;
-    private MaterialCardView cardCancelRequest;
-    private TextView tvCancelRequestReason;
-    private TextView tvCancelRequestTime;
-    private MaterialButton btnApproveCancelRequest;
-    private MaterialButton btnRejectCancelRequest;
+    private TextView tvDeliveryAttemptsTitle;
+    private TextView tvReturnInfoTitle;
     private final NumberFormat priceFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
@@ -70,30 +65,16 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         MaterialToolbar toolbar = findViewById(R.id.toolbarOrderDetail);
         toolbar.setNavigationOnClickListener(v -> finish());
 
-        spinnerStatus = findViewById(R.id.spinnerOrderStatus);
         layoutHistory = findViewById(R.id.layoutOrderHistory);
         layoutOrderItems = findViewById(R.id.layoutOrderItems);
+        layoutOrderActions = findViewById(R.id.layoutOrderActions);
+        layoutDeliveryFailures = findViewById(R.id.layoutDeliveryFailures);
+        layoutReturnInfo = findViewById(R.id.layoutReturnInfo);
+        layoutReturnImages = findViewById(R.id.layoutReturnImages);
+        scrollReturnImages = findViewById(R.id.scrollReturnImages);
         tvCustomer = findViewById(R.id.tvOrderDetailCustomer);
-        cardCancelRequest = findViewById(R.id.cardCancelRequest);
-        tvCancelRequestReason = findViewById(R.id.tvCancelRequestReason);
-        tvCancelRequestTime = findViewById(R.id.tvCancelRequestTime);
-        btnApproveCancelRequest = findViewById(R.id.btnApproveCancelRequest);
-        btnRejectCancelRequest = findViewById(R.id.btnRejectCancelRequest);
-        MaterialButton btnSave = findViewById(R.id.btnUpdateOrderStatus);
-
-        btnApproveCancelRequest.setOnClickListener(v -> approveCancelRequest());
-        btnRejectCancelRequest.setOnClickListener(v -> rejectCancelRequest());
-
-        List<String> labels = Arrays.asList(
-                AdminUiHelper.statusLabel(Order.STATUS_PENDING),
-                AdminUiHelper.statusLabel(Order.STATUS_CONFIRMED),
-                AdminUiHelper.statusLabel(Order.STATUS_SHIPPING),
-                AdminUiHelper.statusLabel(Order.STATUS_DELIVERED),
-                AdminUiHelper.statusLabel(Order.STATUS_CANCELLED),
-                AdminUiHelper.statusLabel("returned")
-        );
-        spinnerStatus.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, labels));
-        btnSave.setOnClickListener(v -> updateStatus());
+        tvDeliveryAttemptsTitle = findViewById(R.id.tvDeliveryAttemptsTitle);
+        tvReturnInfoTitle = findViewById(R.id.tvReturnInfoTitle);
         tvCustomer.setOnClickListener(v -> openCustomerDetail());
 
         loadOrder();
@@ -143,6 +124,9 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         tvAddress.setText(formatAddress(currentOrder.getAddress()));
 
         bindOrderItems(currentOrder.getItems());
+        bindDeliveryFailures();
+        bindReturnInfo();
+        bindActions();
 
         customerLabel = "Đang tải…";
         tvCustomer.setText(customerLabel + "  ›");
@@ -154,58 +138,137 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
                 tvCustomer.setEnabled(!TextUtils.isEmpty(currentOrder.getUserId()));
             });
         });
-
-        int index = STATUSES.indexOf(currentOrder.getStatus());
-        if (index >= 0) spinnerStatus.setSelection(index);
-
-        bindCancelRequestSection();
     }
 
-    private void bindCancelRequestSection() {
-        if (cardCancelRequest == null || currentOrder == null) {
-            return;
-        }
-        boolean show = currentOrder.isCancelRequested()
-                && Order.STATUS_PENDING.equalsIgnoreCase(currentOrder.getStatus());
-        cardCancelRequest.setVisibility(show ? View.VISIBLE : View.GONE);
-        if (!show) {
-            return;
-        }
-        String reason = currentOrder.getCancelReason();
-        tvCancelRequestReason.setText(getString(R.string.admin_cancel_request_reason,
-                TextUtils.isEmpty(reason) ? "—" : reason));
-        if (currentOrder.getCancelRequestedAt() != null) {
-            tvCancelRequestTime.setText(getString(R.string.admin_cancel_request_time,
-                    dateFormat.format(currentOrder.getCancelRequestedAt())));
-        } else {
-            tvCancelRequestTime.setText("");
-        }
-    }
-
-    private void approveCancelRequest() {
+    private void bindActions() {
+        layoutOrderActions.removeAllViews();
         if (currentOrder == null) return;
-        repository.approveCancelRequest(orderId, currentOrder.getUserId(),
-                currentOrder.getTotalPrice(), new AdminRepository.SimpleCallback() {
-                    @Override
-                    public void onSuccess() {
-                        Toast.makeText(AdminOrderDetailActivity.this, R.string.admin_cancel_approved, Toast.LENGTH_SHORT).show();
-                        loadOrder();
-                        loadHistory();
-                    }
 
-                    @Override
-                    public void onError(String message) {
-                        Toast.makeText(AdminOrderDetailActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
-                });
+        String status = currentOrder.getStatus() != null ? currentOrder.getStatus() : "";
+        boolean returnRequested = Order.RETURN_REQUESTED.equals(currentOrder.getReturnStatus())
+                || Order.STATUS_RETURNED.equalsIgnoreCase(status);
+        boolean returnApproved = Order.RETURN_APPROVED.equals(currentOrder.getReturnStatus());
+
+        if (Order.STATUS_PENDING.equals(status)) {
+            addActionButton(getString(R.string.admin_action_confirm_order), true, v ->
+                    runAction(() -> repository.confirmOrder(currentOrder, refreshCallback())));
+        } else if (Order.STATUS_CONFIRMED.equals(status)) {
+            addActionButton(getString(R.string.admin_action_start_shipping), true, v ->
+                    runAction(() -> repository.startShipping(currentOrder, refreshCallback())));
+        } else if (Order.STATUS_SHIPPING.equals(status)) {
+            if (currentOrder.isNeedsRedelivery()) {
+                int next = currentOrder.getDeliveryAttempts() + 1;
+                addActionButton(getString(R.string.admin_action_redeliver, next), true, v ->
+                        runAction(() -> repository.scheduleRedelivery(currentOrder, refreshCallback())));
+            } else if (!currentOrder.isShopConfirmedDelivery()) {
+                addActionButton(getString(R.string.admin_action_delivery_success), true, v ->
+                        runAction(() -> repository.confirmShopDelivery(currentOrder, refreshCallback())));
+                addActionButton(getString(R.string.admin_action_delivery_failed), false, v ->
+                        showDeliveryFailureDialog());
+            } else {
+                TextView waiting = new TextView(this);
+                waiting.setText(R.string.admin_waiting_customer_confirm);
+                waiting.setTextColor(getColor(R.color.text_secondary));
+                layoutOrderActions.addView(waiting);
+            }
+        }
+
+        if (returnRequested) {
+            addActionButton(getString(R.string.admin_action_approve_return), true, v ->
+                    runAction(() -> repository.approveReturn(currentOrder, refreshCallback())));
+            addActionButton(getString(R.string.admin_action_reject_return), false, v ->
+                    showRejectReturnDialog());
+        } else if (returnApproved) {
+            String advanceLabel = com.example.healthup.util.ReturnProgressHelper.nextAdvanceLabel(currentOrder);
+            if (advanceLabel != null) {
+                addActionButton(advanceLabel, true, v ->
+                        runAction(() -> repository.advanceReturnProgress(currentOrder, refreshCallback())));
+            }
+            addActionButton(getString(R.string.admin_action_reject_return), false, v ->
+                    showRejectReturnDialog());
+        }
+
+        if (layoutOrderActions.getChildCount() == 0) {
+            TextView empty = new TextView(this);
+            empty.setText(R.string.admin_no_actions);
+            empty.setTextColor(getColor(R.color.text_secondary));
+            layoutOrderActions.addView(empty);
+        }
     }
 
-    private void rejectCancelRequest() {
-        if (currentOrder == null) return;
-        repository.rejectCancelRequest(orderId, new AdminRepository.SimpleCallback() {
+    private void addActionButton(String label, boolean primary, View.OnClickListener listener) {
+        MaterialButton btn = new MaterialButton(this);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        lp.topMargin = 8;
+        btn.setLayoutParams(lp);
+        btn.setText(label);
+        btn.setCornerRadius(24);
+        if (!primary) {
+            btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.white)));
+            btn.setTextColor(getColor(R.color.brand_primary));
+            btn.setStrokeColor(android.content.res.ColorStateList.valueOf(getColor(R.color.brand_primary)));
+            btn.setStrokeWidth(2);
+        }
+        btn.setOnClickListener(listener);
+        layoutOrderActions.addView(btn);
+    }
+
+    private void showDeliveryFailureDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_admin_delivery_failure, null);
+        Spinner spinner = dialogView.findViewById(R.id.spinnerFailureReason);
+        spinner.setAdapter(new ArrayAdapter<>(this,
+                android.R.layout.simple_spinner_dropdown_item,
+                Order.deliveryFailureReasons()));
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_delivery_failure_title)
+                .setView(dialogView)
+                .setPositiveButton(R.string.admin_confirm, (d, w) -> {
+                    String reason = (String) spinner.getSelectedItem();
+                    if (TextUtils.isEmpty(reason)) {
+                        Toast.makeText(this, R.string.admin_failure_reason_label, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    runAction(() -> repository.recordDeliveryFailure(currentOrder, reason, null, refreshCallback()));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void showRejectReturnDialog() {
+        EditText input = new EditText(this);
+        input.setHint(R.string.admin_reject_return_hint);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMinLines(2);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_action_reject_return)
+                .setView(input)
+                .setPositiveButton(R.string.admin_confirm, (d, w) -> {
+                    String reason = input.getText() != null ? input.getText().toString().trim() : "";
+                    if (reason.isEmpty()) {
+                        Toast.makeText(this, R.string.admin_reject_return_required, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    runAction(() -> repository.rejectReturn(currentOrder, reason, refreshCallback()));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void runAction(Runnable action) {
+        action.run();
+    }
+
+    private AdminRepository.SimpleCallback refreshCallback() {
+        return new AdminRepository.SimpleCallback() {
             @Override
             public void onSuccess() {
-                Toast.makeText(AdminOrderDetailActivity.this, R.string.admin_cancel_rejected, Toast.LENGTH_SHORT).show();
+                Toast.makeText(AdminOrderDetailActivity.this, R.string.admin_saved, Toast.LENGTH_SHORT).show();
                 loadOrder();
                 loadHistory();
             }
@@ -214,7 +277,131 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
             public void onError(String message) {
                 Toast.makeText(AdminOrderDetailActivity.this, message, Toast.LENGTH_SHORT).show();
             }
-        });
+        };
+    }
+
+    private void bindDeliveryFailures() {
+        layoutDeliveryFailures.removeAllViews();
+        List<DeliveryFailure> failures = currentOrder != null ? currentOrder.getDeliveryFailures() : null;
+        if (failures == null || failures.isEmpty()) {
+            tvDeliveryAttemptsTitle.setVisibility(View.GONE);
+            if (currentOrder != null && !TextUtils.isEmpty(currentOrder.getCancelReason())
+                    && Order.STATUS_CANCELLED.equalsIgnoreCase(currentOrder.getStatus())) {
+                tvDeliveryAttemptsTitle.setVisibility(View.VISIBLE);
+                tvDeliveryAttemptsTitle.setText(R.string.admin_cancel_info);
+                TextView tv = new TextView(this);
+                tv.setText(currentOrder.getCancelReason());
+                tv.setTextColor(getColor(R.color.text_secondary));
+                layoutDeliveryFailures.addView(tv);
+            }
+            return;
+        }
+        tvDeliveryAttemptsTitle.setVisibility(View.VISIBLE);
+        tvDeliveryAttemptsTitle.setText(getString(R.string.admin_delivery_attempts_count,
+                currentOrder.getDeliveryAttempts()));
+        for (DeliveryFailure failure : failures) {
+            TextView tv = new TextView(this);
+            String time = failure.getAt() != null ? dateFormat.format(failure.getAt()) : "";
+            StringBuilder sb = new StringBuilder();
+            sb.append("Lần ").append(failure.getAttempt()).append(": ").append(failure.getReason());
+            if (!TextUtils.isEmpty(failure.getNote())) {
+                sb.append(" — ").append(failure.getNote());
+            }
+            if (!TextUtils.isEmpty(time)) {
+                sb.append("\n").append(time);
+            }
+            if (!TextUtils.isEmpty(failure.getByEmail())) {
+                sb.append(" • ").append(failure.getByEmail());
+            }
+            tv.setText(sb.toString());
+            tv.setTextColor(getColor(R.color.text_secondary));
+            tv.setPadding(0, 0, 0, 16);
+            layoutDeliveryFailures.addView(tv);
+        }
+    }
+
+    private void bindReturnInfo() {
+        layoutReturnInfo.removeAllViews();
+        layoutReturnImages.removeAllViews();
+        scrollReturnImages.setVisibility(View.GONE);
+
+        if (currentOrder == null || !currentOrder.hasActiveReturn()) {
+            tvReturnInfoTitle.setVisibility(View.GONE);
+            return;
+        }
+        tvReturnInfoTitle.setVisibility(View.VISIBLE);
+
+        addInfoLine("Trạng thái trả: " + returnStatusLabel(currentOrder.getReturnStatus()));
+        if (Order.RETURN_APPROVED.equals(currentOrder.getReturnStatus())
+                || Order.RETURN_COMPLETED.equals(currentOrder.getReturnStatus())) {
+            int max = com.example.healthup.util.ReturnProgressHelper.maxStep(currentOrder);
+            int step = Math.max(currentOrder.getReturnStep(), 0);
+            addInfoLine("Tiến trình: bước " + step + "/" + max
+                    + " — " + com.example.healthup.util.ReturnProgressHelper.stepTitle(
+                    currentOrder.getReturnHandling(), Math.max(step, 1)));
+        }
+        if (!TextUtils.isEmpty(currentOrder.getReturnReason())) {
+            addInfoLine("Lý do: " + currentOrder.getReturnReason());
+        }
+        if (!TextUtils.isEmpty(currentOrder.getReturnDescription())) {
+            addInfoLine("Mô tả: " + currentOrder.getReturnDescription());
+        }
+        if (!TextUtils.isEmpty(currentOrder.getReturnHandling())) {
+            addInfoLine("Hình thức: " + currentOrder.getReturnHandling());
+        }
+        if (!TextUtils.isEmpty(currentOrder.getReturnRejectReason())) {
+            addInfoLine("Lý do từ chối: " + currentOrder.getReturnRejectReason());
+        }
+        if (currentOrder.getReturnRequestedAt() != null) {
+            addInfoLine("Gửi lúc: " + dateFormat.format(currentOrder.getReturnRequestedAt()));
+        }
+        List<Map<String, Object>> returnItems = currentOrder.getReturnItems();
+        if (returnItems != null && !returnItems.isEmpty()) {
+            StringBuilder items = new StringBuilder("Sản phẩm trả: ");
+            for (int i = 0; i < returnItems.size(); i++) {
+                Map<String, Object> item = returnItems.get(i);
+                if (i > 0) items.append(", ");
+                Object name = item.get("name");
+                Object qty = item.get("quantity");
+                items.append(name != null ? name : "?");
+                if (qty != null) items.append(" x").append(qty);
+            }
+            addInfoLine(items.toString());
+        }
+
+        List<String> media = currentOrder.getReturnMediaUris();
+        if (media != null && !media.isEmpty()) {
+            scrollReturnImages.setVisibility(View.VISIBLE);
+            for (String uri : media) {
+                ImageView img = new ImageView(this);
+                int size = (int) (96 * getResources().getDisplayMetrics().density);
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(size, size);
+                lp.setMarginEnd((int) (8 * getResources().getDisplayMetrics().density));
+                img.setLayoutParams(lp);
+                img.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                ImageLoadHelper.loadInto(img, uri);
+                layoutReturnImages.addView(img);
+            }
+        }
+    }
+
+    private void addInfoLine(String text) {
+        TextView tv = new TextView(this);
+        tv.setText(text);
+        tv.setTextColor(getColor(R.color.text_secondary));
+        tv.setPadding(0, 0, 0, 8);
+        layoutReturnInfo.addView(tv);
+    }
+
+    private String returnStatusLabel(String status) {
+        if (status == null) return "—";
+        switch (status) {
+            case Order.RETURN_REQUESTED: return "Chờ duyệt";
+            case Order.RETURN_APPROVED: return "Đang xử lý";
+            case Order.RETURN_REJECTED: return "Không thành công";
+            case Order.RETURN_COMPLETED: return "Hoàn thành";
+            default: return status;
+        }
     }
 
     private void bindOrderItems(@Nullable List<OrderItem> items) {
@@ -258,28 +445,6 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
-    private void updateStatus() {
-        if (currentOrder == null) return;
-        String newStatus = STATUSES.get(spinnerStatus.getSelectedItemPosition());
-        if (newStatus.equals(currentOrder.getStatus())) {
-            Toast.makeText(this, "Trạng thái không thay đổi", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        repository.updateOrderStatus(orderId, currentOrder.getStatus(), newStatus, new AdminRepository.SimpleCallback() {
-            @Override
-            public void onSuccess() {
-                Toast.makeText(AdminOrderDetailActivity.this, R.string.admin_saved, Toast.LENGTH_SHORT).show();
-                loadOrder();
-                loadHistory();
-            }
-
-            @Override
-            public void onError(String message) {
-                Toast.makeText(AdminOrderDetailActivity.this, message, Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
     private void loadHistory() {
         if (orderId == null || orderId.isEmpty()) {
             return;
@@ -295,15 +460,42 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
                     layoutHistory.addView(empty);
                     return;
                 }
-                for (AdminRepository.OrderHistoryEntry entry : entries) {
-                    TextView tv = new TextView(AdminOrderDetailActivity.this);
+                LayoutInflater inflater = LayoutInflater.from(AdminOrderDetailActivity.this);
+                for (int i = 0; i < entries.size(); i++) {
+                    AdminRepository.OrderHistoryEntry entry = entries.get(i);
+                    View row = inflater.inflate(R.layout.item_order_history_timeline, layoutHistory, false);
+                    View topLine = row.findViewById(R.id.viewTimelineTopLine);
+                    View bottomLine = row.findViewById(R.id.viewTimelineBottomLine);
+                    TextView tvEvent = row.findViewById(R.id.tvHistoryEvent);
+                    TextView tvActor = row.findViewById(R.id.tvHistoryActor);
+                    TextView tvTime = row.findViewById(R.id.tvHistoryTime);
+                    TextView tvNote = row.findViewById(R.id.tvHistoryNote);
+
+                    topLine.setVisibility(i == 0 ? View.INVISIBLE : View.VISIBLE);
+                    bottomLine.setVisibility(i == entries.size() - 1 ? View.INVISIBLE : View.VISIBLE);
+
+                    String eventLabel = AdminUiHelper.historyEventLabel(entry);
+                    tvEvent.setText(eventLabel);
+
+                    String actor = AdminUiHelper.historyActorLabel(entry);
+                    if (TextUtils.isEmpty(actor)) {
+                        tvActor.setVisibility(View.GONE);
+                    } else {
+                        tvActor.setVisibility(View.VISIBLE);
+                        tvActor.setText(actor);
+                    }
+
                     String time = entry.createdAt != null ? dateFormat.format(entry.createdAt.toDate()) : "";
-                    tv.setText(time + " • "
-                            + AdminUiHelper.statusLabel(entry.fromStatus) + " → "
-                            + AdminUiHelper.statusLabel(entry.toStatus)
-                            + (entry.adminEmail != null ? (" • " + entry.adminEmail) : ""));
-                    tv.setPadding(0, 0, 0, 16);
-                    layoutHistory.addView(tv);
+                    tvTime.setText(time);
+
+                    String note = AdminUiHelper.historyNoteLabel(entry);
+                    if (TextUtils.isEmpty(note) || note.equals(eventLabel)) {
+                        tvNote.setVisibility(View.GONE);
+                    } else {
+                        tvNote.setVisibility(View.VISIBLE);
+                        tvNote.setText(note);
+                    }
+                    layoutHistory.addView(row);
                 }
             }
 
@@ -347,6 +539,7 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(status)) return "Chưa rõ";
         if ("paid".equalsIgnoreCase(status)) return "Đã thanh toán";
         if ("pending".equalsIgnoreCase(status)) return "Chờ thanh toán";
+        if ("refunded".equalsIgnoreCase(status)) return "Đã hoàn tiền";
         return status;
     }
 }

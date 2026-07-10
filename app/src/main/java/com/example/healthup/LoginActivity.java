@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
@@ -22,6 +23,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.healthup.admin.AdminLoginActivity;
 import com.example.healthup.auth.SocialAuthHelper;
+import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.util.AccountDisabledWatcher;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
@@ -263,7 +265,7 @@ public class LoginActivity extends AppCompatActivity {
         String password = getInputValue(passwordEditText);
 
         if (LoginValidator.isEmailIdentifier(identifier)) {
-            signInWithEmail(identifier, password, null);
+            signInWithEmailLookup(identifier, password);
             return;
         }
 
@@ -472,6 +474,54 @@ public class LoginActivity extends AppCompatActivity {
                 });
     }
 
+    private void signInWithEmailLookup(String email, String password) {
+        setLoading(true);
+        final String normalizedEmail = RegisterValidator.normalizeEmail(email);
+        if (TextUtils.isEmpty(normalizedEmail)
+                || UserProfileBuilder.isSyntheticAuthEmail(normalizedEmail)) {
+            setLoading(false);
+            showIdentifierError(getString(R.string.login_email_invalid_error));
+            return;
+        }
+
+        firebaseFirestore.collection("users")
+                .whereEqualTo("displayEmail", normalizedEmail)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(byDisplay -> {
+                    if (!byDisplay.isEmpty()) {
+                        DocumentSnapshot doc = byDisplay.getDocuments().get(0);
+                        String authEmail = doc.getString("email");
+                        if (TextUtils.isEmpty(authEmail)) {
+                            authEmail = normalizedEmail;
+                        }
+                        signInWithEmail(authEmail, password, doc);
+                        return;
+                    }
+                    firebaseFirestore.collection("users")
+                            .whereEqualTo("email", normalizedEmail)
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener(byEmail -> {
+                                if (!byEmail.isEmpty()) {
+                                    DocumentSnapshot doc = byEmail.getDocuments().get(0);
+                                    signInWithEmail(normalizedEmail, password, doc);
+                                    return;
+                                }
+                                // No Firestore hit — still try Auth (may be legacy).
+                                signInWithEmail(normalizedEmail, password, null);
+                            })
+                            .addOnFailureListener(e -> {
+                                setLoading(false);
+                                showPasswordError(getString(R.string.login_failed_generic));
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    showPasswordError(getString(R.string.login_failed_generic));
+                });
+    }
+
     private void handlePhoneLoginResult(com.google.firebase.firestore.QuerySnapshot queryDocumentSnapshots, String password) {
         if (queryDocumentSnapshots.isEmpty()) {
             setLoading(false);
@@ -479,14 +529,19 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        String email = queryDocumentSnapshots.getDocuments().get(0).getString("email");
+        DocumentSnapshot profileDoc = queryDocumentSnapshots.getDocuments().get(0);
+        String email = profileDoc.getString("email");
+        String displayEmail = profileDoc.getString("displayEmail");
+        // Prefer real displayEmail — Auth email may already be updated after verifyBeforeUpdateEmail.
+        if (UserProfileBuilder.isRealEmail(displayEmail)) {
+            email = displayEmail;
+        }
         if (email == null || email.trim().isEmpty()) {
             setLoading(false);
             showPasswordError(getString(R.string.login_credentials_wrong));
             return;
         }
 
-        DocumentSnapshot profileDoc = queryDocumentSnapshots.getDocuments().get(0);
         signInWithEmail(email, password, profileDoc);
     }
 
@@ -494,31 +549,64 @@ public class LoginActivity extends AppCompatActivity {
         setLoading(true);
         firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
-                    setLoading(false);
-                    updateLoginButtonState();
-
-                    if (task.isSuccessful()) {
-                        FirebaseUser user = firebaseAuth.getCurrentUser();
-                        if (user != null) {
-                            if (profileDoc != null) {
-                                UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
-                            } else {
-                                ensureProfileFromAuthEmail(user);
-                            }
+                    if (!task.isSuccessful()) {
+                        setLoading(false);
+                        updateLoginButtonState();
+                        Exception exception = task.getException();
+                        if (exception instanceof FirebaseAuthInvalidCredentialsException
+                                || exception instanceof FirebaseAuthInvalidUserException) {
+                            showPasswordError(getString(R.string.login_credentials_wrong));
+                        } else {
+                            showPasswordError(getString(R.string.login_failed_generic));
                         }
-                        Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
-                        openMainScreen();
                         return;
                     }
 
-                    Exception exception = task.getException();
-                    if (exception instanceof FirebaseAuthInvalidCredentialsException
-                            || exception instanceof FirebaseAuthInvalidUserException) {
-                        showPasswordError(getString(R.string.login_credentials_wrong));
-                    } else {
+                    FirebaseUser user = firebaseAuth.getCurrentUser();
+                    if (user == null) {
+                        setLoading(false);
                         showPasswordError(getString(R.string.login_failed_generic));
+                        return;
                     }
+
+                    // Email login requires Firebase Auth emailVerified (source of truth).
+                    // Phone login skips this. Sync Firestore flag after a successful Auth verify.
+                    boolean isEmailIdentifier = LoginValidator.isEmailIdentifier(
+                            getInputValue(identifierEditText));
+                    if (isEmailIdentifier && !UserProfileBuilder.isSyntheticAuthEmail(user.getEmail())) {
+                        if (!user.isEmailVerified()) {
+                            firebaseAuth.signOut();
+                            setLoading(false);
+                            updateLoginButtonState();
+                            showIdentifierError(getString(R.string.login_email_not_verified));
+                            return;
+                        }
+                    }
+
+                    setLoading(false);
+                    updateLoginButtonState();
+                    if (profileDoc != null) {
+                        UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
+                        syncEmailVerifiedFlag(user, profileDoc.getId());
+                    } else {
+                        ensureProfileFromAuthEmail(user);
+                        syncEmailVerifiedFlag(user, user.getUid());
+                    }
+                    Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
+                    openMainScreen();
                 });
+    }
+
+    private void syncEmailVerifiedFlag(@NonNull FirebaseUser user, @NonNull String profileDocId) {
+        if (!user.isEmailVerified()) {
+            return;
+        }
+        if (!UserProfileBuilder.isRealEmail(user.getEmail())) {
+            firebaseFirestore.collection("users").document(profileDocId)
+                    .update("emailVerified", true);
+            return;
+        }
+        com.example.healthup.auth.EmailProfileSync.writeTask(profileDocId, user.getEmail());
     }
 
     private void ensureProfileFromAuthEmail(@NonNull FirebaseUser user) {

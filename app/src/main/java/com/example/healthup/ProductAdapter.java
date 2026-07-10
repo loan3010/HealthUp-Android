@@ -248,25 +248,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             String imagePath = product.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                Object loadTarget;
-
-
-                if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (imagePath.startsWith("http")) {
-                    loadTarget = imagePath;
-                } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                }
-
-
-
-
-                Glide.with(itemView.getContext())
-                        .load(loadTarget)
-                        .placeholder(R.color.neutral_light_grey)
-                        .into(ivProduct);
+                com.example.healthup.util.ImageLoadHelper.loadInto(ivProduct, imagePath);
             } else {
                 ivProduct.setImageResource(R.color.neutral_light_grey);
             }

@@ -17,12 +17,13 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.healthup.R;
 import com.example.models.Order;
 import com.google.android.material.card.MaterialCardView;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -39,25 +40,42 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
             AdminOrderListHelper.SORT_OLDEST
     );
 
+    private static final List<String> FILTERS = Arrays.asList(
+            AdminOrderSearchHelper.FILTER_ALL,
+            Order.STATUS_PENDING,
+            AdminOrderSearchHelper.FILTER_OVERDUE,
+            Order.STATUS_CONFIRMED,
+            Order.STATUS_SHIPPING,
+            Order.STATUS_DELIVERED,
+            AdminOrderSearchHelper.FILTER_RETURNED,
+            Order.STATUS_CANCELLED
+    );
+
     private final AdminRepository repository = new AdminRepository();
     private final List<Order> allOrders = new ArrayList<>();
-    private final List<Order> filteredOrders = new ArrayList<>();
     private final Map<String, AdminRepository.AdminCustomer> customerLookup = new HashMap<>();
 
-    private AdminOrderAdapter adapter;
-    private TextView tvEmpty;
     private TextView tvResultSummary;
     private TextView tvOrderAlert;
     private MaterialCardView cardOrderAlert;
     private TextInputEditText etSearch;
     private Spinner spinnerSort;
-    private ChipGroup chipGroup;
-    private Chip chipAll, chipPending, chipCancelRequested, chipOverdue, chipConfirmed;
-    private Chip chipShipping, chipDelivered, chipReturned, chipCancelled;
+    private ViewPager2 viewPager;
+    private TabLayout tabFilters;
+    private TabLayoutMediator tabMediator;
+    private OrderPagerAdapter pagerAdapter;
 
     private String currentFilter = AdminOrderSearchHelper.FILTER_ALL;
     private String currentSort = AdminOrderListHelper.SORT_NEWEST;
-    private boolean suppressChipCallback;
+
+    private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
+        @Override
+        public void onPageSelected(int position) {
+            currentFilter = FILTERS.get(position);
+            updateTabLabels(currentQuery());
+            updateSummaryAndAlert(currentQuery());
+        }
+    };
 
     @Nullable
     @Override
@@ -67,28 +85,13 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        tvEmpty = view.findViewById(R.id.tvEmptyOrders);
         tvResultSummary = view.findViewById(R.id.tvOrderResultSummary);
         tvOrderAlert = view.findViewById(R.id.tvOrderAlert);
         cardOrderAlert = view.findViewById(R.id.cardOrderAlert);
         etSearch = view.findViewById(R.id.etSearchOrders);
         spinnerSort = view.findViewById(R.id.spinnerOrderSort);
-        RecyclerView recyclerView = view.findViewById(R.id.rvAdminOrders);
-        chipGroup = view.findViewById(R.id.chipGroupOrderStatus);
-
-        chipAll = view.findViewById(R.id.chipAllOrders);
-        chipPending = view.findViewById(R.id.chipPendingOrders);
-        chipCancelRequested = view.findViewById(R.id.chipCancelRequestedOrders);
-        chipOverdue = view.findViewById(R.id.chipOverdueOrders);
-        chipConfirmed = view.findViewById(R.id.chipConfirmedOrders);
-        chipShipping = view.findViewById(R.id.chipShippingOrders);
-        chipDelivered = view.findViewById(R.id.chipDeliveredOrders);
-        chipReturned = view.findViewById(R.id.chipReturnedOrders);
-        chipCancelled = view.findViewById(R.id.chipCancelledOrders);
-
-        adapter = new AdminOrderAdapter(filteredOrders, this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        recyclerView.setAdapter(adapter);
+        viewPager = view.findViewById(R.id.vpAdminOrders);
+        tabFilters = view.findViewById(R.id.tabOrderFilters);
 
         List<String> sortLabels = Arrays.asList(
                 getString(R.string.admin_sort_order_newest),
@@ -101,7 +104,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
             public void onItemSelected(android.widget.AdapterView<?> parent, View v, int position, long id) {
                 if (position >= 0 && position < SORT_KEYS.size()) {
                     currentSort = SORT_KEYS.get(position);
-                    applyFilter();
+                    refreshPagesAndSummary();
                 }
             }
 
@@ -110,79 +113,48 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
             }
         });
 
-        chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == View.NO_ID || suppressChipCallback) return;
-            if (checkedId == R.id.chipPendingOrders) {
-                currentFilter = Order.STATUS_PENDING;
-            } else if (checkedId == R.id.chipCancelRequestedOrders) {
-                currentFilter = AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED;
-            } else if (checkedId == R.id.chipOverdueOrders) {
-                currentFilter = AdminOrderSearchHelper.FILTER_OVERDUE;
-            } else if (checkedId == R.id.chipConfirmedOrders) {
-                currentFilter = Order.STATUS_CONFIRMED;
-            } else if (checkedId == R.id.chipShippingOrders) {
-                currentFilter = Order.STATUS_SHIPPING;
-            } else if (checkedId == R.id.chipDeliveredOrders) {
-                currentFilter = Order.STATUS_DELIVERED;
-            } else if (checkedId == R.id.chipReturnedOrders) {
-                currentFilter = AdminOrderSearchHelper.FILTER_RETURNED;
-            } else if (checkedId == R.id.chipCancelledOrders) {
-                currentFilter = Order.STATUS_CANCELLED;
-            } else {
-                currentFilter = AdminOrderSearchHelper.FILTER_ALL;
-            }
-            applyFilter();
-        });
+        pagerAdapter = new OrderPagerAdapter();
+        viewPager.setAdapter(pagerAdapter);
+        viewPager.setOffscreenPageLimit(FILTERS.size());
+        viewPager.registerOnPageChangeCallback(pageChangeCallback);
+
+        tabMediator = new TabLayoutMediator(tabFilters, viewPager, (tab, position) ->
+                tab.setText(baseLabelForFilter(FILTERS.get(position))));
+        tabMediator.attach();
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { applyFilter(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                refreshPagesAndSummary();
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
 
-        syncChipToCurrentFilter();
+        viewPager.setCurrentItem(indexForFilter(currentFilter), false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (viewPager != null) {
+            viewPager.unregisterOnPageChangeCallback(pageChangeCallback);
+        }
+        if (tabMediator != null) {
+            tabMediator.detach();
+            tabMediator = null;
+        }
+        super.onDestroyView();
     }
 
     public void applyStatusFilter(@Nullable String statusFilter) {
         currentFilter = statusFilter != null ? statusFilter : AdminOrderSearchHelper.FILTER_ALL;
-        if (!isAdded() || getView() == null || chipGroup == null) return;
-        syncChipToCurrentFilter();
-        applyFilter();
+        if (!isAdded() || getView() == null || viewPager == null) return;
+        viewPager.setCurrentItem(indexForFilter(currentFilter), false);
+        refreshPagesAndSummary();
     }
 
-    private void syncChipToCurrentFilter() {
-        if (chipGroup == null) return;
-        suppressChipCallback = true;
-        chipGroup.check(resolveChipIdForFilter(currentFilter));
-        suppressChipCallback = false;
-    }
-
-    private int resolveChipIdForFilter(@NonNull String filter) {
-        if (Order.STATUS_PENDING.equals(filter)) {
-            return R.id.chipPendingOrders;
-        }
-        if (AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED.equals(filter)) {
-            return R.id.chipCancelRequestedOrders;
-        }
-        if (AdminOrderSearchHelper.FILTER_OVERDUE.equals(filter)) {
-            return R.id.chipOverdueOrders;
-        }
-        if (Order.STATUS_CONFIRMED.equals(filter)) {
-            return R.id.chipConfirmedOrders;
-        }
-        if (Order.STATUS_SHIPPING.equals(filter)) {
-            return R.id.chipShippingOrders;
-        }
-        if (Order.STATUS_DELIVERED.equals(filter)) {
-            return R.id.chipDeliveredOrders;
-        }
-        if (AdminOrderSearchHelper.FILTER_RETURNED.equals(filter)) {
-            return R.id.chipReturnedOrders;
-        }
-        if (Order.STATUS_CANCELLED.equals(filter)) {
-            return R.id.chipCancelledOrders;
-        }
-        return R.id.chipAllOrders;
+    private int indexForFilter(@NonNull String filter) {
+        int index = FILTERS.indexOf(filter);
+        return Math.max(0, index);
     }
 
     @Override
@@ -216,7 +188,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
                 if (!isAdded()) return;
                 allOrders.clear();
                 allOrders.addAll(orders);
-                applyFilter();
+                refreshPagesAndSummary();
             }
 
             @Override
@@ -227,72 +199,51 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         });
     }
 
-    private void applyFilter() {
-        if (!isAdded() || getView() == null || adapter == null || tvEmpty == null) return;
-
-        String query = etSearch != null && etSearch.getText() != null ? etSearch.getText().toString() : "";
-        filteredOrders.clear();
-        for (Order order : allOrders) {
-            if (AdminOrderSearchHelper.matches(order, query, currentFilter, customerLookup)) {
-                filteredOrders.add(order);
-            }
+    private void refreshPagesAndSummary() {
+        if (pagerAdapter != null) {
+            pagerAdapter.notifyDataSetChanged();
         }
-        AdminOrderListHelper.sort(filteredOrders, currentSort);
-        adapter.setOverdueThresholdMs(AdminOrderListHelper.hoursToMillis(OVERDUE_HOURS));
-        adapter.notifyDataSetChanged();
-
-        updateChipCounts(query);
-        updateSummaryAndAlert(query);
-
-        tvEmpty.setVisibility(filteredOrders.isEmpty() ? View.VISIBLE : View.GONE);
+        updateTabLabels(currentQuery());
+        updateSummaryAndAlert(currentQuery());
     }
 
-    private void updateChipCounts(String query) {
+    private String currentQuery() {
+        return etSearch != null && etSearch.getText() != null ? etSearch.getText().toString() : "";
+    }
+
+    private List<Order> buildPageOrders(@NonNull String filter) {
+        String query = currentQuery();
+        List<Order> result = new ArrayList<>();
+        for (Order order : allOrders) {
+            if (AdminOrderSearchHelper.matches(order, query, filter, customerLookup)) {
+                result.add(order);
+            }
+        }
+        AdminOrderListHelper.sort(result, currentSort);
+        return result;
+    }
+
+    private void updateTabLabels(String query) {
+        if (tabFilters == null) return;
         Map<String, Integer> counts = AdminOrderListHelper.buildFilterCounts(allOrders, query, customerLookup);
-        if (chipAll != null) {
-            chipAll.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_filter_all), counts.getOrDefault(AdminOrderSearchHelper.FILTER_ALL, 0)));
+        for (int i = 0; i < FILTERS.size(); i++) {
+            TabLayout.Tab tab = tabFilters.getTabAt(i);
+            if (tab == null) continue;
+            String filter = FILTERS.get(i);
+            tab.setText(AdminOrderListHelper.formatChipLabel(
+                    baseLabelForFilter(filter), counts.getOrDefault(filter, 0)));
         }
-        if (chipPending != null) {
-            chipPending.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_pending), counts.getOrDefault(Order.STATUS_PENDING, 0)));
-        }
-        if (chipCancelRequested != null) {
-            chipCancelRequested.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_cancel_requested),
-                    counts.getOrDefault(AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED, 0)));
-        }
-        if (chipOverdue != null) {
-            chipOverdue.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_filter_overdue),
-                    counts.getOrDefault(AdminOrderSearchHelper.FILTER_OVERDUE, 0)));
-        }
-        if (chipConfirmed != null) {
-            chipConfirmed.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_confirmed), counts.getOrDefault(Order.STATUS_CONFIRMED, 0)));
-        }
-        if (chipShipping != null) {
-            chipShipping.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_shipping), counts.getOrDefault(Order.STATUS_SHIPPING, 0)));
-        }
-        if (chipDelivered != null) {
-            chipDelivered.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_delivered), counts.getOrDefault(Order.STATUS_DELIVERED, 0)));
-        }
-        if (chipReturned != null) {
-            chipReturned.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_returned), counts.getOrDefault(AdminOrderSearchHelper.FILTER_RETURNED, 0)));
-        }
-        if (chipCancelled != null) {
-            chipCancelled.setText(AdminOrderListHelper.formatChipLabel(
-                    getString(R.string.admin_status_cancelled), counts.getOrDefault(Order.STATUS_CANCELLED, 0)));
-        }
+    }
+
+    private String baseLabelForFilter(String filter) {
+        return filterLabelFor(filter);
     }
 
     private void updateSummaryAndAlert(String query) {
         if (tvResultSummary == null || cardOrderAlert == null || tvOrderAlert == null) return;
 
-        int showing = filteredOrders.size();
+        List<Order> filtered = buildPageOrders(currentFilter);
+        int showing = filtered.size();
         int totalInFilter = AdminOrderListHelper.countForFilter(allOrders, currentFilter, query, customerLookup);
         String filterLabel = filterLabelFor(currentFilter);
         tvResultSummary.setText(getString(R.string.admin_orders_result_summary, showing, totalInFilter, filterLabel));
@@ -315,7 +266,6 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
 
     private String filterLabelFor(String filter) {
         if (Order.STATUS_PENDING.equals(filter)) return getString(R.string.admin_status_pending);
-        if (AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED.equals(filter)) return getString(R.string.admin_status_cancel_requested);
         if (AdminOrderSearchHelper.FILTER_OVERDUE.equals(filter)) return getString(R.string.admin_filter_overdue);
         if (Order.STATUS_CONFIRMED.equals(filter)) return getString(R.string.admin_status_confirmed);
         if (Order.STATUS_SHIPPING.equals(filter)) return getString(R.string.admin_status_shipping);
@@ -330,5 +280,52 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         Intent intent = new Intent(requireContext(), AdminOrderDetailActivity.class);
         intent.putExtra(AdminOrderDetailActivity.EXTRA_ORDER_ID, order.getId());
         startActivity(intent);
+    }
+
+    private class OrderPagerAdapter extends RecyclerView.Adapter<OrderPagerAdapter.PageHolder> {
+
+        @NonNull
+        @Override
+        public PageHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View page = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_admin_filter_page, parent, false);
+            return new PageHolder(page);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PageHolder holder, int position) {
+            String filter = FILTERS.get(position);
+            holder.bind(buildPageOrders(filter), getString(R.string.admin_empty_orders));
+        }
+
+        @Override
+        public int getItemCount() {
+            return FILTERS.size();
+        }
+
+        class PageHolder extends RecyclerView.ViewHolder {
+            private final List<Order> pageItems = new ArrayList<>();
+            private final AdminOrderAdapter adapter;
+            private final TextView tvEmpty;
+
+            PageHolder(@NonNull View itemView) {
+                super(itemView);
+                RecyclerView rv = itemView.findViewById(R.id.rvFilterPage);
+                tvEmpty = itemView.findViewById(R.id.tvFilterPageEmpty);
+                adapter = new AdminOrderAdapter(pageItems, AdminOrdersFragment.this);
+                adapter.setOverdueThresholdMs(AdminOrderListHelper.hoursToMillis(OVERDUE_HOURS));
+                rv.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+                rv.setAdapter(adapter);
+            }
+
+            void bind(@NonNull List<Order> orders, @NonNull String emptyText) {
+                pageItems.clear();
+                pageItems.addAll(orders);
+                adapter.setOverdueThresholdMs(AdminOrderListHelper.hoursToMillis(OVERDUE_HOURS));
+                adapter.notifyDataSetChanged();
+                tvEmpty.setText(emptyText);
+                tvEmpty.setVisibility(pageItems.isEmpty() ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 }

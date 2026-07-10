@@ -7,15 +7,21 @@ import android.widget.ImageView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import com.bumptech.glide.Glide;
-import com.example.healthup.R;
+import com.example.healthup.util.ImageLoadHelper;
 import java.util.List;
 
 public class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.ImageViewHolder> {
 
     private List<String> imageUrls;
+    private final boolean centerCrop;
 
     public ImageSliderAdapter(List<String> imageUrls) {
+        this(imageUrls, false);
+    }
+
+    public ImageSliderAdapter(List<String> imageUrls, boolean centerCrop) {
         this.imageUrls = imageUrls;
+        this.centerCrop = centerCrop;
     }
 
     @NonNull
@@ -28,30 +34,16 @@ public class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.
     @Override
     public void onBindViewHolder(@NonNull ImageViewHolder holder, int position) {
         String imageUrl = imageUrls.get(position);
-        Object loadTarget = R.drawable.ic_loading; // Sử dụng icon loading làm placeholder
-
-        if (imageUrl != null && !imageUrl.isEmpty()) {
-            if (imageUrl.startsWith("http") || imageUrl.startsWith("file://") || imageUrl.startsWith("content://")) {
-                loadTarget = imageUrl;
-            } else {
-                String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
-                // Ưu tiên tìm trong images/products/ hoặc images/ hoặc trực tiếp
-                if (cleanPath.startsWith("images/products/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                }
-            }
+        com.bumptech.glide.RequestBuilder<android.graphics.drawable.Drawable> request =
+                Glide.with(holder.itemView.getContext())
+                        .load(ImageLoadHelper.resolveLoadTarget(imageUrl))
+                        .placeholder(R.drawable.ic_loading)
+                        .error(R.drawable.ic_launcher_background);
+        if (centerCrop) {
+            request.centerCrop().into(holder.imageView);
+        } else {
+            request.centerInside().into(holder.imageView);
         }
-
-        Glide.with(holder.itemView.getContext())
-                .load(loadTarget)
-                .placeholder(R.drawable.ic_loading)
-                .error(R.drawable.ic_launcher_background)
-                .centerInside() // Đảm bảo ảnh không bị cắt mất chi tiết quan trọng
-                .into(holder.imageView);
     }
 
     @Override

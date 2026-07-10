@@ -59,15 +59,8 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
         binding.tvStock.setText("Kho: " + (product.getStock() > 0 ? product.getStock() : "Còn hàng"));
         
         if (product.getImages() != null && !product.getImages().isEmpty()) {
-            String imagePath = product.getImages().get(0);
-            String fullPath;
-            if (imagePath.startsWith("http")) {
-                fullPath = imagePath;
-            } else {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                fullPath = "file:///android_asset/" + cleanPath;
-            }
-            Glide.with(this).load(fullPath).into(binding.ivProductSmall);
+            com.example.healthup.util.ImageLoadHelper.loadInto(
+                    binding.ivProductSmall, product.getImages().get(0));
         }
 
         setupDynamicChips();

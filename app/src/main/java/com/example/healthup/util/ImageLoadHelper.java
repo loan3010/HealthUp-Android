@@ -13,14 +13,19 @@ public final class ImageLoadHelper {
     }
 
     public static Object resolveLoadTarget(@Nullable String imageUrl) {
-        if (imageUrl == null || imageUrl.isEmpty()) {
+        if (imageUrl == null || imageUrl.isEmpty() || "null".equalsIgnoreCase(imageUrl.trim())) {
             return R.drawable.ic_loading;
         }
-        if (imageUrl.startsWith("http") || imageUrl.startsWith("file://")
-                || imageUrl.startsWith("content://") || imageUrl.startsWith("data:")) {
-            return imageUrl;
+        String trimmed = imageUrl.trim();
+        if (trimmed.startsWith("http") || trimmed.startsWith("file://")
+                || trimmed.startsWith("content://") || trimmed.startsWith("data:")) {
+            return trimmed;
         }
-        String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;
+        // Firebase Storage gs:// URLs are not loadable by Glide directly
+        if (trimmed.startsWith("gs://")) {
+            return trimmed;
+        }
+        String cleanPath = trimmed.startsWith("/") ? trimmed.substring(1) : trimmed;
         if (cleanPath.startsWith("images/products/") || cleanPath.startsWith("images/")) {
             return "file:///android_asset/" + cleanPath;
         }
@@ -35,7 +40,7 @@ public final class ImageLoadHelper {
         if (context == null) {
             return;
         }
-        if (imageUrl == null || imageUrl.isEmpty()) {
+        if (imageUrl == null || imageUrl.isEmpty() || "null".equalsIgnoreCase(imageUrl.trim())) {
             imageView.setImageResource(R.color.neutral_light_grey);
             return;
         }

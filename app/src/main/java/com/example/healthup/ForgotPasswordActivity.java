@@ -55,10 +55,19 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(ForgotPasswordViewModel.class);
 
         bindViews();
+        applyPrefillPhone();
         setupInputBehavior();
         setupActions();
         observeViewModel();
         updateSendButtonState();
+    }
+
+    private void applyPrefillPhone() {
+        String prefill = getIntent().getStringExtra(
+                com.example.healthup.util.CheckoutIntentHelper.EXTRA_PREFILL_PHONE);
+        if (prefill != null && !prefill.trim().isEmpty()) {
+            phoneEditText.setText(com.example.healthup.util.PhoneNormalizer.normalize(prefill));
+        }
     }
 
     private void bindViews() {
