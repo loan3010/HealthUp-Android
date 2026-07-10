@@ -6,6 +6,8 @@ import android.text.TextUtils;
 import androidx.annotation.NonNull;
 
 import com.example.healthup.FirebaseAuthErrorMapper;
+import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UserPhoneLookup;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
@@ -59,10 +61,19 @@ public class PasswordResetRepository {
 
     public interface ResetPasswordCallback {
         void onResult(ResetPasswordResult result, @NonNull String errorMessage);
+
+        default void onSmsCodeRequired() {
+        }
     }
 
     public void sendOtp(@NonNull String phone, @NonNull SendOtpCallback callback) {
-        firestoreRepository.findUserByPhone(phone)
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        if (normalizedPhone.isEmpty()) {
+            callback.onResult(SendOtpResult.ERROR, "");
+            return;
+        }
+
+        UserPhoneLookup.queryUsers(normalizedPhone)
                 .addOnSuccessListener(query -> {
                     if (query.isEmpty()) {
                         callback.onResult(SendOtpResult.PHONE_NOT_REGISTERED, "");
@@ -70,7 +81,7 @@ public class PasswordResetRepository {
                     }
 
                     String otp = otpRepository.generateOtp();
-                    otpRepository.savePasswordResetOtp(phone, otp)
+                    otpRepository.savePasswordResetOtp(normalizedPhone, otp)
                             .addOnSuccessListener(unused ->
                                     callback.onResult(SendOtpResult.SUCCESS, otp))
                             .addOnFailureListener(e ->
@@ -84,7 +95,8 @@ public class PasswordResetRepository {
     }
 
     public void verifyOtp(@NonNull String phone, @NonNull String inputOtp, @NonNull VerifyOtpCallback callback) {
-        otpRepository.getPasswordResetDoc(phone)
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        otpRepository.getPasswordResetDoc(normalizedPhone)
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) {
                         callback.onResult(VerifyOtpResult.EXPIRED);
@@ -99,7 +111,7 @@ public class PasswordResetRepository {
                         return;
                     }
 
-                    otpRepository.markVerified(phone)
+                    otpRepository.markVerified(normalizedPhone)
                             .addOnSuccessListener(unused -> callback.onResult(VerifyOtpResult.SUCCESS))
                             .addOnFailureListener(e -> callback.onResult(VerifyOtpResult.ERROR));
                 })
@@ -113,14 +125,15 @@ public class PasswordResetRepository {
             @NonNull Activity activity,
             @NonNull ResetPasswordCallback callback
     ) {
-        otpRepository.getPasswordResetDoc(phone)
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        otpRepository.getPasswordResetDoc(normalizedPhone)
                 .addOnSuccessListener(resetDoc -> {
                     if (!otpRepository.isResetSessionValid(resetDoc)) {
                         callback.onResult(ResetPasswordResult.SESSION_INVALID, "");
                         return;
                     }
 
-                    firestoreRepository.findUserByPhone(phone)
+                    UserPhoneLookup.queryUsers(normalizedPhone)
                             .addOnSuccessListener(userQuery -> {
                                 if (userQuery.isEmpty()) {
                                     callback.onResult(ResetPasswordResult.USER_NOT_FOUND, "");
@@ -136,14 +149,15 @@ public class PasswordResetRepository {
                                 }
 
                                 firebaseAuthRepository.updatePasswordForPhone(
-                                        phone,
                                         localPhoneE164,
+                                        userDoc.getId(),
                                         newPassword,
                                         activity,
+                                        callback::onSmsCodeRequired,
                                         new FirebaseAuthRepository.PasswordUpdateCallback() {
                                             @Override
                                             public void onSuccess() {
-                                                otpRepository.deletePasswordResetDoc(phone);
+                                                otpRepository.deletePasswordResetDoc(normalizedPhone);
                                                 callback.onResult(ResetPasswordResult.SUCCESS, "");
                                             }
 
@@ -165,8 +179,17 @@ public class PasswordResetRepository {
                                 FirebaseAuthErrorMapper.map(e)));
     }
 
+    public void submitResetSmsCode(@NonNull String smsCode) {
+        firebaseAuthRepository.submitSmsCodeAndUpdatePassword(smsCode);
+    }
+
+    public void cancelResetVerification() {
+        firebaseAuthRepository.cancelPendingVerification();
+    }
+
     public void getDebugOtp(@NonNull String phone, @NonNull DebugOtpCallback callback) {
-        otpRepository.getPasswordResetDoc(phone)
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        otpRepository.getPasswordResetDoc(normalizedPhone)
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
                         String otp = doc.getString("otp");

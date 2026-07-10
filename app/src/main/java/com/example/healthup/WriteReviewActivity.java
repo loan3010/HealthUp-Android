@@ -27,12 +27,9 @@ import com.example.healthup.databinding.ItemWriteReviewBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.Review;
-import com.google.android.gms.tasks.Task;
-import com.google.android.gms.tasks.Tasks;
-import com.google.firebase.Timestamp;
-import com.google.firebase.firestore.DocumentSnapshot;
-import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.firebase.Timestamp;
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -55,15 +52,12 @@ public class WriteReviewActivity extends AppCompatActivity {
             registerForActivityResult(new ActivityResultContracts.PickMultipleVisualMedia(5), uris -> {
                 if (!uris.isEmpty() && currentTargetIndex != -1) {
                     List<Uri> currentMedia = mediaMap.get(currentTargetIndex);
-                    if (currentMedia != null) {
-                        int remaining = 5 - currentMedia.size();
-                        int toAdd = Math.min(uris.size(), remaining);
-                        for (int i = 0; i < toAdd; i++) {
-                            currentMedia.add(uris.get(i));
-                        }
-                        MediaAdapter adapter = adapterMap.get(currentTargetIndex);
-                        if (adapter != null) adapter.notifyDataSetChanged();
+                    int remaining = 5 - currentMedia.size();
+                    int toAdd = Math.min(uris.size(), remaining);
+                    for (int i = 0; i < toAdd; i++) {
+                        currentMedia.add(uris.get(i));
                     }
+                    adapterMap.get(currentTargetIndex).notifyDataSetChanged();
                 }
             });
 
@@ -71,12 +65,8 @@ public class WriteReviewActivity extends AppCompatActivity {
             new ActivityResultContracts.StartActivityForResult(),
             result -> {
                 if (result.getResultCode() == RESULT_OK && currentTargetIndex != -1) {
-                    List<Uri> currentMedia = mediaMap.get(currentTargetIndex);
-                    if (currentMedia != null) {
-                        currentMedia.add(photoUri);
-                        MediaAdapter adapter = adapterMap.get(currentTargetIndex);
-                        if (adapter != null) adapter.notifyDataSetChanged();
-                    }
+                    mediaMap.get(currentTargetIndex).add(photoUri);
+                    adapterMap.get(currentTargetIndex).notifyDataSetChanged();
                 }
             });
 
@@ -157,8 +147,7 @@ public class WriteReviewActivity extends AppCompatActivity {
                 @Override public void onAddClick() { currentTargetIndex = index; showImageSourceDialog(); }
                 @Override public void onRemoveClick(int position) {
                     uris.remove(position);
-                    MediaAdapter a = adapterMap.get(index);
-                    if (a != null) a.notifyDataSetChanged();
+                    adapterMap.get(index).notifyDataSetChanged();
                 }
             });
             adapterMap.put(index, adapter);
@@ -181,24 +170,21 @@ public class WriteReviewActivity extends AppCompatActivity {
 
     private void showImageSourceDialog() {
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
-        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_image_source, null, false);
-        dialog.setContentView(view);
+        com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding dialogBinding =
+                com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
 
-        TextView tvHeader = view.findViewById(R.id.tvHeader);
-        if (tvHeader != null) tvHeader.setText("Thêm minh chứng");
-
-        view.findViewById(R.id.btnCamera).setOnClickListener(v -> {
+        dialogBinding.btnCamera.setOnClickListener(v -> {
             dialog.dismiss();
             launchCamera();
         });
 
-        view.findViewById(R.id.btnGallery).setOnClickListener(v -> {
+        dialogBinding.btnGallery.setOnClickListener(v -> {
             dialog.dismiss();
             launchGallery();
         });
 
-        view.findViewById(R.id.btnCancelSource).setOnClickListener(v -> dialog.dismiss());
-
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }
 
@@ -248,7 +234,7 @@ public class WriteReviewActivity extends AppCompatActivity {
         
         // Map of index to List of uploaded URLs
         Map<Integer, List<String>> uploadedUrlsMap = new HashMap<>();
-        List<Task<?>> allUploadTasks = new ArrayList<>();
+        List<com.google.android.gms.tasks.Task<?>> allUploadTasks = new ArrayList<>();
 
         for (Map.Entry<Integer, List<Uri>> entry : mediaMap.entrySet()) {
             final int index = entry.getKey();
@@ -262,19 +248,28 @@ public class WriteReviewActivity extends AppCompatActivity {
             }));
         }
 
-        Tasks.whenAllComplete(allUploadTasks).addOnCompleteListener(task -> {
+        com.google.android.gms.tasks.Tasks.whenAllComplete(allUploadTasks).addOnCompleteListener(task -> {
             // Lấy thông tin User hiện tại trước khi lưu đánh giá
             String uid = FirebaseManager.getInstance().getCurrentUserId();
-            if (uid == null) return;
-
             FirebaseFirestore.getInstance().collection("users").document(uid).get().addOnSuccessListener(userDoc -> {
-                String userName = userDoc.getString("name");
-                if (userName == null || userName.isEmpty()) userName = userDoc.getString("displayName");
-                if (userName == null || userName.isEmpty()) userName = "Người dùng HealthUp";
+                // Ưu tiên lấy username theo yêu cầu
+                String userName = userDoc.getString("username");
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("name");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("fullName");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = userDoc.getString("displayName");
+                }
+                if (userName == null || userName.isEmpty()) {
+                    userName = "Người dùng HealthUp";
+                }
                 String userAvatar = userDoc.getString("avatarUrl");
 
                 // Save reviews
-                List<Task<Void>> saveTasks = new ArrayList<>();
+                List<com.google.android.gms.tasks.Task<Void>> saveTasks = new ArrayList<>();
                 for (int i = 0; i < binding.lnReviewContainer.getChildCount(); i++) {
                     View view = binding.lnReviewContainer.getChildAt(i);
                     RatingBar rb = view.findViewById(R.id.ratingBar);
@@ -304,7 +299,7 @@ public class WriteReviewActivity extends AppCompatActivity {
                     }
                 }
 
-                Tasks.whenAll(saveTasks).addOnSuccessListener(aVoid -> {
+                com.google.android.gms.tasks.Tasks.whenAll(saveTasks).addOnSuccessListener(aVoid -> {
                     loadingDialog.dismiss();
                     showSuccessPopup();
                 }).addOnFailureListener(e -> {

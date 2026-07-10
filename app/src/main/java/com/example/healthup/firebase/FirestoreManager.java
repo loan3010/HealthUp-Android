@@ -72,6 +72,7 @@ public class FirestoreManager {
         for (DocumentSnapshot doc : snapshots) {
             Product p = doc.toObject(Product.class);
             if (p == null) continue;
+            if (!Product.isVisibleToBuyers(doc)) continue;
             p.setId(doc.getId());
 
             Double priceVal = doc.getDouble("price");

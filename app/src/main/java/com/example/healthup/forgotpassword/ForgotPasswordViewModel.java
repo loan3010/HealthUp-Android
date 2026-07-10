@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel;
 import com.example.healthup.RegisterValidator;
 import com.example.healthup.data.repository.PasswordResetRepository;
 import com.example.healthup.util.Event;
+import com.example.healthup.util.PhoneNormalizer;
 
 public class ForgotPasswordViewModel extends ViewModel {
 
@@ -55,18 +56,19 @@ public class ForgotPasswordViewModel extends ViewModel {
     public void sendOtp(String phone) {
         phoneError.setValue(null);
 
-        String validationError = RegisterValidator.validatePhone(phone);
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        String validationError = RegisterValidator.validatePhone(normalizedPhone);
         if (validationError != null) {
             phoneError.setValue(validationError);
             return;
         }
 
         uiState.setValue(UiState.LOADING);
-        repository.sendOtp(phone, (result, otpForDebug) -> {
+        repository.sendOtp(normalizedPhone, (result, otpForDebug) -> {
             lastGeneratedOtp = otpForDebug;
             switch (result) {
                 case SUCCESS:
-                    navigateToOtpEvent.postValue(new Event<>(phone));
+                    navigateToOtpEvent.postValue(new Event<>(normalizedPhone));
                     uiState.postValue(UiState.SUCCESS);
                     break;
                 case PHONE_NOT_REGISTERED:

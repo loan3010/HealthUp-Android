@@ -177,20 +177,12 @@ public class FirebaseManager {
         String uid = getCurrentUserId();
         if (uid == null) return Tasks.forException(new Exception("User not logged in"));
 
-        com.google.firebase.firestore.WriteBatch batch = db.batch();
-        
-        // 1. Cập nhật trạng thái đơn hàng
         Map<String, Object> updates = new HashMap<>();
-        updates.put("status", "cancelled");
-        updates.put("returnReason", reason);
+        updates.put("cancelRequested", true);
+        updates.put("cancelReason", reason);
+        updates.put("cancelRequestedAt", new java.util.Date());
         updates.put("updatedAt", new java.util.Date());
-        batch.update(db.collection("orders").document(orderId), updates);
-        
-        // 2. Hoàn lại số tiền đã chi trong tích lũy
-        DocumentReference userRef = db.collection("users").document(uid);
-        batch.update(userRef, "spentAmount", com.google.firebase.firestore.FieldValue.increment(-amount));
-        
-        return batch.commit();
+        return db.collection("orders").document(orderId).update(updates);
     }
 
     public Task<Void> confirmReceived(String orderId) {
@@ -218,7 +210,19 @@ public class FirebaseManager {
         updates.put("returnDescription", desc);
         updates.put("returnMediaUris", mediaUrls);
         updates.put("returnHandling", handling);
+        updates.put("returnStep", 1); // Tự động duyệt -> Step 1
+        updates.put("returnRequestedAt", Timestamp.now()); // Lưu thời điểm yêu cầu để sắp xếp cố định
         updates.put("updatedAt", Timestamp.now());
+        return db.collection("orders").document(orderId).update(updates);
+    }
+
+    public Task<Void> advanceReturnStep(String orderId, int nextStep, boolean isFinal) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("returnStep", nextStep);
+        updates.put("updatedAt", Timestamp.now());
+        if (isFinal) {
+            updates.put("status", "completed");
+        }
         return db.collection("orders").document(orderId).update(updates);
     }
 

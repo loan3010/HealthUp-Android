@@ -7,6 +7,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
@@ -15,6 +16,7 @@ import com.example.healthup.databinding.ItemOrderProductBinding;
 import com.example.healthup.databinding.ItemTimelineStepBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -27,6 +29,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
     private DecimalFormat df = new DecimalFormat("#,###đ");
     private SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault());
     private Order order;
+    private int currentStep = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,10 +51,11 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         order = (Order) getIntent().getSerializableExtra("order");
         String orderIdFallback = getIntent().getStringExtra("extra_order_id");
 
-        if (order != null && order.getUpdatedAt() != null) {
+        if (order != null) {
+            currentStep = order.getReturnStep() > 0 ? order.getReturnStep() : 1;
             populateUI();
         } else {
-            String orderId = (order != null) ? order.getId() : orderIdFallback;
+            String orderId = orderIdFallback;
             if (orderId != null) {
                 com.google.firebase.firestore.FirebaseFirestore.getInstance()
                         .collection("orders")
@@ -62,6 +66,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
                                 order = doc.toObject(Order.class);
                                 if (order != null) {
                                     order.setId(doc.getId());
+                                    currentStep = order.getReturnStep() > 0 ? order.getReturnStep() : 1;
                                     populateUI();
                                 }
                             }
@@ -70,20 +75,96 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
-        binding.rowChat.setOnClickListener(v ->
-                OrderChatHelper.openOrderChat(this, order, binding.tvOrderCode.getText().toString()));
+        setupSupportAndContactListeners();
+        
+        // Cho phép bấm vào vùng tiến trình để giả lập bước tiếp theo (Demo mode)
+        binding.lnTimeline.setOnClickListener(v -> advanceStepDemo());
+    }
+
+    private void setupSupportAndContactListeners() {
+        binding.rowFAQ.setOnClickListener(v -> {
+            Intent intent = new Intent(this, MainActivity.class);
+            intent.putExtra("navigate_to", "faq");
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            startActivity(intent);
+        });
+
+        binding.rowChat.setOnClickListener(v -> {
+            if (order != null) {
+                showContactOptions(order);
+            }
+        });
+
+        binding.rowContactPhone.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            startActivity(intent);
+        });
+
+        binding.rowContactEmail.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(android.net.Uri.parse("mailto:healthup@gmail.com"));
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ yêu cầu trả hàng đơn #" + (order != null ? order.getOrderCode() : ""));
+            try {
+                startActivity(intent);
+            } catch (android.content.ActivityNotFoundException e) {
+                Toast.makeText(this, "Không tìm thấy ứng dụng email", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void showContactOptions(Order order) {
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
+        com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding dialogBinding = 
+            com.example.healthup.databinding.LayoutBottomSheetContactOptionsBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
+
+        dialogBinding.btnChat.setOnClickListener(v -> {
+            dialog.dismiss();
+            startActivity(ChatActivity.buyerIntentForOrder(this, order.getOrderCode(), order.getId()));
+        });
+
+        dialogBinding.btnCall.setOnClickListener(v -> {
+            dialog.dismiss();
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            startActivity(intent);
+        });
+
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
+    }
+
+    private void advanceStepDemo() {
+        String handling = order.getReturnHandling() != null ? order.getReturnHandling() : "Trả hàng & Hoàn tiền";
+        int maxStep = handling.equals("Trả hàng & Hoàn tiền") ? 4 : 3;
+
+        if (currentStep < maxStep) {
+            final int nextStep = currentStep + 1;
+            final boolean isFinal = (nextStep == maxStep);
+            
+            FirebaseManager.getInstance().advanceReturnStep(order.getId(), nextStep, isFinal)
+                    .addOnSuccessListener(aVoid -> {
+                        currentStep = nextStep;
+                        order.setReturnStep(currentStep);
+                        if (isFinal) {
+                            order.setStatus("completed");
+                        }
+                        populateUI();
+                    });
+        }
     }
 
     private void populateUI() {
         String handling = order.getReturnHandling() != null ? order.getReturnHandling() : "Trả hàng & Hoàn tiền";
         boolean isReship = handling.contains("Nhận bổ sung");
         
-        // Status Badge Logic
-        String paymentStatus = order.getPaymentStatus();
-        boolean isCompleted = "refunded".equalsIgnoreCase(paymentStatus) || "reshipped".equalsIgnoreCase(paymentStatus);
+        // Cập nhật thẻ trạng thái ở góc phải (Banner)
+        int maxStep = handling.equals("Trả hàng & Hoàn tiền") ? 4 : 3;
+        boolean isCompleted = currentStep >= maxStep || "completed".equalsIgnoreCase(order.getStatus());
         
         if (isCompleted) {
-            binding.tvStatusBanner.setText(isReship ? "ĐÃ GỬI HÀNG BÙ" : "ĐÃ HOÀN TIỀN");
+            binding.tvStatusBanner.setText("ĐÃ HOÀN THÀNH");
             binding.tvStatusBanner.setBackgroundResource(R.drawable.bg_status_delivered);
             binding.tvStatusBanner.setTextColor(getResources().getColor(R.color.white));
         } else {
@@ -93,7 +174,7 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         }
 
         // Timeline
-        setupTimeline(isCompleted, isReship);
+        setupTimeline(currentStep, handling);
 
         // Request Info
         binding.tvRequestType.setText(handling);
@@ -112,26 +193,9 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
             binding.lnRefundMethodRow.setVisibility(View.VISIBLE);
             binding.lnShippingAddressRow.setVisibility(View.GONE);
             
-            String paymentMethod = order.getPaymentMethod();
-            if ("cod".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("nhận hàng"))) {
-                paymentMethod = "Tài khoản Ngân hàng liên kết";
-            } else if ("momo".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("MoMo"))) {
-                paymentMethod = "Ví MoMo";
-            } else if ("zalopay".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("ZaloPay"))) {
-                paymentMethod = "Ví ZaloPay";
-            } else if ("vnpay".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && paymentMethod.contains("VNPAY"))) {
-                paymentMethod = "Ví VNPAY";
-            } else if ("card".equalsIgnoreCase(paymentMethod) || (paymentMethod != null && (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")))) {
-                paymentMethod = "Thẻ Tín dụng / Ghi nợ";
-            }
-
+            String displayRefundMethod = getDisplayRefundMethod(order.getPaymentMethod());
             binding.tvRefundAmount.setText(df.format(order.getTotalPrice()));
-            binding.tvRefundMethod.setText(paymentMethod);
-            if (paymentMethod != null && (paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản") || paymentMethod.contains("Ngân hàng") || paymentMethod.contains("card"))) {
-                binding.imgRefundMethod.setImageResource(R.drawable.ic_payment_card);
-            } else {
-                binding.imgRefundMethod.setImageResource(R.drawable.ic_payment_wallet);
-            }
+            binding.tvRefundMethod.setText(displayRefundMethod);
         }
 
         // Evidence
@@ -213,41 +277,110 @@ public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
         }
     }
 
-    private void setupTimeline(boolean isCompleted, boolean isReship) {
+    private void setupTimeline(int currentStep, String handling) {
         binding.lnTimeline.removeAllViews();
         long updatedAtMs = (order.getUpdatedAt() != null) ? order.getUpdatedAt().getTime() : System.currentTimeMillis();
+        long hour = 3600000L;
         long day = 86400000L;
 
-        addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAtMs - day * 2)));
-        addTimelineStep("HealthUp đã duyệt yêu cầu", sdf.format(new Date(updatedAtMs - day - 3600000 * 5)));
-        
-        if (isCompleted) {
-            if (isReship) {
-                addTimelineStep("Đang chuẩn bị hàng gửi bù", sdf.format(new Date(updatedAtMs - 3600000 * 4)));
-                addTimelineStep("Đã gửi hàng bổ sung thành công", sdf.format(new Date(updatedAtMs)), true);
-            } else {
-                addTimelineStep("Đã nhận lại hàng trả", sdf.format(new Date(updatedAtMs - 3600000 * 2)));
-                addTimelineStep("Hoàn tiền thành công", sdf.format(new Date(updatedAtMs)) + " – qua " + order.getPaymentMethod(), true);
+        String refundMethodDisplay = getDisplayRefundMethod(order.getPaymentMethod());
+
+        // Bước 0 & 1: Luôn màu xanh (Vì gửi và duyệt tự động)
+        addTimelineStep("Yêu cầu đã được gửi", sdf.format(new Date(updatedAtMs - day)), false, false);
+        addTimelineStep("HealthUp đã duyệt yêu cầu", sdf.format(new Date(updatedAtMs - day + hour)), false, false);
+
+        if (handling.equals("Trả hàng & Hoàn tiền")) {
+            // maxStep = 4. Quy trình: 1 (Duyệt) -> 2 (Chờ gửi) -> 3 (Kiểm tra) -> 4 (Hoàn tiền xong)
+            
+            // Bước 2: Chờ gửi hàng
+            if (currentStep >= 2) {
+                addTimelineStep("Đang chờ khách hàng gửi trả hàng", 
+                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 5)), 
+                    currentStep == 2, false);
             }
-        } else {
-            String pendingStep = isReship ? "Đang chuẩn bị hàng gửi bù" : "Đang kiểm tra hàng trả";
-            addTimelineStep(pendingStep, "Đang xử lý...", true);
+            // Bước 3: Kiểm tra hàng
+            if (currentStep >= 3) {
+                addTimelineStep("Đang kiểm tra hàng trả", 
+                    currentStep == 3 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 2)), 
+                    currentStep == 3, false);
+            }
+            // Bước 4: Hoàn tiền thành công
+            if (currentStep >= 4) {
+                addTimelineStep("Hoàn tiền thành công", 
+                    sdf.format(new Date(updatedAtMs)) + " – qua " + refundMethodDisplay, 
+                    false, true);
+            }
+        } else if (handling.equals("Hoàn tiền sản phẩm bị thiếu")) {
+            // maxStep = 3. Quy trình: 1 (Duyệt) -> 2 (Đang xử lý hoàn tiền) -> 3 (Hoàn tiền xong)
+            
+            // Bước 2: Đang xử lý hoàn tiền
+            if (currentStep >= 2) {
+                addTimelineStep("Đang xử lý hoàn tiền", 
+                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 3)), 
+                    currentStep == 2, false);
+            }
+            // Bước 3: Hoàn tiền thành công
+            if (currentStep >= 3) {
+                addTimelineStep("Hoàn tiền thành công", 
+                    sdf.format(new Date(updatedAtMs)) + " – qua " + refundMethodDisplay,
+                    false, true);
+            }
+        } else if (handling.contains("bổ sung")) {
+            // maxStep = 3. Quy trình: 1 (Duyệt) -> 2 (Chuẩn bị hàng bù) -> 3 (Gửi bù xong)
+            
+            // Bước 2: Chuẩn bị hàng bù
+            if (currentStep >= 2) {
+                addTimelineStep("Đang chuẩn bị hàng gửi bù", 
+                    currentStep == 2 ? "Đang xử lý..." : sdf.format(new Date(updatedAtMs - hour * 4)), 
+                    currentStep == 2, false);
+            }
+            // Bước 3: Gửi bù thành công
+            if (currentStep >= 3) {
+                addTimelineStep("Đã gửi hàng bổ sung thành công", 
+                    sdf.format(new Date(updatedAtMs)), 
+                    false, true);
+            }
         }
     }
 
-    private void addTimelineStep(String title, String time) {
-        addTimelineStep(title, time, false);
-    }
-
-    private void addTimelineStep(String title, String time, boolean isLast) {
+    private void addTimelineStep(String title, String time, boolean isPending, boolean isLast) {
         ItemTimelineStepBinding stepBinding = ItemTimelineStepBinding.inflate(getLayoutInflater(), binding.lnTimeline, false);
         stepBinding.tvStepTitle.setText(title);
         stepBinding.tvStepTime.setText(time);
+        
+        if (isPending) {
+            stepBinding.imgStepIndicator.setImageResource(R.drawable.ic_pending_circle);
+            stepBinding.imgStepIndicator.setImageTintList(android.content.res.ColorStateList.valueOf(getResources().getColor(R.color.text_hint)));
+            stepBinding.viewLine.setBackgroundColor(getResources().getColor(R.color.border_color));
+            stepBinding.tvStepTitle.setTextColor(getResources().getColor(R.color.text_hint));
+        } else {
+            stepBinding.imgStepIndicator.setImageResource(R.drawable.ic_check_circle);
+            stepBinding.imgStepIndicator.setImageTintList(null); // Green from drawable
+            stepBinding.viewLine.setBackgroundColor(getResources().getColor(R.color.primary));
+            stepBinding.tvStepTitle.setTextColor(getResources().getColor(R.color.text_main));
+        }
         
         if (isLast) {
             stepBinding.viewLine.setVisibility(View.GONE);
         }
         
         binding.lnTimeline.addView(stepBinding.getRoot());
+    }
+
+    private String getDisplayRefundMethod(String paymentMethod) {
+        if (paymentMethod == null) return "Phương thức đã chọn";
+        String pm = paymentMethod.toLowerCase();
+        if (pm.contains("cod") || pm.contains("nhận hàng")) {
+            return "Tài khoản Ngân hàng liên kết";
+        } else if (pm.contains("momo")) {
+            return "Ví MoMo";
+        } else if (pm.contains("zalopay")) {
+            return "Ví ZaloPay";
+        } else if (pm.contains("vnpay")) {
+            return "Ví VNPAY";
+        } else if (pm.contains("card") || pm.contains("thẻ") || pm.contains("tài khoản")) {
+            return "Thẻ Tín dụng / Ghi nợ";
+        }
+        return paymentMethod;
     }
 }

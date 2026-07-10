@@ -11,7 +11,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
@@ -318,24 +317,21 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
 
     private void showImageSourceDialog() {
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.BottomSheetDialogTheme);
-        View view = getLayoutInflater().inflate(R.layout.layout_bottom_sheet_image_source, null);
-        dialog.setContentView(view);
+        com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding dialogBinding =
+                com.example.healthup.databinding.LayoutBottomSheetImageSourceBinding.inflate(getLayoutInflater());
+        dialog.setContentView(dialogBinding.getRoot());
 
-        TextView tvHeader = view.findViewById(R.id.tvHeader);
-        if (tvHeader != null) tvHeader.setText("Thêm minh chứng");
-
-        view.findViewById(R.id.btnCamera).setOnClickListener(v -> {
+        dialogBinding.btnCamera.setOnClickListener(v -> {
             dialog.dismiss();
             launchCamera();
         });
 
-        view.findViewById(R.id.btnGallery).setOnClickListener(v -> {
+        dialogBinding.btnGallery.setOnClickListener(v -> {
             dialog.dismiss();
             launchGallery();
         });
 
-        view.findViewById(R.id.btnCancelSource).setOnClickListener(v -> dialog.dismiss());
-
+        dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
         dialog.show();
     }
 
@@ -390,20 +386,21 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
         String refundMethod = paymentMethod;
         int iconRes = R.drawable.ic_payment_wallet;
         
+        String pm = paymentMethod.toLowerCase();
         // Cập nhật mapping code -> text đầy đủ
-        if ("cod".equalsIgnoreCase(paymentMethod) || "Thanh toán khi nhận hàng".equals(paymentMethod)) {
+        if (pm.contains("cod") || pm.contains("nhận hàng")) {
             refundMethod = "Tài khoản Ngân hàng liên kết";
             iconRes = R.drawable.ic_payment_card;
-        } else if ("momo".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("MoMo")) {
+        } else if (pm.contains("momo")) {
             refundMethod = "Ví MoMo";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("zalopay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("ZaloPay")) {
+        } else if (pm.contains("zalopay")) {
             refundMethod = "Ví ZaloPay";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("vnpay".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("VNPAY")) {
+        } else if (pm.contains("vnpay")) {
             refundMethod = "Ví VNPAY";
             iconRes = R.drawable.ic_payment_wallet;
-        } else if ("card".equalsIgnoreCase(paymentMethod) || paymentMethod.contains("Thẻ") || paymentMethod.contains("Tài khoản")) {
+        } else if (pm.contains("card") || pm.contains("thẻ") || pm.contains("tài khoản")) {
             refundMethod = "Thẻ Tín dụng / Ghi nợ";
             iconRes = R.drawable.ic_payment_card;
         }
@@ -531,19 +528,16 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
             }
 
             itemBinding.btnPlus.setOnClickListener(v -> {
-                Integer current = selectedItemsMap.get(item);
-                if (current != null && current < item.getQuantity()) {
-                    selectedItemsMap.put(item, current + 1);
+                if (selectedItemsMap.get(item) < item.getQuantity()) {
+                    selectedItemsMap.put(item, selectedItemsMap.get(item) + 1);
                     updateSelectedProductsUI();
                 }
             });
             itemBinding.btnMinus.setOnClickListener(v -> {
-                Integer current = selectedItemsMap.get(item);
-                if (current != null) {
-                    if (current > 1) selectedItemsMap.put(item, current - 1);
-                    else selectedItemsMap.remove(item);
-                    updateSelectedProductsUI();
-                }
+                int currentQty = selectedItemsMap.get(item);
+                if (currentQty > 1) selectedItemsMap.put(item, currentQty - 1);
+                else selectedItemsMap.remove(item);
+                updateSelectedProductsUI();
             });
             binding.lnSelectedProductsContainer.addView(itemBinding.getRoot());
         }

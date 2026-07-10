@@ -52,6 +52,8 @@
             <include android:id="@+id/rowLibrary" layout="@layout/item_setting_switch_row" />
             <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="16dp" android:background="@color/neutral_light_grey" />
             <include android:id="@+id/rowMicro" layout="@layout/item_setting_switch_row" />
+            <View android:layout_width="match_parent" android:layout_height="1dp" android:layout_marginHorizontal="16dp" android:background="@color/neutral_light_grey" />
+            <include android:id="@+id/rowNotification" layout="@layout/item_setting_switch_row" />
 
         </LinearLayout>
     </androidx.cardview.widget.CardView>

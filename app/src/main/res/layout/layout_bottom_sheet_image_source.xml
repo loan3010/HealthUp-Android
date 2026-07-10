@@ -1,53 +1,42 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_bottom_sheet"
-    android:paddingBottom="24dp">
+    android:orientation="vertical"
+    android:padding="20dp">
 
     <View
-        android:id="@+id/viewHandle"
         android:layout_width="40dp"
         android:layout_height="4dp"
-        android:layout_marginTop="12dp"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginBottom="20dp"
         android:background="@color/border_color"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        android:backgroundTint="#DCDCDC" />
 
     <TextView
-        android:id="@+id/tvHeader"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="20dp"
-        android:text="Thay đổi ảnh đại diện"
+        android:layout_marginBottom="24dp"
+        android:text="Thêm hình ảnh/video"
         android:textColor="@color/text_main"
         android:textSize="18sp"
-        android:textStyle="bold"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/viewHandle" />
+        android:textStyle="bold" />
 
     <LinearLayout
         android:id="@+id/btnCamera"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="24dp"
-        android:layout_marginHorizontal="16dp"
-        android:background="@drawable/bg_card_white"
+        android:layout_height="60dp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:elevation="1dp"
-        app:layout_constraintTop_toBottomOf="@id/tvHeader">
+        android:orientation="horizontal">
 
         <FrameLayout
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:background="@drawable/bg_circle_light">
             <ImageView
                 android:layout_width="22dp"
@@ -58,78 +47,59 @@
         </FrameLayout>
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_weight="1"
-            android:text="Chụp ảnh mới"
+            android:text="Chụp ảnh ngay"
             android:textColor="@color/text_main"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_chevron_right"
-            app:tint="@color/text_gray_muted" />
+            android:textSize="16sp" />
     </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#F0F0F0" />
 
     <LinearLayout
         android:id="@+id/btnGallery"
         android:layout_width="match_parent"
-        android:layout_height="64dp"
-        android:layout_marginTop="12dp"
-        android:layout_marginHorizontal="16dp"
-        android:background="@drawable/bg_card_white"
+        android:layout_height="60dp"
+        android:background="?attr/selectableItemBackground"
         android:clickable="true"
         android:focusable="true"
-        android:foreground="?attr/selectableItemBackground"
         android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="16dp"
-        android:elevation="1dp"
-        app:layout_constraintTop_toBottomOf="@id/btnCamera">
+        android:orientation="horizontal">
 
         <FrameLayout
-            android:layout_width="40dp"
-            android:layout_height="40dp"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
             android:background="@drawable/bg_circle_light">
             <ImageView
                 android:layout_width="22dp"
                 android:layout_height="22dp"
                 android:layout_gravity="center"
-                android:src="@drawable/ic_nav_category"
+                android:src="@drawable/ic_favorite"
                 app:tint="@color/primary" />
         </FrameLayout>
 
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="16dp"
-            android:layout_weight="1"
             android:text="Chọn từ thư viện"
             android:textColor="@color/text_main"
-            android:textSize="15sp"
-            android:textStyle="bold" />
-
-        <ImageView
-            android:layout_width="16dp"
-            android:layout_height="16dp"
-            android:src="@drawable/ic_chevron_right"
-            app:tint="@color/text_gray_muted" />
+            android:textSize="16sp" />
     </LinearLayout>
 
     <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCancelSource"
+        android:id="@+id/btnCancel"
         style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:text="Hủy bỏ"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:layout_marginTop="12dp"
+        android:text="Hủy"
         android:textAllCaps="false"
-        android:textColor="@color/text_gray"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/btnGallery" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+        android:textColor="@color/error"
+        android:textSize="16sp"
+        android:textStyle="bold" />
+</LinearLayout>

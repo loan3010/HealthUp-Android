@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.healthup.admin.AdminActivity;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UserProfileResolver;
@@ -34,6 +35,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Source;
 
 
+import com.example.healthup.util.LocaleHelper;
 import java.text.NumberFormat;
 import java.util.Locale;
 
@@ -56,6 +58,7 @@ public class ProfileFragment extends Fragment {
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
     private View rowSellerInbox;
     private View cardStaffInbox;
+    private View rowAdminPanel;
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping;
     private ProgressBar progressTichLuy;
@@ -74,6 +77,7 @@ public class ProfileFragment extends Fragment {
         cardTichLuy = view.findViewById(R.id.card_tich_luy);
         rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
         cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
+        rowAdminPanel = view.findViewById(R.id.row_admin_panel);
         tvName = view.findViewById(R.id.tv_name);
         tvUsername = view.findViewById(R.id.tv_username);
         tvTier = view.findViewById(R.id.tv_tier);
@@ -173,8 +177,12 @@ public class ProfileFragment extends Fragment {
                 loadFragment(new SettingsFragment()));
 
 
-        view.findViewById(R.id.btn_chat).setOnClickListener(v ->
-                startActivity(ChatActivity.buyerIntent(requireContext())));
+        view.findViewById(R.id.btn_chat).setOnClickListener(v -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).restoreFloatingChatBubble();
+            }
+            startActivity(ChatActivity.buyerIntent(requireContext()));
+        });
 
 
         view.findViewById(R.id.btn_dang_ky).setOnClickListener(v ->
@@ -238,6 +246,12 @@ public class ProfileFragment extends Fragment {
                     startActivity(new Intent(requireContext(), AboutActivity.class)));
         }
 
+        View dietRow = view.findViewById(R.id.row_diet_recommendation);
+        if (dietRow != null) {
+            dietRow.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), DietLandingActivity.class)));
+        }
+
 
         View faqRow = findRowByText(view, "Trung tâm trợ giúp - FAQs");
         if (faqRow != null) {
@@ -253,8 +267,12 @@ public class ProfileFragment extends Fragment {
 
         View chatRow = findRowByText(view, "Trò chuyện cùng HealthUp");
         if (chatRow != null) {
-            chatRow.setOnClickListener(v ->
-                    startActivity(ChatActivity.buyerIntent(requireContext())));
+            chatRow.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).restoreFloatingChatBubble();
+                }
+                startActivity(ChatActivity.buyerIntent(requireContext()));
+            });
         }
 
 
@@ -272,6 +290,11 @@ public class ProfileFragment extends Fragment {
         }
         if (cardStaffInbox != null) {
             cardStaffInbox.setOnClickListener(v -> openSellerInbox());
+        }
+
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), AdminActivity.class)));
         }
     }
 
@@ -337,6 +360,7 @@ public class ProfileFragment extends Fragment {
 
         if (currentUser == null) {
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             resetBadges();
             return;
         }
@@ -414,29 +438,43 @@ public class ProfileFragment extends Fragment {
     private void bindUserToUi(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
         bindHeaderName(document, firebaseUser);
 
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+        String defaultTier = currentLang.equals("en") ? "Member" : "Thành viên";
+
         if (document == null || !document.exists()) {
-            tvTier.setText("Thành viên");
+            tvTier.setText(defaultTier);
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             return;
         }
 
         String avatarUrl = document.getString(FIELD_AVATAR_URL);
         long spent = readSpentAmount(document);
-        String tier = spent >= MUC_VIP ? "VIP" : "Thành viên";
+        boolean isVip = spent >= MUC_VIP;
+        String tier = isVip ? "VIP" : defaultTier;
 
         tvTier.setText(tier);
+        tvTier.setBackgroundResource(isVip ? R.drawable.bg_badge_vip : R.drawable.bg_badge_tier);
 
 
         NumberFormat vnFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
-        tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
+        if (currentLang.equals("en")) {
+            tvSpent.setText("Spent: " + vnFormat.format(spent) + " VND");
+        } else {
+            tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
+        }
 
 
         long conLai = MUC_VIP - spent;
         if (conLai > 0) {
-            tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
+            if (currentLang.equals("en")) {
+                tvProgressHint.setText("Buy " + vnFormat.format(conLai) + " VND more to get VIP!");
+            } else {
+                tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
+            }
             progressTichLuy.setProgress((int) ((spent * 100) / MUC_VIP));
         } else {
-            tvProgressHint.setText("Bạn đã đạt hạng VIP!");
+            tvProgressHint.setText(currentLang.equals("en") ? "You are a VIP member!" : "Bạn đã đạt hạng VIP!");
             progressTichLuy.setProgress(100);
         }
 
@@ -451,6 +489,14 @@ public class ProfileFragment extends Fragment {
 
 
         updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
+        updateAdminPanelVisibility(StaffRoleHelper.isAdmin(StaffRoleHelper.resolveRole(document)));
+    }
+
+
+    private void updateAdminPanelVisibility(boolean visible) {
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
 

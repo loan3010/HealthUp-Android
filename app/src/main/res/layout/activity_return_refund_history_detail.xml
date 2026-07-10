@@ -272,27 +272,16 @@
                             android:text="Phương thức hoàn tiền"
                             android:textColor="@color/text_hint"
                             android:textSize="14sp" />
-                        <LinearLayout
+                        <TextView
+                            android:id="@+id/tvRefundMethod"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="2"
                             android:gravity="end"
-                            android:orientation="horizontal">
-                            <ImageView
-                                android:id="@+id/imgRefundMethod"
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:src="@drawable/ic_launcher_foreground" />
-                            <TextView
-                                android:id="@+id/tvRefundMethod"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:text="Ví MoMo"
-                                android:textColor="@color/text_main"
-                                android:textSize="14sp"
-                                android:textStyle="bold" />
-                        </LinearLayout>
+                            android:text="Tài khoản Ngân hàng liên kết"
+                            android:textColor="@color/text_main"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
                     </LinearLayout>
 
                     <LinearLayout
@@ -342,10 +331,13 @@
                 android:orientation="horizontal" />
 
             <!-- Order Code Section -->
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp">
+                android:layout_marginTop="24dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
                 <TextView
                     android:id="@+id/tvOrderCodeLabel"
                     android:layout_width="wrap_content"
@@ -353,21 +345,25 @@
                     android:text="Mã đơn hàng: "
                     android:textColor="@color/text_secondary"
                     android:textSize="14sp" />
+
                 <TextView
                     android:id="@+id/tvOrderCode"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
-                    android:layout_toEndOf="@id/tvOrderCodeLabel"
+                    android:layout_weight="1"
+                    android:ellipsize="middle"
+                    android:singleLine="true"
                     android:text="0621XMHU3845"
                     android:textColor="@color/text_main"
                     android:textSize="14sp"
                     android:textStyle="bold" />
+
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnCopyOrderCode"
                     style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                     android:layout_width="wrap_content"
                     android:layout_height="32dp"
-                    android:layout_alignParentEnd="true"
+                    android:layout_marginStart="8dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:minWidth="0dp"
@@ -380,7 +376,7 @@
                     android:textStyle="bold"
                     app:cornerRadius="16dp"
                     app:strokeColor="@color/primary" />
-            </RelativeLayout>
+            </LinearLayout>
 
             <!-- Product Items Card -->
             <com.google.android.material.card.MaterialCardView
@@ -414,7 +410,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:layout_marginBottom="24dp"
                 app:cardBackgroundColor="@color/white"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="2dp"
@@ -425,10 +420,14 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
                     <LinearLayout
+                        android:id="@+id/rowFAQ"
                         android:layout_width="match_parent"
                         android:layout_height="64dp"
                         android:gravity="center_vertical"
-                        android:paddingHorizontal="16dp">
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
                         <FrameLayout
                             android:layout_width="40dp"
                             android:layout_height="40dp"
@@ -440,12 +439,18 @@
                                 android:src="@drawable/ic_help" />
                         </FrameLayout>
                         <TextView
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:layout_marginStart="16dp"
                             android:text="Trung tâm trợ giúp - FAQs"
                             android:textColor="@color/text_main"
                             android:textSize="14sp" />
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/text_gray_muted"/>
                     </LinearLayout>
                     <View
                         android:layout_width="match_parent"
@@ -473,10 +478,114 @@
                                 app:tint="@color/primary" />
                         </FrameLayout>
                         <TextView
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:layout_marginStart="16dp"
+                            android:text="Trò chuyện cùng HealthUp"
+                            android:textColor="@color/text_main"
+                            android:textSize="14sp" />
+                        <ImageView
+                            android:layout_width="16dp"
+                            android:layout_height="16dp"
+                            android:src="@drawable/ic_chevron_right"
+                            app:tint="@color/text_gray_muted"/>
+                    </LinearLayout>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <!-- Contact Section -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="Liên hệ"
+                android:textColor="@color/text_main"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:layout_marginBottom="24dp"
+                app:cardBackgroundColor="@color/white"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="2dp"
+                app:strokeColor="@color/border_color"
+                app:strokeWidth="1dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <LinearLayout
+                        android:id="@+id/rowContactPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_circle_light">
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_phone" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tvPhone"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="16dp"
-                            android:text="Trò chuyện cùng HealthUp"
+                            android:text="0769845728"
+                            android:textColor="@color/text_main"
+                            android:textSize="14sp" />
+                    </LinearLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/border_color"
+                        android:backgroundTint="#F0F0F0" />
+
+                    <LinearLayout
+                        android:id="@+id/rowContactEmail"
+                        android:layout_width="match_parent"
+                        android:layout_height="64dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingHorizontal="16dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        android:foreground="?attr/selectableItemBackground">
+
+                        <FrameLayout
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:background="@drawable/bg_circle_light">
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:layout_gravity="center"
+                                android:src="@drawable/ic_mail" />
+                        </FrameLayout>
+
+                        <TextView
+                            android:id="@+id/tvEmail"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="16dp"
+                            android:text="healthup@gmail.com"
                             android:textColor="@color/text_main"
                             android:textSize="14sp" />
                     </LinearLayout>

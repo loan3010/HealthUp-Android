@@ -2,10 +2,14 @@ package com.example.healthup;
 
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -32,6 +36,9 @@ public class BlogFragment extends Fragment {
     private List<Blog> filteredList = new ArrayList<>();
     private ChipGroup chipGroup;
     private String currentCategory;
+    private String searchQuery = "";
+    private EditText etSearch;
+    private ImageView ivClearSearch;
 
 
     @Nullable
@@ -49,12 +56,28 @@ public class BlogFragment extends Fragment {
     private void initViews(View view) {
         rvBlogs = view.findViewById(R.id.rv_blogs);
         chipGroup = view.findViewById(R.id.chip_group_blog);
-
+        etSearch = view.findViewById(R.id.et_search_blog);
+        ivClearSearch = view.findViewById(R.id.iv_clear_search);
 
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
 
+        ivClearSearch.setOnClickListener(v -> {
+            etSearch.setText("");
+            searchQuery = "";
+            filterBlogs();
+        });
+
+        etSearch.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchQuery = s.toString().toLowerCase().trim();
+                ivClearSearch.setVisibility(searchQuery.isEmpty() ? View.GONE : View.VISIBLE);
+                filterBlogs();
+            }
+            @Override public void afterTextChanged(Editable s) {}
+        });
 
         chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
             Chip chip = group.findViewById(checkedId);
@@ -111,9 +134,15 @@ public class BlogFragment extends Fragment {
         filteredList.clear();
         String allCats = normalize(getString(R.string.all_categories));
         String normalizedCurrent = normalize(currentCategory);
+
         for (Blog blog : blogList) {
             String category = normalize(blog.getCategory());
-            if (normalizedCurrent.equals(allCats) || (category != null && category.equals(normalizedCurrent))) {
+            boolean matchesCategory = normalizedCurrent.equals(allCats) || (category != null && category.equals(normalizedCurrent));
+
+            boolean matchesSearch = searchQuery.isEmpty() ||
+                    (blog.getTitle() != null && blog.getTitle().toLowerCase().contains(searchQuery));
+
+            if (matchesCategory && matchesSearch) {
                 filteredList.add(blog);
             }
         }

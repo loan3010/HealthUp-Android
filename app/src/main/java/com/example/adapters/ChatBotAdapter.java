@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.healthup.R;
+import com.example.healthup.chat.ChatBubbleHelper;
 import com.example.healthup.chat.SuggestionProvider;
 import com.example.models.ChatMessage;
 
@@ -109,14 +110,13 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     @Override
     public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         ChatMessage m = items.get(position);
+        ChatBubbleHelper.GroupPosition groupPosition = ChatBubbleHelper.resolveGroupPosition(items, position);
         if (holder instanceof UserVH) {
-            UserVH userHolder = (UserVH) holder;
-            userHolder.text.setText(m.getText());
-            userHolder.time.setText(formatMessageTime(m));
+            ((UserVH) holder).bind(m, groupPosition, items, position);
         } else if (holder instanceof SystemVH) {
             ((SystemVH) holder).text.setText(m.getText());
         } else if (holder instanceof BotVH) {
-            ((BotVH) holder).bind(m);
+            ((BotVH) holder).bind(m, groupPosition, items, position);
         } else if (holder instanceof OrderCardVH) {
             ((OrderCardVH) holder).bind(m, listener);
         } else if (holder instanceof SuggestionVH) {
@@ -140,6 +140,21 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             text = v.findViewById(R.id.chatUserText);
             time = v.findViewById(R.id.chatUserTime);
         }
+
+        void bind(@NonNull ChatMessage message,
+                  @NonNull ChatBubbleHelper.GroupPosition groupPosition,
+                  @NonNull List<ChatMessage> items,
+                  int position) {
+            text.setText(message.getText());
+            text.setBackgroundResource(ChatBubbleHelper.userBubbleBackground(groupPosition));
+            applyVerticalPadding(itemView, groupPosition);
+            if (ChatBubbleHelper.shouldShowTimestamp(items, position)) {
+                time.setVisibility(View.VISIBLE);
+                time.setText(formatMessageTime(message));
+            } else {
+                time.setVisibility(View.GONE);
+            }
+        }
     }
 
     static class SystemVH extends RecyclerView.ViewHolder {
@@ -152,25 +167,47 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     static class BotVH extends RecyclerView.ViewHolder {
+        final View avatarContainer;
         final TextView name;
         final TextView text;
         final TextView time;
 
         BotVH(@NonNull View v) {
             super(v);
+            avatarContainer = v.findViewById(R.id.chatBotAvatarContainer);
             name = v.findViewById(R.id.chatSenderName);
             text = v.findViewById(R.id.chatBotText);
             time = v.findViewById(R.id.chatBotTime);
         }
 
-        void bind(ChatMessage m) {
-            text.setText(m.getText());
-            time.setText(formatMessageTime(m));
-            if (ChatMessage.SENDER_SELLER.equals(m.getSenderType())) {
+        void bind(@NonNull ChatMessage message,
+                  @NonNull ChatBubbleHelper.GroupPosition groupPosition,
+                  @NonNull List<ChatMessage> items,
+                  int position) {
+            text.setText(message.getText());
+            text.setBackgroundResource(ChatBubbleHelper.incomingBubbleBackground(groupPosition));
+            applyVerticalPadding(itemView, groupPosition);
+
+            if (ChatBubbleHelper.shouldShowAvatar(items, position)) {
+                if (avatarContainer != null) {
+                    avatarContainer.setVisibility(View.VISIBLE);
+                }
+            } else if (avatarContainer != null) {
+                avatarContainer.setVisibility(View.INVISIBLE);
+            }
+
+            if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                name.setText(m.getSenderName() != null ? m.getSenderName() : "Người bán");
+                name.setText(message.getSenderName() != null ? message.getSenderName() : "Người bán");
             } else {
                 name.setVisibility(View.GONE);
+            }
+
+            if (ChatBubbleHelper.shouldShowTimestamp(items, position)) {
+                time.setVisibility(View.VISIBLE);
+                time.setText(formatMessageTime(message));
+            } else {
+                time.setVisibility(View.GONE);
             }
         }
     }
@@ -293,6 +330,14 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 });
             }
         }
+    }
+
+    private static void applyVerticalPadding(@NonNull View itemView,
+                                             @NonNull ChatBubbleHelper.GroupPosition groupPosition) {
+        float density = itemView.getResources().getDisplayMetrics().density;
+        int top = (int) (ChatBubbleHelper.verticalPaddingTopDp(groupPosition) * density);
+        int bottom = (int) (ChatBubbleHelper.verticalPaddingBottomDp(groupPosition) * density);
+        itemView.setPadding(itemView.getPaddingLeft(), top, itemView.getPaddingRight(), bottom);
     }
 
     private static String formatMessageTime(@NonNull ChatMessage message) {

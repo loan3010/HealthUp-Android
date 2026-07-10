@@ -16,7 +16,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
-import androidx.core.content.ContextCompat;
 import com.example.healthup.databinding.DialogLoadingBinding;
 import com.example.healthup.databinding.DialogSuccessBinding;
 import com.example.healthup.databinding.ItemOrderBinding;
@@ -98,15 +97,15 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             AlertDialog loadingDialog = showLoadingDialog();
             FirebaseManager.getInstance().cancelOrder(orderId, selected.getTitle(), order.getTotalPrice())
                 .addOnSuccessListener(aVoid -> {
-                    // Chờ 1.5s cho cảm giác đang xử lý như yêu cầu
                     new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                         loadingDialog.dismiss();
-                        // Chuyển thẳng về tab đã hủy trong MainActivity
+                        android.widget.Toast.makeText(context,
+                                "Đã gửi yêu cầu hủy. Shop sẽ xác nhận trong thời gian sớm nhất.",
+                                android.widget.Toast.LENGTH_LONG).show();
                         Intent intent = new Intent(context, MainActivity.class);
-                        intent.putExtra("navigate_to", "cancelled_tab");
+                        intent.putExtra("navigate_to", "pending_tab");
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
                         context.startActivity(intent);
-                        android.widget.Toast.makeText(context, "Đã hủy đơn hàng thành công", android.widget.Toast.LENGTH_SHORT).show();
                     }, 1500);
                 })
                 .addOnFailureListener(e -> {
@@ -136,7 +135,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
     }
 
 
-    public class OrderViewHolder extends RecyclerView.ViewHolder {
+    class OrderViewHolder extends RecyclerView.ViewHolder {
         private ItemOrderBinding binding;
 
         public OrderViewHolder(ItemOrderBinding binding) {
@@ -159,7 +158,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                             // Update local data to reflect change immediately
                             order.setShopConfirmedDelivery(true);
                             order.setDeliveredAt(new java.util.Date());
-                            notifyItemChanged(getBindingAdapterPosition());
+                            notifyItemChanged(getAdapterPosition());
                         })
                         .addOnFailureListener(e -> {
                             loading.dismiss();
@@ -203,9 +202,10 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             itemView.setOnClickListener(v -> {
                 String status = order.getStatus() != null ? order.getStatus().toLowerCase() : "";
                 String orderId = order.getId();
+                boolean isReturnFlow = order.getReturnHandling() != null;
                 
                 android.content.Intent intent;
-                if ("returned".equals(status) || "refunded".equals(status)) {
+                if ("returned".equals(status) || "refunded".equals(status) || ("completed".equals(status) && isReturnFlow)) {
                     intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                 } else {
                     intent = new android.content.Intent(context, OrderDetailActivity.class);
@@ -278,7 +278,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
             pBinding.tvPriceOld.setVisibility(View.VISIBLE);
             pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
-            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
+            pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
         } else {
             pBinding.tvPriceOld.setVisibility(View.GONE);
         }
@@ -325,37 +325,34 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
         private void setStatusUI(Order order) {
             String status = order.getStatus();
             String displayStatus = "";
-            int color = ContextCompat.getColor(context, R.color.status_delivered);
+            int color = 0xFF36873A;
 
             switch (status.toLowerCase()) {
                 case "pending":
-                    displayStatus = "Chờ xác nhận";
-                    color = ContextCompat.getColor(context, R.color.status_pending);
+                    if (order.isCancelRequested()) {
+                        displayStatus = "Chờ xác nhận hủy";
+                        color = 0xFFE53835;
+                    } else {
+                        displayStatus = "Chờ xác nhận";
+                        color = 0xFFFF8F00;
+                    }
                     break;
                 case "confirmed":
-                    displayStatus = "Chờ lấy hàng";
-                    color = ContextCompat.getColor(context, R.color.status_pending);
-                    break;
+                    displayStatus = "Chờ lấy hàng"; color = 0xFFFF8F00; break;
                 case "shipping":
-                    displayStatus = "Chờ giao hàng";
-                    color = ContextCompat.getColor(context, R.color.status_shipping);
-                    break;
+                    displayStatus = "Chờ giao hàng"; color = 0xFFFF8F00; break;
                 case "delivered":
-                    displayStatus = "Hoàn thành";
-                    color = ContextCompat.getColor(context, R.color.status_delivered);
-                    break;
+                    displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
                 case "cancelled":
-                    displayStatus = "Đã hủy";
-                    color = ContextCompat.getColor(context, R.color.status_cancelled);
-                    break;
+                    displayStatus = "Đã hủy"; color = 0xFFE53835; break;
+                case "completed":
+                    displayStatus = "Hoàn thành"; color = 0xFF36873A; break;
                 case "returned":
                 case "refunded":
                     if ("refunded".equalsIgnoreCase(order.getPaymentStatus())) {
-                        displayStatus = "Đã hoàn tiền";
-                        color = ContextCompat.getColor(context, R.color.status_delivered);
+                        displayStatus = "Đã hoàn tiền"; color = 0xFF36873A;
                     } else {
-                        displayStatus = "Đang xử lý trả hàng";
-                        color = ContextCompat.getColor(context, R.color.status_returned);
+                        displayStatus = "Đang xử lý"; color = 0xFFFF8F00;
                     }
                     break;
             }
@@ -373,8 +370,10 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                 case "pending":
                     setupButton(binding.btnActionMiddle, "Liên hệ", "outline");
                     binding.btnActionMiddle.setOnClickListener(v -> showContactOptions(order));
-                    setupButton(binding.btnActionRight, "Hủy", "outline_error");
-                    binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
+                    if (!order.isCancelRequested()) {
+                        setupButton(binding.btnActionRight, "Hủy", "outline_error");
+                        binding.btnActionRight.setOnClickListener(v -> showCancelOrderBottomSheet(order));
+                    }
                     break;
                 case "confirmed":
                     setupButton(binding.btnActionRight, "Liên hệ", "outline");
@@ -458,6 +457,20 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         intent.putExtra("order", order);
                         context.startActivity(intent);
                     });
+                    setupButton(binding.btnActionRight, "Mua lại", "filled");
+                    binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
+                    break;
+                case "completed":
+                    if (order.getReturnHandling() != null) {
+                        setupButton(binding.btnActionMiddle, "Xem chi tiết hoàn tiền", "outline");
+                        binding.btnActionMiddle.setOnClickListener(v -> {
+                            android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
+                            intent.putExtra("order", order);
+                            context.startActivity(intent);
+                        });
+                    } else {
+                        setupButton(binding.btnActionMiddle, "Đánh giá", "outline");
+                    }
                     setupButton(binding.btnActionRight, "Mua lại", "filled");
                     binding.btnActionRight.setOnClickListener(v -> performRebuy(order));
                     break;

@@ -23,6 +23,7 @@ import com.example.healthup.LoginActivity;
 import com.example.healthup.R;
 import com.example.healthup.RegisterValidator;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
 
@@ -208,6 +209,9 @@ public class ResetPasswordActivity extends AppCompatActivity {
                 case LOADING:
                     setLoading(true);
                     break;
+                case WAITING_SMS:
+                    setLoading(false);
+                    break;
                 case SUCCESS:
                     setLoading(false);
                     Toast.makeText(this, R.string.reset_password_success, Toast.LENGTH_SHORT).show();
@@ -242,6 +246,12 @@ public class ResetPasswordActivity extends AppCompatActivity {
             }
         });
 
+        viewModel.getSmsCodeRequiredEvent().observe(this, event -> {
+            if (event != null && event.getContentIfNotHandled() != null) {
+                showSmsCodeDialog();
+            }
+        });
+
         viewModel.getGeneralError().observe(this, error -> {
             if (error == null) {
                 return;
@@ -259,8 +269,10 @@ public class ResetPasswordActivity extends AppCompatActivity {
                 return getString(R.string.forgot_password_phone_not_registered);
             case "provider_disabled":
                 return getString(R.string.reset_password_provider_disabled);
-            case "function_not_deployed":
-                return getString(R.string.reset_password_function_not_deployed);
+            case "phone_not_linked":
+                return getString(R.string.reset_password_phone_not_linked);
+            case "invalid_sms_code":
+                return getString(R.string.reset_password_invalid_sms_code);
             case "recent_auth_required":
                 return getString(R.string.reset_password_recent_auth_required);
             case "network":
@@ -409,6 +421,26 @@ public class ResetPasswordActivity extends AppCompatActivity {
 
     private void showSnackbar(String message) {
         Snackbar.make(findViewById(R.id.resetPasswordScrollView), message, Snackbar.LENGTH_LONG).show();
+    }
+
+    private void showSmsCodeDialog() {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setInputType(android.text.InputType.TYPE_CLASS_NUMBER);
+        input.setHint(R.string.reset_password_sms_hint);
+        int padding = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(padding, padding, padding, padding);
+
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.reset_password_sms_title)
+                .setMessage(R.string.reset_password_sms_message)
+                .setView(input)
+                .setCancelable(false)
+                .setNegativeButton(android.R.string.cancel, (dialog, which) -> viewModel.resetState())
+                .setPositiveButton(R.string.reset_password_sms_confirm, (dialog, which) -> {
+                    String code = input.getText() == null ? "" : input.getText().toString();
+                    viewModel.submitSmsCode(code);
+                })
+                .show();
     }
 
     private abstract static class SimpleTextWatcher implements TextWatcher {

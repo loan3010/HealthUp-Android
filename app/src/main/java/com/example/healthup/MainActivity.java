@@ -18,8 +18,10 @@ import androidx.fragment.app.Fragment;
 
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
+import com.example.healthup.util.AccountDisabledWatcher;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
+import com.example.healthup.util.FloatingChatBubbleController;
 import com.example.healthup.util.NotificationPermissionHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.models.CartItem;
@@ -33,6 +35,7 @@ import com.google.firebase.firestore.ListenerRegistration;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
+import com.example.healthup.util.LocaleHelper;
 import androidx.core.content.ContextCompat;
 
 import java.io.Serializable;
@@ -57,15 +60,22 @@ public class MainActivity extends AppCompatActivity {
 
     private BottomNavigationView navView;
     private FloatingActionButton fabChat;
+    private FloatingChatBubbleController floatingChatBubble;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
     private ListenerRegistration cartListener;
+    private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             refreshGuestCartBadge();
         }
     };
+
+    @Override
+    protected void attachBaseContext(Context newBase) {
+        super.attachBaseContext(LocaleHelper.onAttach(newBase));
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -75,9 +85,15 @@ public class MainActivity extends AppCompatActivity {
         navView = findViewById(R.id.bottom_navigation);
 
         fabChat = findViewById(R.id.fabChat);
-        if (fabChat != null) {
-            fabChat.setOnClickListener(v ->
-                    startActivity(ChatActivity.buyerIntent(MainActivity.this)));
+        View mainRoot = findViewById(R.id.main_root);
+        if (fabChat != null && mainRoot instanceof ViewGroup) {
+            floatingChatBubble = new FloatingChatBubbleController(
+                    this,
+                    fabChat,
+                    (ViewGroup) mainRoot,
+                    () -> openBuyerChat());
+            floatingChatBubble.attach();
+            fabChat.setOnClickListener(v -> openBuyerChat());
         }
 
         applySystemBarInsets();
@@ -86,28 +102,22 @@ public class MainActivity extends AppCompatActivity {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 loadFragment(new HomeFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_category) {
                 if (skipNextCategoryNavLoad) {
                     skipNextCategoryNavLoad = false;
-                    updateFabVisibility(false);
                     return true;
                 }
                 loadFragment(new ProductListFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_cart) {
                 loadFragment(new CartFragment());
-                updateFabVisibility(true);
                 return true;
             } else if (id == R.id.nav_notifications) {
                 loadFragment(new NotificationsFragment());
-                updateFabVisibility(false);
                 return true;
             } else if (id == R.id.nav_profile) {
                 loadFragment(new ProfileFragment());
-                updateFabVisibility(false);
                 return true;
             }
             return false;
@@ -188,6 +198,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh listener in case user logged in/out
         setupCartBadgeListener();
+        accountDisabledWatcher.attach(this);
 
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
         ContextCompat.registerReceiver(this, guestCartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
@@ -195,6 +206,7 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onPause() {
+        accountDisabledWatcher.detach();
         unregisterReceiver(guestCartReceiver);
         super.onPause();
     }
@@ -248,9 +260,23 @@ public class MainActivity extends AppCompatActivity {
 
             if (keyboardNowShowing != isKeyboardShowing) {
                 isKeyboardShowing = keyboardNowShowing;
-                navView.setVisibility(isKeyboardShowing ? View.GONE : View.VISIBLE);
+                
+                Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                boolean isHideFlow = isKeyboardShowing || isCheckoutFlow(currentFragment);
+                navView.setVisibility(isHideFlow ? View.GONE : View.VISIBLE);
             }
         });
+    }
+
+    private boolean isCheckoutFlow(Fragment fragment) {
+        return (fragment instanceof CartFragment ||
+                fragment instanceof CheckoutFragment ||
+                fragment instanceof PhoneVerificationFragment ||
+                fragment instanceof AddressBookFragment ||
+                fragment instanceof PromoCouponFragment ||
+                fragment instanceof OrderHistoryFragment ||
+                fragment instanceof PolicyFragment ||
+                fragment instanceof FAQFragment);
     }
 
     @Override
@@ -283,7 +309,6 @@ public class MainActivity extends AppCompatActivity {
             } else if ("phone_verification".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_cart);
                 loadFragment(new PhoneVerificationFragment());
-                updateFabVisibility(true);
                 return;
             } else if ("checkout".equals(target)) {
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
@@ -293,7 +318,6 @@ public class MainActivity extends AppCompatActivity {
                     args.putSerializable("selected_items", (Serializable) checkoutItems);
                     fragment.setArguments(args);
                     loadFragment(fragment);
-                    updateFabVisibility(false);
                 } else {
                     navView.setSelectedItemId(R.id.nav_cart);
                 }
@@ -317,20 +341,16 @@ public class MainActivity extends AppCompatActivity {
                 args.putInt("initial_tab", 1);
             } else if ("faq".equals(target)) {
                 loadFragment(new FAQFragment());
-                updateFabVisibility(false);
                 return;
             } else if ("policy".equals(target)) {
                 loadFragment(new PolicyFragment());
-                updateFabVisibility(false);
                 return;
             }
 
             fragment.setArguments(args);
             loadFragment(fragment);
-            updateFabVisibility(false);
         } else {
             loadFragment(new HomeFragment());
-            updateFabVisibility(false);
         }
     }
 
@@ -351,28 +371,47 @@ public class MainActivity extends AppCompatActivity {
             // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
 
-            // Fix Fragment Container: không để content lọt xuống dưới Nav Bar của app
-            // Chúng ta không cần padding bottom ở đây vì fragment_container đã được constraint
-            // vào TOP của bottom_navigation (đã được dãn chiều cao ở trên).
-
-            if (fabChat != null) {
-                ViewGroup.MarginLayoutParams params =
-                        (ViewGroup.MarginLayoutParams) fabChat.getLayoutParams();
-                params.bottomMargin = (int) (16 * getResources().getDisplayMetrics().density) + systemBars.bottom;
-                fabChat.setLayoutParams(params);
-            }
+            updateFloatingChatReservedSpace(systemBars.bottom);
             return windowInsets;
         });
     }
 
-    private void updateFabVisibility(boolean hideOnCart) {
-        if (fabChat == null) {
+    private void updateFloatingChatReservedSpace(int systemBottomInset) {
+        if (floatingChatBubble == null || navView == null) {
             return;
         }
-        fabChat.setVisibility(hideOnCart ? View.GONE : View.VISIBLE);
+        navView.post(() -> {
+            int margin = (int) (16 * getResources().getDisplayMetrics().density);
+            int reserved = navView.getHeight() + systemBottomInset + margin;
+            floatingChatBubble.updateBottomReservedPx(reserved);
+        });
     }
 
+    public void restoreFloatingChatBubble() {
+        if (floatingChatBubble != null) {
+            floatingChatBubble.restoreAfterChatEntry();
+        }
+    }
+
+    private void openBuyerChat() {
+        restoreFloatingChatBubble();
+        startActivity(ChatActivity.buyerIntent(MainActivity.this));
+    }
+
+
     private void loadFragment(Fragment fragment) {
+        // ✅ QUY TẮC: Ẩn BottomNav và FAB khi vào quy trình mua hàng hoặc các trang con sâu
+        boolean hideNavigation = isCheckoutFlow(fragment);
+
+        if (navView != null) {
+            navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
+        }
+        if (fabChat != null) {
+            boolean showBubble = !hideNavigation
+                    && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
+            fabChat.setVisibility(showBubble ? View.VISIBLE : View.GONE);
+        }
+
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
@@ -381,13 +420,11 @@ public class MainActivity extends AppCompatActivity {
     public void showCartTab() {
         navView.setSelectedItemId(R.id.nav_cart);
         loadFragment(new CartFragment());
-        updateFabVisibility(true);
     }
 
     public void showHomeTab() {
         navView.setSelectedItemId(R.id.nav_home);
         loadFragment(new HomeFragment());
-        updateFabVisibility(false);
     }
 
     @SuppressWarnings("unchecked")

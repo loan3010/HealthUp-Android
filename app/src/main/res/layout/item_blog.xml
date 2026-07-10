@@ -124,10 +124,14 @@
                     android:layout_height="wrap_content"
                     android:layout_alignParentEnd="true"
                     android:layout_centerVertical="true"
-                    android:text="Đọc tiếp >"
+                    android:drawablePadding="4dp"
+                    android:gravity="center_vertical"
+                    android:text="Đọc tiếp"
                     android:textColor="@color/primary_green"
                     android:textSize="14sp"
-                    android:textStyle="bold" />
+                    android:textStyle="bold"
+                    app:drawableEndCompat="@drawable/ic_chevron_right"
+                    app:drawableTint="@color/primary_green" />
             </RelativeLayout>
         </LinearLayout>
     </LinearLayout>

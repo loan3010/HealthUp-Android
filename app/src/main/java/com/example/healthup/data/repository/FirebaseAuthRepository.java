@@ -3,33 +3,34 @@ package com.example.healthup.data.repository;
 import android.app.Activity;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.example.healthup.FirebaseAuthErrorMapper;
+import com.example.healthup.auth.PhoneAuthHelper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.auth.PhoneAuthCredential;
-import com.google.firebase.auth.PhoneAuthOptions;
 import com.google.firebase.auth.PhoneAuthProvider;
-import com.google.firebase.functions.FirebaseFunctions;
-
-import java.util.HashMap;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 public class FirebaseAuthRepository {
 
-    private static final long PHONE_AUTH_TIMEOUT_SECONDS = 60L;
-
     private final FirebaseAuth firebaseAuth;
-    private final FirebaseFunctions firebaseFunctions;
+
+    @Nullable
+    private String pendingVerificationId;
+    @Nullable
+    private String pendingExpectedUid;
+    @Nullable
+    private String pendingNewPassword;
+    @Nullable
+    private PasswordUpdateCallback pendingCallback;
 
     public FirebaseAuthRepository() {
-        this(FirebaseAuth.getInstance(), FirebaseFunctions.getInstance());
+        this(FirebaseAuth.getInstance());
     }
 
-    public FirebaseAuthRepository(FirebaseAuth firebaseAuth, FirebaseFunctions firebaseFunctions) {
+    public FirebaseAuthRepository(FirebaseAuth firebaseAuth) {
         this.firebaseAuth = firebaseAuth;
-        this.firebaseFunctions = firebaseFunctions;
     }
 
     public interface PasswordUpdateCallback {
@@ -38,97 +39,188 @@ public class FirebaseAuthRepository {
         void onError(@NonNull String errorCode);
     }
 
-    /**
-     * Attempts Cloud Function reset first, then falls back to Phone Auth sign-in + updatePassword.
-     *
-     * @param localPhone local VN phone used as Firestore document key (09xxxxxxxx)
-     * @param phoneE164  E.164 phone for Firebase Phone Auth fallback (+849xxxxxxxx)
-     */
-    public void updatePasswordForPhone(
-            @NonNull String localPhone,
-            @NonNull String phoneE164,
-            @NonNull String newPassword,
-            @NonNull Activity activity,
-            @NonNull PasswordUpdateCallback callback
-    ) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("phone", localPhone);
-        data.put("newPassword", newPassword);
-
-        firebaseFunctions.getHttpsCallable("resetPassword")
-                .call(data)
-                .addOnSuccessListener(result -> callback.onSuccess())
-                .addOnFailureListener(e -> {
-                    String errorCode = FirebaseAuthErrorMapper.map(e);
-                    if ("function_not_deployed".equals(errorCode)) {
-                        updatePasswordViaPhoneAuth(phoneE164, newPassword, activity, callback);
-                    } else {
-                        callback.onError(errorCode);
-                    }
-                });
+    public interface PhoneVerificationCallback {
+        void onSmsCodeRequired();
     }
 
-    private void updatePasswordViaPhoneAuth(
+    /**
+     * Verifies phone ownership via Firebase Phone Auth, signs in, then updates password.
+     * Works on Spark plan without Cloud Functions when the phone is linked to the account.
+     */
+    public void updatePasswordForPhone(
             @NonNull String phoneE164,
+            @NonNull String expectedUid,
             @NonNull String newPassword,
             @NonNull Activity activity,
+            @NonNull PhoneVerificationCallback verificationCallback,
             @NonNull PasswordUpdateCallback callback
     ) {
-        PhoneAuthOptions options = PhoneAuthOptions.newBuilder(firebaseAuth)
-                .setPhoneNumber(phoneE164)
-                .setTimeout(PHONE_AUTH_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                .setActivity(activity)
-                .setCallbacks(new PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
+        clearPendingState();
+        pendingExpectedUid = expectedUid;
+        pendingNewPassword = newPassword;
+        pendingCallback = callback;
+
+        PhoneAuthHelper.startVerification(
+                firebaseAuth,
+                activity,
+                phoneE164,
+                new PhoneAuthHelper.Callbacks() {
                     @Override
                     public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
-                        signInAndUpdatePassword(credential, newPassword, callback);
-                    }
-
-                    @Override
-                    public void onVerificationFailed(@NonNull com.google.firebase.FirebaseException e) {
-                        callback.onError(FirebaseAuthErrorMapper.map(e));
+                        signInAndUpdatePassword(credential);
                     }
 
                     @Override
                     public void onCodeSent(
                             @NonNull String verificationId,
-                            @NonNull PhoneAuthProvider.ForceResendingToken token
+                            @NonNull PhoneAuthProvider.ForceResendingToken resendToken
                     ) {
-                        callback.onError("function_not_deployed");
+                        pendingVerificationId = verificationId;
+                        verificationCallback.onSmsCodeRequired();
                     }
-                })
-                .build();
 
-        PhoneAuthProvider.verifyPhoneNumber(options);
+                    @Override
+                    public void onVerificationFailed(@NonNull Exception error) {
+                        finishWithError(FirebaseAuthErrorMapper.map(error));
+                    }
+                }
+        );
     }
 
-    private void signInAndUpdatePassword(
-            @NonNull PhoneAuthCredential credential,
-            @NonNull String newPassword,
-            @NonNull PasswordUpdateCallback callback
+    public void submitSmsCodeAndUpdatePassword(@NonNull String smsCode) {
+        String verificationId = pendingVerificationId;
+        if (verificationId == null || pendingCallback == null) {
+            return;
+        }
+
+        String normalizedCode = PhoneAuthHelper.normalizeSmsCode(smsCode);
+        if (normalizedCode == null) {
+            finishWithError("invalid_sms_code");
+            return;
+        }
+
+        signInAndUpdatePassword(PhoneAuthHelper.buildCredential(verificationId, normalizedCode));
+    }
+
+    public void cancelPendingVerification() {
+        clearPendingState();
+    }
+
+    public void linkPhoneToCurrentUser(
+            @NonNull Activity activity,
+            @NonNull String phoneE164,
+            @NonNull Runnable onLinked,
+            @NonNull Runnable onSkipped
     ) {
+        PhoneAuthHelper.startVerification(
+                firebaseAuth,
+                activity,
+                phoneE164,
+                new PhoneAuthHelper.Callbacks() {
+                    @Override
+                    public void onVerificationCompleted(@NonNull PhoneAuthCredential credential) {
+                        linkCredential(credential, onLinked, onSkipped);
+                    }
+
+                    @Override
+                    public void onCodeSent(
+                            @NonNull String verificationId,
+                            @NonNull PhoneAuthProvider.ForceResendingToken resendToken
+                    ) {
+                        // Registration keeps going even if Firebase SMS is not entered.
+                        onSkipped.run();
+                    }
+
+                    @Override
+                    public void onVerificationFailed(@NonNull Exception error) {
+                        onSkipped.run();
+                    }
+                }
+        );
+    }
+
+    public void linkPhoneWithSmsCode(
+            @NonNull String verificationId,
+            @NonNull String smsCode,
+            @NonNull Runnable onLinked,
+            @NonNull Runnable onSkipped
+    ) {
+        String normalizedCode = PhoneAuthHelper.normalizeSmsCode(smsCode);
+        if (normalizedCode == null) {
+            onSkipped.run();
+            return;
+        }
+        linkCredential(
+                PhoneAuthHelper.buildCredential(verificationId, normalizedCode),
+                onLinked,
+                onSkipped
+        );
+    }
+
+    private void linkCredential(
+            @NonNull PhoneAuthCredential credential,
+            @NonNull Runnable onLinked,
+            @NonNull Runnable onSkipped
+    ) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user == null) {
+            onSkipped.run();
+            return;
+        }
+
+        user.linkWithCredential(credential)
+                .addOnSuccessListener(unused -> onLinked.run())
+                .addOnFailureListener(unused -> onSkipped.run());
+    }
+
+    private void signInAndUpdatePassword(@NonNull PhoneAuthCredential credential) {
+        PasswordUpdateCallback callback = pendingCallback;
+        String expectedUid = pendingExpectedUid;
+        String newPassword = pendingNewPassword;
+
+        if (callback == null || expectedUid == null || newPassword == null) {
+            return;
+        }
+
         firebaseAuth.signInWithCredential(credential)
                 .addOnCompleteListener(task -> {
                     if (!task.isSuccessful()) {
-                        callback.onError(FirebaseAuthErrorMapper.map(task.getException()));
+                        finishWithError(FirebaseAuthErrorMapper.map(task.getException()));
                         return;
                     }
 
                     FirebaseUser user = firebaseAuth.getCurrentUser();
-                    if (user == null) {
-                        callback.onError("user_not_found");
+                    if (user == null || !expectedUid.equals(user.getUid())) {
+                        firebaseAuth.signOut();
+                        finishWithError("phone_not_linked");
                         return;
                     }
 
                     user.updatePassword(newPassword)
                             .addOnSuccessListener(unused -> {
                                 firebaseAuth.signOut();
+                                clearPendingState();
                                 callback.onSuccess();
                             })
                             .addOnFailureListener(e -> {
                                 firebaseAuth.signOut();
-                                callback.onError(FirebaseAuthErrorMapper.map(e));
+                                finishWithError(FirebaseAuthErrorMapper.map(e));
                             });
                 });
+    }
+
+    private void finishWithError(@NonNull String errorCode) {
+        PasswordUpdateCallback callback = pendingCallback;
+        clearPendingState();
+        if (callback != null) {
+            callback.onError(errorCode);
+        }
+    }
+
+    private void clearPendingState() {
+        pendingVerificationId = null;
+        pendingExpectedUid = null;
+        pendingNewPassword = null;
+        pendingCallback = null;
     }
 }
