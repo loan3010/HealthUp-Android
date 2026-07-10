@@ -5,6 +5,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
@@ -40,8 +42,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private FirebaseFirestore db;
     private View rootView;
-    private ChipGroup cgWeight, cgFlavor, cgPackage;
-    private TextView tvLabelWeight, tvLabelFlavor, tvLabelPackage;
+    private LinearLayout layoutGroups;
     private TextView tvPrice, tvSelectedOptions;
     private Product loadedProduct;
 
@@ -50,9 +51,9 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     public EditCartItemBottomSheet(CartItem item, OnConfirmListener listener) {
         this.item = item;
         this.listener = listener;
-        this.selectedWeight = extractLabel(item.getWeight());
-        this.selectedFlavor = extractLabel(item.getFlavor());
-        this.selectedPackage = extractLabel(item.getPackageType());
+        this.selectedWeight = item.getWeight();
+        this.selectedFlavor = item.getFlavor();
+        this.selectedPackage = item.getPackageType();
         this.quantity = item.getQuantity();
     }
 
@@ -73,13 +74,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         View btnConfirm = rootView.findViewById(R.id.btnConfirm);
         View btnClose = rootView.findViewById(R.id.btnCloseEditCart);
 
-        cgWeight = rootView.findViewById(R.id.cgWeight);
-        cgFlavor = rootView.findViewById(R.id.cgFlavor);
-        cgPackage = rootView.findViewById(R.id.cgPackage);
-
-        tvLabelWeight = rootView.findViewById(R.id.tvLabelWeight);
-        tvLabelFlavor = rootView.findViewById(R.id.tvLabelFlavor);
-        tvLabelPackage = rootView.findViewById(R.id.tvLabelPackage);
+        layoutGroups = rootView.findViewById(R.id.layout_variant_groups);
 
         updatePriceDisplay();
         updateSelectedSummary();
@@ -117,9 +112,6 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void loadProductOptions() {
-        ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
-        ImageLoadHelper.loadInto(imgProduct, item.getImageUrl());
-
         if (item.getProductId() == null) {
             showFallbackOptions();
             return;
@@ -131,16 +123,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                     if (doc.exists()) {
                         Product p = Product.fromDocument(doc);
                         if (p != null) {
-                            loadedProduct = p;
-                            if (item.getImageUrl() == null || item.getImageUrl().isEmpty()) {
-                                String productImage = p.getImageUrl();
-                                if (productImage != null && !productImage.isEmpty()) {
-                                    item.setImageUrl(productImage);
-                                    ImageLoadHelper.loadInto(imgProduct, productImage);
-                                }
-                            }
                             updateOptionsUI(p);
-                            updatePriceDisplay();
                         }
                     } else {
                         showFallbackOptions();
@@ -150,43 +133,94 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void showFallbackOptions() {
-        updateUISection(tvLabelWeight, cgWeight, Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> {
+        layoutGroups.removeAllViews();
+        addFallbackGroup("Khối lượng", Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> {
             selectedWeight = v;
             updatePriceDisplay();
             updateSelectedSummary();
         });
-        updateUISection(tvLabelFlavor, cgFlavor, Arrays.asList("Vị Socola", "Vị Mật Ong", "Nguyên Bản"), selectedFlavor, v -> {
-            selectedFlavor = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-        });
-        updateUISection(tvLabelPackage, cgPackage, Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> {
+        addFallbackGroup("Loại đóng gói", Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> {
             selectedPackage = v;
             updatePriceDisplay();
             updateSelectedSummary();
         });
     }
 
+    private void addFallbackGroup(String label, List<String> options, String currentValue, OnOptionSelected callback) {
+        View groupView = getLayoutInflater().inflate(R.layout.layout_variant_group, layoutGroups, false);
+        TextView tvLabel = groupView.findViewById(R.id.tv_group_label);
+        ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
+        tvLabel.setText(label);
+        buildOptionGroup(cg, options, currentValue, callback);
+        layoutGroups.addView(groupView);
+    }
+
     private void updateOptionsUI(Product product) {
         loadedProduct = product;
-        updateUISection(tvLabelWeight, cgWeight, convertToStringList(product.getWeights()), selectedWeight, v -> {
-            selectedWeight = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-            updateVariantImagePreview();
-        });
-        updateUISection(tvLabelFlavor, cgFlavor, convertToStringList(product.getFlavors()), selectedFlavor, v -> {
-            selectedFlavor = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-            updateVariantImagePreview();
-        });
-        updateUISection(tvLabelPackage, cgPackage, convertToStringList(product.getPackagingTypes()), selectedPackage, v -> {
-            selectedPackage = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-            updateVariantImagePreview();
-        });
+
+        // Tự động khôi phục các lựa chọn từ variantName nếu các trường lẻ đang bị null
+        if (selectedWeight == null && selectedFlavor == null && selectedPackage == null) {
+            String vn = item.getVariantName();
+            if (vn != null && !vn.isEmpty()) {
+                Map<String, List<Product.ProductVariant>> allGroups = product.getGroupedVariants();
+                for (Map.Entry<String, List<Product.ProductVariant>> entry : allGroups.entrySet()) {
+                    for (Product.ProductVariant v : entry.getValue()) {
+                        // Kiểm tra xem tên phân loại này có nằm trong chuỗi tên tổng hợp không
+                        if (vn.toLowerCase().contains(v.getName().toLowerCase())) {
+                            String gn = entry.getKey().toLowerCase();
+                            if (gn.contains("khối lượng") || gn.contains("weight")) selectedWeight = v.getName();
+                            else if (gn.contains("hương vị") || gn.contains("flavor")) selectedFlavor = v.getName();
+                            else if (gn.contains("đóng gói") || gn.contains("package") || gn.contains("quy cách")) selectedPackage = v.getName();
+                        }
+                    }
+                }
+            }
+        }
+
+        layoutGroups.removeAllViews();
+
+        Map<String, List<Product.ProductVariant>> grouped = product.getGroupedVariants();
+        if (grouped.isEmpty()) {
+            showFallbackOptions();
+            return;
+        }
+
+        for (Map.Entry<String, List<Product.ProductVariant>> entry : grouped.entrySet()) {
+            View groupView = getLayoutInflater().inflate(R.layout.layout_variant_group, layoutGroups, false);
+            TextView tvLabel = groupView.findViewById(R.id.tv_group_label);
+            ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
+
+            String groupName = entry.getKey();
+            tvLabel.setText(groupName);
+
+            String currentValue = "";
+            String normalizedName = groupName.toLowerCase();
+            if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")) currentValue = selectedWeight;
+            else if (normalizedName.contains("hương vị") || normalizedName.contains("flavor")) currentValue = selectedFlavor;
+            else if (normalizedName.contains("đóng gói") || normalizedName.contains("package") || normalizedName.contains("quy cách")) currentValue = selectedPackage;
+            else if (normalizedName.contains("phân loại")) {
+                currentValue = selectedWeight != null ? selectedWeight : (selectedFlavor != null ? selectedFlavor : selectedPackage);
+            }
+
+            List<String> options = new ArrayList<>();
+            for (Product.ProductVariant v : entry.getValue()) {
+                options.add(v.getName());
+            }
+
+            buildOptionGroup(cg, options, currentValue, v -> {
+                if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")) selectedWeight = v;
+                else if (normalizedName.contains("hương vị") || normalizedName.contains("flavor")) selectedFlavor = v;
+                else if (normalizedName.contains("đóng gói") || normalizedName.contains("package") || normalizedName.contains("quy cách")) selectedPackage = v;
+
+                updatePriceDisplay();
+                updateSelectedSummary();
+                updateVariantImagePreview();
+            });
+
+            layoutGroups.addView(groupView);
+        }
+        updatePriceDisplay();
+        updateSelectedSummary();
         updateVariantImagePreview();
     }
 
@@ -228,7 +262,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private void updateSelectedSummary() {
         if (tvSelectedOptions == null) return;
-        List<String> parts = new ArrayList<>();
+        java.util.LinkedHashSet<String> parts = new java.util.LinkedHashSet<>();
         if (selectedWeight != null && !selectedWeight.isEmpty()) parts.add(selectedWeight);
         if (selectedFlavor != null && !selectedFlavor.isEmpty()) parts.add(selectedFlavor);
         if (selectedPackage != null && !selectedPackage.isEmpty()) parts.add(selectedPackage);
@@ -242,52 +276,21 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private double resolveSelectedPrice() {
         if (loadedProduct != null) {
-            // 1. Kiểm tra khối lượng (selectedWeight)
             if (selectedWeight != null && !selectedWeight.trim().isEmpty()) {
                 Product.ProductVariant variant = loadedProduct.findVariantByName(selectedWeight);
-                if (variant != null && variant.getPrice() > 0) {
-                    return variant.getPrice();
-                }
+                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
             }
-            // 2. Kiểm tra hương vị (selectedFlavor)
             if (selectedFlavor != null && !selectedFlavor.trim().isEmpty()) {
                 Product.ProductVariant variant = loadedProduct.findVariantByName(selectedFlavor);
-                if (variant != null && variant.getPrice() > 0) {
-                    return variant.getPrice();
-                }
+                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
             }
-            // 3. Kiểm tra quy cách đóng gói (selectedPackage)
             if (selectedPackage != null && !selectedPackage.trim().isEmpty()) {
                 Product.ProductVariant variant = loadedProduct.findVariantByName(selectedPackage);
-                if (variant != null && variant.getPrice() > 0) {
-                    return variant.getPrice();
-                }
+                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
             }
-            // Mặc định trả về giá cơ bản của sản phẩm
             return loadedProduct.getPrice();
         }
         return item.getPrice();
-    }
-
-    private void updateUISection(TextView label, ChipGroup group, List<String> options, String current, OnOptionSelected callback) {
-        if (options == null || options.isEmpty()) {
-            label.setVisibility(View.GONE);
-            group.setVisibility(View.GONE);
-            return;
-        }
-        label.setVisibility(View.VISIBLE);
-        group.setVisibility(View.VISIBLE);
-        buildOptionGroup(group, options, current, callback);
-    }
-
-    private List<String> convertToStringList(List<Object> input) {
-        List<String> result = new ArrayList<>();
-        if (input == null) return result;
-        for (Object obj : input) {
-            String label = Product.extractOptionLabel(obj);
-            if (!label.isEmpty()) result.add(label);
-        }
-        return result;
     }
 
     private interface OnOptionSelected {
@@ -300,8 +303,6 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
         for (String rawOption : options) {
             String displayLabel = extractLabel(rawOption);
-
-            // FIX: Inflate từ item_variant_chip.xml để lấy style giống popup gốc (green selected state)
             Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, container, false);
             chip.setText(displayLabel);
             chip.setCheckable(true);
@@ -321,21 +322,20 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 updateChipStyle(chip, true);
                 callback.onSelected(displayLabel);
             });
-
             container.addView(chip);
         }
     }
 
     private void updateChipStyle(Chip chip, boolean isSelected) {
         if (isSelected) {
-            chip.setChipBackgroundColorResource(R.color.primary_green);
+            chip.setChipBackgroundColorResource(R.color.primary_default);
             chip.setTextColor(getResources().getColor(R.color.white));
             chip.setChipStrokeWidth(0f);
         } else {
             chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
             chip.setTextColor(getResources().getColor(R.color.text_dark));
             chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
-            chip.setChipStrokeColorResource(R.color.primary_green);
+            chip.setChipStrokeColorResource(R.color.primary_default);
         }
     }
 

@@ -26,8 +26,8 @@
             android:clipToPadding="false"
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
-            android:paddingTop="30dp"
-            android:paddingBottom="20dp">
+            android:paddingTop="0dp"
+            android:paddingBottom="10dp">
 
             <FrameLayout
                 android:id="@+id/avatar_container"
@@ -96,7 +96,8 @@
                 android:layout_alignTop="@id/avatar_container"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="12dp"
-                android:gravity="center_vertical"
+                android:gravity="start"
+                android:paddingTop="10dp"
                 android:minHeight="80dp"
                 android:orientation="vertical"
                 android:visibility="gone">

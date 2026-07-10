@@ -367,6 +367,22 @@
     <string name="view_all">Xem tất cả</string>
     <string name="customer_reviews">Đánh giá khách hàng</string>
     <string name="may_also_like">Có thể bạn quan tâm</string>
+    <string name="cart_edit">Sửa</string>
+    <string name="cart_done">Xong</string>
+    <string name="cart_select_all">Tất cả</string>
+    <string name="cart_save_to_wishlist">Lưu vào Đã thích</string>
+    <string name="cart_delete">Xóa</string>
+    <string name="cart_back">Quay lại</string>
+    <string name="cart_total">Tổng tiền</string>
+    <string name="cart_voucher_hint">Chọn hoặc nhập khuyến mãi</string>
+    <string name="cart_empty_title">Giỏ hàng của bạn đang trống</string>
+    <string name="cart_shop_now">Tiếp tục mua sắm</string>
+    <string name="cart_select_items_required">Vui lòng chọn ít nhất 1 sản phẩm</string>
+    <string name="cart_saved_to_wishlist">Đã lưu vào yêu thích</string>
+    <string name="wishlist_added">Đã thêm vào yêu thích</string>
+    <string name="wishlist_removed">Đã xóa khỏi yêu thích</string>
+    <string name="wishlist_update_failed">Không thể cập nhật yêu thích</string>
+    <string name="wishlist_login_required">Vui lòng đăng nhập để sử dụng chức năng yêu thích</string>
 
     <string name="welcome_back">Xin chào</string>
     <string name="home_question">Bạn muốn ăn gì hôm nay?</string>

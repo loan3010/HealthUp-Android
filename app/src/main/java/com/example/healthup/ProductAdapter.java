@@ -286,8 +286,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 btnWishlist.setOnClickListener(v -> {
                     product.setFavorite(!product.isFavorite());
                     updateWishlistIcon(btnWishlist, product);
+                    // FIX (bug #3): dùng string resource thay vì chuỗi tiếng Việt cứng.
                     Toast.makeText(itemView.getContext(),
-                            product.isFavorite() ? "Đã thêm vào yêu thích" : "Đã xóa khỏi yêu thích",
+                            product.isFavorite()
+                                    ? itemView.getContext().getString(R.string.wishlist_added)
+                                    : itemView.getContext().getString(R.string.wishlist_removed),
                             Toast.LENGTH_SHORT).show();
                 });
             }

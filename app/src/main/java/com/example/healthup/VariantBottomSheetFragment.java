@@ -180,14 +180,14 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
     private void updateVariantChipStyle(Chip chip, boolean isSelected) {
         if (isSelected) {
-            chip.setChipBackgroundColorResource(R.color.primary_green);
+            chip.setChipBackgroundColorResource(R.color.primary_default);
             chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
             chip.setChipStrokeWidth(0f);
         } else {
-            chip.setChipBackgroundColorResource(R.color.white);
+            chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
             chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_dark));
-            chip.setChipStrokeWidth(1f);
-            chip.setChipStrokeColorResource(android.R.color.darker_gray);
+            chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
+            chip.setChipStrokeColorResource(R.color.primary_default);
         }
     }
 

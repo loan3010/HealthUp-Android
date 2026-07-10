@@ -1,11 +1,12 @@
 package com.example.healthup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CheckBox;
-import android.widget.ProgressBar;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -15,37 +16,56 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.adapters.CartAdapter;
+import com.example.healthup.firebase.FirestoreManager;
+import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.healthup.util.PhoneVerifiedHelper;
 import com.example.models.CartItem;
+import com.example.models.Product;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.WriteBatch;
 
 import java.io.Serializable;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private List<CartItem> cartItems = new ArrayList<>();
     private CartAdapter adapter;
+    private ProductAdapter recommendAdapter;
 
-    private RecyclerView rvCartItems;
-    private View emptyState, footer, btnDeleteSelected, rowVoucher, btnContinueShopping, guestSyncBanner;
-    private ProgressBar progressBar;
-    private CheckBox cbSelectAll;
-    private TextView tvTotalPrice, btnCheckout, btnBackFooter, tvCartTitle;
+    private RecyclerView rvCartItems, rvCartRecommendations;
+    private View emptyState, footer, rowVoucher, btnContinueShopping, guestSyncBanner;
+    private View totalsRow, editRow;
+    private View btnSaveToWishlist, btnDeleteSelected;
+    private CheckBox cbSelectAllEdit;
+    private TextView tvTotalPrice, btnCheckout, btnBackFooter, tvCartTitle, tvEditToggle, tvViewAllRecommend;
+    private ImageButton btnBack;
 
     private FirebaseFirestore db;
     private String userId;
+    private boolean editMode = false;
+
+    // FIX (bug #4): true khi Cart được mở từ nút "Xem giỏ hàng" trong ProductDetailActivity.
+    // Khi đó nút "Quay lại"/mũi tên back phải finish() Activity này để trở về đúng màn Chi
+    // tiết sản phẩm, thay vì chuyển tab Trang chủ như luồng vào Giỏ hàng bình thường.
+    private boolean returnToPreviousActivity = false;
 
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
 
@@ -57,11 +77,15 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         db = FirebaseFirestore.getInstance();
         userId = FirebaseAuth.getInstance().getUid();
+        returnToPreviousActivity = getArguments() != null && getArguments().getBoolean("return_to_previous", false);
 
         bindViews(view);
         applyHeaderWindowInsets(view);
+        applyFooterWindowInsets(view);
         setupListeners();
+        setupRecommendationAdapter();
         loadCartFromFirestore();
+        fetchRecommendations();
 
         return view;
     }
@@ -69,53 +93,78 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onDestroyView() {
         adapter = null;
+        recommendAdapter = null;
         super.onDestroyView();
     }
 
     private void applyHeaderWindowInsets(View view) {
         View header = view.findViewById(R.id.header);
-        if (header == null) {
-            return;
-        }
+        if (header == null) return;
 
-        final int basePaddingStart = header.getPaddingStart();
         final int basePaddingTop = header.getPaddingTop();
-        final int basePaddingEnd = header.getPaddingEnd();
-        final int basePaddingBottom = header.getPaddingBottom();
 
         ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPaddingRelative(
-                    basePaddingStart,
+                    header.getPaddingStart(),
                     basePaddingTop + systemBars.top,
-                    basePaddingEnd,
-                    basePaddingBottom
+                    header.getPaddingEnd(),
+                    header.getPaddingBottom()
             );
             return windowInsets;
         });
         ViewCompat.requestApplyInsets(header);
     }
 
+    // FIX (bug #5): footer trước đây không nhận padding bottom theo system bar, nên bị thanh
+    // điều hướng cử chỉ / thanh nav hệ thống che khuất một phần. Áp dụng inset bottom cho
+    // footer giống cách header đã nhận inset top.
+    private void applyFooterWindowInsets(View view) {
+        View footerView = view.findViewById(R.id.footer);
+        if (footerView == null) return;
+
+        final int basePaddingBottom = footerView.getPaddingBottom();
+
+        ViewCompat.setOnApplyWindowInsetsListener(footerView, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(),
+                    basePaddingBottom + systemBars.bottom);
+            return windowInsets;
+        });
+        ViewCompat.requestApplyInsets(footerView);
+    }
+
     private void bindViews(View view) {
         rvCartItems = view.findViewById(R.id.rvCartItems);
+        rvCartRecommendations = view.findViewById(R.id.rvCartRecommendations);
         emptyState = view.findViewById(R.id.emptyState);
         footer = view.findViewById(R.id.footer);
-        cbSelectAll = view.findViewById(R.id.cbSelectAll);
+        totalsRow = view.findViewById(R.id.totalsRow);
+        editRow = view.findViewById(R.id.editRow);
+        cbSelectAllEdit = view.findViewById(R.id.cbSelectAllEdit);
+        btnSaveToWishlist = view.findViewById(R.id.btnSaveToWishlist);
         btnDeleteSelected = view.findViewById(R.id.btnDeleteSelected);
         tvTotalPrice = view.findViewById(R.id.tvTotalPrice);
         btnCheckout = view.findViewById(R.id.btnCheckout);
         btnBackFooter = view.findViewById(R.id.btnBackFooter);
+        btnBack = view.findViewById(R.id.btnBack);
         tvCartTitle = view.findViewById(R.id.tvCartTitle);
+        tvEditToggle = view.findViewById(R.id.tvEditToggle);
+        tvViewAllRecommend = view.findViewById(R.id.tvViewAllRecommend);
         rowVoucher = view.findViewById(R.id.rowVoucher);
         btnContinueShopping = view.findViewById(R.id.btnContinueShopping);
         guestSyncBanner = view.findViewById(R.id.guestSyncBanner);
 
         rvCartItems.setLayoutManager(new LinearLayoutManager(getContext()));
+        rvCartItems.setNestedScrollingEnabled(false);
+
+        rvCartRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        rvCartRecommendations.setNestedScrollingEnabled(false);
     }
 
     private void setupListeners() {
-        if (cbSelectAll != null) {
-            cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        if (cbSelectAllEdit != null) {
+            cbSelectAllEdit.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 for (CartItem item : cartItems) item.setSelected(isChecked);
                 if (adapter != null) adapter.notifyDataSetChanged();
                 updateFooter();
@@ -125,25 +174,20 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (btnDeleteSelected != null) {
             btnDeleteSelected.setOnClickListener(v -> deleteSelectedItems());
         }
+        if (btnSaveToWishlist != null) {
+            btnSaveToWishlist.setOnClickListener(v -> saveSelectedItemsToWishlist());
+        }
         if (btnCheckout != null) {
             btnCheckout.setOnClickListener(v -> goToCheckout());
         }
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> goBack());
+        }
         if (btnBackFooter != null) {
-            btnBackFooter.setOnClickListener(v -> {
-                if (!isAdded()) return;
-                
-                // Thử quay lại màn hình trước đó trong stack
-                boolean movedBack = requireActivity().getSupportFragmentManager().popBackStackImmediate();
-                
-                // Nếu không có gì để quay lại (đang ở tab giỏ hàng), chuyển về tab Trang chủ
-                if (!movedBack) {
-                    com.google.android.material.bottomnavigation.BottomNavigationView navView = 
-                        requireActivity().findViewById(R.id.bottom_navigation);
-                    if (navView != null) {
-                        navView.setSelectedItemId(R.id.nav_home);
-                    }
-                }
-            });
+            btnBackFooter.setOnClickListener(v -> goBack());
+        }
+        if (tvEditToggle != null) {
+            tvEditToggle.setOnClickListener(v -> setEditMode(!editMode));
         }
         if (rowVoucher != null) {
             rowVoucher.setOnClickListener(v -> openVoucherList());
@@ -157,6 +201,58 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         .commit();
             });
         }
+        if (tvViewAllRecommend != null) {
+            tvViewAllRecommend.setOnClickListener(v -> goToCategoryTab());
+        }
+    }
+
+    // FIX (bug #4): xử lý dùng chung cho cả mũi tên back ở header và nút "Quay lại" ở footer,
+    // đúng theo layout header kiểu Shopee (Quay lại | Giỏ hàng (n) | Sửa).
+    private void goBack() {
+        if (!isAdded()) return;
+
+        if (returnToPreviousActivity) {
+            requireActivity().finish();
+            return;
+        }
+
+        boolean movedBack = requireActivity().getSupportFragmentManager().popBackStackImmediate();
+        if (!movedBack) {
+            com.google.android.material.bottomnavigation.BottomNavigationView navView =
+                    requireActivity().findViewById(R.id.bottom_navigation);
+            if (navView != null) {
+                navView.setSelectedItemId(R.id.nav_home);
+            }
+        }
+    }
+
+    private void goToCategoryTab() {
+        if (!isAdded()) return;
+        com.google.android.material.bottomnavigation.BottomNavigationView navView =
+                requireActivity().findViewById(R.id.bottom_navigation);
+        if (navView != null) {
+            navView.setSelectedItemId(R.id.nav_category);
+        }
+    }
+
+    // FIX (bug #7): toggle chế độ "Sửa" (giống Shopee) — đổi header text Sửa/Xong và đổi
+    // footer giữa 2 trạng thái: bình thường (Tổng tiền/Quay lại/Tiếp tục) và chỉnh sửa
+    // (Tất cả/Lưu vào Đã thích/Xóa).
+    private void setEditMode(boolean enabled) {
+        editMode = enabled;
+        if (tvEditToggle != null) {
+            tvEditToggle.setText(enabled ? getString(R.string.cart_done) : getString(R.string.cart_edit));
+        }
+        if (totalsRow != null) {
+            totalsRow.setVisibility(enabled ? View.GONE : View.VISIBLE);
+        }
+        if (editRow != null) {
+            editRow.setVisibility(enabled ? View.VISIBLE : View.GONE);
+        }
+        if (rowVoucher != null) {
+            boolean isEmpty = cartItems.isEmpty();
+            rowVoucher.setVisibility(!enabled && !isEmpty ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void openVoucherList() {
@@ -167,14 +263,77 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .commit();
     }
 
+    // FIX (bug #6): thiết lập adapter gợi ý "Có thể bạn quan tâm" ngay trong Giỏ hàng, tham
+    // khảo Shopee — luôn hiển thị bất kể giỏ hàng có sản phẩm hay không, tái sử dụng đúng
+    // ProductAdapter (có nút yêu thích + thêm giỏ hàng) như các trang khác trong app.
+    private void setupRecommendationAdapter() {
+        recommendAdapter = new ProductAdapter(new ArrayList<>(), new ProductAdapter.OnProductClickListener() {
+            @Override
+            public void onProductClick(Product product) {
+                if (product == null || product.getId() == null || !isAdded()) return;
+                Intent intent = new Intent(requireContext(), ProductDetailActivity.class);
+                intent.putExtra("productId", product.getId());
+                startActivity(intent);
+            }
+
+            @Override
+            public void onAddToCart(Product product) {
+                if (!isAdded()) return;
+                VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
+                        CartHelper.addToCart(requireContext(), product, variant, quantity));
+                sheet.show(getChildFragmentManager(), "VariantSelectionCartRecommend");
+            }
+
+            @Override
+            public void onFavoriteClick(Product product) {
+                if (!isAdded()) return;
+                WishlistManager.toggle(requireContext(), product, success -> {
+                    if (success && isAdded() && recommendAdapter != null) {
+                        recommendAdapter.notifyDataSetChanged();
+                    }
+                });
+            }
+        });
+        rvCartRecommendations.setAdapter(recommendAdapter);
+    }
+
+    private void fetchRecommendations() {
+        if (rvCartRecommendations == null) return;
+        FirestoreManager.getInstance().getProductsCollection()
+                .limit(20)
+                .get()
+                .addOnSuccessListener(snapshot -> {
+                    if (!isAdded()) return;
+                    List<Product> pool = new ArrayList<>();
+                    for (DocumentSnapshot doc : snapshot) {
+                        if (!Product.isVisibleToBuyers(doc)) continue;
+                        Product p = Product.fromDocument(doc);
+                        if (p != null) pool.add(p);
+                    }
+                    Collections.shuffle(pool);
+                    List<Product> selected = new ArrayList<>(pool.subList(0, Math.min(6, pool.size())));
+                    applyWishlistStateToRecommendations(selected);
+                });
+    }
+
+    private void applyWishlistStateToRecommendations(List<Product> products) {
+        if (userId == null) {
+            if (recommendAdapter != null) recommendAdapter.updateData(products);
+            return;
+        }
+        WishlistManager.loadFavoriteIds(userId, ids -> {
+            if (!isAdded()) return;
+            WishlistManager.applyFavoriteState(products, ids);
+            if (recommendAdapter != null) recommendAdapter.updateData(products);
+        });
+    }
+
     private void loadCartFromFirestore() {
         if (userId == null) {
             loadGuestCart();
             return;
         }
 
-        // Bỏ orderBy ở query Firestore vì nếu 1 document thiếu field 'updatedAt', 
-        // nó sẽ bị Firestore loại bỏ khỏi kết quả trả về, gây lệch số lượng với Badge.
         db.collection("users").document(userId).collection("cart")
                 .get()
                 .addOnSuccessListener(snapshot -> {
@@ -190,7 +349,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     }
 
     private void applyFirestoreCartSnapshot(com.google.firebase.firestore.QuerySnapshot snapshot) {
-        java.util.Map<String, Boolean> selection = new java.util.HashMap<>();
+        Map<String, Boolean> selection = new HashMap<>();
         for (CartItem ci : cartItems) {
             if (ci.getId() != null) {
                 selection.put(ci.getId(), ci.isSelected());
@@ -216,8 +375,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
 
-        // Sắp xếp theo updatedAt giảm dần trong bộ nhớ (để document không có field này vẫn hiện ở cuối)
-        java.util.Collections.sort(loadedItems, (o1, o2) -> {
+        Collections.sort(loadedItems, (o1, o2) -> {
             com.google.firebase.Timestamp t1 = o1.getUpdatedAt();
             com.google.firebase.Timestamp t2 = o2.getUpdatedAt();
             if (t1 == null && t2 == null) return 0;
@@ -268,7 +426,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         loadCartFromFirestore();
     }
 
-    private String getStringOrMapLabel(com.google.firebase.firestore.DocumentSnapshot doc, String field) {
+    private String getStringOrMapLabel(DocumentSnapshot doc, String field) {
         Object val = doc.get(field);
         if (val instanceof String) return (String) val;
         if (val instanceof java.util.Map) {
@@ -304,7 +462,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             item.setName(name);
         }
 
-        // Fix: Trích xuất nhãn sạch từ Firestore (nếu là Map)
         item.setWeight(getStringOrMapLabel(doc, "weight"));
         item.setFlavor(getStringOrMapLabel(doc, "flavor"));
         item.setPackageType(getStringOrMapLabel(doc, "packageType"));
@@ -323,9 +480,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         hydrateImageUrl(item, doc);
 
-        // Kiểm tra tính hợp lệ: Phải có productId và name
         if (item.getProductId() == null || item.getProductId().isEmpty() ||
-            item.getName() == null || item.getName().isEmpty()) {
+                item.getName() == null || item.getName().isEmpty()) {
             return null;
         }
 
@@ -376,29 +532,28 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    private void refreshCartUi() {
-        if (!isAdded()) {
-            return;
-        }
-        renderList();
-        updateFooter();
-    }
-
+    // FIX (bug #5/#6/#7): giỏ hàng trống vẫn hiển thị đầy đủ header + footer (Quay lại/Tiếp
+    // tục) để không chặn luồng người dùng; đồng thời tự thoát chế độ "Sửa" nếu cartItems rỗng.
     private void renderList() {
         if (!isAdded() || emptyState == null || rvCartItems == null || footer == null) {
             return;
         }
 
-        if (cartItems.isEmpty()) {
-            emptyState.setVisibility(View.VISIBLE);
-            rvCartItems.setVisibility(View.GONE);
-            footer.setVisibility(View.GONE);
-            return;
+        boolean isEmpty = cartItems.isEmpty();
+        if (isEmpty && editMode) {
+            setEditMode(false);
         }
 
-        emptyState.setVisibility(View.GONE);
-        rvCartItems.setVisibility(View.VISIBLE);
-        footer.setVisibility(View.VISIBLE);
+        emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
+        rvCartItems.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+
+        if (tvEditToggle != null) {
+            tvEditToggle.setVisibility(isEmpty ? View.INVISIBLE : View.VISIBLE);
+        }
+        if (rowVoucher != null) {
+            rowVoucher.setVisibility(!isEmpty && !editMode ? View.VISIBLE : View.GONE);
+        }
+
         updateGuestBanner();
 
         if (adapter == null) {
@@ -417,10 +572,10 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         for (CartItem i : cartItems) {
             if (!i.isSelected()) { allSelected = false; break; }
         }
-        if (cbSelectAll != null) {
-            cbSelectAll.setOnCheckedChangeListener(null);
-            cbSelectAll.setChecked(allSelected);
-            cbSelectAll.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        if (cbSelectAllEdit != null) {
+            cbSelectAllEdit.setOnCheckedChangeListener(null);
+            cbSelectAllEdit.setChecked(allSelected);
+            cbSelectAllEdit.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 for (CartItem i : cartItems) i.setSelected(isChecked);
                 if (adapter != null) adapter.notifyDataSetChanged();
                 updateFooter();
@@ -504,7 +659,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onItemClick(CartItem item) {
         if (item.getProductId() != null) {
-            android.content.Intent intent = new android.content.Intent(requireContext(), ProductDetailActivity.class);
+            Intent intent = new Intent(requireContext(), ProductDetailActivity.class);
             intent.putExtra("productId", item.getProductId());
             startActivity(intent);
         }
@@ -548,7 +703,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .setMessage("Bạn có chắc chắn muốn xóa " + toRemove.size() + " sản phẩm đã chọn?")
                 .setPositiveButton("Xóa", (dialog, which) -> {
                     if (userId != null) {
-                        com.google.firebase.firestore.WriteBatch batch = db.batch();
+                        WriteBatch batch = db.batch();
                         for (CartItem item : toRemove) {
                             if (item.getId() != null) {
                                 batch.delete(db.collection("users").document(userId)
@@ -567,6 +722,58 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
+    }
+
+    // FIX (bug #7): "Lưu vào Đã thích" ở footer chế độ Sửa — chuyển các sản phẩm đang chọn
+    // sang wishlist (users/{uid}/wishlist/{productId}) rồi xóa khỏi giỏ hàng, giống hành vi
+    // Shopee. Yêu cầu đăng nhập vì wishlist là dữ liệu theo tài khoản.
+    private void saveSelectedItemsToWishlist() {
+        List<CartItem> toSave = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            if (item.isSelected()) toSave.add(item);
+        }
+        if (toSave.isEmpty()) {
+            Toast.makeText(getContext(), getString(R.string.cart_select_items_required), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (userId == null) {
+            Toast.makeText(getContext(), getString(R.string.wishlist_login_required), Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        WriteBatch batch = db.batch();
+        List<CartItem> validItems = new ArrayList<>();
+        for (CartItem item : toSave) {
+            if (item.getProductId() == null || item.getProductId().isEmpty()) continue;
+
+            Map<String, Object> data = new HashMap<>();
+            data.put("productId", item.getProductId());
+            data.put("addedAt", FieldValue.serverTimestamp());
+            batch.set(db.collection("users").document(userId)
+                    .collection("wishlist").document(item.getProductId()), data);
+
+            if (item.getId() != null) {
+                batch.delete(db.collection("users").document(userId)
+                        .collection("cart").document(item.getId()));
+            }
+            validItems.add(item);
+        }
+
+        if (validItems.isEmpty()) {
+            return;
+        }
+
+        batch.commit().addOnSuccessListener(unused -> {
+            if (!isAdded()) return;
+            cartItems.removeAll(validItems);
+            renderList();
+            updateFooter();
+            Toast.makeText(getContext(), getString(R.string.cart_saved_to_wishlist), Toast.LENGTH_SHORT).show();
+        }).addOnFailureListener(e -> {
+            if (isAdded()) {
+                Toast.makeText(getContext(), getString(R.string.wishlist_update_failed), Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     private void goToCheckout() {

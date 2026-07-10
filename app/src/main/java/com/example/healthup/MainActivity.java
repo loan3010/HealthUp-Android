@@ -342,10 +342,19 @@ public class MainActivity extends AppCompatActivity {
             if ("cart_tab".equals(target) || "cart".equals(target)) {
                 navView.setSelectedItemId(R.id.nav_cart);
                 boolean isRebuy = intent.getBooleanExtra("is_rebuy", false);
+                // FIX (bug #4): truyền cờ "return_to_previous" xuống CartFragment để nút
+                // "Quay lại" biết cần finish() Activity này (quay về ProductDetailActivity)
+                // thay vì cố popBackStack rồi rơi về tab Trang chủ.
+                boolean returnToPrevious = intent.getBooleanExtra("return_to_previous", false);
                 CartFragment fragment = new CartFragment();
+                Bundle args = new Bundle();
                 if (isRebuy) {
-                    Bundle args = new Bundle();
                     args.putBoolean("is_rebuy_flow", true);
+                }
+                if (returnToPrevious) {
+                    args.putBoolean("return_to_previous", true);
+                }
+                if (!args.isEmpty()) {
                     fragment.setArguments(args);
                 }
                 loadFragment(fragment);

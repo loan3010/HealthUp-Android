@@ -131,9 +131,16 @@ public class ProductDetailActivity extends AppCompatActivity {
         btnWishlist.setOnClickListener(v -> toggleFavorite());
         if (btnCartHeader != null) {
             btnCartHeader.setOnClickListener(v -> {
+                // FIX (bug #4): trước đây dùng FLAG_ACTIVITY_CLEAR_TOP|SINGLE_TOP sẽ XÓA
+                // ProductDetailActivity ra khỏi back stack (vì MainActivity gốc nằm ngay dưới
+                // nó), khiến bấm "Quay lại" ở Giỏ hàng không còn màn Chi tiết sản phẩm để quay
+                // về -> rơi về trang chủ. Bỏ 2 flag này để MainActivity mới được ĐẨY CHỒNG lên
+                // trên ProductDetailActivity (không hủy nó), đồng thời gắn cờ
+                // "return_to_previous" để CartFragment biết cần finish() để quay lại đúng màn
+                // Chi tiết sản phẩm khi người dùng bấm nút "Quay lại".
                 Intent intent = new Intent(this, MainActivity.class);
                 intent.putExtra("navigate_to", "cart_tab");
-                intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+                intent.putExtra("return_to_previous", true);
                 startActivity(intent);
             });
         }

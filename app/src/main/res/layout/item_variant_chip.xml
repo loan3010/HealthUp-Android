@@ -8,5 +8,5 @@
     android:clickable="true"
     android:textColor="@color/text_dark"
     app:chipBackgroundColor="@color/chip_bg_selector"
-    app:chipStrokeColor="@color/primary_green"
+    app:chipStrokeColor="@color/primary_default"
     app:chipStrokeWidth="1dp" />
