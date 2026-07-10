@@ -22,6 +22,7 @@ import androidx.core.content.ContextCompat;
 
 import com.example.healthup.admin.AdminLoginActivity;
 import com.example.healthup.auth.SocialAuthHelper;
+import com.example.healthup.util.AccountDisabledWatcher;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.healthup.util.PhoneNormalizer;
@@ -557,10 +558,11 @@ public class LoginActivity extends AppCompatActivity {
             return;
         }
 
-        GuestCartManager.getInstance(this).mergeToFirestore(user.getUid(), () -> runOnUiThread(() -> {
-            startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(LoginActivity.this));
-            finish();
-        }));
+        GuestCartManager.getInstance(this).mergeToFirestore(user.getUid(), () -> runOnUiThread(() ->
+                AccountDisabledWatcher.checkBeforeEnterApp(LoginActivity.this, () -> {
+                    startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(LoginActivity.this));
+                    finish();
+                })));
     }
 
     private abstract static class SimpleTextWatcher implements TextWatcher {

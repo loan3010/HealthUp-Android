@@ -16,7 +16,8 @@ public final class ImageLoadHelper {
         if (imageUrl == null || imageUrl.isEmpty()) {
             return R.drawable.ic_loading;
         }
-        if (imageUrl.startsWith("http") || imageUrl.startsWith("file://") || imageUrl.startsWith("content://")) {
+        if (imageUrl.startsWith("http") || imageUrl.startsWith("file://")
+                || imageUrl.startsWith("content://") || imageUrl.startsWith("data:")) {
             return imageUrl;
         }
         String cleanPath = imageUrl.startsWith("/") ? imageUrl.substring(1) : imageUrl;

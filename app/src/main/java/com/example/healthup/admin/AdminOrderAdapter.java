@@ -24,12 +24,17 @@ public class AdminOrderAdapter extends RecyclerView.Adapter<AdminOrderAdapter.Vi
 
     private final List<Order> orders;
     private final Listener listener;
+    private long overdueThresholdMs = 0L;
     private final NumberFormat priceFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault());
 
     public AdminOrderAdapter(List<Order> orders, Listener listener) {
         this.orders = orders;
         this.listener = listener;
+    }
+
+    public void setOverdueThresholdMs(long overdueThresholdMs) {
+        this.overdueThresholdMs = overdueThresholdMs;
     }
 
     @NonNull
@@ -43,7 +48,12 @@ public class AdminOrderAdapter extends RecyclerView.Adapter<AdminOrderAdapter.Vi
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Order order = orders.get(position);
         holder.tvCode.setText(order.getOrderCode() != null ? order.getOrderCode() : ("#" + order.getId()));
-        holder.tvStatus.setText(AdminUiHelper.statusLabel(order.getStatus()));
+        holder.tvStatus.setText(AdminUiHelper.orderStatusLabel(order));
+        if (overdueThresholdMs > 0 && AdminOrderListHelper.isOverdue(order, overdueThresholdMs)) {
+            holder.tvOverdue.setVisibility(View.VISIBLE);
+        } else {
+            holder.tvOverdue.setVisibility(View.GONE);
+        }
         holder.tvTotal.setText("Tổng: " + priceFormat.format(order.getTotalPrice()) + " đ");
         holder.tvCustomer.setText("Khách: …");
         if (order.getCreatedAt() != null) {
@@ -67,7 +77,7 @@ public class AdminOrderAdapter extends RecyclerView.Adapter<AdminOrderAdapter.Vi
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView tvCode, tvStatus, tvTotal, tvCustomer, tvDate;
+        TextView tvCode, tvStatus, tvTotal, tvCustomer, tvDate, tvOverdue;
 
         ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -76,6 +86,7 @@ public class AdminOrderAdapter extends RecyclerView.Adapter<AdminOrderAdapter.Vi
             tvTotal = itemView.findViewById(R.id.tvAdminOrderTotal);
             tvCustomer = itemView.findViewById(R.id.tvAdminOrderCustomer);
             tvDate = itemView.findViewById(R.id.tvAdminOrderDate);
+            tvOverdue = itemView.findViewById(R.id.tvAdminOrderOverdue);
         }
     }
 }

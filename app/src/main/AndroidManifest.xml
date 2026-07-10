@@ -136,6 +136,7 @@
         <activity android:name="com.example.healthup.admin.AdminActivity" />
         <activity android:name="com.example.healthup.admin.AdminProductEditActivity" />
         <activity android:name="com.example.healthup.admin.AdminOrderDetailActivity" />
+        <activity android:name="com.example.healthup.admin.AdminCustomerDetailActivity" />
 
 
         <provider

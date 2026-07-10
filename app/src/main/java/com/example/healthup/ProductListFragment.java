@@ -370,6 +370,9 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
             recommendationList.clear();
             for (DocumentSnapshot doc : snapshots) {
+                if (!Product.isVisibleToBuyers(doc)) {
+                    continue;
+                }
                 Product p = doc.toObject(Product.class);
                 if (p != null) {
                     p.setId(doc.getId());

@@ -19,6 +19,7 @@ import java.util.Locale;
 public class AdminCustomerAdapter extends RecyclerView.Adapter<AdminCustomerAdapter.ViewHolder> {
 
     public interface Listener {
+        void onCustomerClick(AdminRepository.AdminCustomer customer);
         void onToggleDisabled(AdminRepository.AdminCustomer customer, boolean disabled);
     }
 
@@ -42,18 +43,37 @@ public class AdminCustomerAdapter extends RecyclerView.Adapter<AdminCustomerAdap
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         AdminRepository.AdminCustomer customer = customers.get(position);
         holder.tvName.setText(customer.fullName != null ? customer.fullName : "Khách hàng");
-        holder.tvPhone.setText(customer.phone != null ? customer.phone : (customer.email != null ? customer.email : "—"));
+        holder.tvPhone.setText(formatContact(customer));
         holder.tvSpent.setText("Đã chi: " + format.format(customer.spentAmount) + " VND");
 
         holder.switchDisabled.setOnCheckedChangeListener(null);
         holder.switchDisabled.setChecked(customer.disabled);
         holder.switchDisabled.setOnCheckedChangeListener((CompoundButton buttonView, boolean isChecked) ->
                 listener.onToggleDisabled(customer, isChecked));
+
+        View mainArea = holder.itemView.findViewById(R.id.layoutCustomerMain);
+        if (mainArea != null) {
+            mainArea.setOnClickListener(v -> listener.onCustomerClick(customer));
+        } else {
+            holder.itemView.setOnClickListener(v -> listener.onCustomerClick(customer));
+        }
     }
 
     @Override
     public int getItemCount() {
         return customers.size();
+    }
+
+    private String formatContact(AdminRepository.AdminCustomer customer) {
+        StringBuilder builder = new StringBuilder();
+        if (customer.phone != null && !customer.phone.trim().isEmpty()) {
+            builder.append(customer.phone.trim());
+        }
+        if (customer.email != null && !customer.email.trim().isEmpty()) {
+            if (builder.length() > 0) builder.append(" • ");
+            builder.append(customer.email.trim());
+        }
+        return builder.length() > 0 ? builder.toString() : "—";
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {

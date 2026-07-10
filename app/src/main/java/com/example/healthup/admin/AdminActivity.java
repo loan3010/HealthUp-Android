@@ -7,6 +7,7 @@ import android.view.MenuItem;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -16,7 +17,7 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 
-public class AdminActivity extends AppCompatActivity {
+public class AdminActivity extends AppCompatActivity implements AdminNavigator {
 
     private final AdminDashboardFragment dashboardFragment = new AdminDashboardFragment();
     private final AdminProductsFragment productsFragment = new AdminProductsFragment();
@@ -89,5 +90,19 @@ public class AdminActivity extends AppCompatActivity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void openOrders(@Nullable String statusFilter) {
+        BottomNavigationView bottomNav = findViewById(R.id.admin_bottom_navigation);
+        bottomNav.setSelectedItemId(R.id.nav_admin_orders);
+        ordersFragment.applyStatusFilter(statusFilter);
+    }
+
+    @Override
+    public void openProducts(@Nullable String productFilter) {
+        BottomNavigationView bottomNav = findViewById(R.id.admin_bottom_navigation);
+        bottomNav.setSelectedItemId(R.id.nav_admin_products);
+        productsFragment.applyProductFilter(productFilter);
     }
 }

@@ -307,6 +307,7 @@
     <string name="home_question">What would you like to eat today?</string>
     <string name="flash_sale_title">⚡ FLASH SALE</string>
     <string name="new_products_title">Latest Products</string>
+    <string name="featured_products_title">Featured Products</string>
     <string name="weekly_promo">THIS WEEK</string>
 
     <string name="nav_home">Home</string>

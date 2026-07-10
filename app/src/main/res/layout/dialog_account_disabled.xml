@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="20dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/account_disabled_message"
+        android:textColor="@color/text_secondary" />
+
+    <TextView
+        android:id="@+id/tvAccountDisabledReason"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/bg_badge_default"
+        android:padding="12dp"
+        android:textColor="@color/text_dark"
+        android:textStyle="bold" />
+</LinearLayout>

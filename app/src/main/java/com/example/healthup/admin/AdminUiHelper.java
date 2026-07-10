@@ -21,4 +21,12 @@ public final class AdminUiHelper {
             default: return status;
         }
     }
+
+    public static String orderStatusLabel(@Nullable Order order) {
+        if (order == null) return "Không rõ";
+        if (order.isCancelRequested() && Order.STATUS_PENDING.equalsIgnoreCase(order.getStatus())) {
+            return "Yêu cầu hủy";
+        }
+        return statusLabel(order.getStatus());
+    }
 }
