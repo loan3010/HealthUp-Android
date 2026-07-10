@@ -4,18 +4,15 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_light">
-
-
+    android:background="@color/neutral_cream">
 
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/white"
-        app:elevation="0dp">
-
-
+        android:background="@color/neutral_cream"
+        app:elevation="0dp"
+        app:liftOnScroll="false">
 
 
         <RelativeLayout
@@ -24,8 +21,6 @@
             android:minHeight="56dp"
             android:paddingTop="30dp"
             android:paddingHorizontal="16dp">
-
-
 
 
             <ImageButton
@@ -38,8 +33,6 @@
                 app:tint="@color/text_dark" />
 
 
-
-
             <TextView
                 android:id="@+id/tv_title"
                 android:layout_width="wrap_content"
@@ -49,8 +42,6 @@
                 android:textColor="@color/text_dark"
                 android:textSize="18sp"
                 android:textStyle="bold" />
-
-
 
 
             <RelativeLayout
@@ -66,8 +57,6 @@
                 android:visibility="gone">
 
 
-
-
                 <ImageView
                     android:id="@+id/ic_search_small"
                     android:layout_width="20dp"
@@ -75,8 +64,6 @@
                     android:layout_centerVertical="true"
                     android:src="@drawable/ic_search"
                     app:tint="@color/text_gray" />
-
-
 
 
                 <EditText
@@ -93,8 +80,6 @@
             </RelativeLayout>
 
 
-
-
             <TextView
                 android:id="@+id/btn_cancel_search"
                 android:layout_width="wrap_content"
@@ -107,8 +92,6 @@
                 android:visibility="gone" />
 
 
-
-
             <LinearLayout
                 android:id="@+id/layout_header_actions"
                 android:layout_width="wrap_content"
@@ -116,8 +99,6 @@
                 android:layout_alignParentEnd="true"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
-
-
 
 
                 <ImageButton
@@ -130,8 +111,6 @@
                     android:visibility="gone"
                     app:tint="@color/text_dark"
                     tools:visibility="visible" />
-
-
 
 
                 <TextView
@@ -147,16 +126,10 @@
         </RelativeLayout>
 
 
-
-
         <!-- FIX: đã bỏ HorizontalScrollView chứa 2 chip "Tất cả"/"Đang giảm giá" theo yêu cầu -->
 
 
-
-
     </com.google.android.material.appbar.AppBarLayout>
-
-
 
 
     <androidx.core.widget.NestedScrollView
@@ -165,15 +138,11 @@
         app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
 
-
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingBottom="100dp">
-
-
 
 
             <!-- Empty State -->
@@ -188,16 +157,12 @@
                 tools:visibility="visible">
 
 
-
-
                 <com.google.android.material.card.MaterialCardView
                     android:layout_width="140dp"
                     android:layout_height="140dp"
                     app:cardBackgroundColor="#F8F9FA"
                     app:cardCornerRadius="70dp"
                     app:cardElevation="0dp">
-
-
 
 
                     <ImageView
@@ -207,8 +172,6 @@
                         android:src="@drawable/ic_heart_outline"
                         app:tint="#D1D1D1" />
                 </com.google.android.material.card.MaterialCardView>
-
-
 
 
                 <TextView
@@ -223,8 +186,6 @@
                     android:textStyle="bold" />
 
 
-
-
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -234,8 +195,6 @@
                     android:text="Hãy khám phá những sản phẩm sức khỏe tuyệt vời và lưu lại tại đây nhé!"
                     android:textColor="@color/text_gray"
                     android:textSize="14sp" />
-
-
 
 
                 <com.google.android.material.button.MaterialButton
@@ -255,8 +214,6 @@
             </LinearLayout>
 
 
-
-
             <!-- List State -->
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rv_wishlist"
@@ -269,8 +226,6 @@
                 tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"/>
 
 
-
-
             <!-- Recommendations Section -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -279,14 +234,10 @@
                 android:orientation="vertical">
 
 
-
-
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:paddingHorizontal="16dp">
-
-
 
 
                     <TextView
@@ -297,8 +248,6 @@
                         android:textColor="@color/text_dark"
                         android:textSize="18sp"
                         android:textStyle="bold" />
-
-
 
 
                     <TextView
@@ -313,8 +262,6 @@
                 </RelativeLayout>
 
 
-
-
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rv_wishlist_recommendations"
                     android:layout_width="match_parent"
@@ -327,12 +274,8 @@
             </LinearLayout>
 
 
-
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
-
-
 
 
     <!-- Selection Bottom Bar (Visible in Edit Mode) -->
@@ -347,15 +290,11 @@
         tools:visibility="visible">
 
 
-
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
             android:gravity="center"
             android:paddingHorizontal="16dp">
-
-
 
 
             <com.google.android.material.button.MaterialButton
@@ -368,8 +307,6 @@
                 app:cornerRadius="12dp" />
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
-
-
 
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
