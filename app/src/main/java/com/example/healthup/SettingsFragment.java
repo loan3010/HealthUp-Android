@@ -92,7 +92,9 @@ public class SettingsFragment extends Fragment {
 
 
         setupRow(binding.itemNotification.getRoot(), "Thông báo", "");
-        setupRow(binding.itemLanguage.getRoot(), "Ngôn ngữ", "Tiếng Việt");
+        String currentLang = com.example.healthup.util.LocaleHelper.getLanguage(requireContext());
+        String langDisplay = currentLang.equals("vi") ? "Tiếng Việt" : "English";
+        setupRow(binding.itemLanguage.getRoot(), "Ngôn ngữ", langDisplay);
         setupRow(binding.itemAccess.getRoot(), "Quyền truy cập", "");
 
         ItemSettingRowBinding deleteBinding = ItemSettingRowBinding.bind(binding.itemDeleteAccount.getRoot());

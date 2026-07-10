@@ -33,7 +33,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     private Product product;
     private OnVariantSelectedListener listener;
     private ProductVariant selectedVariant;
-    private Map<String, ProductVariant> selectedVariantsMap = new java.util.HashMap<>();
+    private Map<String, ProductVariant> selectedVariantsMap = new java.util.LinkedHashMap<>();
     private int quantity = 1;
     private boolean isBuyNow = false;
 
@@ -169,14 +169,34 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         
         selectedVariantsMap.put(groupName, variant);
         
+        // Priority order for price setting: Weight is the most common primary price setter.
+        // We'll look for the first variant that has a price different from the base price,
+        // prioritizing groups like "Khối lượng".
         ProductVariant bestVariant = null;
-        for (ProductVariant v : selectedVariantsMap.values()) {
-            if (bestVariant == null) {
-                bestVariant = v;
-            } else if (v.getPrice() != product.getPrice() && v.getPrice() > 0) {
+        
+        // 1. Try to find a variant in the "Khối lượng" group first if it has a specific price
+        if (selectedVariantsMap.containsKey("Khối lượng")) {
+            ProductVariant v = selectedVariantsMap.get("Khối lượng");
+            if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
                 bestVariant = v;
             }
         }
+        
+        // 2. If no Weight variant with specific price, search other groups
+        if (bestVariant == null) {
+            for (ProductVariant v : selectedVariantsMap.values()) {
+                if (v.getPrice() != product.getPrice() && v.getPrice() > 0) {
+                    bestVariant = v;
+                    break;
+                }
+            }
+        }
+        
+        // 3. Fallback to any selection (the first one)
+        if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
+            bestVariant = selectedVariantsMap.values().iterator().next();
+        }
+
         selectedVariant = bestVariant;
         updateDisplay();
     }

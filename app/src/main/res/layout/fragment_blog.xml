@@ -6,17 +6,20 @@
     android:layout_height="match_parent"
     android:background="@color/neutral_cream">
 
+
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/neutral_cream"
         app:elevation="0dp">
 
+
         <RelativeLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="36dp"
             android:paddingHorizontal="16dp">
+
 
             <ImageButton
                 android:id="@+id/btn_back"
@@ -25,6 +28,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:src="@drawable/ic_back"
                 app:tint="@color/text_dark" />
+
 
             <TextView
                 android:layout_width="wrap_content"
@@ -36,6 +40,7 @@
                 android:textSize="18sp"
                 android:textStyle="bold" />
         </RelativeLayout>
+
 
         <!-- Search Bar Section -->
         <LinearLayout
@@ -49,11 +54,13 @@
             android:orientation="horizontal"
             android:paddingHorizontal="12dp">
 
+
             <ImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
                 android:src="@drawable/ic_search"
                 app:tint="@color/neutral_grey" />
+
 
             <EditText
                 android:id="@+id/et_search_blog"
@@ -69,6 +76,7 @@
                 android:textColorHint="@color/neutral_grey"
                 android:textSize="14sp" />
 
+
             <ImageView
                 android:id="@+id/iv_clear_search"
                 android:layout_width="20dp"
@@ -78,6 +86,10 @@
                 app:tint="@color/neutral_grey" />
         </LinearLayout>
 
+
+        <!-- FIX (bug #1): ChipGroup để trống, chip được sinh động trong BlogFragment
+             bằng chính item_category_chip.xml mà trang Danh mục dùng, để layout/màu sắc
+             (nền xanh khi chọn, viền xám khi chưa chọn) đồng bộ 2 trang. -->
         <HorizontalScrollView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -85,69 +97,19 @@
             android:paddingTop="4dp"
             android:scrollbars="none">
 
+
             <com.google.android.material.chip.ChipGroup
                 android:id="@+id/chip_group_blog"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:paddingHorizontal="16dp"
                 app:singleLine="true"
-                app:singleSelection="true"
-                app:selectionRequired="true">
-
-                <com.google.android.material.chip.Chip
-                    android:id="@+id/chip_all_blog"
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/all_categories"
-                    android:checked="true"
-                    app:chipBackgroundColor="@color/bg_chip_filter"
-                    app:chipStrokeWidth="0dp" />
-
-                <!-- FIX (bug chính - tab không bấm được): 4 chip bên dưới trước đây KHÔNG
-                     có style="@style/Widget.MaterialComponents.Chip.Choice" như chip "Tất cả",
-                     nên chúng mặc định rơi vào style Chip.Action (android:checkable="false").
-                     Vì không checkable, chạm vào các chip này KHÔNG đổi trạng thái chọn ->
-                     ChipGroup.OnCheckedChangeListener không bao giờ được gọi -> currentCategory
-                     không cập nhật -> danh sách không lọc, người dùng thấy như "không bấm được".
-                     Sửa: thêm đúng style Choice cho cả 4 chip để chúng checkable/selectable
-                     giống hệt chip "Tất cả". Đồng thời thêm app:selectionRequired="true" cho
-                     ChipGroup để tránh trường hợp bấm lại chip đang chọn làm nó bị bỏ chọn hết
-                     (checkedId thành NO_ID), khiến listener nhận null và không làm gì. -->
-                <com.google.android.material.chip.Chip
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Dinh dưỡng"
-                    app:chipBackgroundColor="@color/bg_chip_filter"
-                    app:chipStrokeWidth="0dp" />
-
-                <com.google.android.material.chip.Chip
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Sức khỏe"
-                    app:chipBackgroundColor="@color/bg_chip_filter"
-                    app:chipStrokeWidth="0dp" />
-
-                <com.google.android.material.chip.Chip
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Công thức"
-                    app:chipBackgroundColor="@color/bg_chip_filter"
-                    app:chipStrokeWidth="0dp" />
-
-                <com.google.android.material.chip.Chip
-                    style="@style/Widget.MaterialComponents.Chip.Choice"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Kiến thức"
-                    app:chipBackgroundColor="@color/bg_chip_filter"
-                    app:chipStrokeWidth="0dp" />
+                app:singleSelection="true">
+                <!-- Chips được thêm động trong BlogFragment.setupCategoryChips() -->
             </com.google.android.material.chip.ChipGroup>
         </HorizontalScrollView>
     </com.google.android.material.appbar.AppBarLayout>
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_blogs"
@@ -159,5 +121,6 @@
         android:paddingBottom="24dp"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"
         tools:listitem="@layout/item_blog" />
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

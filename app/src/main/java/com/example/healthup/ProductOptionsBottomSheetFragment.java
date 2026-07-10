@@ -82,7 +82,7 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
             binding.cgWeight.setVisibility(View.VISIBLE);
             binding.cgWeight.removeAllViews();
             for (Object w : product.getWeights()) {
-                addChipToGroup(binding.cgWeight, String.valueOf(w));
+                addChipToGroup(binding.cgWeight, Product.extractOptionLabel(w));
             }
         } else {
             binding.tvWeightLabel.setVisibility(View.GONE);
@@ -95,7 +95,7 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
             binding.cgFlavor.setVisibility(View.VISIBLE);
             binding.cgFlavor.removeAllViews();
             for (Object f : product.getFlavors()) {
-                addChipToGroup(binding.cgFlavor, String.valueOf(f));
+                addChipToGroup(binding.cgFlavor, Product.extractOptionLabel(f));
             }
         } else {
             binding.tvFlavorLabel.setVisibility(View.GONE);
@@ -108,7 +108,7 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
             binding.cgPackaging.setVisibility(View.VISIBLE);
             binding.cgPackaging.removeAllViews();
             for (Object p : product.getPackagingTypes()) {
-                addChipToGroup(binding.cgPackaging, String.valueOf(p));
+                addChipToGroup(binding.cgPackaging, Product.extractOptionLabel(p));
             }
         } else {
             binding.tvPackagingLabel.setVisibility(View.GONE);

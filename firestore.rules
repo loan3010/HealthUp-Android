@@ -60,8 +60,7 @@ service cloud.firestore {
 
     // --- Users ------------------------------------------------------------
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isStaff())
-                  || resource.data.phone is string;
+      allow read, list: if true;
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if (isSignedIn() && request.auth.uid == userId)
                     || isPasswordResetEmailRotation(userId)
@@ -100,11 +99,11 @@ service cloud.firestore {
 
     // --- Pre-auth OTP (registration + password reset, Spark / no Cloud Functions) ---
     match /registration_otp/{phone} {
-      allow read, write: if phone.matches('^0[0-9]{9}$');
+      allow read, write: if phone is string;
     }
 
     match /password_reset/{phone} {
-      allow read, write: if phone.matches('^0[0-9]{9}$');
+      allow read, write: if phone is string;
     }
 
     // --- Catalog / demo content (student project) -------------------------
