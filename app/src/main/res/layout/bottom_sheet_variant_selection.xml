@@ -5,22 +5,20 @@
     android:layout_height="wrap_content"
     android:background="@drawable/bg_bottom_sheet"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:padding="20dp">
 
-
+    <!-- Thanh gạch ngang trên đầu -->
     <View
         android:layout_width="40dp"
         android:layout_height="4dp"
         android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="16dp"
+        android:layout_marginBottom="20dp"
         android:background="#E0E0E0" />
-
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp">
-
 
         <com.google.android.material.imageview.ShapeableImageView
             android:id="@+id/iv_variant_product"
@@ -29,34 +27,32 @@
             android:scaleType="centerCrop"
             app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.SmallComponent" />
 
-
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_centerVertical="true"
             android:layout_marginStart="16dp"
+            android:layout_marginEnd="32dp"
             android:layout_toEndOf="@id/iv_variant_product"
             android:orientation="vertical">
-
 
             <TextView
                 android:id="@+id/tv_variant_price"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="220.000đ"
-                android:textColor="@color/primary_green"
-                android:textSize="20sp"
+                android:textColor="@color/primary_default"
+                android:textSize="22sp"
                 android:textStyle="bold" />
-
 
             <TextView
                 android:id="@+id/tv_variant_stock"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
-                android:text="Kho: 100"
-                android:textColor="@color/text_gray"
+                android:text="Kho: Còn hàng"
+                android:textColor="@color/neutral_grey"
                 android:textSize="14sp" />
-
 
             <TextView
                 android:id="@+id/tv_variant_selected_name"
@@ -64,10 +60,9 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="4dp"
                 android:text="Phân loại: Chưa chọn"
-                android:textColor="@color/text_dark"
+                android:textColor="@color/neutral_black"
                 android:textSize="14sp" />
         </LinearLayout>
-
 
         <ImageButton
             android:id="@+id/btn_close_variant"
@@ -75,17 +70,16 @@
             android:layout_height="24dp"
             android:layout_alignParentEnd="true"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@android:drawable/ic_menu_close_clear_cancel"
-            app:tint="@color/text_gray" />
+            android:src="@drawable/ic_close"
+            app:tint="@color/neutral_grey" />
     </RelativeLayout>
 
-
+    <!-- Các lựa chọn phân loại được thêm động -->
     <LinearLayout
         android:id="@+id/layout_variant_groups"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical" />
-
 
     <View
         android:layout_width="match_parent"
@@ -93,22 +87,20 @@
         android:layout_marginVertical="16dp"
         android:background="#F5F5F5" />
 
-
+    <!-- Chọn số lượng -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="24dp">
-
+        android:layout_marginBottom="28dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerVertical="true"
             android:text="Số lượng"
-            android:textColor="@color/text_dark"
+            android:textColor="@color/neutral_black"
             android:textSize="16sp"
             android:textStyle="bold" />
-
 
         <LinearLayout
             android:layout_width="wrap_content"
@@ -119,47 +111,46 @@
             android:orientation="horizontal"
             android:padding="2dp">
 
-
             <ImageButton
                 android:id="@+id/btn_minus_qty"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
                 android:src="@drawable/ic_minus"
-                app:tint="@color/text_dark" />
-
+                app:tint="@color/neutral_black" />
 
             <TextView
                 android:id="@+id/tv_quantity"
-                android:layout_width="40dp"
+                android:layout_width="44dp"
                 android:layout_height="wrap_content"
                 android:gravity="center"
                 android:text="1"
-                android:textColor="@color/text_dark"
+                android:textColor="@color/neutral_black"
                 android:textSize="16sp"
                 android:textStyle="bold" />
 
-
             <ImageButton
                 android:id="@+id/btn_plus_qty"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
                 android:src="@drawable/ic_plus"
-                app:tint="@color/text_dark" />
+                app:tint="@color/neutral_black" />
         </LinearLayout>
     </RelativeLayout>
-
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_confirm_variant"
         android:layout_width="match_parent"
         android:layout_height="56dp"
-        android:backgroundTint="@color/primary_green"
+        android:backgroundTint="@color/primary_default"
         android:text="Thêm vào giỏ hàng"
         android:textAllCaps="false"
         android:textColor="@color/white"
+        android:textSize="16sp"
+        android:textStyle="bold"
         app:cornerRadius="12dp" />
-
 
 </LinearLayout>

@@ -94,8 +94,9 @@ public class FirebaseManager {
     }
 
     /**
-     * SCRIPT NÂNG CẤP DỮ LIỆU:
-     * Quét tất cả sản phẩm và chuyển đổi các phân loại từ Array sang Map để hỗ trợ giá riêng.
+     * SCRIPT NÂNG CẤP VÀ SỬA LỖI DỮ LIỆU:
+     * 1. Chuyển đổi phân loại từ List sang Map.
+     * 2. Sửa lỗi "Stringified Keys" (các key bị dính định dạng {price=..., label=...}).
      */
     public void upgradeAllProductsDataStructure() {
         db.collection("products").get().addOnSuccessListener(queryDocumentSnapshots -> {
@@ -106,35 +107,9 @@ public class FirebaseManager {
                 Map<String, Object> updates = new HashMap<>();
                 double basePrice = doc.getDouble("price") != null ? doc.getDouble("price") : 0;
 
-                // 1. Chuyển đổi weights
-                Object w = doc.get("weights");
-                if (w instanceof List) {
-                    Map<String, Double> newWeightMap = new HashMap<>();
-                    for (Object item : (List<?>) w) {
-                        newWeightMap.put(String.valueOf(item), basePrice);
-                    }
-                    updates.put("weights", newWeightMap);
-                }
-
-                // 2. Chuyển đổi flavors
-                Object f = doc.get("flavors");
-                if (f instanceof List) {
-                    Map<String, Double> newFlavorMap = new HashMap<>();
-                    for (Object item : (List<?>) f) {
-                        newFlavorMap.put(String.valueOf(item), basePrice);
-                    }
-                    updates.put("flavors", newFlavorMap);
-                }
-
-                // 3. Chuyển đổi packagingTypes
-                Object p = doc.get("packagingTypes");
-                if (p instanceof List) {
-                    Map<String, Double> newPkgMap = new HashMap<>();
-                    for (Object item : (List<?>) p) {
-                        newPkgMap.put(String.valueOf(item), basePrice);
-                    }
-                    updates.put("packagingTypes", newPkgMap);
-                }
+                updates.putAll(processCategoryField(doc, "weights", basePrice));
+                updates.putAll(processCategoryField(doc, "flavors", basePrice));
+                updates.putAll(processCategoryField(doc, "packagingTypes", basePrice));
 
                 if (!updates.isEmpty()) {
                     batch.update(doc.getReference(), updates);
@@ -144,9 +119,78 @@ public class FirebaseManager {
 
             if (count > 0) {
                 int finalCount = count;
-                batch.commit().addOnSuccessListener(v -> Log.d("Migration", "Đã nâng cấp cấu trúc cho " + finalCount + " sản phẩm."));
+                batch.commit().addOnSuccessListener(v -> Log.d("Migration", "Đã sửa và nâng cấp cấu trúc cho " + finalCount + " sản phẩm."));
             }
         });
+    }
+
+    private Map<String, Object> processCategoryField(DocumentSnapshot doc, String fieldName, double basePrice) {
+        Map<String, Object> update = new HashMap<>();
+        Object raw = doc.get(fieldName);
+        if (raw == null) return update;
+
+        Map<String, Double> cleanMap = new HashMap<>();
+        boolean changed = false;
+
+        if (raw instanceof List) {
+            // Trường hợp 1: Đang là List, cần chuyển sang Map
+            for (Object item : (List<?>) raw) {
+                processSingleItem(item, cleanMap, basePrice);
+            }
+            changed = true;
+        } else if (raw instanceof Map) {
+            // Trường hợp 2: Đã là Map nhưng có thể bị lỗi "Stringified Keys"
+            for (Map.Entry<?, ?> entry : ((Map<?, ?>) raw).entrySet()) {
+                String key = String.valueOf(entry.getKey());
+                if (key.startsWith("{") && key.contains("label=")) {
+                    // Đây là key bị lỗi định dạng, cần trích xuất lại
+                    processSingleItem(key, cleanMap, basePrice);
+                    changed = true;
+                } else {
+                    // Key đã chuẩn, giữ nguyên
+                    Object val = entry.getValue();
+                    double price = (val instanceof Number) ? ((Number) val).doubleValue() : basePrice;
+                    cleanMap.put(key, price);
+                }
+            }
+        }
+
+        if (changed) {
+            update.put(fieldName, cleanMap);
+        }
+        return update;
+    }
+
+    private void processSingleItem(Object item, Map<String, Double> targetMap, double basePrice) {
+        String raw = String.valueOf(item);
+        if (raw.startsWith("{") && raw.endsWith("}")) {
+            // Trích xuất label và price từ chuỗi định dạng "{price=100, label=ABC}"
+            String label = extractVal(raw, "label");
+            if (label == null) label = extractVal(raw, "name");
+            
+            String priceStr = extractVal(raw, "price");
+            double price = basePrice;
+            try {
+                if (priceStr != null) price = Double.parseDouble(priceStr);
+            } catch (Exception ignored) {}
+            
+            if (label != null) targetMap.put(label, price);
+        } else {
+            targetMap.put(raw, basePrice);
+        }
+    }
+
+    private String extractVal(String s, String key) {
+        String target = key + "=";
+        if (!s.contains(target)) return null;
+        int start = s.indexOf(target) + target.length();
+        int end = s.indexOf(",", start);
+        if (end == -1) end = s.indexOf("}", start);
+        if (end != -1) {
+            String val = s.substring(start, end).trim();
+            return "null".equalsIgnoreCase(val) ? null : val;
+        }
+        return null;
     }
 
     // --- ORDERS ---

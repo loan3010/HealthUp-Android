@@ -342,21 +342,11 @@ public class Product implements Serializable {
         if (!f.isEmpty()) groups.put("Hương vị", f);
         
         List<ProductVariant> p = normalizeVariants(parseVariantsField(packagingTypes, this));
-        if (!p.isEmpty()) groups.put("Quy cách", p);
+        if (!p.isEmpty()) groups.put("Loại đóng gói", p);
         
-        // If there's a main variants list, only add it as "Phân loại" if it's not a duplicate of legacy fields
-        if (variants != null && !variants.isEmpty()) {
-            List<ProductVariant> v = normalizeVariants(variants);
-            boolean isDuplicate = false;
-            for (List<ProductVariant> existing : groups.values()) {
-                if (isSameVariantList(existing, v)) {
-                    isDuplicate = true;
-                    break;
-                }
-            }
-            if (!isDuplicate) {
-                groups.put("Phân loại", v);
-            }
+        // Only add generic "Phân loại" if we don't have ANY specific groups
+        if (groups.isEmpty() && variants != null && !variants.isEmpty()) {
+            groups.put("Phân loại", normalizeVariants(variants));
         }
         
         return groups;
@@ -379,8 +369,11 @@ public class Product implements Serializable {
     /** Finds a variant by display name (e.g. "100g", "200g"). */
     public ProductVariant findVariantByName(String name) {
         if (name == null || name.isEmpty()) return null;
+        String searchName = name.trim().toLowerCase();
         for (ProductVariant variant : getResolvableVariants()) {
-            if (name.equals(variant.getName())) return variant;
+            if (variant.getName() != null && variant.getName().trim().toLowerCase().equals(searchName)) {
+                return variant;
+            }
         }
         return null;
     }
@@ -398,15 +391,30 @@ public class Product implements Serializable {
         if (p == null) return null;
         p.setId(doc.getId());
         p.resolvedVariantsCache = null;
-        List<ProductVariant> fromVariants = parseVariantsField(doc.get("variants"), p);
+
+        // ✅ CẢI TIẾN: Thu thập tất cả variants từ mọi nguồn (weights, flavors, pkg, variants)
+        List<ProductVariant> allVariants = new ArrayList<>();
+        
+        // 1. Phân loại chính (nếu có)
+        allVariants.addAll(parseVariantsField(doc.get("variants"), p));
+        
+        // 2. Khối lượng (Weights)
         List<ProductVariant> fromWeights = parseVariantsField(doc.get("weights"), p);
-        p.variants = mergeVariantLists(fromVariants, fromWeights);
-        if (p.variants.isEmpty()) {
-            p.variants = p.buildVariantsFromLegacyOptions();
-        }
+        allVariants = mergeVariantLists(allVariants, fromWeights);
+        
+        // 3. Hương vị (Flavors)
+        List<ProductVariant> fromFlavors = parseVariantsField(doc.get("flavors"), p);
+        allVariants = mergeVariantLists(allVariants, fromFlavors);
+        
+        // 4. Đóng gói (PackagingTypes)
+        List<ProductVariant> fromPkg = parseVariantsField(doc.get("packagingTypes"), p);
+        allVariants = mergeVariantLists(allVariants, fromPkg);
+
+        p.variants = allVariants;
         if (!p.variants.isEmpty()) {
             p.hasVariants = true;
         }
+
         Boolean hiddenVal = doc.getBoolean("hidden");
         if (hiddenVal != null) {
             p.setHidden(hiddenVal);
@@ -418,12 +426,29 @@ public class Product implements Serializable {
         return p;
     }
 
-    private static List<ProductVariant> mergeVariantLists(List<ProductVariant> primary, List<ProductVariant> secondary) {
-        if (primary.isEmpty()) return new ArrayList<>(secondary);
-        if (secondary.isEmpty()) return new ArrayList<>(primary);
-        List<ProductVariant> merged = new ArrayList<>(primary);
-        mergeVariantPricing(merged, secondary);
-        return merged;
+    private static List<ProductVariant> mergeVariantLists(List<ProductVariant> target, List<ProductVariant> source) {
+        if (source.isEmpty()) return target;
+        if (target.isEmpty()) return new ArrayList<>(source);
+        
+        for (ProductVariant s : source) {
+            if (s.getName() == null || s.getName().isEmpty()) continue;
+            
+            boolean found = false;
+            for (ProductVariant t : target) {
+                if (s.getName().equalsIgnoreCase(t.getName().trim())) {
+                    // Cập nhật giá và kho nếu nguồn mới có giá trị tốt hơn
+                    if (s.getPrice() > 0) t.setPrice(s.getPrice());
+                    if (s.getOriginalPrice() > 0) t.setOriginalPrice(s.getOriginalPrice());
+                    if (s.getStock() > 0) t.setStock(s.getStock());
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                target.add(s);
+            }
+        }
+        return target;
     }
 
     /** Applies per-variant price/stock from weights when the variants list only has labels. */
@@ -476,6 +501,26 @@ public class Product implements Serializable {
         ProductVariant keyed = new ProductVariant();
         keyed.setId("variant_" + index);
         keyed.setName(name);
+
+        // ✅ FIX QUAN TRỌNG: Nếu Key là chuỗi object "{price=..., label=...}"
+        // thì phải ưu tiên lấy giá tiền bên trong chuỗi Key này.
+        String keyStr = String.valueOf(key);
+        if (keyStr.startsWith("{") && keyStr.endsWith("}")) {
+            String pStr = extractVal(keyStr, "price");
+            if (pStr != null) {
+                try {
+                    double p = Double.parseDouble(pStr);
+                    if (p > 0) {
+                        keyed.setPrice(p);
+                        keyed.setOriginalPrice(p);
+                        keyed.setStock(parent.getStockCount());
+                        return keyed;
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+
+        // Nếu không có giá trong Key, mới dùng giá trị Value của Map
         if (value instanceof Number) {
             keyed.setPrice(((Number) value).doubleValue());
             keyed.setOriginalPrice(keyed.getPrice());
@@ -505,8 +550,24 @@ public class Product implements Serializable {
                 if (item != null) result.add(item);
             }
         } else if (raw instanceof Map) {
-            for (Object item : ((Map<?, ?>) raw).values()) {
-                if (item != null) result.add(item);
+            Map<?, ?> map = (Map<?, ?>) raw;
+            // Nếu Map này là dạng legacy (Key là nhãn, Value là giá số), ta cần lấy Key làm nhãn
+            boolean isSimplePriceMap = true;
+            for (Object val : map.values()) {
+                if (val != null && !(val instanceof Number)) {
+                    isSimplePriceMap = false;
+                    break;
+                }
+            }
+
+            if (isSimplePriceMap && !map.isEmpty()) {
+                for (Object key : map.keySet()) {
+                    if (key != null) result.add(key);
+                }
+            } else {
+                for (Object item : map.values()) {
+                    if (item != null) result.add(item);
+                }
             }
         }
         return result;
