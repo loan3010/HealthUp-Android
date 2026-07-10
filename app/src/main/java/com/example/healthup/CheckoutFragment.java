@@ -18,6 +18,9 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -140,6 +143,7 @@ public class CheckoutFragment extends Fragment {
 
 
         bindViews(view);
+        applySystemBarInsets(view);
         setupListeners();
         hydrateSelectedItemImages();
         renderProductList();
@@ -451,14 +455,28 @@ public class CheckoutFragment extends Fragment {
         FirebaseFirestore.getInstance()
                 .collection("users").document(effectiveUserId)
                 .collection("addresses")
-                .whereEqualTo("default", true)
-                .limit(1)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
-                        selectedAddress = queryDocumentSnapshots.getDocuments().get(0).toObject(Address.class);
-                        if (selectedAddress != null) {
-                            selectedAddress.setId(queryDocumentSnapshots.getDocuments().get(0).getId());
+                        // 1. Tìm địa chỉ mặc định
+                        for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            Address addr = doc.toObject(Address.class);
+                            if (addr != null) {
+                                addr.setId(doc.getId());
+                                if (addr.isDefault()) {
+                                    selectedAddress = addr;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 2. Nếu không có mặc định, lấy địa chỉ đầu tiên
+                        if (selectedAddress == null) {
+                            DocumentSnapshot firstDoc = queryDocumentSnapshots.getDocuments().get(0);
+                            selectedAddress = firstDoc.toObject(Address.class);
+                            if (selectedAddress != null) {
+                                selectedAddress.setId(firstDoc.getId());
+                            }
                         }
                         renderAddress();
                     } else {
@@ -589,6 +607,17 @@ public class CheckoutFragment extends Fragment {
         tvFooterTotal.setText(formatVnd(grandTotal));
     }
 
+
+    private void applySystemBarInsets(View view) {
+        View footer = view.findViewById(R.id.footer);
+        if (footer == null) return;
+
+        ViewCompat.setOnApplyWindowInsetsListener(footer, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), systemBars.bottom);
+            return windowInsets;
+        });
+    }
 
     private void openAddressBook() {
         AddressBookFragment fragment = new AddressBookFragment();

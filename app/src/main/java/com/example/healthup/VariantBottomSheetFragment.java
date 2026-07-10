@@ -160,44 +160,33 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     }
 
     private void selectVariantInGroup(String groupName, ChipGroup group, ProductVariant variant) {
+        String targetName = variant.getName();
+        
         for (int i = 0; i < group.getChildCount(); i++) {
             Chip chip = (Chip) group.getChildAt(i);
-            boolean isThis = chip.getText().toString().equals(variant.getName());
+            boolean isThis = chip.getText().toString().equals(targetName);
             updateVariantChipStyle(chip, isThis);
-            if (isThis) chip.setChecked(true);
+            if (isThis) {
+                chip.setChecked(true);
+            }
         }
         
         selectedVariantsMap.put(groupName, variant);
         
-        // Priority order for price setting: Weight is the most common primary price setter.
-        // We'll look for the first variant that has a price different from the base price,
-        // prioritizing groups like "Khối lượng".
+        // Cập nhật selectedVariant để hiển thị giá/kho chính xác
+        // Ưu tiên variant có giá khác biệt (thường là khối lượng)
         ProductVariant bestVariant = null;
-        
-        // 1. Try to find a variant in the "Khối lượng" group first if it has a specific price
-        if (selectedVariantsMap.containsKey("Khối lượng")) {
-            ProductVariant v = selectedVariantsMap.get("Khối lượng");
-            if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
+        for (ProductVariant v : selectedVariantsMap.values()) {
+            if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
                 bestVariant = v;
+                break;
             }
         }
-        
-        // 2. If no Weight variant with specific price, search other groups
-        if (bestVariant == null) {
-            for (ProductVariant v : selectedVariantsMap.values()) {
-                if (v.getPrice() != product.getPrice() && v.getPrice() > 0) {
-                    bestVariant = v;
-                    break;
-                }
-            }
-        }
-        
-        // 3. Fallback to any selection (the first one)
         if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
             bestVariant = selectedVariantsMap.values().iterator().next();
         }
-
         selectedVariant = bestVariant;
+
         updateDisplay();
     }
 
@@ -220,17 +209,20 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         int stock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
 
         tvPrice.setText(formatter.format(price) + "đ");
-        tvStock.setText("Kho: " + stock);
+        tvStock.setText("Kho: " + (stock > 0 ? stock : "Hết hàng"));
         
         StringBuilder label = new StringBuilder("Phân loại: ");
         if (selectedVariantsMap.isEmpty()) {
             label.append("Chưa chọn");
         } else {
             boolean first = true;
-            for (Map.Entry<String, ProductVariant> entry : selectedVariantsMap.entrySet()) {
-                if (!first) label.append(", ");
-                label.append(entry.getValue().getName());
-                first = false;
+            for (ProductVariant v : selectedVariantsMap.values()) {
+                String name = v.getName();
+                if (name != null && !name.isEmpty()) {
+                    if (!first) label.append(", ");
+                    label.append(name);
+                    first = false;
+                }
             }
         }
         tvSelectedName.setText(label.toString());

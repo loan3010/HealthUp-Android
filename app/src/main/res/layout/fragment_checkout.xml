@@ -436,6 +436,11 @@
                     android:orientation="vertical">
 
                     <RadioButton
+                        android:id="@+id/rbBankLink"
+                        style="@style/PaymentOptionStyle"
+                        android:text="Liên kết tài khoản ngân hàng" />
+
+                    <RadioButton
                         android:id="@+id/rbVnpay"
                         style="@style/PaymentOptionStyle"
                         android:text="VNPAY-QR" />
@@ -578,7 +583,8 @@
     <LinearLayout
         android:id="@+id/footer"
         android:layout_width="0dp"
-        android:layout_height="69dp"
+        android:layout_height="wrap_content"
+        android:minHeight="69dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"
