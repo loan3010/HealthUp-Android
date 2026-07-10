@@ -1,0 +1,3254 @@
+{
+  "meta": {
+    "app": "HealthUp",
+    "feature": "BMI Calculator + Diet Recommendation + Daily Meal Plan",
+    "version": "1.0",
+    "generatedFor": "Tích hợp vào ứng dụng bán đồ ăn vặt/thực phẩm khô healthy HealthUp",
+    "productSourceFile": "products_export.json (dùng chung productId)",
+    "disclaimer": "Đây là công cụ tham khảo dinh dưỡng tổng quát, không thay thế tư vấn của bác sĩ/chuyên gia dinh dưỡng. Với người có bệnh lý nền, phụ nữ mang thai/cho con bú, trẻ em dưới 18 tuổi, nên tham khảo ý kiến chuyên môn trước khi áp dụng."
+  },
+  "bmi": {
+    "formula": {
+      "formula": "BMI = Cân nặng (kg) / (Chiều cao (m) x Chiều cao (m))",
+      "unitNote": "Chiều cao nhập vào có thể là cm, cần chia 100 để đổi ra mét trước khi tính.",
+      "standard": "WHO Asia-Pacific (IDI & WPRO) - phù hợp thể trạng người Việt Nam / châu Á, khác với chuẩn WHO quốc tế (chuẩn quốc tế: thừa cân từ 25, béo phì từ 30)."
+    },
+    "classification": [
+      {
+        "id": "gay",
+        "label": "Thiếu cân (Gầy)",
+        "min": 0,
+        "max": 18.49,
+        "suggestedGoal": "tang_can",
+        "advice": "BMI dưới 18.5 cho thấy bạn đang thiếu cân. Nên tăng cường năng lượng nạp vào, ưu tiên đạm và chất béo tốt để tăng cân lành mạnh."
+      },
+      {
+        "id": "binh_thuong",
+        "label": "Bình thường",
+        "min": 18.5,
+        "max": 22.99,
+        "suggestedGoal": "duy_tri",
+        "advice": "BMI trong khoảng bình thường. Duy trì chế độ ăn cân bằng và vận động đều đặn để giữ vóc dáng."
+      },
+      {
+        "id": "thua_can",
+        "label": "Thừa cân",
+        "min": 23,
+        "max": 24.99,
+        "suggestedGoal": "giam_can",
+        "advice": "BMI ở mức thừa cân. Nên kiểm soát lượng calo nạp vào, tăng chất xơ - đạm, giảm tinh bột tinh chế."
+      },
+      {
+        "id": "beo_phi_1",
+        "label": "Béo phì độ I",
+        "min": 25,
+        "max": 29.99,
+        "suggestedGoal": "giam_can",
+        "advice": "BMI ở mức béo phì độ I. Nên xây dựng thâm hụt calo hợp lý (15-20%) kết hợp vận động."
+      },
+      {
+        "id": "beo_phi_2",
+        "label": "Béo phì độ II trở lên",
+        "min": 30,
+        "max": 999,
+        "suggestedGoal": "giam_can",
+        "advice": "BMI ở mức béo phì độ II trở lên. Khuyến nghị tham khảo thêm ý kiến bác sĩ/chuyên gia dinh dưỡng song song với điều chỉnh chế độ ăn."
+      }
+    ]
+  },
+  "calorieCalculation": {
+    "bmrFormula": {
+      "method": "Mifflin-St Jeor (khuyến nghị bởi Hiệp hội Dinh dưỡng Hoa Kỳ, độ chính xác cao hơn Harris-Benedict)",
+      "male": "BMR = 10 x cân nặng(kg) + 6.25 x chiều cao(cm) - 5 x tuổi + 5",
+      "female": "BMR = 10 x cân nặng(kg) + 6.25 x chiều cao(cm) - 5 x tuổi - 161",
+      "tdeeFormula": "TDEE = BMR x Hệ số vận động (activity factor)"
+    },
+    "activityLevels": [
+      {
+        "id": "sedentary",
+        "label": "Ít vận động (ngồi văn phòng, không tập luyện)",
+        "factor": 1.2
+      },
+      {
+        "id": "light",
+        "label": "Vận động nhẹ (tập 1-3 buổi/tuần)",
+        "factor": 1.375
+      },
+      {
+        "id": "moderate",
+        "label": "Vận động vừa (tập 3-5 buổi/tuần)",
+        "factor": 1.55
+      },
+      {
+        "id": "active",
+        "label": "Vận động nhiều (tập 6-7 buổi/tuần)",
+        "factor": 1.725
+      },
+      {
+        "id": "very_active",
+        "label": "Vận động rất nhiều (vận động viên / lao động chân tay nặng)",
+        "factor": 1.9
+      }
+    ],
+    "goalAdjustment": [
+      {
+        "goalId": "giam_can",
+        "label": "Giảm cân",
+        "adjustPercentMin": -20,
+        "adjustPercentMax": -15,
+        "note": "Thâm hụt 15-20% so với TDEE để giảm mỡ an toàn (~0.3-0.5kg/tuần), không khuyến nghị thâm hụt quá 25% khi không có giám sát chuyên môn."
+      },
+      {
+        "goalId": "duy_tri",
+        "label": "Duy trì",
+        "adjustPercentMin": 0,
+        "adjustPercentMax": 0,
+        "note": "Giữ nguyên mức TDEE để duy trì cân nặng hiện tại."
+      },
+      {
+        "goalId": "tang_can",
+        "label": "Tăng cân",
+        "adjustPercentMin": 10,
+        "adjustPercentMax": 15,
+        "note": "Thặng dư 10-15% so với TDEE để tăng cân lành mạnh, ưu tiên tăng cơ hơn tăng mỡ (kết hợp tập luyện sức mạnh)."
+      }
+    ],
+    "macroRatio": {
+      "giam_can": {
+        "protein": 0.3,
+        "carbs": 0.4,
+        "fat": 0.3,
+        "note": "Tăng đạm để giữ cơ & no lâu, giảm tinh bột tinh chế, ưu tiên chất xơ."
+      },
+      "duy_tri": {
+        "protein": 0.25,
+        "carbs": 0.45,
+        "fat": 0.3,
+        "note": "Tỉ lệ cân bằng theo khuyến nghị dinh dưỡng phổ thông."
+      },
+      "tang_can": {
+        "protein": 0.25,
+        "carbs": 0.5,
+        "fat": 0.25,
+        "note": "Tăng carbs & tổng năng lượng để hỗ trợ tăng cân, đạm đủ để phát triển cơ."
+      }
+    },
+    "mealSplit": {
+      "sang": 0.25,
+      "trua": 0.35,
+      "xe": 0.1,
+      "toi": 0.3
+    },
+    "mealSplitNote": "Tỉ lệ % năng lượng phân bổ cho 4 bữa: Sáng 25% - Trưa 35% - Xế 10% - Tối 30%."
+  },
+  "goals": [
+    {
+      "id": "giam_can",
+      "name": "Giảm cân",
+      "description": "Chế độ ăn thâm hụt calo, giàu chất xơ và đạm, giảm tinh bột tinh chế, dùng các sản phẩm ít calo/nhiều chất xơ của HealthUp.",
+      "tiers": [
+        {
+          "id": "giam_can_thap",
+          "label": "Mức thấp (nữ, ít vận động)",
+          "kcalRange": [
+            1200,
+            1400
+          ],
+          "targetKcal": 1300
+        },
+        {
+          "id": "giam_can_vua",
+          "label": "Mức tiêu chuẩn",
+          "kcalRange": [
+            1400,
+            1600
+          ],
+          "targetKcal": 1500
+        },
+        {
+          "id": "giam_can_cao",
+          "label": "Mức cao (nam / vận động nhiều)",
+          "kcalRange": [
+            1600,
+            1800
+          ],
+          "targetKcal": 1700
+        }
+      ]
+    },
+    {
+      "id": "duy_tri",
+      "name": "Duy trì",
+      "description": "Chế độ ăn cân bằng năng lượng nạp vào = năng lượng tiêu hao, đa dạng nhóm chất, dùng HealthUp như bữa phụ lành mạnh thay đồ ăn vặt công nghiệp.",
+      "tiers": [
+        {
+          "id": "duy_tri_thap",
+          "label": "Mức thấp",
+          "kcalRange": [
+            1800,
+            2000
+          ],
+          "targetKcal": 1900
+        },
+        {
+          "id": "duy_tri_vua",
+          "label": "Mức tiêu chuẩn",
+          "kcalRange": [
+            2000,
+            2200
+          ],
+          "targetKcal": 2100
+        },
+        {
+          "id": "duy_tri_cao",
+          "label": "Mức cao",
+          "kcalRange": [
+            2200,
+            2400
+          ],
+          "targetKcal": 2300
+        }
+      ]
+    },
+    {
+      "id": "tang_can",
+      "name": "Tăng cân",
+      "description": "Chế độ ăn thặng dư calo, tăng cường nhóm hạt dinh dưỡng, granola năng lượng cao, ngũ cốc nguyên cám để tăng cân lành mạnh.",
+      "tiers": [
+        {
+          "id": "tang_can_thap",
+          "label": "Mức thấp",
+          "kcalRange": [
+            2200,
+            2400
+          ],
+          "targetKcal": 2300
+        },
+        {
+          "id": "tang_can_vua",
+          "label": "Mức tiêu chuẩn",
+          "kcalRange": [
+            2400,
+            2600
+          ],
+          "targetKcal": 2500
+        },
+        {
+          "id": "tang_can_cao",
+          "label": "Mức cao (nam / vận động nhiều)",
+          "kcalRange": [
+            2600,
+            2800
+          ],
+          "targetKcal": 2700
+        }
+      ]
+    }
+  ],
+  "dishLibrary": [
+    {
+      "id": "s01",
+      "name": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Granola trộn cùng sữa chua không đường, thêm chút mật ong.",
+      "otherIngredients": [
+        {
+          "name": "Sữa chua không đường 100g",
+          "kcal": 62
+        }
+      ],
+      "otherKcal": 62,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46246",
+        "name": "Granola Hạt Dinh Dưỡng",
+        "kcalPer100g": 435
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 80
+      },
+      "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+    },
+    {
+      "id": "s02",
+      "name": "Granola Cacao & Chuối Tươi + Sữa Tươi",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Granola vị cacao ăn kèm chuối tươi cắt lát và sữa tươi nguyên kem.",
+      "otherIngredients": [
+        {
+          "name": "Chuối tươi 1 quả",
+          "kcal": 90
+        },
+        {
+          "name": "Sữa tươi nguyên kem 150ml",
+          "kcal": 100
+        }
+      ],
+      "otherKcal": 190,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46247",
+        "name": "Granola Cacao",
+        "kcalPer100g": 422
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 90
+      },
+      "tip": "Món giàu năng lượng, phù hợp bữa sáng cho người tăng cân/vận động nhiều."
+    },
+    {
+      "id": "s03",
+      "name": "Granola Dừa & Sữa Hạt",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri"
+      ],
+      "description": "Granola vị dừa dùng cùng sữa hạt (óc chó/hạnh nhân) không đường.",
+      "otherIngredients": [
+        {
+          "name": "Sữa hạt không đường 200ml",
+          "kcal": 50
+        }
+      ],
+      "otherKcal": 50,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46248",
+        "name": "Granola Dừa",
+        "kcalPer100g": 418
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 70
+      },
+      "tip": "Sữa hạt giúp bổ sung chất béo tốt, ít calo hơn sữa bò nguyên kem."
+    },
+    {
+      "id": "s04",
+      "name": "Granola Chuối & Sữa Chua Hy Lạp",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Granola vị chuối ăn cùng sữa chua Hy Lạp giàu đạm, ít béo.",
+      "otherIngredients": [
+        {
+          "name": "Sữa chua Hy Lạp không đường 100g",
+          "kcal": 59
+        }
+      ],
+      "otherKcal": 59,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46249",
+        "name": "Granola Chuối",
+        "kcalPer100g": 416
+      },
+      "servingRange": {
+        "minGram": 25,
+        "maxGram": 60
+      },
+      "tip": "Sữa chua Hy Lạp giàu đạm giúp no lâu, phù hợp người giảm cân."
+    },
+    {
+      "id": "s05",
+      "name": "Granola Trái Cây Tươi Mix",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Granola trái cây ăn kèm trái cây tươi theo mùa (dâu, việt quất, táo).",
+      "otherIngredients": [
+        {
+          "name": "Trái cây tươi mix 100g",
+          "kcal": 55
+        }
+      ],
+      "otherKcal": 55,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46245",
+        "name": "Granola Trái Cây",
+        "kcalPer100g": 415
+      },
+      "servingRange": {
+        "minGram": 25,
+        "maxGram": 60
+      },
+      "tip": "Có thể thay trái cây tươi theo mùa để đa dạng khẩu vị."
+    },
+    {
+      "id": "s06",
+      "name": "Granola Truyền Thống & Trứng Ốp La",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Granola ăn kèm 1 quả trứng ốp la áp chảo ít dầu, thêm rau xanh.",
+      "otherIngredients": [
+        {
+          "name": "Trứng gà ốp la 1 quả",
+          "kcal": 90
+        },
+        {
+          "name": "Rau xà lách 30g",
+          "kcal": 5
+        }
+      ],
+      "otherKcal": 95,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46244",
+        "name": "Granola Truyền Thống",
+        "kcalPer100g": 420
+      },
+      "servingRange": {
+        "minGram": 25,
+        "maxGram": 70
+      },
+      "tip": "Kết hợp đạm động vật từ trứng giúp bữa sáng cân bằng hơn."
+    },
+    {
+      "id": "s07",
+      "name": "Granola 03 Vị Siêu Hạt Befresco + Sữa Chua Sấy",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri"
+      ],
+      "description": "Granola nướng phồng 3 vị dùng cùng sữa chua tươi.",
+      "otherIngredients": [
+        {
+          "name": "Sữa chua tươi 100g",
+          "kcal": 70
+        }
+      ],
+      "otherKcal": 70,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46239",
+        "name": "Granola 03 Vị Siêu Hạt Befresco",
+        "kcalPer100g": 420
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 80
+      },
+      "tip": "Sản phẩm đã có mật thốt nốt dịu ngọt, không cần thêm đường."
+    },
+    {
+      "id": "s08",
+      "name": "Granola Siêu Hạt 3 Vị (Matcha/Choco) & Bơ Đậu Phộng",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Granola siêu hạt cao năng lượng ăn cùng 1 thìa bơ đậu phộng.",
+      "otherIngredients": [
+        {
+          "name": "Bơ đậu phộng nguyên chất 15g",
+          "kcal": 95
+        }
+      ],
+      "otherKcal": 95,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623c",
+        "name": "Granola Siêu Hạt 3 Vị Truyền Thống, Choco, Matcha",
+        "kcalPer100g": 410
+      },
+      "servingRange": {
+        "minGram": 35,
+        "maxGram": 100
+      },
+      "tip": "Món năng lượng cao, phù hợp người cần tăng cân nhanh hoặc trước buổi tập nặng."
+    },
+    {
+      "id": "s09",
+      "name": "Bột Ngũ Cốc Damtuh Pha Nóng",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Ngũ cốc pha nước nóng dạng gói tiện lợi, nhẹ bụng buổi sáng bận rộn.",
+      "otherIngredients": [
+        {
+          "name": "Không thêm gì khác",
+          "kcal": 0
+        }
+      ],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623a",
+        "name": "Bột Ngũ Cốc Damtuh Hàn Quốc",
+        "kcalPer100g": 380
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 100
+      },
+      "tip": "Phù hợp bữa sáng nhanh gọn cho người giảm cân, có thể ăn thêm 1 quả trứng luộc nếu cần thêm đạm."
+    },
+    {
+      "id": "s10",
+      "name": "Ngũ Cốc Mè Đen Gạo Lứt Đậu Đen Damtuh",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Ngũ cốc mè đen - gạo lứt - đậu đen pha sữa hạt, hỗ trợ tiêu hóa.",
+      "otherIngredients": [
+        {
+          "name": "Sữa hạt không đường 150ml",
+          "kcal": 38
+        }
+      ],
+      "otherKcal": 38,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623b",
+        "name": "Ngũ Cốc Mè Đen Gạo Lứt Đậu Đen Damtuh",
+        "kcalPer100g": 375
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 100
+      },
+      "tip": "Giàu chất xơ từ gạo lứt & đậu đen, hỗ trợ no lâu, tốt cho hệ tiêu hóa."
+    },
+    {
+      "id": "s11",
+      "name": "Chia Pudding Sữa Hạnh Nhân",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Hạt chia ngâm qua đêm cùng sữa hạnh nhân không đường, ăn kèm trái cây.",
+      "otherIngredients": [
+        {
+          "name": "Sữa hạnh nhân không đường 200ml",
+          "kcal": 30
+        }
+      ],
+      "otherKcal": 30,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622f",
+        "name": "Hạt Chia Đen - Chia Black Bag Úc Organic",
+        "kcalPer100g": 486
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Chia nở gấp nhiều lần khi ngâm, chỉ cần lượng nhỏ đã no lâu - lý tưởng cho giảm cân."
+    },
+    {
+      "id": "s12",
+      "name": "Sinh Tố Chuối Chia Hạt",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Sinh tố chuối, sữa tươi nguyên kem, hạt chia, mật ong - năng lượng cao.",
+      "otherIngredients": [
+        {
+          "name": "Chuối 1 quả",
+          "kcal": 90
+        },
+        {
+          "name": "Sữa tươi nguyên kem 250ml",
+          "kcal": 165
+        }
+      ],
+      "otherKcal": 255,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46230",
+        "name": "Hạt Chia Úc Absolute Organic (bịch tím)",
+        "kcalPer100g": 486
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Sinh tố tiện lợi mang đi, phù hợp bữa sáng cho người cần tăng cân/tập gym."
+    },
+    {
+      "id": "s13",
+      "name": "Yến Mạch Tươi Nấu Sữa & Trái Cây",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Yến mạch nấu cùng sữa tươi không đường, thêm trái cây tươi cắt lát.",
+      "otherIngredients": [
+        {
+          "name": "Sữa tươi không đường 200ml",
+          "kcal": 90
+        },
+        {
+          "name": "Trái cây tươi 80g",
+          "kcal": 40
+        }
+      ],
+      "otherKcal": 130,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623e",
+        "name": "Combo Yến Mạch Tươi Nhập Khẩu",
+        "kcalPer100g": 389
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 100
+      },
+      "tip": "Yến mạch giàu beta-glucan giúp no lâu và ổn định đường huyết."
+    },
+    {
+      "id": "s14",
+      "name": "Set Sáng Granola Matcha Gia Đình",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri"
+      ],
+      "description": "Granola vị matcha dùng cùng sữa tươi, phù hợp chuẩn bị nhanh cho cả gia đình.",
+      "otherIngredients": [
+        {
+          "name": "Sữa tươi không đường 150ml",
+          "kcal": 68
+        }
+      ],
+      "otherKcal": 68,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623d",
+        "name": "Combo 2 Túi Granola Truly Healthy Matcha",
+        "kcalPer100g": 415
+      },
+      "servingRange": {
+        "minGram": 30,
+        "maxGram": 70
+      },
+      "tip": "Phù hợp chuẩn bị bữa sáng nhanh cho nhiều người trong gia đình."
+    },
+    {
+      "id": "s15",
+      "name": "Phở Gạo Lứt Bò Sáng",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Phở gạo lứt nấu cùng thịt bò thái mỏng, hành lá, giá đỗ - bữa sáng no bụng kiểu Việt.",
+      "otherIngredients": [
+        {
+          "name": "Thịt bò 60g",
+          "kcal": 110
+        },
+        {
+          "name": "Rau thơm, giá đỗ",
+          "kcal": 15
+        }
+      ],
+      "otherKcal": 125,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622b",
+        "name": "Phở Gạo Lứt",
+        "kcalPer100g": 340
+      },
+      "servingRange": {
+        "minGram": 60,
+        "maxGram": 120
+      },
+      "tip": "Gạo lứt giúp chỉ số đường huyết tăng chậm hơn phở gạo trắng thông thường."
+    },
+    {
+      "id": "s16",
+      "name": "Biscotti Nguyên Cám ăn kèm cà phê/trà",
+      "mealTimes": [
+        "sang"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "2-3 miếng Biscotti nguyên cám dùng kèm cà phê đen hoặc trà không đường, bữa sáng nhẹ.",
+      "otherIngredients": [
+        {
+          "name": "Cà phê đen/trà không đường",
+          "kcal": 5
+        }
+      ],
+      "otherKcal": 5,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46228",
+        "name": "Biscotti Nguyên Cám Low Calories 4 Vị",
+        "kcalPer100g": 390
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 45
+      },
+      "tip": "Lựa chọn cho người bận rộn cần bữa sáng gọn nhẹ, giàu chất xơ."
+    },
+    {
+      "id": "t01",
+      "name": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Mỳ chũ gạo lứt xào cùng ức gà, bông cải xanh, cà rốt, ớt chuông.",
+      "otherIngredients": [
+        {
+          "name": "Ức gà 100g",
+          "kcal": 165
+        },
+        {
+          "name": "Rau củ xào 100g",
+          "kcal": 45
+        },
+        {
+          "name": "Dầu ô liu 1 thìa",
+          "kcal": 40
+        }
+      ],
+      "otherKcal": 250,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46229",
+        "name": "Mỳ Chũ Gạo Lứt",
+        "kcalPer100g": 350
+      },
+      "servingRange": {
+        "minGram": 60,
+        "maxGram": 160
+      },
+      "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+    },
+    {
+      "id": "t02",
+      "name": "Mì Chũ Ngũ Sắc Trộn Sốt Mè & Đậu Hũ",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Mì chũ ngũ sắc trộn sốt dầu mè, đậu hũ chiên áp chảo ít dầu, rau sống.",
+      "otherIngredients": [
+        {
+          "name": "Đậu hũ chiên áp chảo 100g",
+          "kcal": 120
+        },
+        {
+          "name": "Sốt dầu mè + rau sống",
+          "kcal": 40
+        }
+      ],
+      "otherKcal": 160,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622a",
+        "name": "Mì Chũ Rau Củ Tự Nhiên 5 Vị (Ngũ Sắc)",
+        "kcalPer100g": 345
+      },
+      "servingRange": {
+        "minGram": 50,
+        "maxGram": 150
+      },
+      "tip": "Món chay thanh đạm, nhiều màu sắc tự nhiên từ rau củ, phù hợp giảm cân."
+    },
+    {
+      "id": "t03",
+      "name": "Phở Gạo Lứt Bò Tái Trưa",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Phở gạo lứt nước dùng xương hầm, thịt bò tái, rau thơm.",
+      "otherIngredients": [
+        {
+          "name": "Thịt bò tái 80g",
+          "kcal": 145
+        },
+        {
+          "name": "Nước dùng + rau thơm",
+          "kcal": 30
+        }
+      ],
+      "otherKcal": 175,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622b",
+        "name": "Phở Gạo Lứt",
+        "kcalPer100g": 340
+      },
+      "servingRange": {
+        "minGram": 70,
+        "maxGram": 170
+      },
+      "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+    },
+    {
+      "id": "t04",
+      "name": "Nui Gạo Lứt Sốt Bò Bằm Cà Chua",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Nui gạo lứt sốt bò bằm cà chua kiểu Ý, rắc phô mai bào ít.",
+      "otherIngredients": [
+        {
+          "name": "Thịt bò bằm 100g",
+          "kcal": 200
+        },
+        {
+          "name": "Sốt cà chua + phô mai bào",
+          "kcal": 90
+        }
+      ],
+      "otherKcal": 290,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622c",
+        "name": "Nui Gạo Lứt",
+        "kcalPer100g": 342
+      },
+      "servingRange": {
+        "minGram": 70,
+        "maxGram": 170
+      },
+      "tip": "Món đậm đà, giàu năng lượng, phù hợp người cần tăng cân."
+    },
+    {
+      "id": "t05",
+      "name": "Bún Gạo Lứt Đỏ Trộn Tôm & Rau Sống",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Bún gạo lứt đỏ trộn tôm luộc, rau sống, nước mắm chua ngọt ít đường.",
+      "otherIngredients": [
+        {
+          "name": "Tôm luộc 100g",
+          "kcal": 100
+        },
+        {
+          "name": "Rau sống + nước trộn",
+          "kcal": 35
+        }
+      ],
+      "otherKcal": 135,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622d",
+        "name": "Bún Gạo Lứt Đỏ",
+        "kcalPer100g": 338
+      },
+      "servingRange": {
+        "minGram": 60,
+        "maxGram": 160
+      },
+      "tip": "Món thanh mát ít dầu mỡ, giàu chất xơ từ gạo lứt đỏ, phù hợp giảm cân."
+    },
+    {
+      "id": "t06",
+      "name": "Nui Ngũ Sắc Xào Hải Sản Thập Cẩm",
+      "mealTimes": [
+        "trua"
+      ],
+      "suitableGoals": [
+        "duy_tri"
+      ],
+      "description": "Nui ngũ sắc xào cùng tôm, mực, rau củ nhiều màu.",
+      "otherIngredients": [
+        {
+          "name": "Hải sản thập cẩm 120g",
+          "kcal": 140
+        },
+        {
+          "name": "Rau củ xào",
+          "kcal": 40
+        }
+      ],
+      "otherKcal": 180,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622e",
+        "name": "Nui Ngũ Sắc",
+        "kcalPer100g": 344
+      },
+      "servingRange": {
+        "minGram": 60,
+        "maxGram": 160
+      },
+      "tip": "Món trưa đủ chất, đa dạng màu sắc kích thích vị giác."
+    },
+    {
+      "id": "d01",
+      "name": "Mỳ Chũ Gạo Lứt Súp Rau Củ Nhẹ",
+      "mealTimes": [
+        "toi"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Mỳ chũ gạo lứt nấu súp cùng rau củ thanh đạm, ít dầu mỡ - bữa tối nhẹ bụng.",
+      "otherIngredients": [
+        {
+          "name": "Rau củ thập cẩm 150g",
+          "kcal": 60
+        },
+        {
+          "name": "Ức gà xé 50g",
+          "kcal": 80
+        }
+      ],
+      "otherKcal": 140,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46229",
+        "name": "Mỳ Chũ Gạo Lứt",
+        "kcalPer100g": 350
+      },
+      "servingRange": {
+        "minGram": 40,
+        "maxGram": 120
+      },
+      "tip": "Bữa tối nên ăn nhẹ hơn bữa trưa, ưu tiên súp/canh để dễ tiêu hóa."
+    },
+    {
+      "id": "d02",
+      "name": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+      "mealTimes": [
+        "toi"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Bún gạo lứt đỏ trộn cùng ức gà xé, xà lách, dưa leo, sốt chanh dầu ô liu.",
+      "otherIngredients": [
+        {
+          "name": "Ức gà xé 100g",
+          "kcal": 165
+        },
+        {
+          "name": "Rau salad + sốt",
+          "kcal": 50
+        }
+      ],
+      "otherKcal": 215,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622d",
+        "name": "Bún Gạo Lứt Đỏ",
+        "kcalPer100g": 338
+      },
+      "servingRange": {
+        "minGram": 50,
+        "maxGram": 140
+      },
+      "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+    },
+    {
+      "id": "d03",
+      "name": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+      "mealTimes": [
+        "toi"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Nui gạo lứt luộc để nguội trộn salad dầu giấm, rắc hạt điều rang.",
+      "otherIngredients": [
+        {
+          "name": "Rau củ salad + dầu giấm",
+          "kcal": 70
+        },
+        {
+          "name": "Hạt điều rang 10g",
+          "kcal": 55
+        }
+      ],
+      "otherKcal": 125,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622c",
+        "name": "Nui Gạo Lứt",
+        "kcalPer100g": 342
+      },
+      "servingRange": {
+        "minGram": 50,
+        "maxGram": 140
+      },
+      "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+    },
+    {
+      "id": "d04",
+      "name": "Phở Gạo Lứt Chay Nấm & Đậu Hũ",
+      "mealTimes": [
+        "toi"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Phở gạo lứt nước dùng chay từ nấm, đậu hũ non, rau cải.",
+      "otherIngredients": [
+        {
+          "name": "Nấm + đậu hũ non 120g",
+          "kcal": 100
+        },
+        {
+          "name": "Nước dùng chay + rau cải",
+          "kcal": 30
+        }
+      ],
+      "otherKcal": 130,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622b",
+        "name": "Phở Gạo Lứt",
+        "kcalPer100g": 340
+      },
+      "servingRange": {
+        "minGram": 50,
+        "maxGram": 140
+      },
+      "tip": "Bữa tối chay thanh đạm, dễ tiêu, phù hợp ăn tối muộn."
+    },
+    {
+      "id": "d05",
+      "name": "Mì Chũ Ngũ Sắc Xào Chay Rau Củ",
+      "mealTimes": [
+        "toi"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Mì chũ ngũ sắc xào cùng nấm, cải thìa, cà rốt, ít dầu.",
+      "otherIngredients": [
+        {
+          "name": "Rau củ nấm xào 150g",
+          "kcal": 65
+        }
+      ],
+      "otherKcal": 65,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4622a",
+        "name": "Mì Chũ Rau Củ Tự Nhiên 5 Vị (Ngũ Sắc)",
+        "kcalPer100g": 345
+      },
+      "servingRange": {
+        "minGram": 40,
+        "maxGram": 120
+      },
+      "tip": "Bữa tối chay nhẹ nhàng, nhiều màu sắc, ít calo, phù hợp giảm cân."
+    },
+    {
+      "id": "x01",
+      "name": "Hạnh Nhân Tẩm Mật Ong",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Hạnh Nhân Tẩm Mật Ong làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46231",
+        "name": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+        "kcalPer100g": 598
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 35
+      },
+      "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+    },
+    {
+      "id": "x02",
+      "name": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Ong",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Dùng Hạt Tổng Hợp (Mix Nut) Tẩm Mật Ong làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46232",
+        "name": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Bơ Ong Murgerbon",
+        "kcalPer100g": 610
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 35
+      },
+      "tip": "Món ăn xế năng lượng cao, phù hợp người tập gym/tăng cân cần nạp thêm calo giữa các bữa chính."
+    },
+    {
+      "id": "x03",
+      "name": "Hạt Bí Xanh Rang Mộc",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Hạt Bí Xanh Rang Mộc làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46233",
+        "name": "Hạt Bí Xanh Rang Mộc",
+        "kcalPer100g": 559
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+    },
+    {
+      "id": "x04",
+      "name": "Hạt Điều Rang Mộc",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Hạt Điều Rang Mộc làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46234",
+        "name": "Hạt Điều Nguyên Hạt Rang Mộc",
+        "kcalPer100g": 553
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Giàu chất béo không bão hòa tốt cho tim mạch, dùng điều độ 15-20g/lần."
+    },
+    {
+      "id": "x05",
+      "name": "Nhân Óc Chó Nguyên Hạt",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Nhân Óc Chó Nguyên Hạt làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46235",
+        "name": "Nhân Óc Chó Nguyên Hạt Cao Cấp",
+        "kcalPer100g": 654
+      },
+      "servingRange": {
+        "minGram": 10,
+        "maxGram": 25
+      },
+      "tip": "Óc chó calo dày đặc nhất trong nhóm hạt, chỉ cần lượng nhỏ đã cung cấp năng lượng tốt."
+    },
+    {
+      "id": "x06",
+      "name": "Hạnh Nhân Nướng Giòn Rang Mộc",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Hạnh Nhân Nướng Giòn Rang Mộc làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46236",
+        "name": "Hạnh Nhân Nướng Giòn Rang Mộc",
+        "kcalPer100g": 579
+      },
+      "servingRange": {
+        "minGram": 10,
+        "maxGram": 25
+      },
+      "tip": "Ăn kèm 1 ly trà không đường để tăng cảm giác no."
+    },
+    {
+      "id": "x07",
+      "name": "Chuối Sấy Lạnh",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Chuối Sấy Lạnh làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624a",
+        "name": "Chuối Sấy Lạnh",
+        "kcalPer100g": 346
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Sấy lạnh giữ được nhiều dưỡng chất hơn sấy dầu (chiên)."
+    },
+    {
+      "id": "x08",
+      "name": "Xoài Sấy Dẻo",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Xoài Sấy Dẻo làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624b",
+        "name": "Xoài Sấy Dẻo",
+        "kcalPer100g": 319
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Vị ngọt tự nhiên, nên ăn kèm nước lọc để giảm cảm giác ngán."
+    },
+    {
+      "id": "x09",
+      "name": "Táo Sấy Lạnh",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Dùng Táo Sấy Lạnh làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624c",
+        "name": "Táo Sấy Lạnh",
+        "kcalPer100g": 290
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Trong nhóm trái cây sấy, táo sấy lạnh có mức năng lượng thấp hơn, phù hợp giảm cân."
+    },
+    {
+      "id": "x10",
+      "name": "Dứa Sấy Dẻo",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri"
+      ],
+      "description": "Dùng Dứa Sấy Dẻo làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624d",
+        "name": "Dứa Sấy Dẻo",
+        "kcalPer100g": 312
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Hương vị chua ngọt hài hòa, giàu vitamin C."
+    },
+    {
+      "id": "x11",
+      "name": "Dâu Tây Sấy Lạnh",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Dâu Tây Sấy Lạnh làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624e",
+        "name": "Dâu Tây Sấy Lạnh",
+        "kcalPer100g": 324
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 35
+      },
+      "tip": "Có thể bẻ nhỏ rắc lên granola hoặc sữa chua để tăng hương vị."
+    },
+    {
+      "id": "x12",
+      "name": "Cam Sấy Dẻo",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Cam Sấy Dẻo làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4624f",
+        "name": "Cam Sấy Dẻo",
+        "kcalPer100g": 308
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Giàu chất xơ (7g/100g), hỗ trợ tiêu hóa, thích hợp bữa xế lành mạnh."
+    },
+    {
+      "id": "x13",
+      "name": "Kiwi Sấy Dẻo",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Kiwi Sấy Dẻo làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46250",
+        "name": "Kiwi Sấy Dẻo",
+        "kcalPer100g": 310
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Vị chua nhẹ tự nhiên, phù hợp người không thích đồ ngọt đậm."
+    },
+    {
+      "id": "x14",
+      "name": "Nho Khô",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Nho Khô làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46251",
+        "name": "Nho Khô",
+        "kcalPer100g": 299
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Có thể trộn cùng granola hoặc sữa chua buổi sáng thay vì ăn xế riêng."
+    },
+    {
+      "id": "x15",
+      "name": "Thanh Long Sấy Lạnh",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Dùng Thanh Long Sấy Lạnh làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46252",
+        "name": "Thanh Long Sấy Lạnh",
+        "kcalPer100g": 264
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 45
+      },
+      "tip": "Một trong những loại trái cây sấy có năng lượng thấp nhất, phù hợp người giảm cân ăn thoải mái hơn."
+    },
+    {
+      "id": "x16",
+      "name": "Ổi Sấy Dẻo",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Ổi Sấy Dẻo làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46253",
+        "name": "Ổi Sấy Dẻo",
+        "kcalPer100g": 285
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 45
+      },
+      "tip": "Chất xơ rất cao (17g/100g) giúp no lâu, hỗ trợ tiêu hóa tốt."
+    },
+    {
+      "id": "x17",
+      "name": "Thạch Trái Cây Tiktok Hàn Quốc",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Dùng Thạch Trái Cây Tiktok Hàn Quốc làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46240",
+        "name": "Thạch Trái Cây Tiktok Hàn Quốc",
+        "kcalPer100g": 72
+      },
+      "servingRange": {
+        "minGram": 80,
+        "maxGram": 160
+      },
+      "tip": "Món tráng miệng/xế calo rất thấp, giải pháp thay thế đồ ngọt cho người giảm cân thèm ăn vặt."
+    },
+    {
+      "id": "x18",
+      "name": "Thạch Que Rau Câu Sữa Chua Kidswell",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can"
+      ],
+      "description": "Dùng Thạch Que Rau Câu Sữa Chua Kidswell làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46241",
+        "name": "Thạch Que Rau Câu Sữa Chua Kidswell",
+        "kcalPer100g": 68
+      },
+      "servingRange": {
+        "minGram": 80,
+        "maxGram": 160
+      },
+      "tip": "Vị sữa chua nhẹ nhàng, calo thấp, phù hợp cả trẻ em và người lớn đang giảm cân."
+    },
+    {
+      "id": "x19",
+      "name": "Kẹo Cà Phê Coffee Candy Pamiriter",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Kẹo Cà Phê Coffee Candy Pamiriter làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46237",
+        "name": "Kẹo Cà Phê Coffee Candy Pamiriter",
+        "kcalPer100g": 385
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Dùng như món ăn xế tỉnh táo giữa giờ làm việc, không khuyến nghị cho người đang giảm cân dùng thường xuyên."
+    },
+    {
+      "id": "x20",
+      "name": "Kẹo Collagen Lựu Boto (Gummy Vitamin C)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Kẹo Collagen Lựu Boto (Gummy Vitamin C) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46238",
+        "name": "Kẹo Collagen Lựu Boto",
+        "kcalPer100g": 320
+      },
+      "servingRange": {
+        "minGram": 15,
+        "maxGram": 30
+      },
+      "tip": "Bổ sung collagen & vitamin C, phù hợp dùng như món xế kết hợp làm đẹp da."
+    },
+    {
+      "id": "x21",
+      "name": "Biscotti Nguyên Cám (bữa xế)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri"
+      ],
+      "description": "Dùng Biscotti Nguyên Cám (bữa xế) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46228",
+        "name": "Biscotti Nguyên Cám Low Calories 4 Vị",
+        "kcalPer100g": 390
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Giàu chất xơ, ít đường, dùng thay bánh quy thông thường cho bữa xế."
+    },
+    {
+      "id": "x22",
+      "name": "Bánh Quy Sandwich Phô Mai Pamiriter (xế nhẹ)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "tang_can"
+      ],
+      "description": "Dùng Bánh Quy Sandwich Phô Mai Pamiriter (xế nhẹ) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46227",
+        "name": "Bánh Quy Sandwich Vị Phô Mai Pamiriter",
+        "kcalPer100g": 480
+      },
+      "servingRange": {
+        "minGram": 20,
+        "maxGram": 40
+      },
+      "tip": "Món xế năng lượng cao, phù hợp người cần tăng cân, không khuyến nghị dùng thường xuyên khi giảm cân."
+    },
+    {
+      "id": "x23",
+      "name": "Trà Hoa Sâm Hàn Quốc (đồ uống kèm xế)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "giam_can",
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Trà Hoa Sâm Hàn Quốc (đồ uống kèm xế) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46242",
+        "name": "Trà Hoa Sâm Hàn Quốc",
+        "kcalPer100g": 0
+      },
+      "servingRange": {
+        "minGram": 0,
+        "maxGram": 0
+      },
+      "tip": "Trà thảo mộc gần như không calo, hỗ trợ thanh lọc, uống kèm bất kỳ bữa xế nào."
+    },
+    {
+      "id": "x24",
+      "name": "Kỷ Tử Sấy Khô Organic (thêm vào trà/chè/salad)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Kỷ Tử Sấy Khô Organic (thêm vào trà/chè/salad) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c46243",
+        "name": "Kỷ Tử Sấy Khô Organic",
+        "kcalPer100g": 349
+      },
+      "servingRange": {
+        "minGram": 10,
+        "maxGram": 20
+      },
+      "tip": "Thường dùng lượng nhỏ pha trà hoặc rắc lên salad/granola, không ăn như snack độc lập lượng lớn."
+    },
+    {
+      "id": "x25",
+      "name": "Combo Granola Matcha + Biscotti (set xế tiện lợi)",
+      "mealTimes": [
+        "xe"
+      ],
+      "suitableGoals": [
+        "duy_tri",
+        "tang_can"
+      ],
+      "description": "Dùng Combo Granola Matcha + Biscotti (set xế tiện lợi) làm bữa phụ buổi xế.",
+      "otherIngredients": [],
+      "otherKcal": 0,
+      "healthupProduct": {
+        "productId": "699a8934044940b8f1c4623f",
+        "name": "Combo 250g Granola Truly Healthy MATCHA + 250g Biscotti 3 Vị",
+        "kcalPer100g": 405
+      },
+      "servingRange": {
+        "minGram": 25,
+        "maxGram": 50
+      },
+      "tip": "Set combo 2-trong-1 tiện lợi cho bữa xế, phù hợp mang theo đi làm/đi học."
+    }
+  ],
+  "sampleMenus": [
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_thap",
+      "day": 1,
+      "targetKcalDay": 1300,
+      "meals": {
+        "sang": {
+          "dishId": "s04",
+          "dishName": "Granola Chuối & Sữa Chua Hy Lạp",
+          "productId": "699a8934044940b8f1c46249",
+          "productName": "Granola Chuối",
+          "productGram": 60,
+          "productKcal": 250,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua Hy Lạp không đường 100g",
+              "kcal": 59
+            }
+          ],
+          "otherKcal": 59,
+          "totalKcal": 309,
+          "targetKcal": 325,
+          "tip": "Sữa chua Hy Lạp giàu đạm giúp no lâu, phù hợp người giảm cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 60,
+          "productKcal": 210,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 460,
+          "targetKcal": 455,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 23,
+          "productKcal": 129,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 129,
+          "targetKcal": 130,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d01",
+          "dishName": "Mỳ Chũ Gạo Lứt Súp Rau Củ Nhẹ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 71,
+          "productKcal": 248,
+          "otherIngredients": [
+            {
+              "name": "Rau củ thập cẩm 150g",
+              "kcal": 60
+            },
+            {
+              "name": "Ức gà xé 50g",
+              "kcal": 80
+            }
+          ],
+          "otherKcal": 140,
+          "totalKcal": 388,
+          "targetKcal": 390,
+          "tip": "Bữa tối nên ăn nhẹ hơn bữa trưa, ưu tiên súp/canh để dễ tiêu hóa."
+        }
+      },
+      "actualKcalDay": 1286
+    },
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_thap",
+      "day": 2,
+      "targetKcalDay": 1300,
+      "meals": {
+        "sang": {
+          "dishId": "s05",
+          "dishName": "Granola Trái Cây Tươi Mix",
+          "productId": "699a8934044940b8f1c46245",
+          "productName": "Granola Trái Cây",
+          "productGram": 60,
+          "productKcal": 249,
+          "otherIngredients": [
+            {
+              "name": "Trái cây tươi mix 100g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 55,
+          "totalKcal": 304,
+          "targetKcal": 325,
+          "tip": "Có thể thay trái cây tươi theo mùa để đa dạng khẩu vị."
+        },
+        "trua": {
+          "dishId": "t02",
+          "dishName": "Mì Chũ Ngũ Sắc Trộn Sốt Mè & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622a",
+          "productName": "Mì Chũ Rau Củ Tự Nhiên 5 Vị (Ngũ Sắc)",
+          "productGram": 86,
+          "productKcal": 297,
+          "otherIngredients": [
+            {
+              "name": "Đậu hũ chiên áp chảo 100g",
+              "kcal": 120
+            },
+            {
+              "name": "Sốt dầu mè + rau sống",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 160,
+          "totalKcal": 457,
+          "targetKcal": 455,
+          "tip": "Món chay thanh đạm, nhiều màu sắc tự nhiên từ rau củ, phù hợp giảm cân."
+        },
+        "xe": {
+          "dishId": "x06",
+          "dishName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productId": "699a8934044940b8f1c46236",
+          "productName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productGram": 22,
+          "productKcal": 127,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 127,
+          "targetKcal": 130,
+          "tip": "Ăn kèm 1 ly trà không đường để tăng cảm giác no."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 52,
+          "productKcal": 176,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 391,
+          "targetKcal": 390,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 1279
+    },
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_vua",
+      "day": 1,
+      "targetKcalDay": 1500,
+      "meals": {
+        "sang": {
+          "dishId": "s04",
+          "dishName": "Granola Chuối & Sữa Chua Hy Lạp",
+          "productId": "699a8934044940b8f1c46249",
+          "productName": "Granola Chuối",
+          "productGram": 60,
+          "productKcal": 250,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua Hy Lạp không đường 100g",
+              "kcal": 59
+            }
+          ],
+          "otherKcal": 59,
+          "totalKcal": 309,
+          "targetKcal": 375,
+          "tip": "Sữa chua Hy Lạp giàu đạm giúp no lâu, phù hợp người giảm cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 79,
+          "productKcal": 276,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 526,
+          "targetKcal": 525,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 27,
+          "productKcal": 151,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 151,
+          "targetKcal": 150,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d01",
+          "dishName": "Mỳ Chũ Gạo Lứt Súp Rau Củ Nhẹ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 89,
+          "productKcal": 312,
+          "otherIngredients": [
+            {
+              "name": "Rau củ thập cẩm 150g",
+              "kcal": 60
+            },
+            {
+              "name": "Ức gà xé 50g",
+              "kcal": 80
+            }
+          ],
+          "otherKcal": 140,
+          "totalKcal": 452,
+          "targetKcal": 450,
+          "tip": "Bữa tối nên ăn nhẹ hơn bữa trưa, ưu tiên súp/canh để dễ tiêu hóa."
+        }
+      },
+      "actualKcalDay": 1438
+    },
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_vua",
+      "day": 2,
+      "targetKcalDay": 1500,
+      "meals": {
+        "sang": {
+          "dishId": "s05",
+          "dishName": "Granola Trái Cây Tươi Mix",
+          "productId": "699a8934044940b8f1c46245",
+          "productName": "Granola Trái Cây",
+          "productGram": 60,
+          "productKcal": 249,
+          "otherIngredients": [
+            {
+              "name": "Trái cây tươi mix 100g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 55,
+          "totalKcal": 304,
+          "targetKcal": 375,
+          "tip": "Có thể thay trái cây tươi theo mùa để đa dạng khẩu vị."
+        },
+        "trua": {
+          "dishId": "t02",
+          "dishName": "Mì Chũ Ngũ Sắc Trộn Sốt Mè & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622a",
+          "productName": "Mì Chũ Rau Củ Tự Nhiên 5 Vị (Ngũ Sắc)",
+          "productGram": 106,
+          "productKcal": 366,
+          "otherIngredients": [
+            {
+              "name": "Đậu hũ chiên áp chảo 100g",
+              "kcal": 120
+            },
+            {
+              "name": "Sốt dầu mè + rau sống",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 160,
+          "totalKcal": 526,
+          "targetKcal": 525,
+          "tip": "Món chay thanh đạm, nhiều màu sắc tự nhiên từ rau củ, phù hợp giảm cân."
+        },
+        "xe": {
+          "dishId": "x06",
+          "dishName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productId": "699a8934044940b8f1c46236",
+          "productName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productGram": 25,
+          "productKcal": 145,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 145,
+          "targetKcal": 150,
+          "tip": "Ăn kèm 1 ly trà không đường để tăng cảm giác no."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 70,
+          "productKcal": 237,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 452,
+          "targetKcal": 450,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 1427
+    },
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_cao",
+      "day": 1,
+      "targetKcalDay": 1700,
+      "meals": {
+        "sang": {
+          "dishId": "s04",
+          "dishName": "Granola Chuối & Sữa Chua Hy Lạp",
+          "productId": "699a8934044940b8f1c46249",
+          "productName": "Granola Chuối",
+          "productGram": 60,
+          "productKcal": 250,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua Hy Lạp không đường 100g",
+              "kcal": 59
+            }
+          ],
+          "otherKcal": 59,
+          "totalKcal": 309,
+          "targetKcal": 425,
+          "tip": "Sữa chua Hy Lạp giàu đạm giúp no lâu, phù hợp người giảm cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 99,
+          "productKcal": 346,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 596,
+          "targetKcal": 595,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 30,
+          "productKcal": 168,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 168,
+          "targetKcal": 170,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d01",
+          "dishName": "Mỳ Chũ Gạo Lứt Súp Rau Củ Nhẹ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 106,
+          "productKcal": 371,
+          "otherIngredients": [
+            {
+              "name": "Rau củ thập cẩm 150g",
+              "kcal": 60
+            },
+            {
+              "name": "Ức gà xé 50g",
+              "kcal": 80
+            }
+          ],
+          "otherKcal": 140,
+          "totalKcal": 511,
+          "targetKcal": 510,
+          "tip": "Bữa tối nên ăn nhẹ hơn bữa trưa, ưu tiên súp/canh để dễ tiêu hóa."
+        }
+      },
+      "actualKcalDay": 1584
+    },
+    {
+      "goalId": "giam_can",
+      "tierId": "giam_can_cao",
+      "day": 2,
+      "targetKcalDay": 1700,
+      "meals": {
+        "sang": {
+          "dishId": "s05",
+          "dishName": "Granola Trái Cây Tươi Mix",
+          "productId": "699a8934044940b8f1c46245",
+          "productName": "Granola Trái Cây",
+          "productGram": 60,
+          "productKcal": 249,
+          "otherIngredients": [
+            {
+              "name": "Trái cây tươi mix 100g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 55,
+          "totalKcal": 304,
+          "targetKcal": 425,
+          "tip": "Có thể thay trái cây tươi theo mùa để đa dạng khẩu vị."
+        },
+        "trua": {
+          "dishId": "t02",
+          "dishName": "Mì Chũ Ngũ Sắc Trộn Sốt Mè & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622a",
+          "productName": "Mì Chũ Rau Củ Tự Nhiên 5 Vị (Ngũ Sắc)",
+          "productGram": 126,
+          "productKcal": 435,
+          "otherIngredients": [
+            {
+              "name": "Đậu hũ chiên áp chảo 100g",
+              "kcal": 120
+            },
+            {
+              "name": "Sốt dầu mè + rau sống",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 160,
+          "totalKcal": 595,
+          "targetKcal": 595,
+          "tip": "Món chay thanh đạm, nhiều màu sắc tự nhiên từ rau củ, phù hợp giảm cân."
+        },
+        "xe": {
+          "dishId": "x06",
+          "dishName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productId": "699a8934044940b8f1c46236",
+          "productName": "Hạnh Nhân Nướng Giòn Rang Mộc",
+          "productGram": 25,
+          "productKcal": 145,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 145,
+          "targetKcal": 170,
+          "tip": "Ăn kèm 1 ly trà không đường để tăng cảm giác no."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 87,
+          "productKcal": 294,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 509,
+          "targetKcal": 510,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 1553
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_thap",
+      "day": 1,
+      "targetKcalDay": 1900,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 475,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 119,
+          "productKcal": 416,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 666,
+          "targetKcal": 665,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 32,
+          "productKcal": 191,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 191,
+          "targetKcal": 190,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 105,
+          "productKcal": 355,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 570,
+          "targetKcal": 570,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 1837
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_thap",
+      "day": 2,
+      "targetKcalDay": 1900,
+      "meals": {
+        "sang": {
+          "dishId": "s03",
+          "dishName": "Granola Dừa & Sữa Hạt",
+          "productId": "699a8934044940b8f1c46248",
+          "productName": "Granola Dừa",
+          "productGram": 70,
+          "productKcal": 293,
+          "otherIngredients": [
+            {
+              "name": "Sữa hạt không đường 200ml",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 50,
+          "totalKcal": 343,
+          "targetKcal": 475,
+          "tip": "Sữa hạt giúp bổ sung chất béo tốt, ít calo hơn sữa bò nguyên kem."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 144,
+          "productKcal": 490,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 665,
+          "targetKcal": 665,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 30,
+          "productKcal": 168,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 168,
+          "targetKcal": 190,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 130,
+          "productKcal": 445,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 570,
+          "targetKcal": 570,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 1746
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_vua",
+      "day": 1,
+      "targetKcalDay": 2100,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 525,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 139,
+          "productKcal": 486,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 736,
+          "targetKcal": 735,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 209,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 209,
+          "targetKcal": 210,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 123,
+          "productKcal": 416,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 631,
+          "targetKcal": 630,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 1986
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_vua",
+      "day": 2,
+      "targetKcalDay": 2100,
+      "meals": {
+        "sang": {
+          "dishId": "s03",
+          "dishName": "Granola Dừa & Sữa Hạt",
+          "productId": "699a8934044940b8f1c46248",
+          "productName": "Granola Dừa",
+          "productGram": 70,
+          "productKcal": 293,
+          "otherIngredients": [
+            {
+              "name": "Sữa hạt không đường 200ml",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 50,
+          "totalKcal": 343,
+          "targetKcal": 525,
+          "tip": "Sữa hạt giúp bổ sung chất béo tốt, ít calo hơn sữa bò nguyên kem."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 165,
+          "productKcal": 561,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 736,
+          "targetKcal": 735,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 30,
+          "productKcal": 168,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 168,
+          "targetKcal": 210,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 479,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 604,
+          "targetKcal": 630,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 1851
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_cao",
+      "day": 1,
+      "targetKcalDay": 2300,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 575,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 159,
+          "productKcal": 556,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 806,
+          "targetKcal": 805,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 209,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 209,
+          "targetKcal": 230,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d02",
+          "dishName": "Bún Gạo Lứt Đỏ Trộn Salad Ức Gà",
+          "productId": "699a8934044940b8f1c4622d",
+          "productName": "Bún Gạo Lứt Đỏ",
+          "productGram": 140,
+          "productKcal": 473,
+          "otherIngredients": [
+            {
+              "name": "Ức gà xé 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau salad + sốt",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 215,
+          "totalKcal": 688,
+          "targetKcal": 690,
+          "tip": "Món salad no bụng ít calo, giàu đạm nạc, phù hợp bữa tối giảm cân."
+        }
+      },
+      "actualKcalDay": 2113
+    },
+    {
+      "goalId": "duy_tri",
+      "tierId": "duy_tri_cao",
+      "day": 2,
+      "targetKcalDay": 2300,
+      "meals": {
+        "sang": {
+          "dishId": "s03",
+          "dishName": "Granola Dừa & Sữa Hạt",
+          "productId": "699a8934044940b8f1c46248",
+          "productName": "Granola Dừa",
+          "productGram": 70,
+          "productKcal": 293,
+          "otherIngredients": [
+            {
+              "name": "Sữa hạt không đường 200ml",
+              "kcal": 50
+            }
+          ],
+          "otherKcal": 50,
+          "totalKcal": 343,
+          "targetKcal": 575,
+          "tip": "Sữa hạt giúp bổ sung chất béo tốt, ít calo hơn sữa bò nguyên kem."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 170,
+          "productKcal": 578,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 753,
+          "targetKcal": 805,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x03",
+          "dishName": "Hạt Bí Xanh Rang Mộc",
+          "productId": "699a8934044940b8f1c46233",
+          "productName": "Hạt Bí Xanh Rang Mộc",
+          "productGram": 30,
+          "productKcal": 168,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 168,
+          "targetKcal": 230,
+          "tip": "Rang mộc không tẩm đường/mật, phù hợp người kiểm soát calo hơn hạt tẩm mật ong."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 479,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 604,
+          "targetKcal": 690,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 1868
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_thap",
+      "day": 1,
+      "targetKcalDay": 2300,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 575,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 159,
+          "productKcal": 556,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 806,
+          "targetKcal": 805,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 209,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 209,
+          "targetKcal": 230,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 479,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 604,
+          "targetKcal": 690,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 2029
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_thap",
+      "day": 2,
+      "targetKcalDay": 2300,
+      "meals": {
+        "sang": {
+          "dishId": "s02",
+          "dishName": "Granola Cacao & Chuối Tươi + Sữa Tươi",
+          "productId": "699a8934044940b8f1c46247",
+          "productName": "Granola Cacao",
+          "productGram": 90,
+          "productKcal": 380,
+          "otherIngredients": [
+            {
+              "name": "Chuối tươi 1 quả",
+              "kcal": 90
+            },
+            {
+              "name": "Sữa tươi nguyên kem 150ml",
+              "kcal": 100
+            }
+          ],
+          "otherKcal": 190,
+          "totalKcal": 570,
+          "targetKcal": 575,
+          "tip": "Món giàu năng lượng, phù hợp bữa sáng cho người tăng cân/vận động nhiều."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 170,
+          "productKcal": 578,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 753,
+          "targetKcal": 805,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x02",
+          "dishName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46232",
+          "productName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Bơ Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 214,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 214,
+          "targetKcal": 230,
+          "tip": "Món ăn xế năng lượng cao, phù hợp người tập gym/tăng cân cần nạp thêm calo giữa các bữa chính."
+        },
+        "toi": {
+          "dishId": "d04",
+          "dishName": "Phở Gạo Lứt Chay Nấm & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 476,
+          "otherIngredients": [
+            {
+              "name": "Nấm + đậu hũ non 120g",
+              "kcal": 100
+            },
+            {
+              "name": "Nước dùng chay + rau cải",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 130,
+          "totalKcal": 606,
+          "targetKcal": 690,
+          "tip": "Bữa tối chay thanh đạm, dễ tiêu, phù hợp ăn tối muộn."
+        }
+      },
+      "actualKcalDay": 2143
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_vua",
+      "day": 1,
+      "targetKcalDay": 2500,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 625,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 160,
+          "productKcal": 560,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 810,
+          "targetKcal": 875,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 209,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 209,
+          "targetKcal": 250,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 479,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 604,
+          "targetKcal": 750,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 2033
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_vua",
+      "day": 2,
+      "targetKcalDay": 2500,
+      "meals": {
+        "sang": {
+          "dishId": "s02",
+          "dishName": "Granola Cacao & Chuối Tươi + Sữa Tươi",
+          "productId": "699a8934044940b8f1c46247",
+          "productName": "Granola Cacao",
+          "productGram": 90,
+          "productKcal": 380,
+          "otherIngredients": [
+            {
+              "name": "Chuối tươi 1 quả",
+              "kcal": 90
+            },
+            {
+              "name": "Sữa tươi nguyên kem 150ml",
+              "kcal": 100
+            }
+          ],
+          "otherKcal": 190,
+          "totalKcal": 570,
+          "targetKcal": 625,
+          "tip": "Món giàu năng lượng, phù hợp bữa sáng cho người tăng cân/vận động nhiều."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 170,
+          "productKcal": 578,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 753,
+          "targetKcal": 875,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x02",
+          "dishName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46232",
+          "productName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Bơ Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 214,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 214,
+          "targetKcal": 250,
+          "tip": "Món ăn xế năng lượng cao, phù hợp người tập gym/tăng cân cần nạp thêm calo giữa các bữa chính."
+        },
+        "toi": {
+          "dishId": "d04",
+          "dishName": "Phở Gạo Lứt Chay Nấm & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 476,
+          "otherIngredients": [
+            {
+              "name": "Nấm + đậu hũ non 120g",
+              "kcal": 100
+            },
+            {
+              "name": "Nước dùng chay + rau cải",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 130,
+          "totalKcal": 606,
+          "targetKcal": 750,
+          "tip": "Bữa tối chay thanh đạm, dễ tiêu, phù hợp ăn tối muộn."
+        }
+      },
+      "actualKcalDay": 2143
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_cao",
+      "day": 1,
+      "targetKcalDay": 2700,
+      "meals": {
+        "sang": {
+          "dishId": "s01",
+          "dishName": "Granola Hạt Dinh Dưỡng + Sữa Chua Không Đường",
+          "productId": "699a8934044940b8f1c46246",
+          "productName": "Granola Hạt Dinh Dưỡng",
+          "productGram": 80,
+          "productKcal": 348,
+          "otherIngredients": [
+            {
+              "name": "Sữa chua không đường 100g",
+              "kcal": 62
+            }
+          ],
+          "otherKcal": 62,
+          "totalKcal": 410,
+          "targetKcal": 675,
+          "tip": "Tăng khối lượng granola để tăng năng lượng cho người cần tăng cân."
+        },
+        "trua": {
+          "dishId": "t01",
+          "dishName": "Mỳ Chũ Gạo Lứt Xào Ức Gà & Rau Củ",
+          "productId": "699a8934044940b8f1c46229",
+          "productName": "Mỳ Chũ Gạo Lứt",
+          "productGram": 160,
+          "productKcal": 560,
+          "otherIngredients": [
+            {
+              "name": "Ức gà 100g",
+              "kcal": 165
+            },
+            {
+              "name": "Rau củ xào 100g",
+              "kcal": 45
+            },
+            {
+              "name": "Dầu ô liu 1 thìa",
+              "kcal": 40
+            }
+          ],
+          "otherKcal": 250,
+          "totalKcal": 810,
+          "targetKcal": 945,
+          "tip": "Món trưa cân bằng đủ đạm - tinh bột chậm - rau xơ, dùng được cho cả 3 chế độ."
+        },
+        "xe": {
+          "dishId": "x01",
+          "dishName": "Hạnh Nhân Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46231",
+          "productName": "Hạnh Nhân Tẩm Mật Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 209,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 209,
+          "targetKcal": 270,
+          "tip": "Hạt tẩm mật ong calo khá cao, người giảm cân nên dùng lượng nhỏ hoặc thay bằng hạt rang mộc."
+        },
+        "toi": {
+          "dishId": "d03",
+          "dishName": "Nui Gạo Lứt Salad Trộn Dầu Giấm & Hạt Điều",
+          "productId": "699a8934044940b8f1c4622c",
+          "productName": "Nui Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 479,
+          "otherIngredients": [
+            {
+              "name": "Rau củ salad + dầu giấm",
+              "kcal": 70
+            },
+            {
+              "name": "Hạt điều rang 10g",
+              "kcal": 55
+            }
+          ],
+          "otherKcal": 125,
+          "totalKcal": 604,
+          "targetKcal": 810,
+          "tip": "Kết hợp hạt điều tạo độ béo bùi và tăng năng lượng nhẹ cho bữa tối."
+        }
+      },
+      "actualKcalDay": 2033
+    },
+    {
+      "goalId": "tang_can",
+      "tierId": "tang_can_cao",
+      "day": 2,
+      "targetKcalDay": 2700,
+      "meals": {
+        "sang": {
+          "dishId": "s02",
+          "dishName": "Granola Cacao & Chuối Tươi + Sữa Tươi",
+          "productId": "699a8934044940b8f1c46247",
+          "productName": "Granola Cacao",
+          "productGram": 90,
+          "productKcal": 380,
+          "otherIngredients": [
+            {
+              "name": "Chuối tươi 1 quả",
+              "kcal": 90
+            },
+            {
+              "name": "Sữa tươi nguyên kem 150ml",
+              "kcal": 100
+            }
+          ],
+          "otherKcal": 190,
+          "totalKcal": 570,
+          "targetKcal": 675,
+          "tip": "Món giàu năng lượng, phù hợp bữa sáng cho người tăng cân/vận động nhiều."
+        },
+        "trua": {
+          "dishId": "t03",
+          "dishName": "Phở Gạo Lứt Bò Tái Trưa",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 170,
+          "productKcal": 578,
+          "otherIngredients": [
+            {
+              "name": "Thịt bò tái 80g",
+              "kcal": 145
+            },
+            {
+              "name": "Nước dùng + rau thơm",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 175,
+          "totalKcal": 753,
+          "targetKcal": 945,
+          "tip": "Phù hợp bữa trưa no bụng, năng lượng cao hơn cho người tăng cân/vận động nhiều."
+        },
+        "xe": {
+          "dishId": "x02",
+          "dishName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Ong",
+          "productId": "699a8934044940b8f1c46232",
+          "productName": "Hạt Tổng Hợp (Mix Nut) Tẩm Mật Bơ Ong Murgerbon",
+          "productGram": 35,
+          "productKcal": 214,
+          "otherIngredients": [],
+          "otherKcal": 0,
+          "totalKcal": 214,
+          "targetKcal": 270,
+          "tip": "Món ăn xế năng lượng cao, phù hợp người tập gym/tăng cân cần nạp thêm calo giữa các bữa chính."
+        },
+        "toi": {
+          "dishId": "d04",
+          "dishName": "Phở Gạo Lứt Chay Nấm & Đậu Hũ",
+          "productId": "699a8934044940b8f1c4622b",
+          "productName": "Phở Gạo Lứt",
+          "productGram": 140,
+          "productKcal": 476,
+          "otherIngredients": [
+            {
+              "name": "Nấm + đậu hũ non 120g",
+              "kcal": 100
+            },
+            {
+              "name": "Nước dùng chay + rau cải",
+              "kcal": 30
+            }
+          ],
+          "otherKcal": 130,
+          "totalKcal": 606,
+          "targetKcal": 810,
+          "tip": "Bữa tối chay thanh đạm, dễ tiêu, phù hợp ăn tối muộn."
+        }
+      },
+      "actualKcalDay": 2143
+    }
+  ],
+  "servingCalculationLogic": {
+    "description": "Công thức tính khối lượng (gram) sản phẩm HealthUp cần dùng trong 1 món ăn để khớp mục tiêu calo của bữa ăn đó.",
+    "steps": [
+      "1. targetMealKcal = targetKcalDay (theo tier) x tỉ lệ mealSplit tương ứng (sang/trua/xe/toi).",
+      "2. remainingKcal = targetMealKcal - otherKcal (calo cố định của nguyên liệu đi kèm trong món).",
+      "3. gramRaw = remainingKcal / kcalPer100g x 100.",
+      "4. gram = clamp(gramRaw, minGram, maxGram) theo servingRange của từng sản phẩm để đảm bảo khẩu phần thực tế hợp lý.",
+      "5. productKcal = gram / 100 x kcalPer100g.",
+      "6. totalKcal (món ăn) = otherKcal + productKcal."
+    ]
+  }
+}

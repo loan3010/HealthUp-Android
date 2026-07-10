@@ -179,17 +179,7 @@ public class AccountInfoActivity extends AppCompatActivity {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent event) {
-        if (event.getAction() == MotionEvent.ACTION_DOWN) {
-            View focused = getCurrentFocus();
-            if (focused instanceof EditText) {
-                Rect rect = new Rect();
-                focused.getGlobalVisibleRect(rect);
-                if (!rect.contains((int) event.getRawX(), (int) event.getRawY())) {
-                    focused.clearFocus();
-                    UIUtils.hideKeyboard(this);
-                }
-            }
-        }
+        UIUtils.maybeHideKeyboardOnTouchOutside(this, event);
         return super.dispatchTouchEvent(event);
     }
 

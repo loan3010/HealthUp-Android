@@ -33,6 +33,10 @@ public class Order implements Serializable {
     private boolean reviewExpired;
     private boolean shopConfirmedDelivery;
 
+    private boolean cancelRequested;
+    private String cancelReason;
+    private java.util.Date cancelRequestedAt;
+
     private String returnReason;
     private String returnDescription;
     private List<String> returnMediaUris;
@@ -133,6 +137,15 @@ public class Order implements Serializable {
     public void setShopConfirmedDelivery(boolean shopConfirmedDelivery) {
         this.shopConfirmedDelivery = shopConfirmedDelivery;
     }
+
+    public boolean isCancelRequested() { return cancelRequested; }
+    public void setCancelRequested(boolean cancelRequested) { this.cancelRequested = cancelRequested; }
+
+    public String getCancelReason() { return cancelReason; }
+    public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
+
+    public java.util.Date getCancelRequestedAt() { return cancelRequestedAt; }
+    public void setCancelRequestedAt(java.util.Date cancelRequestedAt) { this.cancelRequestedAt = cancelRequestedAt; }
 
     public String getReturnReason() { return returnReason; }
     public void setReturnReason(String returnReason) { this.returnReason = returnReason; }

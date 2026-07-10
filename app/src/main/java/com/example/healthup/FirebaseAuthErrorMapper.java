@@ -32,17 +32,33 @@ public final class FirebaseAuthErrorMapper {
                     }
                     return "function_not_deployed";
                 case FAILED_PRECONDITION:
+                    if (detail.contains("otp") || detail.contains("verified")) {
+                        return "session_invalid";
+                    }
                     return "session_invalid";
                 case INVALID_ARGUMENT:
+                    if (detail.contains("password") || detail.contains("short")) {
+                        return "weak_password";
+                    }
                     return "invalid_request";
                 case UNAVAILABLE:
                 case DEADLINE_EXCEEDED:
                     return "network";
                 case INTERNAL:
                     return "generic";
+                case PERMISSION_DENIED:
+                case UNAUTHENTICATED:
+                    return "function_not_deployed";
                 default:
                     break;
             }
+        }
+
+        if (lower.contains("not_found")
+                || lower.contains("not-found")
+                || lower.contains("does not exist")
+                || lower.contains("404")) {
+            return "function_not_deployed";
         }
 
         if (lower.contains("sign-up provider is disabled")

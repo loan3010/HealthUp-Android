@@ -57,6 +57,8 @@ public class Product implements Serializable {
     private boolean isFlashSale;
     private boolean isNew;
     private boolean isHot;
+    private boolean hidden;
+    private boolean draft;
 
     private boolean hasVariants;
     private List<ProductVariant> variants;
@@ -156,6 +158,52 @@ public class Product implements Serializable {
         return false;
     }
     public void setHot(boolean hot) { isHot = hot; }
+
+    public boolean isHidden() { return hidden; }
+    public void setHidden(boolean hidden) { this.hidden = hidden; }
+
+    public boolean isDraft() { return draft; }
+    public void setDraft(boolean draft) { this.draft = draft; }
+
+    /** True when product should not appear in the shop for buyers. */
+    public static boolean readHiddenFlag(DocumentSnapshot doc) {
+        if (doc == null) return false;
+        Boolean hiddenVal = doc.getBoolean("hidden");
+        return hiddenVal != null && hiddenVal;
+    }
+
+    public static boolean readDraftFlag(DocumentSnapshot doc) {
+        if (doc == null) return false;
+        Boolean draftVal = doc.getBoolean("draft");
+        return draftVal != null && draftVal;
+    }
+
+    /** Buyer-visible listing: not hidden and not draft. */
+    public static boolean isVisibleToBuyers(DocumentSnapshot doc) {
+        return !readHiddenFlag(doc) && !readDraftFlag(doc);
+    }
+
+    /** True for products created from the admin panel. */
+    public static boolean isAdminListedProduct(DocumentSnapshot doc) {
+        if (doc == null) return false;
+        Boolean adminCreated = doc.getBoolean("adminCreated");
+        if (adminCreated != null) {
+            return adminCreated;
+        }
+        Boolean isNewVal = doc.getBoolean("isNew");
+        return isNewVal != null && isNewVal;
+    }
+
+    /** Original catalog products for featured sections on the home screen. */
+    public static boolean isCatalogFeaturedProduct(DocumentSnapshot doc) {
+        return isVisibleToBuyers(doc) && !isAdminListedProduct(doc);
+    }
+
+    public static long readCreatedAtMillis(DocumentSnapshot doc) {
+        if (doc == null) return 0L;
+        com.google.firebase.Timestamp createdAt = doc.getTimestamp("createdAt");
+        return createdAt != null ? createdAt.toDate().getTime() : 0L;
+    }
 
     public String getStarsDisplay() { return starsDisplay; }
     public void setStarsDisplay(String starsDisplay) { this.starsDisplay = starsDisplay; }
@@ -359,6 +407,14 @@ public class Product implements Serializable {
         if (!p.variants.isEmpty()) {
             p.hasVariants = true;
         }
+        Boolean hiddenVal = doc.getBoolean("hidden");
+        if (hiddenVal != null) {
+            p.setHidden(hiddenVal);
+        }
+        Boolean draftVal = doc.getBoolean("draft");
+        if (draftVal != null) {
+            p.setDraft(draftVal);
+        }
         return p;
     }
 
@@ -472,6 +528,8 @@ public class Product implements Serializable {
             v.setPrice(firstDouble(map, parent.getPrice(), "price", "salePrice", "variantPrice", "amount"));
             v.setOriginalPrice(firstDouble(map, v.getPrice(), "originalPrice", "oldPrice", "marketPrice"));
             v.setStock(firstInt(map, "stock", "stockCount", parent.getStockCount()));
+            v.setSku(firstString(map, "sku", "SKU"));
+            v.setImageUrl(firstString(map, "image", "imageUrl"));
             Object outOfStock = map.get("outOfStock");
             if (outOfStock instanceof Boolean && (Boolean) outOfStock) {
                 v.setStock(0);
@@ -593,6 +651,8 @@ public class Product implements Serializable {
         private double price;
         private double originalPrice;
         private int stock;
+        private String sku;
+        private String imageUrl;
         public ProductVariant() {}
         public String getId() { return id; }
         public void setId(String id) { this.id = id; }
@@ -604,6 +664,10 @@ public class Product implements Serializable {
         public void setOriginalPrice(double originalPrice) { this.originalPrice = originalPrice; }
         public int getStock() { return stock; }
         public void setStock(int stock) { this.stock = stock; }
+        public String getSku() { return sku; }
+        public void setSku(String sku) { this.sku = sku; }
+        public String getImageUrl() { return imageUrl; }
+        public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
     }
 
     public static class NutritionItem implements Serializable {

@@ -53,12 +53,13 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     private static final int REQUEST_CODE_CAMERA_INPUT = 1002;
     private static final int REQUEST_CODE_GALLERY_INPUT = 1003;
 
-    private RecyclerView rvNewProducts, rvCategories, rvFlashSale, rvBlogs;
-    private ProductAdapter newProductAdapter, flashSaleAdapter;
+    private RecyclerView rvNewProducts, rvFeaturedProducts, rvCategories, rvFlashSale, rvBlogs;
+    private ProductAdapter newProductAdapter, featuredProductAdapter, flashSaleAdapter;
     private CategoryAdapter categoryAdapter;
     private BlogAdapter blogAdapter;
 
     private List<Product> newProductList = new ArrayList<>();
+    private List<Product> featuredProductList = new ArrayList<>();
     private List<Product> flashSaleList = new ArrayList<>();
     private List<Category> categoryList = new ArrayList<>();
     private List<Blog> blogList = new ArrayList<>();
@@ -211,12 +212,18 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvNewProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvNewProducts.setAdapter(newProductAdapter);
 
+        rvFeaturedProducts = view.findViewById(R.id.rvFeaturedProducts);
+        featuredProductAdapter = new ProductAdapter(featuredProductList, this, false);
+        rvFeaturedProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
+        rvFeaturedProducts.setAdapter(featuredProductAdapter);
+
         rvBlogs = view.findViewById(R.id.rvBlogs);
         blogAdapter = new BlogAdapter(blogList, this, true);
         rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
         rvBlogs.setAdapter(blogAdapter);
 
         view.findViewById(R.id.tvViewAllNew).setOnClickListener(v -> navigateToCategory(null));
+        view.findViewById(R.id.tvViewAllFeatured).setOnClickListener(v -> navigateToCategory(null));
 
         View tvViewAllBlogs = view.findViewById(R.id.tvViewAllBlogs);
         if (tvViewAllBlogs != null) {
@@ -224,6 +231,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         }
 
         setupChipListeners(view);
+
+        View dietCard = view.findViewById(R.id.cardDietEntry);
+        if (dietCard != null) {
+            dietCard.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), DietLandingActivity.class)));
+        }
     }
 
     private void openBlogList() {
@@ -720,11 +733,18 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Product> allFetched = new ArrayList<>();
                     List<Product> flashSales = new ArrayList<>();
+                    List<Product> adminNewProducts = new ArrayList<>();
+                    List<Product> catalogProducts = new ArrayList<>();
+                    Map<String, Long> createdAtById = new HashMap<>();
 
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
+                        if (!Product.isVisibleToBuyers(doc)) {
+                            continue;
+                        }
                         Product product = doc.toObject(Product.class);
                         if (product != null) {
                             product.setId(doc.getId());
+                            createdAtById.put(doc.getId(), Product.readCreatedAtMillis(doc));
                             allFetched.add(product);
 
                             Object isFlash = doc.get("isFlashSale");
@@ -736,6 +756,13 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                             Object isNewObj = doc.get("isNew");
                             if (isNewObj instanceof Boolean && (Boolean)isNewObj) {
                                 product.setNew(true);
+                            }
+
+                            if (Product.isAdminListedProduct(doc)) {
+                                adminNewProducts.add(product);
+                            }
+                            if (Product.isCatalogFeaturedProduct(doc)) {
+                                catalogProducts.add(product);
                             }
                         }
                     }
@@ -752,29 +779,31 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     }
                     flashSaleAdapter.updateData(new ArrayList<>(flashSaleList));
 
+                    adminNewProducts.sort((a, b) -> Long.compare(
+                            createdAtById.getOrDefault(b.getId(), 0L),
+                            createdAtById.getOrDefault(a.getId(), 0L)));
                     newProductList.clear();
-                    List<Product> newProducts = new ArrayList<>();
-                    for (Product p : allFetched) {
-                        if (p.isNew()) newProducts.add(p);
-                    }
-
-                    if (!newProducts.isEmpty()) {
-                        Collections.shuffle(newProducts);
-                        newProductList.addAll(newProducts.subList(0, Math.min(newProducts.size(), 10)));
-                    } else if (!allFetched.isEmpty()) {
-                        Collections.shuffle(allFetched);
-                        int limit = Math.min(allFetched.size(), 10);
-                        newProductList.addAll(allFetched.subList(0, limit));
-                    } else {
-                        newProductList.addAll(Product.getDummyProducts());
+                    if (!adminNewProducts.isEmpty()) {
+                        newProductList.addAll(adminNewProducts.subList(0, Math.min(adminNewProducts.size(), 10)));
                     }
                     newProductAdapter.updateData(new ArrayList<>(newProductList));
+
+                    catalogProducts.sort((a, b) -> Integer.compare(b.getSold(), a.getSold()));
+                    featuredProductList.clear();
+                    if (!catalogProducts.isEmpty()) {
+                        featuredProductList.addAll(catalogProducts.subList(0, Math.min(catalogProducts.size(), 10)));
+                    } else {
+                        featuredProductList.addAll(Product.getDummyProducts());
+                    }
+                    featuredProductAdapter.updateData(new ArrayList<>(featuredProductList));
                     applyWishlistToHomeLists();
                 })
                 .addOnFailureListener(e -> {
                     newProductList.clear();
-                    newProductList.addAll(Product.getDummyProducts());
+                    featuredProductList.clear();
+                    featuredProductList.addAll(Product.getDummyProducts());
                     newProductAdapter.notifyDataSetChanged();
+                    featuredProductAdapter.notifyDataSetChanged();
                 });
     }
 
@@ -785,8 +814,10 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             if (!isAdded()) return;
             WishlistManager.applyFavoriteState(flashSaleList, ids);
             WishlistManager.applyFavoriteState(newProductList, ids);
+            WishlistManager.applyFavoriteState(featuredProductList, ids);
             if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
             if (newProductAdapter != null) newProductAdapter.notifyDataSetChanged();
+            if (featuredProductAdapter != null) featuredProductAdapter.notifyDataSetChanged();
         });
     }
 
@@ -854,6 +885,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         WishlistManager.toggle(requireContext(), product, success -> {
             if (success && isAdded()) {
                 newProductAdapter.notifyDataSetChanged();
+                if (featuredProductAdapter != null) featuredProductAdapter.notifyDataSetChanged();
                 if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
             }
         });

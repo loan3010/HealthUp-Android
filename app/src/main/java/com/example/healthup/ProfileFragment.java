@@ -26,6 +26,7 @@ import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.healthup.admin.AdminActivity;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UserProfileResolver;
@@ -57,6 +58,7 @@ public class ProfileFragment extends Fragment {
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
     private View rowSellerInbox;
     private View cardStaffInbox;
+    private View rowAdminPanel;
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping;
     private ProgressBar progressTichLuy;
@@ -75,6 +77,7 @@ public class ProfileFragment extends Fragment {
         cardTichLuy = view.findViewById(R.id.card_tich_luy);
         rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
         cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
+        rowAdminPanel = view.findViewById(R.id.row_admin_panel);
         tvName = view.findViewById(R.id.tv_name);
         tvUsername = view.findViewById(R.id.tv_username);
         tvTier = view.findViewById(R.id.tv_tier);
@@ -174,8 +177,12 @@ public class ProfileFragment extends Fragment {
                 loadFragment(new SettingsFragment()));
 
 
-        view.findViewById(R.id.btn_chat).setOnClickListener(v ->
-                startActivity(ChatActivity.buyerIntent(requireContext())));
+        view.findViewById(R.id.btn_chat).setOnClickListener(v -> {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).restoreFloatingChatBubble();
+            }
+            startActivity(ChatActivity.buyerIntent(requireContext()));
+        });
 
 
         view.findViewById(R.id.btn_dang_ky).setOnClickListener(v ->
@@ -239,6 +246,12 @@ public class ProfileFragment extends Fragment {
                     startActivity(new Intent(requireContext(), AboutActivity.class)));
         }
 
+        View dietRow = view.findViewById(R.id.row_diet_recommendation);
+        if (dietRow != null) {
+            dietRow.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), DietLandingActivity.class)));
+        }
+
 
         View faqRow = findRowByText(view, "Trung tâm trợ giúp - FAQs");
         if (faqRow != null) {
@@ -254,8 +267,12 @@ public class ProfileFragment extends Fragment {
 
         View chatRow = findRowByText(view, "Trò chuyện cùng HealthUp");
         if (chatRow != null) {
-            chatRow.setOnClickListener(v ->
-                    startActivity(ChatActivity.buyerIntent(requireContext())));
+            chatRow.setOnClickListener(v -> {
+                if (getActivity() instanceof MainActivity) {
+                    ((MainActivity) getActivity()).restoreFloatingChatBubble();
+                }
+                startActivity(ChatActivity.buyerIntent(requireContext()));
+            });
         }
 
 
@@ -273,6 +290,11 @@ public class ProfileFragment extends Fragment {
         }
         if (cardStaffInbox != null) {
             cardStaffInbox.setOnClickListener(v -> openSellerInbox());
+        }
+
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), AdminActivity.class)));
         }
     }
 
@@ -338,6 +360,7 @@ public class ProfileFragment extends Fragment {
 
         if (currentUser == null) {
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             resetBadges();
             return;
         }
@@ -421,6 +444,7 @@ public class ProfileFragment extends Fragment {
         if (document == null || !document.exists()) {
             tvTier.setText(defaultTier);
             updateStaffInboxVisibility(false);
+            updateAdminPanelVisibility(false);
             return;
         }
 
@@ -465,6 +489,14 @@ public class ProfileFragment extends Fragment {
 
 
         updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
+        updateAdminPanelVisibility(StaffRoleHelper.isAdmin(StaffRoleHelper.resolveRole(document)));
+    }
+
+
+    private void updateAdminPanelVisibility(boolean visible) {
+        if (rowAdminPanel != null) {
+            rowAdminPanel.setVisibility(visible ? View.VISIBLE : View.GONE);
+        }
     }
 
 

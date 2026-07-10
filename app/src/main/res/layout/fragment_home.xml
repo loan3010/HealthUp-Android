@@ -154,6 +154,8 @@
                 app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
                 tools:listitem="@layout/item_category" />
 
+            <include layout="@layout/include_diet_home_card" />
+
         <!-- Main Banner -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
@@ -456,6 +458,43 @@
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rvNewProducts"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_m"
+            android:clipToPadding="false"
+            android:paddingHorizontal="@dimen/spacing_s"
+            app:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
+            app:spanCount="2"
+            tools:listitem="@layout/item_product" />
+
+        <!-- Featured Products -->
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="@dimen/spacing_2xl"
+            android:paddingHorizontal="@dimen/spacing_l">
+
+            <TextView
+                style="@style/TextAppearance.HealthUp.SubTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/featured_products_title"
+                android:textColor="@color/neutral_black" />
+
+            <TextView
+                android:id="@+id/tvViewAllFeatured"
+                style="@style/TextAppearance.HealthUp.CaptionLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:text="@string/view_all"
+                android:textColor="@color/primary_default"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvFeaturedProducts"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="@dimen/spacing_m"

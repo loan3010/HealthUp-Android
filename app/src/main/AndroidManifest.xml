@@ -93,6 +93,17 @@
         <activity android:name="com.example.healthup.AddressFormActivity"
             android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.AboutActivity" />
+        <activity android:name="com.example.healthup.DietRecommendationActivity" />
+        <activity
+            android:name="com.example.healthup.DietLandingActivity"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="com.example.healthup.DietInputActivity"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="com.example.healthup.DietResultActivity"
+            android:windowSoftInputMode="adjustResize" />
+        <activity android:name="com.example.healthup.DietMenuActivity" />
         <activity android:name="com.example.healthup.BlogDetailActivity" />
 
 
@@ -120,6 +131,12 @@
         <activity android:name="com.example.healthup.OrderSearchActivity" />
         <activity android:name="com.example.healthup.AddressBookActivity"
             android:windowSoftInputMode="adjustResize" />
+
+        <activity android:name="com.example.healthup.admin.AdminLoginActivity" />
+        <activity android:name="com.example.healthup.admin.AdminActivity" />
+        <activity android:name="com.example.healthup.admin.AdminProductEditActivity" />
+        <activity android:name="com.example.healthup.admin.AdminOrderDetailActivity" />
+        <activity android:name="com.example.healthup.admin.AdminCustomerDetailActivity" />
 
 
         <provider
