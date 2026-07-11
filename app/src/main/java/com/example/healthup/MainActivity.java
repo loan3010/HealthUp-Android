@@ -388,11 +388,23 @@ public class MainActivity extends AppCompatActivity {
             } else if ("checkout".equals(target)) {
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
                 if (checkoutItems != null && !checkoutItems.isEmpty()) {
-                    CheckoutFragment fragment = new CheckoutFragment();
-                    Bundle args = new Bundle();
-                    args.putSerializable("selected_items", (Serializable) checkoutItems);
-                    fragment.setArguments(args);
-                    loadFragment(fragment);
+                    // ✅ BƯỚC 1: Chuyển sang tab Giỏ hàng trước
+                    navView.setSelectedItemId(R.id.nav_cart);
+
+
+                    // ✅ BƯỚC 2: Sử dụng post để đảm bảo CartFragment đã được nạp xong
+                    // trước khi đè trang Thanh toán lên backstack.
+                    navView.post(() -> {
+                        CheckoutFragment fragment = new CheckoutFragment();
+                        Bundle args = new Bundle();
+                        args.putSerializable("selected_items", (Serializable) checkoutItems);
+                        fragment.setArguments(args);
+
+                        getSupportFragmentManager().beginTransaction()
+                                .replace(R.id.fragment_container, fragment)
+                                .addToBackStack(null)
+                                .commit();
+                    });
                 } else {
                     navView.setSelectedItemId(R.id.nav_cart);
                 }
@@ -491,6 +503,13 @@ public class MainActivity extends AppCompatActivity {
     public void showHomeTab() {
         navView.setSelectedItemId(R.id.nav_home);
         loadFragment(new HomeFragment());
+    }
+
+    public void showProfileTab() {
+        if (navView != null) {
+            navView.setSelectedItemId(R.id.nav_profile);
+            loadFragment(new ProfileFragment());
+        }
     }
 
     @SuppressWarnings("unchecked")

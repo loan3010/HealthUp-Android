@@ -59,8 +59,15 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
         db = FirebaseFirestore.getInstance();
         String currentAuthId = FirebaseAuth.getInstance().getUid();
+
+        // Luôn bind nút back ở header
+        View btnBack = view.findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> navigateBack());
+        }
         
         if (currentAuthId == null) {
+            addressList.clear(); // ✅ Clear old data when not logged in
             setupLoginRequired(view);
         } else {
             userId = currentAuthId;
@@ -86,21 +93,31 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
         View layout = view.findViewById(R.id.layoutLoginRequired);
         if (layout != null) {
             layout.setVisibility(View.VISIBLE);
+            
+            // ✅ Bỏ nút xác nhận khi chưa đăng nhập
+            View footer = view.findViewById(R.id.footer);
+            if (footer != null) footer.setVisibility(View.GONE);
+
             layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
                 android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
                 startActivity(intent);
             });
-            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().getOnBackPressedDispatcher().onBackPressed();
-                }
-            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> navigateBack());
+        }
+    }
+
+    private void navigateBack() {
+        if (!isAdded()) return;
+        boolean moved = getParentFragmentManager().popBackStackImmediate();
+        if (!moved) {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).showProfileTab();
+            }
         }
     }
 
 
     private void bindViews(View view) {
-        view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
         rvAddresses = view.findViewById(R.id.rvAddresses);
         layoutEmpty = view.findViewById(R.id.layoutEmpty);
         btnAddNewAddress = view.findViewById(R.id.btnAddNewAddress);

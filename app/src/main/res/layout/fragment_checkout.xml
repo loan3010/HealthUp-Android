@@ -438,11 +438,6 @@
                     android:orientation="vertical">
 
                     <RadioButton
-                        android:id="@+id/rbBankLink"
-                        style="@style/PaymentOptionStyle"
-                        android:text="Liên kết tài khoản ngân hàng" />
-
-                    <RadioButton
                         android:id="@+id/rbVnpay"
                         style="@style/PaymentOptionStyle"
                         android:text="VNPAY-QR" />

@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="20dp"
+    app:cardCornerRadius="24dp"
+    app:cardElevation="0dp"
+    app:cardBackgroundColor="#FAF6F0"
+    app:strokeWidth="0dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FAF6F0"
+        android:padding="24dp">
+
+        <ImageView
+            android:id="@+id/btnClose"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:src="@drawable/ic_close"
+            app:tint="@color/text_gray"
+            android:clickable="true"
+            android:focusable="true"
+            android:contentDescription="Close" />
+
+        <TextView
+            android:id="@+id/tvDialogTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:text="Thông tin liên kết"
+            android:textColor="@color/neutral_black"
+            android:textSize="20sp"
+            android:textStyle="bold" />
+
+        <LinearLayout
+            android:id="@+id/layoutForm"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/tvDialogTitle"
+            android:layout_marginTop="24dp"
+            android:orientation="vertical">
+
+            <!-- Bank Spinner Row -->
+            <LinearLayout
+                android:id="@+id/rowBank"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView android:id="@+id/tvLabelBank" android:layout_width="110dp" android:layout_height="wrap_content" android:text="Ngân hàng:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <Spinner android:id="@+id/spinnerBank" android:layout_width="match_parent" android:layout_height="45dp" android:background="@drawable/bg_spinner_card" android:entries="@array/vietnam_banks" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowNumber"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView android:id="@+id/tvLabelNumber" android:layout_width="110dp" android:layout_height="wrap_content" android:text="Số tài khoản:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <EditText android:id="@+id/etNumber" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="0796583100" android:textSize="14sp" android:textColor="@color/neutral_black" android:backgroundTint="#36873A" android:inputType="number" android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView android:id="@+id/tvLabelName" android:layout_width="110dp" android:layout_height="wrap_content" android:text="Tên chủ TK:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <EditText android:id="@+id/etName" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="QUYNH MY" android:textSize="14sp" android:textColor="@color/neutral_black" android:backgroundTint="#36873A" android:inputType="textCapCharacters" android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <TextView android:id="@+id/tvLabelDate" android:layout_width="110dp" android:layout_height="wrap_content" android:text="Ngày hết hạn:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <EditText android:id="@+id/etDate" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="01/04" android:textSize="14sp" android:textColor="@color/neutral_black" android:backgroundTint="#36873A" android:inputType="text" android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowCCCD"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+                <TextView android:id="@+id/tvLabelCCCD" android:layout_width="110dp" android:layout_height="wrap_content" android:text="Số CCCD:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <EditText android:id="@+id/etCCCD" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="0492345678" android:textSize="14sp" android:textColor="@color/neutral_black" android:backgroundTint="#36873A" android:inputType="number" android:importantForAutofill="no" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/rowPhone"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:visibility="gone">
+                <TextView android:id="@+id/tvLabelPhone" android:layout_width="110dp" android:layout_height="wrap_content" android:text="SĐT đăng ký:" android:textColor="@color/neutral_black" android:textStyle="bold" android:textSize="13sp" />
+                <EditText android:id="@+id/etPhone" android:layout_width="match_parent" android:layout_height="wrap_content" android:hint="0796583100" android:textSize="14sp" android:textColor="@color/neutral_black" android:backgroundTint="#36873A" android:inputType="phone" android:importantForAutofill="no" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_below="@id/layoutForm"
+            android:layout_marginTop="28dp"
+            android:backgroundTint="#36873A"
+            android:text="Lưu thông tin"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            app:cornerRadius="12dp" />
+
+    </RelativeLayout>
+</com.google.android.material.card.MaterialCardView>
