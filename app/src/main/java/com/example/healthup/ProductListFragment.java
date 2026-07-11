@@ -1,12 +1,5 @@
 package com.example.healthup;
 
-
-
-
-
-
-
-
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
@@ -34,23 +27,12 @@ import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Product;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
 
-
-
-
-
-
-
 public class ProductListFragment extends Fragment implements ProductAdapter.OnProductClickListener {
-
-
-
-
-
-
 
 
     private RecyclerView rvProducts, rvRecommendations;
@@ -63,21 +45,13 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     private View layoutEmpty;
     private android.widget.ProgressBar progressBar;
 
-
-
-
-
-
+    // FIX (yêu cầu): view bao ngoài section "Có thể bạn quan tâm" — cần ẩn/hiện tùy theo
+    // đang xem "Tất cả sản phẩm" hay đang xem 1 danh mục cụ thể.
+    private View layoutRecommendSection;
 
 
     private List<String> categoryNames = new ArrayList<>();
     private String selectedCategory = "Tất cả";
-
-
-
-
-
-
 
 
     private String currentSort = "Phổ biến";
@@ -86,47 +60,21 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     private float minRating = 0;
 
 
-
-
-
-
-
-
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_product_list, container, false);
         initViews(view);
 
-
-
-
-
-
-
-
         if (getArguments() != null) {
             selectedCategory = getArguments().getString("category", "Tất cả");
         }
-
-
-
-
-
-
-
 
         setupRecyclerViews();
         fetchCategoriesFromFirestore();
         fetchProducts();
         return view;
     }
-
-
-
-
-
-
 
 
     private void initViews(View view) {
@@ -137,45 +85,18 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         chipGroupCategories = view.findViewById(R.id.chip_group_categories);
         layoutEmpty = view.findViewById(R.id.layout_empty);
         progressBar = view.findViewById(R.id.progressBar);
-
-
-
-
-
-
-
+        layoutRecommendSection = view.findViewById(R.id.layout_recommend_section);
 
         if (layoutEmpty != null) {
             View btnClear = layoutEmpty.findViewById(R.id.btn_clear_filter);
             if (btnClear != null) btnClear.setOnClickListener(v -> resetFilters());
         }
 
-
-
-
-
-
-
-
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
 
-
-
-
-
-
-
-
         fabFilter.setOnClickListener(v -> showFilterBottomSheet());
-
-
-
-
-
-
-
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -187,24 +108,11 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void setupRecyclerViews() {
         productAdapter = new ProductAdapter(productList, this);
         rvProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvProducts.setAdapter(productAdapter);
         rvProducts.setNestedScrollingEnabled(false);
-
-
-
-
-
-
-
 
         recommendationAdapter = new ProductAdapter(recommendationList, this);
         rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
@@ -213,17 +121,10 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void fetchCategoriesFromFirestore() {
         categoryNames.clear();
         categoryNames.addAll(Arrays.asList("Tất cả", "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"));
         setupCategoryChips();
-
 
         FirestoreManager.getInstance().getFirestore().collection("categories").get().addOnSuccessListener(snapshots -> {
             if (!snapshots.isEmpty()) {
@@ -233,12 +134,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void setupCategoryChips() {
         chipGroupCategories.removeAllViews();
         for (String name : categoryNames) {
@@ -246,23 +141,9 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             chip.setText(name);
             chip.setCheckable(true);
 
-
-
-
-
-
-
-
             boolean isSelected = name.equals(selectedCategory);
             chip.setChecked(isSelected);
             updateChipStyle(chip, isSelected);
-
-
-
-
-
-
-
 
             chip.setOnClickListener(v -> {
                 selectedCategory = name;
@@ -274,12 +155,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void refreshChipGroupUI() {
         for (int i = 0; i < chipGroupCategories.getChildCount(); i++) {
             Chip chip = (Chip) chipGroupCategories.getChildAt(i);
@@ -288,12 +163,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             updateChipStyle(chip, isSelected);
         }
     }
-
-
-
-
-
-
 
 
     private void updateChipStyle(Chip chip, boolean isSelected) {
@@ -310,37 +179,16 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void fetchProducts() {
         if (progressBar != null) progressBar.setVisibility(View.VISIBLE);
         if (layoutEmpty != null) layoutEmpty.setVisibility(View.GONE);
         rvProducts.setVisibility(View.GONE);
 
-
         Query query = FirestoreManager.getInstance().getFilteredProductsQuery(selectedCategory);
-
-
-
-
-
-
-
 
         query.get().addOnSuccessListener(snapshots -> {
             List<Product> result = FirestoreManager.getInstance()
                     .processProductSnapshots(snapshots, currentSort, minPrice, maxPrice, minRating);
-
-
-
-
-
-
-
 
             productList.clear();
             productList.addAll(result);
@@ -360,45 +208,56 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             updateFilterButtonLabel(0);
         });
 
-
-
-
-
-
-
-
-        FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
+        // FIX (yêu cầu): "Có thể bạn quan tâm" CHỈ hiển thị khi đang xem 1 danh mục cụ thể
+        // (không phải "Tất cả sản phẩm"), và nội dung của nó là các sản phẩm thuộc danh mục
+        // KHÁC với danh mục đang xem — để thực sự gợi ý thứ người dùng chưa xem tới.
+        boolean isAllCategory = "Tất cả".equals(selectedCategory);
+        if (layoutRecommendSection != null) {
+            layoutRecommendSection.setVisibility(isAllCategory ? View.GONE : View.VISIBLE);
+        }
+        if (isAllCategory) {
             recommendationList.clear();
+            if (recommendationAdapter != null) {
+                recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+            }
+        } else {
+            fetchRecommendationsExcludingCategory(selectedCategory);
+        }
+    }
+
+
+    // FIX (yêu cầu): lấy tối đa 4 sản phẩm thuộc các danh mục KHÁC danh mục hiện tại để
+    // hiển thị trong "Có thể bạn quan tâm". Lấy 1 pool rộng hơn rồi lọc + xáo trộn ở client,
+    // tương tự cách CartFragment.fetchRecommendations() đang làm.
+    private void fetchRecommendationsExcludingCategory(String category) {
+        FirestoreManager.getInstance().getProductsCollection().limit(30).get().addOnSuccessListener(snapshots -> {
+            if (!isAdded()) return;
+
+            List<Product> pool = new ArrayList<>();
             for (DocumentSnapshot doc : snapshots) {
                 if (!Product.isVisibleToBuyers(doc)) {
+                    continue;
+                }
+                String docCategory = doc.getString("category");
+                if (docCategory != null && docCategory.equals(category)) {
+                    // Bỏ qua sản phẩm cùng danh mục đang xem
                     continue;
                 }
                 Product p = doc.toObject(Product.class);
                 if (p != null) {
                     p.setId(doc.getId());
-                    recommendationList.add(p);
+                    pool.add(p);
                 }
             }
-            recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+
+            Collections.shuffle(pool);
+            recommendationList.clear();
+            recommendationList.addAll(pool.subList(0, Math.min(4, pool.size())));
+            if (recommendationAdapter != null) {
+                recommendationAdapter.updateData(new ArrayList<>(recommendationList));
+            }
         });
     }
-
-
-
-
-
-
-
-
-    // FIX (yêu cầu): cập nhật chữ trên nút "Bộ lọc" thành "Bộ lọc (N)" với N là số sản phẩm
-    // đang khớp với danh mục/sắp xếp/khoảng giá/đánh giá hiện tại.
-    private void updateFilterButtonLabel(int count) {
-        if (fabFilter != null) {
-            fabFilter.setText(String.format(Locale.getDefault(), "Bộ lọc (%d)", count));
-        }
-    }
-
-
 
 
     // FIX (yêu cầu #4): xem giải thích chi tiết trong HomeFragment.applyWishlistToHomeLists().
@@ -420,8 +279,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
     private void updateEmptyState() {
         if (productList.isEmpty()) {
             rvProducts.setVisibility(View.GONE);
@@ -435,10 +292,13 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
+    // FIX (yêu cầu): cập nhật chữ trên nút "Bộ lọc" thành "Bộ lọc (N)" với N là số sản phẩm
+    // đang khớp với danh mục/sắp xếp/khoảng giá/đánh giá hiện tại.
+    private void updateFilterButtonLabel(int count) {
+        if (fabFilter != null) {
+            fabFilter.setText(String.format(Locale.getDefault(), "Bộ lọc (%d)", count));
+        }
+    }
 
 
     private void resetFilters() {
@@ -452,12 +312,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     private void filterLocal(String query) {
         List<Product> filtered = new ArrayList<>();
         for (Product p : productList) {
@@ -465,12 +319,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         }
         productAdapter.updateData(filtered);
     }
-
-
-
-
-
-
 
 
     private void showFilterBottomSheet() {
@@ -494,12 +342,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     @Override
     public void onProductClick(Product product) {
         if (product == null || product.getId() == null) return;
@@ -509,12 +351,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
-
-
-
-
     // FIX (yêu cầu #3): luôn hiển thị popup chọn số lượng/phân loại, bất kể có phân loại hay không.
     @Override
     public void onAddToCart(Product product) {
@@ -522,19 +358,11 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     }
 
 
-
-
     private void showVariantSheet(Product product) {
         VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
                 com.example.healthup.util.CartHelper.addToCart(requireContext(), product, variant, quantity));
         sheet.show(getChildFragmentManager(), "VariantSelection");
     }
-
-
-
-
-
-
 
 
     @Override
