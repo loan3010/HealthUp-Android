@@ -261,7 +261,6 @@
     <string name="diet_saved_dish_load_error">Could not load saved dish</string>
     <string name="diet_saved_dish_readonly_hint">Saved dishes are view-only</string>
     <string name="diet_saved_dish_detail_title">Saved dish details</string>
-    <string name="diet_saved_dish_detail_title">Saved dish details</string>
     <string name="diet_search_saved_dishes_hint">Search by dish, meal, or product…</string>
     <string name="diet_saved_dishes_empty">No matching dishes found</string>
     <string name="diet_delete_saved_dish">Delete saved dish</string>
