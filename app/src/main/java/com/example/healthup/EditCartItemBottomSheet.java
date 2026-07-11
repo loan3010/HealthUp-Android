@@ -157,19 +157,23 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private void updateOptionsUI(Product product) {
         loadedProduct = product;
 
-        // Tự động khôi phục các lựa chọn từ variantName nếu các trường lẻ đang bị null
-        if (selectedWeight == null && selectedFlavor == null && selectedPackage == null) {
+        // Tự động khôi phục các lựa chọn từ variantName nếu có trường lẻ đang bị null
+        if (selectedWeight == null || selectedFlavor == null || selectedPackage == null) {
             String vn = item.getVariantName();
             if (vn != null && !vn.isEmpty()) {
                 Map<String, List<Product.ProductVariant>> allGroups = product.getGroupedVariants();
                 for (Map.Entry<String, List<Product.ProductVariant>> entry : allGroups.entrySet()) {
                     for (Product.ProductVariant v : entry.getValue()) {
-                        // Kiểm tra xem tên phân loại này có nằm trong chuỗi tên tổng hợp không
-                        if (vn.toLowerCase().contains(v.getName().toLowerCase())) {
+                        String vName = v.getName();
+                        if (vName != null && vn.toLowerCase().contains(vName.toLowerCase())) {
                             String gn = entry.getKey().toLowerCase();
-                            if (gn.contains("khối lượng") || gn.contains("weight")) selectedWeight = v.getName();
-                            else if (gn.contains("hương vị") || gn.contains("flavor")) selectedFlavor = v.getName();
-                            else if (gn.contains("đóng gói") || gn.contains("package") || gn.contains("quy cách")) selectedPackage = v.getName();
+                            if (gn.contains("khối lượng") || gn.contains("weight")) {
+                                if (selectedWeight == null) selectedWeight = vName;
+                            } else if (gn.contains("hương vị") || gn.contains("flavor")) {
+                                if (selectedFlavor == null) selectedFlavor = vName;
+                            } else if (gn.contains("đóng gói") || gn.contains("package") || gn.contains("quy cách")) {
+                                if (selectedPackage == null) selectedPackage = vName;
+                            }
                         }
                     }
                 }
@@ -311,13 +315,22 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private String extractLabel(String input) {
         if (input == null) return "";
-        if (input.contains("label=")) {
-            try {
-                int start = input.indexOf("label=") + 6;
-                int end = input.indexOf(",", start);
-                if (end == -1) end = input.indexOf("}", start);
-                if (end != -1) return input.substring(start, end).trim();
-            } catch (Exception ignored) {}
+        String s = input.trim();
+        if (s.startsWith("{") && s.endsWith("}")) {
+            String[] keys = {"label=", "name=", "variantName=", "title="};
+            for (String key : keys) {
+                if (s.contains(key)) {
+                    int start = s.indexOf(key) + key.length();
+                    int end = s.indexOf(",", start);
+                    if (end == -1) end = s.indexOf("}", start);
+                    if (end != -1) {
+                        String result = s.substring(start, end).trim();
+                        if (!result.isEmpty() && !"null".equalsIgnoreCase(result)) {
+                            return result;
+                        }
+                    }
+                }
+            }
         }
         return input;
     }

@@ -372,4 +372,5 @@
     <string name="phone_verification_register">Register Now</string>
     <string name="phone_verification_back_to_cart">Back to Cart</string>
     <string name="phone_verification_continue_shopping">Continue Shopping</string>
+    <string name="payment_bank_link">Linked Bank Account</string>
 </resources>

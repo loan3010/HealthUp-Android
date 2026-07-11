@@ -358,10 +358,12 @@
 
                     <LinearLayout
                         android:id="@+id/layoutVoucherText"
-                        android:layout_width="match_parent"
+                        android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_toEndOf="@id/ivVoucherIcon"
+                        android:layout_toStartOf="@+id/btnRemoveVoucher"
                         android:layout_marginStart="16dp"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical">
 
                         <TextView
@@ -434,6 +436,11 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
+
+                    <RadioButton
+                        android:id="@+id/rbBankLink"
+                        style="@style/PaymentOptionStyle"
+                        android:text="Liên kết tài khoản ngân hàng" />
 
                     <RadioButton
                         android:id="@+id/rbVnpay"
@@ -583,7 +590,8 @@
     <LinearLayout
         android:id="@+id/footer"
         android:layout_width="0dp"
-        android:layout_height="69dp"
+        android:layout_height="wrap_content"
+        android:minHeight="69dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:paddingHorizontal="16dp"

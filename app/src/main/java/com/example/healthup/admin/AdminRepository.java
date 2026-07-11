@@ -400,27 +400,56 @@ public class AdminRepository {
             return;
         }
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", toStatus);
-        updates.put("updatedAt", Timestamp.now());
-        if ("delivered".equals(toStatus)) {
-            updates.put("deliveredAt", Timestamp.now());
-        }
+        // Fetch order first to get userId and total amount for loyalty update
+        db.collection("orders").document(orderId).get().addOnSuccessListener(doc -> {
+            if (!doc.exists()) {
+                callback.onError("Đơn hàng không tồn tại");
+                return;
+            }
 
-        WriteBatch batch = db.batch();
-        batch.update(db.collection("orders").document(orderId), updates);
+            String userId = doc.getString("userId");
+            Double total = doc.getDouble("totalPrice");
+            if (total == null) total = 0.0;
 
-        Map<String, Object> history = new HashMap<>();
-        history.put("fromStatus", fromStatus != null ? fromStatus : "");
-        history.put("toStatus", toStatus);
-        history.put("adminUid", user.getUid());
-        history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
-        history.put("createdAt", Timestamp.now());
-        batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+            WriteBatch batch = db.batch();
 
-        batch.commit()
-                .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+            // 1. Cập nhật đơn hàng
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("status", toStatus);
+            updates.put("updatedAt", Timestamp.now());
+            if ("delivered".equals(toStatus)) {
+                updates.put("deliveredAt", Timestamp.now());
+            }
+            batch.update(db.collection("orders").document(orderId), updates);
+
+            // 2. Cập nhật lịch sử
+            Map<String, Object> history = new HashMap<>();
+            history.put("fromStatus", fromStatus != null ? fromStatus : "");
+            history.put("toStatus", toStatus);
+            history.put("adminUid", user.getUid());
+            history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
+            history.put("createdAt", Timestamp.now());
+            batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+
+            // 3. Xử lý hạng thành viên (Loyalty)
+            // Logic: Tăng khi sang Delivered, Giảm khi sang Returned/Cancelled (nếu từ Delivered)
+            if (userId != null) {
+                if ("delivered".equals(toStatus) && !"delivered".equals(fromStatus)) {
+                    // Chuyển sang Giao thành công -> Tăng tích lũy
+                    batch.update(db.collection("users").document(userId),
+                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(total));
+                } else if (("returned".equals(toStatus) || "cancelled".equals(toStatus)) && "delivered".equals(fromStatus)) {
+                    // Nếu đã từng Delivered mà giờ bị Trả hoặc Hủy -> Giảm tích lũy
+                    batch.update(db.collection("users").document(userId),
+                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
+                }
+            }
+
+            batch.commit()
+                    .addOnSuccessListener(unused -> callback.onSuccess())
+                    .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+
+        }).addOnFailureListener(e -> callback.onError(errorMessage(e)));
     }
 
     public void approveCancelRequest(@NonNull String orderId,
@@ -441,10 +470,6 @@ public class AdminRepository {
         WriteBatch batch = db.batch();
         batch.update(db.collection("orders").document(orderId), updates);
 
-        if (!TextUtils.isEmpty(userId)) {
-            batch.update(db.collection("users").document(userId),
-                    "spentAmount", com.google.firebase.firestore.FieldValue.increment(-amount));
-        }
 
         Map<String, Object> history = new HashMap<>();
         history.put("fromStatus", Order.STATUS_PENDING);

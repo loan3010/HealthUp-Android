@@ -31,14 +31,23 @@ public class PromoCouponFragment extends Fragment {
     private Button btnApply, btnConfirm;
     private RecyclerView rvVouchers, rvVouchersDiscount;
     private TextView tvTotalDiscount, tvShippingHeader;
+    private TextView btnViewAllShipping, btnViewAllDiscount;
 
     private VoucherAdapter adapterShipping, adapterDiscount;
-    private List<Voucher> shippingList, discountList;
+    private List<Voucher> shippingListFull = new ArrayList<>();
+    private List<Voucher> discountListFull = new ArrayList<>();
+    private List<Voucher> shippingListVisible = new ArrayList<>();
+    private List<Voucher> discountListVisible = new ArrayList<>();
+    
+    private boolean isShippingExpanded = false;
+    private boolean isDiscountExpanded = false;
+    private static final int VOUCHER_LIMIT = 2; // Hiển thị 2 cái đầu
     
     private List<Voucher> previouslySelected = new ArrayList<>();
     private double orderTotal = 0;
     private double shippingFee = 0;
     private boolean hasVisited = false;
+    private String userTier = "Member"; // Default
 
     public PromoCouponFragment() {
     }
@@ -61,7 +70,7 @@ public class PromoCouponFragment extends Fragment {
 
         initViews(view);
         setupRecyclerViews();
-        loadVoucherData();
+        loadUserDataAndVouchers(); // Combined
 
         btnBack.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
 
@@ -88,76 +97,187 @@ public class PromoCouponFragment extends Fragment {
         rvVouchersDiscount = view.findViewById(R.id.rvVouchersDiscount);
         tvTotalDiscount = view.findViewById(R.id.tvTotalDiscount);
         tvShippingHeader = view.findViewById(R.id.tvShippingHeader);
+        btnViewAllShipping = view.findViewById(R.id.btnViewAllShipping);
+        btnViewAllDiscount = view.findViewById(R.id.btnViewAllDiscount);
+
+        btnViewAllShipping.setOnClickListener(v -> {
+            isShippingExpanded = !isShippingExpanded;
+            updateVisibleLists();
+        });
+
+        btnViewAllDiscount.setOnClickListener(v -> {
+            isDiscountExpanded = !isDiscountExpanded;
+            updateVisibleLists();
+        });
     }
 
     private void setupRecyclerViews() {
-        shippingList = new ArrayList<>();
-        adapterShipping = new VoucherAdapter(requireContext(), shippingList, voucher -> {
+        adapterShipping = new VoucherAdapter(requireContext(), shippingListVisible, orderTotal, shippingFee, userTier, voucher -> {
             if (voucher.isSelected()) {
-                for (Voucher v : shippingList) if (v != voucher) v.setSelected(false);
-                adapterShipping.notifyDataSetChanged();
+                for (Voucher v : shippingListFull) if (v != voucher) v.setSelected(false);
             }
             updateTotalDiscount();
+            adapterShipping.notifyDataSetChanged();
         });
         rvVouchers.setLayoutManager(new LinearLayoutManager(getContext()));
         rvVouchers.setAdapter(adapterShipping);
 
-        discountList = new ArrayList<>();
-        adapterDiscount = new VoucherAdapter(requireContext(), discountList, voucher -> {
+        adapterDiscount = new VoucherAdapter(requireContext(), discountListVisible, orderTotal, shippingFee, userTier, voucher -> {
             if (voucher.isSelected()) {
-                for (Voucher v : discountList) if (v != voucher) v.setSelected(false);
-                adapterDiscount.notifyDataSetChanged();
+                for (Voucher v : discountListFull) if (v != voucher) v.setSelected(false);
             }
             updateTotalDiscount();
+            adapterDiscount.notifyDataSetChanged();
         });
         rvVouchersDiscount.setLayoutManager(new LinearLayoutManager(getContext()));
         rvVouchersDiscount.setAdapter(adapterDiscount);
+    }
+
+    private void loadUserDataAndVouchers() {
+        com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                    .collection("users").document(user.getUid())
+                    .get().addOnSuccessListener(doc -> {
+                        String tier = doc.getString("tier");
+                        if (tier != null) {
+                            userTier = tier;
+                            if (adapterShipping != null) adapterShipping.setUserTier(userTier);
+                            if (adapterDiscount != null) adapterDiscount.setUserTier(userTier);
+                        }
+                        loadVoucherData();
+                    }).addOnFailureListener(e -> loadVoucherData());
+        } else {
+            loadVoucherData();
+        }
     }
 
     private void loadVoucherData() {
         FirebaseManager.getInstance().getVouchers().addOnSuccessListener(snapshot -> {
             if (!isAdded()) return;
             
-            shippingList.clear();
-            discountList.clear();
+            shippingListFull.clear();
+            discountListFull.clear();
             
             if (snapshot != null && !snapshot.isEmpty()) {
                 for (com.google.firebase.firestore.DocumentSnapshot doc : snapshot.getDocuments()) {
                     Voucher v = parseVoucherFromPromoCode(doc);
                     if (v == null) continue;
 
-                    // ✅ CHỈ HIỂN THỊ NẾU ĐỦ ĐIỀU KIỆN ĐƠN TỐI THIỂU
-                    if (orderTotal >= v.getMinOrderAmount()) {
-                        if (v.getType() == Voucher.Type.SHIPPING) {
-                            // ✅ NẾU CHỌN GIAO TIÊU CHUẨN (phí = 0) THÌ KHÔNG HIỆN MÃ GIẢM SHIP
-                            if (shippingFee > 0) {
-                                shippingList.add(v);
-                            }
-                        } else {
-                            discountList.add(v);
-                        }
+                    // Phân loại TẤT CẢ voucher (Shopee style) vào 2 list riêng biệt
+                    if (v.getType() == Voucher.Type.SHIPPING) {
+                        shippingListFull.add(v);
+                    } else {
+                        discountListFull.add(v);
                     }
                 }
             }
             
-            // Xử lý ẩn/hiện tiêu đề VẬN CHUYỂN
+            // Xử lý ẩn/hiện tiêu đề VẬN CHUYỂN dựa trên list full
             if (tvShippingHeader != null) {
-                tvShippingHeader.setVisibility(shippingList.isEmpty() ? View.GONE : View.VISIBLE);
-                rvVouchers.setVisibility(shippingList.isEmpty() ? View.GONE : View.VISIBLE);
+                boolean hasShipping = !shippingListFull.isEmpty();
+                tvShippingHeader.setVisibility(hasShipping ? View.VISIBLE : View.GONE);
+                rvVouchers.setVisibility(hasShipping ? View.VISIBLE : View.GONE);
             }
 
+            // ✅ SẮP XẾP VOUCHER: Đưa cái tốt nhất/khả dụng lên đầu
+            sortVouchers(shippingListFull);
+            sortVouchers(discountListFull);
+
+            updateVisibleLists();
             syncSelections();
         }).addOnFailureListener(e -> {
             syncSelections();
         });
     }
 
-    private void checkAndAddFallbacks() {
-        if (shippingList.isEmpty()) {
-            shippingList.add(new Voucher("v_ship_free", "FREE SHIP", "Miễn phí vận chuyển toàn quốc", 21000, "31/12/2025", Voucher.Type.SHIPPING));
+    private void updateVisibleLists() {
+        shippingListVisible.clear();
+        if (isShippingExpanded || shippingListFull.size() <= VOUCHER_LIMIT) {
+            shippingListVisible.addAll(shippingListFull);
+            if (btnViewAllShipping != null) {
+                if (shippingListFull.size() <= VOUCHER_LIMIT) {
+                    btnViewAllShipping.setVisibility(View.GONE);
+                } else {
+                    btnViewAllShipping.setVisibility(View.VISIBLE);
+                    btnViewAllShipping.setText("Thu gọn");
+                }
+            }
+        } else {
+            shippingListVisible.addAll(shippingListFull.subList(0, VOUCHER_LIMIT));
+            if (btnViewAllShipping != null) {
+                btnViewAllShipping.setVisibility(View.VISIBLE);
+                btnViewAllShipping.setText("Xem tất cả");
+            }
         }
-        if (discountList.isEmpty()) {
-            discountList.add(new Voucher("v_healthup5", "HEALTHUP5", "Giảm 5% cho đơn hàng HealthUp", 5, "31/12/2025", Voucher.Type.DISCOUNT));
+
+        discountListVisible.clear();
+        if (isDiscountExpanded || discountListFull.size() <= VOUCHER_LIMIT) {
+            discountListVisible.addAll(discountListFull);
+            if (btnViewAllDiscount != null) {
+                if (discountListFull.size() <= VOUCHER_LIMIT) {
+                    btnViewAllDiscount.setVisibility(View.GONE);
+                } else {
+                    btnViewAllDiscount.setVisibility(View.VISIBLE);
+                    btnViewAllDiscount.setText("Thu gọn");
+                }
+            }
+        } else {
+            discountListVisible.addAll(discountListFull.subList(0, VOUCHER_LIMIT));
+            if (btnViewAllDiscount != null) {
+                btnViewAllDiscount.setVisibility(View.VISIBLE);
+                btnViewAllDiscount.setText("Xem tất cả");
+            }
+        }
+
+        if (adapterShipping != null) adapterShipping.notifyDataSetChanged();
+        if (adapterDiscount != null) adapterDiscount.notifyDataSetChanged();
+    }
+
+    private void sortVouchers(List<Voucher> list) {
+        java.util.Collections.sort(list, (v1, v2) -> {
+            boolean e1 = isVoucherEligible(v1);
+            boolean e2 = isVoucherEligible(v2);
+
+            if (e1 && !e2) return -1;
+            if (!e1 && e2) return 1;
+
+            if (e1) {
+                // Cả hai đều đủ điều kiện: Sắp xếp theo giá trị giảm dần
+                double s1 = calculateSavingForTotal(v1);
+                double s2 = calculateSavingForTotal(v2);
+                return Double.compare(s2, s1);
+            } else {
+                // Ưu tiên theo Tier trước
+                boolean t1 = isTierMatch(v1);
+                boolean t2 = isTierMatch(v2);
+                if (t1 && !t2) return -1;
+                if (!t1 && t2) return 1;
+
+                // Cả hai đều chưa đủ tiền: Sắp xếp theo cái nào gần đủ nhất
+                double d1 = v1.getMinOrderAmount() - orderTotal;
+                double d2 = v2.getMinOrderAmount() - orderTotal;
+                return Double.compare(d1, d2);
+            }
+        });
+    }
+
+    private boolean isVoucherEligible(Voucher v) {
+        return orderTotal >= v.getMinOrderAmount() && isTierMatch(v);
+    }
+
+    private boolean isTierMatch(Voucher v) {
+        String req = v.getRequiredTier();
+        if (req == null || req.isEmpty() || req.equalsIgnoreCase("Member")) return true;
+        return userTier.equalsIgnoreCase(req);
+    }
+
+    private void checkAndAddFallbacks() {
+        if (shippingListFull.isEmpty()) {
+            shippingListFull.add(new Voucher("v_ship_free", "FREE SHIP", "Miễn phí vận chuyển toàn quốc", 21000, "31/12/2025", Voucher.Type.SHIPPING));
+        }
+        if (discountListFull.isEmpty()) {
+            discountListFull.add(new Voucher("v_healthup5", "HEALTHUP5", "Giảm 5% cho đơn hàng HealthUp", 5, "31/12/2025", Voucher.Type.DISCOUNT));
         }
     }
 
@@ -176,6 +296,16 @@ public class PromoCouponFragment extends Fragment {
         v.setDescription(desc);
         
         v.setMinOrderAmount(getDouble(doc, "minOrderValue"));
+        
+        // ✅ ĐỌC HẠNG YÊU CẦU: Ưu tiên requiredTier, fallback sang tier
+        String reqTier = doc.getString("requiredTier");
+        if (reqTier == null) reqTier = doc.getString("tier");
+        
+        // ✅ CỰC KỲ QUAN TRỌNG: Nếu tên mã bắt đầu bằng "VIP", ép buộc hạng VIP
+        if (code.toUpperCase().startsWith("VIP")) {
+            reqTier = "VIP";
+        }
+        v.setRequiredTier(reqTier);
         
         // ✅ ĐỌC GIÁ TRỊ GIẢM GIÁ ĐA LUỒNG
         double amount = getDouble(doc, "discountAmount");
@@ -241,19 +371,26 @@ public class PromoCouponFragment extends Fragment {
 
     private void syncSelections() {
         if (hasVisited && !previouslySelected.isEmpty()) {
-            // Nếu đã từng vào và có mã đã chọn, giữ nguyên lựa chọn cũ
+            // Nếu đã từng vào và có mã đã chọn, giữ nguyên lựa chọn cũ (nhưng phải check lại Tier)
             for (Voucher prev : previouslySelected) {
-                for (Voucher cur : shippingList) if (cur.getId().equals(prev.getId())) cur.setSelected(true);
-                for (Voucher cur : discountList) if (cur.getId().equals(prev.getId())) cur.setSelected(true);
+                for (Voucher cur : shippingListFull) {
+                    if (java.util.Objects.equals(cur.getId(), prev.getId()) && isTierMatch(cur)) {
+                        cur.setSelected(true);
+                    }
+                }
+                for (Voucher cur : discountListFull) {
+                    if (java.util.Objects.equals(cur.getId(), prev.getId()) && isTierMatch(cur)) {
+                        cur.setSelected(true);
+                    }
+                }
             }
         } else {
             // ✅ TỰ ĐỘNG CHỌN MÃ TỐT NHẤT THỎA MÃN ĐIỀU KIỆN
-            autoSelectBestVoucher(shippingList);
-            autoSelectBestVoucher(discountList);
+            autoSelectBestVoucher(shippingListFull);
+            autoSelectBestVoucher(discountListFull);
         }
 
-        if (adapterShipping != null) adapterShipping.notifyDataSetChanged();
-        if (adapterDiscount != null) adapterDiscount.notifyDataSetChanged();
+        updateVisibleLists();
         updateTotalDiscount();
     }
 
@@ -262,8 +399,8 @@ public class PromoCouponFragment extends Fragment {
         double maxSaving = -1;
 
         for (Voucher v : list) {
-            // Kiểm tra điều kiện đơn tối thiểu từ tổng tiền đơn hàng
-            if (orderTotal >= v.getMinOrderAmount()) {
+            // Kiểm tra điều kiện đơn tối thiểu và Tier
+            if (isVoucherEligible(v)) {
                 double saving = calculateSavingForTotal(v);
                 
                 if (saving > maxSaving) {
@@ -281,15 +418,18 @@ public class PromoCouponFragment extends Fragment {
     private void updateTotalDiscount() {
         double totalItemSaving = 0;
         double totalShipSaving = 0;
+        int selectedCount = 0;
 
-        for (Voucher v : shippingList) {
+        for (Voucher v : shippingListFull) {
             if (v.isSelected()) {
                 totalShipSaving += calculateSavingForTotal(v);
+                selectedCount++;
             }
         }
-        for (Voucher v : discountList) {
+        for (Voucher v : discountListFull) {
             if (v.isSelected()) {
                 totalItemSaving += calculateSavingForTotal(v);
+                selectedCount++;
             }
         }
 
@@ -299,9 +439,30 @@ public class PromoCouponFragment extends Fragment {
         double totalSaving = finalShipDiscount + finalItemDiscount;
 
         tvTotalDiscount.setText(String.format(Locale.getDefault(), "Tiết kiệm %,.0fđ", totalSaving).replace(",", "."));
+        
+        // Cập nhật text hiển thị số lượng
+        TextView tvFooterCount = getView() != null ? getView().findViewById(R.id.tvSelectedCountFooter) : null;
+        if (tvFooterCount != null) {
+            tvFooterCount.setText(String.format(Locale.getDefault(), "ĐÃ CHỌN %d VOUCHER", selectedCount));
+        }
+        
+        TextView tvHeader = getView() != null ? getView().findViewById(R.id.tvBestVoucherHeader) : null;
+        if (tvHeader != null) {
+            if (selectedCount > 0) {
+                tvHeader.setText(String.format(Locale.getDefault(), 
+                    "Chúng tôi đã chọn %d voucher tốt nhất giúp bạn tiết kiệm nhiều nhất.", selectedCount));
+            } else {
+                tvHeader.setText(R.string.cart_voucher_hint);
+            }
+        }
     }
 
     private double calculateSavingForTotal(Voucher v) {
+        // ✅ ĐỒNG BỘ LOGIC: Kiểm tra điều kiện đơn tối thiểu và Tier
+        if (!isVoucherEligible(v)) {
+            return 0;
+        }
+
         double val = v.getDiscountAmount();
         String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
         String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
@@ -331,8 +492,8 @@ public class PromoCouponFragment extends Fragment {
 
     private void confirmSelection() {
         ArrayList<Voucher> resultList = new ArrayList<>();
-        for (Voucher v : shippingList) if (v.isSelected()) resultList.add(v);
-        for (Voucher v : discountList) if (v.isSelected()) resultList.add(v);
+        for (Voucher v : shippingListFull) if (v.isSelected()) resultList.add(v);
+        for (Voucher v : discountListFull) if (v.isSelected()) resultList.add(v);
 
         Bundle result = new Bundle();
         result.putSerializable("selected_vouchers", resultList);

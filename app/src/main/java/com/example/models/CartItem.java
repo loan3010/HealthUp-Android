@@ -102,13 +102,23 @@ public class CartItem implements Serializable {
 
     private String extractLabel(String input) {
         if (input == null) return null;
-        if (input.contains("label=")) {
-            try {
-                int start = input.indexOf("label=") + 6;
-                int end = input.indexOf(",", start);
-                if (end == -1) end = input.indexOf("}", start);
-                if (end != -1) return input.substring(start, end).trim();
-            } catch (Exception ignored) {}
+        String s = input.trim();
+        if (s.startsWith("{") && s.endsWith("}")) {
+            // Robust extraction for strings like "{price=95000, label=70g}"
+            String[] keys = {"label=", "name=", "variantName=", "title="};
+            for (String key : keys) {
+                if (s.contains(key)) {
+                    int start = s.indexOf(key) + key.length();
+                    int end = s.indexOf(",", start);
+                    if (end == -1) end = s.indexOf("}", start);
+                    if (end != -1) {
+                        String result = s.substring(start, end).trim();
+                        if (!result.isEmpty() && !"null".equalsIgnoreCase(result)) {
+                            return result;
+                        }
+                    }
+                }
+            }
         }
         return input;
     }

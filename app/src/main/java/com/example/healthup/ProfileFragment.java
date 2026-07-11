@@ -56,11 +56,11 @@ public class ProfileFragment extends Fragment {
 
     private ImageView imgAvatar;
     private View groupLoggedOut, groupLoggedIn, cardTichLuy;
-    private View rowSellerInbox;
+    private View rowSellerInbox, rowLoyalty;
     private View cardStaffInbox;
     private View rowAdminPanel;
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
-    private TextView badgePending, badgePickup, badgeShipping;
+    private TextView badgePending, badgePickup, badgeShipping, badgeDelivered, badgeReturned;
     private ProgressBar progressTichLuy;
 
 
@@ -76,6 +76,7 @@ public class ProfileFragment extends Fragment {
         groupLoggedIn = view.findViewById(R.id.group_logged_in);
         cardTichLuy = view.findViewById(R.id.card_tich_luy);
         rowSellerInbox = view.findViewById(R.id.row_seller_inbox);
+        rowLoyalty = view.findViewById(R.id.row_loyalty);
         cardStaffInbox = view.findViewById(R.id.card_staff_inbox);
         rowAdminPanel = view.findViewById(R.id.row_admin_panel);
         tvName = view.findViewById(R.id.tv_name);
@@ -88,6 +89,8 @@ public class ProfileFragment extends Fragment {
         badgePending = view.findViewById(R.id.badge_pending);
         badgePickup = view.findViewById(R.id.badge_pickup);
         badgeShipping = view.findViewById(R.id.badge_shipping);
+        badgeDelivered = view.findViewById(R.id.badge_delivered);
+        badgeReturned = view.findViewById(R.id.badge_returned);
 
 
         mAuth = FirebaseAuth.getInstance();
@@ -215,7 +218,7 @@ public class ProfileFragment extends Fragment {
         }
 
 
-        View wishlistCard = findRowByText(view, "Sản phẩm\nyêu thích");
+        View wishlistCard = view.findViewById(R.id.row_wishlist);
         if (wishlistCard != null) {
             wishlistCard.setOnClickListener(v -> loadFragment(new WishlistFragment()));
         }
@@ -282,6 +285,10 @@ public class ProfileFragment extends Fragment {
         if (rowAdminPanel != null) {
             rowAdminPanel.setOnClickListener(v ->
                     startActivity(new Intent(requireContext(), AdminActivity.class)));
+        }
+
+        if (rowLoyalty != null) {
+            rowLoyalty.setOnClickListener(v -> loadFragment(new MemberTierFragment()));
         }
     }
 
@@ -352,6 +359,8 @@ public class ProfileFragment extends Fragment {
             return;
         }
 
+        // ✅ RESET UI mặc định trước khi load dữ liệu thực tế
+        updateLoyaltyUi(0L);
 
         FirebaseUser firebaseUser = currentUser;
         db.collection(COLLECTION_USERS)
@@ -363,7 +372,7 @@ public class ProfileFragment extends Fragment {
                     }
                     if (UserProfileResolver.hasProfileName(doc)) {
                         bindUserToUi(doc, firebaseUser);
-                        loadOrderCounts(currentUser.getUid());
+                        loadOrderCountsAndSpentAmount(currentUser.getUid()); // ✅ FIX: Tự tính tổng chi tiêu
                         return;
                     }
                     fallbackLoadProfile(doc, firebaseUser);
@@ -377,6 +386,77 @@ public class ProfileFragment extends Fragment {
                             "Lỗi tải dữ liệu: " + e.getMessage(),
                             Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void loadOrderCountsAndSpentAmount(String uid) {
+        if (uid == null) return;
+
+        // Fetch counts for all statuses
+        fetchCount(uid, "pending", badgePending);
+        fetchCount(uid, "confirmed", badgePickup);
+        fetchCount(uid, "shipping", badgeShipping);
+        fetchCount(uid, "delivered", badgeDelivered);
+        fetchCount(uid, "returned", badgeReturned);
+
+        // ✅ FIX: Hạng thành viên chỉ tính đơn đã giao.
+        // Tự động tính lại spentAmount từ danh sách đơn hàng thực tế
+        db.collection("orders")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("status", "delivered")
+                .get()
+                .addOnSuccessListener(queryDocumentSnapshots -> {
+                    if (!isAdded()) return;
+                    
+                    double actualSpent = 0;
+                    for (DocumentSnapshot orderDoc : queryDocumentSnapshots) {
+                        // Bỏ qua các đơn đang yêu cầu trả hàng/hủy nếu status vẫn là delivered (đề phòng)
+                        Boolean cancelReq = orderDoc.getBoolean("cancelRequested");
+                        if (cancelReq != null && cancelReq) continue;
+
+                        Double total = orderDoc.getDouble("totalPrice");
+                        if (total != null) actualSpent += total;
+                    }
+
+                    updateLoyaltyUi((long) actualSpent);
+                    
+                    // Đồng bộ lại field spentAmount trong DB nếu bị sai lệch (LƯU Ý: Đây là fix data cứng)
+                    db.collection(COLLECTION_USERS).document(uid)
+                            .update("spentAmount", actualSpent);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    // Nếu lỗi query, mặc định cho về 0 để an toàn
+                    updateLoyaltyUi(0L);
+                });
+    }
+
+    private void updateLoyaltyUi(long spent) {
+        String currentLang = LocaleHelper.getLanguage(requireContext());
+        NumberFormat vnFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+        
+        if (currentLang.equals("en")) {
+            tvSpent.setText("Spent: " + vnFormat.format(spent) + " VND");
+        } else {
+            tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
+        }
+
+        boolean isVip = spent >= MUC_VIP;
+        String defaultTier = currentLang.equals("en") ? "Member" : "Thành viên";
+        tvTier.setText(isVip ? "VIP" : defaultTier);
+        tvTier.setBackgroundResource(isVip ? R.drawable.bg_badge_vip : R.drawable.bg_badge_tier);
+
+        long conLai = MUC_VIP - spent;
+        if (conLai > 0) {
+            if (currentLang.equals("en")) {
+                tvProgressHint.setText("Buy " + vnFormat.format(conLai) + " VND more to get VIP!");
+            } else {
+                tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
+            }
+            progressTichLuy.setProgress((int) ((spent * 100) / MUC_VIP));
+        } else {
+            tvProgressHint.setText(currentLang.equals("en") ? "You are a VIP member!" : "Bạn đã đạt hạng VIP!");
+            progressTichLuy.setProgress(100);
+        }
     }
 
     private void fallbackLoadProfile(@Nullable DocumentSnapshot uidDoc, @NonNull FirebaseUser firebaseUser) {
@@ -402,14 +482,14 @@ public class ProfileFragment extends Fragment {
                             : uidDoc;
                     bindUserToUi(profileDoc, firebaseUser);
                     UserProfileResolver.syncProfileAfterLogin(firebaseUser.getUid(), profileDoc);
-                    loadOrderCounts(firebaseUser.getUid());
+                    loadOrderCountsAndSpentAmount(firebaseUser.getUid()); // ✅ FIX: Đồng bộ luôn ở đây
                 })
                 .addOnFailureListener(e -> {
                     if (!isAdded()) {
                         return;
                     }
                     bindUserToUi(uidDoc, firebaseUser);
-                    loadOrderCounts(firebaseUser.getUid());
+                    loadOrderCountsAndSpentAmount(firebaseUser.getUid()); // ✅ FIX
                 });
     }
 
@@ -425,47 +505,13 @@ public class ProfileFragment extends Fragment {
     private void bindUserToUi(@Nullable DocumentSnapshot document, @NonNull FirebaseUser firebaseUser) {
         bindHeaderName(document, firebaseUser);
 
-        String currentLang = LocaleHelper.getLanguage(requireContext());
-        String defaultTier = currentLang.equals("en") ? "Member" : "Thành viên";
-
         if (document == null || !document.exists()) {
-            tvTier.setText(defaultTier);
             updateStaffInboxVisibility(false);
             updateAdminPanelVisibility(false);
             return;
         }
 
         String avatarUrl = document.getString(FIELD_AVATAR_URL);
-        long spent = readSpentAmount(document);
-        boolean isVip = spent >= MUC_VIP;
-        String tier = isVip ? "VIP" : defaultTier;
-
-        tvTier.setText(tier);
-        tvTier.setBackgroundResource(isVip ? R.drawable.bg_badge_vip : R.drawable.bg_badge_tier);
-
-
-        NumberFormat vnFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
-        if (currentLang.equals("en")) {
-            tvSpent.setText("Spent: " + vnFormat.format(spent) + " VND");
-        } else {
-            tvSpent.setText("Đã chi: " + vnFormat.format(spent) + " VND");
-        }
-
-
-        long conLai = MUC_VIP - spent;
-        if (conLai > 0) {
-            if (currentLang.equals("en")) {
-                tvProgressHint.setText("Buy " + vnFormat.format(conLai) + " VND more to get VIP!");
-            } else {
-                tvProgressHint.setText("Mua thêm " + vnFormat.format(conLai) + " VND nhận ưu đãi VIP!");
-            }
-            progressTichLuy.setProgress((int) ((spent * 100) / MUC_VIP));
-        } else {
-            tvProgressHint.setText(currentLang.equals("en") ? "You are a VIP member!" : "Bạn đã đạt hạng VIP!");
-            progressTichLuy.setProgress(100);
-        }
-
-
         if (avatarUrl != null && !avatarUrl.isEmpty()) {
             Glide.with(this)
                     .load(avatarUrl)
@@ -473,7 +519,6 @@ public class ProfileFragment extends Fragment {
                     .circleCrop()
                     .into(imgAvatar);
         }
-
 
         updateStaffInboxVisibility(StaffRoleHelper.isStaff(document));
         updateAdminPanelVisibility(StaffRoleHelper.isAdmin(StaffRoleHelper.resolveRole(document)));
@@ -555,6 +600,8 @@ public class ProfileFragment extends Fragment {
         if (badgePending != null) badgePending.setVisibility(View.GONE);
         if (badgePickup != null) badgePickup.setVisibility(View.GONE);
         if (badgeShipping != null) badgeShipping.setVisibility(View.GONE);
+        if (badgeDelivered != null) badgeDelivered.setVisibility(View.GONE);
+        if (badgeReturned != null) badgeReturned.setVisibility(View.GONE);
     }
 
 

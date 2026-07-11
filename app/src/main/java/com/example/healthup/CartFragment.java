@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 import android.content.Intent;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -21,13 +22,13 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.adapters.CartAdapter;
-import com.example.models.Voucher;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.models.CartItem;
 import com.example.models.Product;
+import com.example.models.Voucher;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
@@ -51,10 +52,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private CartAdapter adapter;
     private ProductAdapter recommendAdapter;
 
-    // FIX (yêu cầu #1): lưu lại toàn bộ pool gợi ý đã tải (20 sản phẩm) và danh sách đang
-    // hiển thị (6 sản phẩm) tách riêng, để khi 1 sản phẩm được thêm vào giỏ từ "Có thể bạn
-    // quan tâm" có thể thay ngay bằng 1 gợi ý khác lấy từ pool mà không cần gọi lại Firestore
-    // và không cần người dùng thoát trang vào lại mới thấy thay đổi.
     private List<Product> recommendDisplayed = new ArrayList<>();
     private List<Product> recommendPool = new ArrayList<>();
 
@@ -70,9 +67,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private String userId;
     private boolean editMode = false;
 
-    // FIX (bug #4): true khi Cart được mở từ nút "Xem giỏ hàng" trong ProductDetailActivity.
-    // Khi đó nút back ở header phải finish() Activity này để trở về đúng màn Chi tiết sản
-    // phẩm, thay vì chuyển tab Trang chủ như luồng vào Giỏ hàng bình thường.
     private boolean returnToPreviousActivity = false;
 
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
@@ -81,7 +75,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Nhận kết quả chọn voucher để hiển thị giảm giá ngay tại Giỏ hàng
         getParentFragmentManager().setFragmentResultListener("voucher_result", this, (requestKey, result) -> {
             List<Voucher> vouchers = (List<Voucher>) result.getSerializable("selected_vouchers");
             if (vouchers != null) {
@@ -107,6 +100,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         applyFooterWindowInsets(view);
         setupListeners();
         setupRecommendationAdapter();
+        
         loadCartFromFirestore();
         fetchRecommendations();
 
@@ -125,15 +119,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (header == null) return;
         ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            // ✅ Bỏ basePaddingTop dư thừa để header đi lên cao nhất có thể
             v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
             return windowInsets;
         });
     }
 
-    // FIX (bug #5): footer trước đây không nhận padding bottom theo system bar, nên bị thanh
-    // điều hướng cử chỉ / thanh nav hệ thống che khuất một phần. Áp dụng inset bottom cho
-    // footer giống cách header đã nhận inset top.
     private void applyFooterWindowInsets(View view) {
         View footerView = view.findViewById(R.id.footer);
         if (footerView == null) return;
@@ -179,9 +169,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     }
 
     private void setupListeners() {
-        // FIX (yêu cầu #4): 2 ô tick "chọn tất cả" (một ở thanh điều hướng bình thường
-        // cbSelectAll, một ở chế độ Sửa cbSelectAllEdit) phải luôn đồng bộ với nhau vì cùng
-        // thao tác trên chung 1 danh sách cartItems.
         attachSelectAllListener(cbSelectAllEdit);
         attachSelectAllListener(cbSelectAll);
 
@@ -204,17 +191,19 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             rowVoucher.setOnClickListener(v -> openVoucherList());
         }
         if (btnContinueShopping != null) {
-            btnContinueShopping.setOnClickListener(v -> {
-                if (!isAdded()) return;
-                com.google.android.material.bottomnavigation.BottomNavigationView navView =
-                        requireActivity().findViewById(R.id.bottom_navigation);
-                if (navView != null) {
-                    navView.setSelectedItemId(R.id.nav_home);
-                }
-            });
+            btnContinueShopping.setOnClickListener(v -> showHomeTab());
         }
         if (tvViewAllRecommend != null) {
             tvViewAllRecommend.setOnClickListener(v -> goToCategoryTab());
+        }
+    }
+
+    private void showHomeTab() {
+        if (!isAdded()) return;
+        com.google.android.material.bottomnavigation.BottomNavigationView navView =
+                requireActivity().findViewById(R.id.bottom_navigation);
+        if (navView != null) {
+            navView.setSelectedItemId(R.id.nav_home);
         }
     }
 
@@ -241,8 +230,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    // FIX (bug #4): xử lý cho mũi tên back ở header. Nút "Quay lại" riêng ở thanh điều hướng
-    // dưới đã được bỏ theo yêu cầu #4 vì đã có sẵn nút back ở thanh tiêu đề, tránh trùng lặp.
     private void goBack() {
         if (!isAdded()) return;
 
@@ -253,11 +240,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         boolean movedBack = requireActivity().getSupportFragmentManager().popBackStackImmediate();
         if (!movedBack) {
-            com.google.android.material.bottomnavigation.BottomNavigationView navView =
-                    requireActivity().findViewById(R.id.bottom_navigation);
-            if (navView != null) {
-                navView.setSelectedItemId(R.id.nav_home);
-            }
+            showHomeTab();
         }
     }
 
@@ -270,9 +253,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    // FIX (bug #7): toggle chế độ "Sửa" (giống Shopee) — đổi header text Sửa/Xong và đổi
-    // footer giữa 2 trạng thái: bình thường (Tổng tiền/Tiếp tục) và chỉnh sửa
-    // (Tất cả/Lưu vào Đã thích/Xóa).
     private void setEditMode(boolean enabled) {
         editMode = enabled;
         if (tvEditToggle != null) {
@@ -305,11 +285,10 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         PromoCouponFragment fragment = new PromoCouponFragment();
         Bundle bundle = new Bundle();
-        // Truyền các mã đang chọn để trang Voucher hiển thị đúng trạng thái tích chọn
         bundle.putSerializable("selected_vouchers", new ArrayList<>(selectedVouchers));
         bundle.putDouble("order_total", selectedTotal);
         bundle.putDouble("shipping_fee", 21000);
-        bundle.putBoolean("has_visited", !selectedVouchers.isEmpty());
+        bundle.putBoolean("has_visited", true);
         fragment.setArguments(bundle);
 
         requireActivity().getSupportFragmentManager()
@@ -338,9 +317,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    // FIX (bug #6): thiết lập adapter gợi ý "Có thể bạn quan tâm" ngay trong Giỏ hàng, tham
-    // khảo Shopee — luôn hiển thị bất kể giỏ hàng có sản phẩm hay không, tái sử dụng đúng
-    // ProductAdapter (có nút yêu thích + thêm giỏ hàng) như các trang khác trong app.
     private void setupRecommendationAdapter() {
         recommendAdapter = new ProductAdapter(new ArrayList<>(), new ProductAdapter.OnProductClickListener() {
             @Override
@@ -360,9 +336,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                             public void onSuccess() {
                                 if (!isAdded()) return;
                                 Toast.makeText(getContext(), R.string.added_to_cart, Toast.LENGTH_SHORT).show();
-                                // FIX (yêu cầu #1): loại ngay sản phẩm khỏi "Có thể bạn quan
-                                // tâm" (thay bằng gợi ý ngẫu nhiên khác) và tải lại Giỏ hàng để
-                                // sản phẩm vừa thêm nhảy lên ngay, không cần thoát trang vào lại.
                                 replaceRecommendation(product);
                                 refreshCartList();
                             }
@@ -420,9 +393,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         });
     }
 
-    // FIX (yêu cầu #1): tách pool 20 sản phẩm đã tải thành 6 sản phẩm hiển thị + phần còn lại
-    // dự trữ để thay thế ngay khi 1 sản phẩm được thêm vào giỏ hàng, không cần gọi lại
-    // Firestore hay thoát trang vào lại.
     private void splitRecommendationPool(List<Product> pool) {
         if (!isAdded()) return;
         int showCount = Math.min(6, pool.size());
@@ -510,7 +480,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
 
-        Collections.sort(loadedItems, (o1, o2) -> {
+        loadedItems.sort((o1, o2) -> {
             com.google.firebase.Timestamp t1 = o1.getUpdatedAt();
             com.google.firebase.Timestamp t2 = o2.getUpdatedAt();
             if (t1 == null && t2 == null) return 0;
@@ -523,8 +493,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         cartItems.addAll(loadedItems);
         renderList();
         updateFooter();
-        // FIX (bug #2): sau khi tải lại giỏ hàng, đồng bộ trạng thái trái tim yêu thích thật
-        // của từng sản phẩm từ wishlist trên Firestore, để hiển thị đúng ngay khi mở trang.
         applyFavoriteStateToCartItems();
     }
 
@@ -688,9 +656,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    // FIX (yêu cầu #3): giỏ hàng trống thì ẩn toàn bộ thanh điều hướng bên dưới (footer) —
-    // không cần chiếm chỗ màn hình khi không có sản phẩm nào để thao tác. Đồng thời tự thoát
-    // chế độ "Sửa" nếu cartItems rỗng.
     private void renderList() {
         if (!isAdded() || emptyState == null || rvCartItems == null || footer == null) {
             return;
@@ -704,7 +669,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         rvCartItems.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
 
-        // ✅ ẨN THANH TỔNG TIỀN (footer) KHI GIỎ HÀNG TRỐNG
         footer.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
 
         if (tvEditToggle != null) {
@@ -809,9 +773,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
     }
 
-    // FIX (bug #2): người dùng có thể bấm trực tiếp icon trái tim trên từng sản phẩm trong
-    // Giỏ hàng để thêm/xóa khỏi Đã thích mà KHÔNG bị xóa khỏi giỏ hàng — khác với hành vi cũ
-    // của nút "Lưu vào Đã thích" ở chế độ Sửa (đã sửa bên dưới, saveSelectedItemsToWishlist()).
     @Override
     public void onToggleFavorite(CartItem item) {
         if (!isAdded() || item == null || item.getProductId() == null) return;
@@ -847,9 +808,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         Toast.makeText(getContext(), getString(R.string.wishlist_update_failed), Toast.LENGTH_SHORT).show();
     }
 
-    // FIX (hợp nhất): kết hợp cả tính năng tính giảm giá theo voucher (nhánh HEAD) và tính
-    // "Tiết kiệm ...đ" theo chênh lệch giá gốc/giá bán (nhánh Ploann). Tổng tiền hiển thị là
-    // tổng tiền hàng đã trừ giảm giá voucher; dòng tiết kiệm phản ánh chênh lệch giá sản phẩm.
     private void updateFooter() {
         if (!isAdded() || tvTotalPrice == null || btnCheckout == null) {
             return;
@@ -869,7 +827,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
 
-        // Tính toán giảm giá từ voucher, giống bên Checkout
+        // Tính toán giảm giá từ voucher
         double totalDiscount = 0;
         for (Voucher v : selectedVouchers) {
             totalDiscount += calculateSavingForFooter(v, itemsTotal);
@@ -877,11 +835,24 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         double finalTotal = Math.max(0, itemsTotal - totalDiscount);
 
-        tvTotalPrice.setText(currencyFormat.format(finalTotal) + "đ");
-        btnCheckout.setText("Tiếp tục (" + selectedCount + ")");
+        tvTotalPrice.setText(String.format(Locale.getDefault(), "%sđ", currencyFormat.format(finalTotal)));
+        
+        View view = getView();
+        if (view != null) {
+            TextView tvVoucherHint = view.findViewById(R.id.tvVoucherHint);
+            if (tvVoucherHint != null) {
+                if (totalDiscount > 0) {
+                    tvVoucherHint.setText(String.format(Locale.getDefault(), "Đã áp dụng %d voucher (Giảm %,.0fđ)", 
+                        selectedVouchers.size(), totalDiscount).replace(",", "."));
+                    tvVoucherHint.setTextColor(Color.parseColor("#36873A"));
+                } else {
+                    tvVoucherHint.setText(R.string.cart_voucher_hint);
+                    tvVoucherHint.setTextColor(Color.parseColor("#36873A"));
+                }
+            }
+        }
+        btnCheckout.setText(String.format(Locale.getDefault(), "Tiếp tục (%d)", selectedCount));
 
-        // FIX (yêu cầu #4): dòng "Tiết kiệm ...đ" bên dưới Tổng tiền, tham khảo Shopee — chỉ
-        // hiện khi các sản phẩm đang chọn có khoản chênh lệch giá gốc/giá bán thực sự.
         if (tvSavings != null) {
             if (savings > 0) {
                 tvSavings.setVisibility(View.VISIBLE);
@@ -892,14 +863,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         if (tvCartTitle != null) {
-            tvCartTitle.setText("Giỏ hàng (" + cartItems.size() + ")");
+            tvCartTitle.setText(String.format(Locale.getDefault(), "Giỏ hàng (%d)", cartItems.size()));
         }
     }
 
     private double calculateSavingForFooter(Voucher v, double itemsTotal) {
         double val = v.getDiscountAmount();
         if (v.getType() == Voucher.Type.SHIPPING) {
-            // Tại Giỏ hàng chưa tính phí ship thực tế nên chỉ tính theo phí ship giả định
             if (val == 100) return 21000;
             if (val > 0 && val < 100) return (val / 100.0) * 21000;
             return Math.min(val, 21000);
@@ -945,13 +915,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 .show();
     }
 
-    // FIX (bug #2, hợp nhất): "Lưu vào Đã thích" ở footer chế độ Sửa — thêm các sản phẩm đang
-    // chọn vào wishlist (users/{uid}/wishlist/{productId}) NHƯNG KHÔNG xóa khỏi giỏ hàng nữa.
-    // Trước đây hàm này xóa luôn document giỏ hàng sau khi thêm vào wishlist, khiến sản phẩm
-    // biến mất khỏi trang Giỏ hàng dù đã "lưu" thành công — sai với hành vi tham khảo từ
-    // Shopee, nơi sản phẩm vẫn ở lại giỏ hàng và chỉ chuyển trái tim sang trạng thái đã thích
-    // (đỏ). Đồng thời vẫn lọc ra danh sách hợp lệ (có productId) và cập nhật lại icon trái tim
-    // trên UI sau khi lưu thành công, để đồng bộ với hành vi toggle yêu thích ở onToggleFavorite.
     private void saveSelectedItemsToWishlist() {
         List<CartItem> toSave = new ArrayList<>();
         for (CartItem item : cartItems) {
@@ -977,7 +940,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             batch.set(db.collection("users").document(userId)
                     .collection("wishlist").document(item.getProductId()), data);
 
-            // ✅ KHÔNG XOÁ sản phẩm khỏi giỏ hàng nữa
             validItems.add(item);
         }
 
@@ -987,7 +949,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         batch.commit().addOnSuccessListener(unused -> {
             if (!isAdded()) return;
-            // Cập nhật UI để đánh dấu các sản phẩm vừa lưu là đã thích (trái tim đỏ)
             for (CartItem item : validItems) {
                 item.setFavorite(true);
             }
@@ -1023,6 +984,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         Bundle bundle = new Bundle();
         bundle.putSerializable("selected_items", (Serializable) selectedItems);
+        bundle.putSerializable("selected_vouchers", (Serializable) selectedVouchers);
 
         CheckoutFragment fragment = new CheckoutFragment();
         fragment.setArguments(bundle);
