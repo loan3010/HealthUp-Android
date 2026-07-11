@@ -156,9 +156,7 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
                 Toast.makeText(context, hint, Toast.LENGTH_SHORT).show();
                 return;
             }
-            // Logic: Toggle selection
-            voucher.setSelected(!voucher.isSelected());
-            notifyItemChanged(position);
+            // Không tự tích chọn nữa, báo cho Fragment xử lý xác nhận
             if (listener != null) listener.onVoucherClick(voucher);
         });
     }

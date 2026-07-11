@@ -292,6 +292,7 @@ public class MainActivity extends AppCompatActivity {
                 fragment instanceof PhoneVerificationFragment ||
                 fragment instanceof AddressBookFragment ||
                 fragment instanceof PromoCouponFragment ||
+                fragment instanceof OrderHistoryFragment || // ✅ Thêm lại để ẩn Nav Bar
                 fragment instanceof PolicyFragment ||
                 fragment instanceof MemberTierFragment ||
                 fragment instanceof FAQFragment);

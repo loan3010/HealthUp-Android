@@ -303,17 +303,44 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         TextView tvVoucherInfo = rowVoucher.findViewById(R.id.tvVoucherInfo);
         if (tvVoucherInfo == null) return;
 
+
         if (selectedVouchers.isEmpty()) {
             tvVoucherInfo.setText("Chọn hoặc nhập mã khuyến mãi");
             tvVoucherInfo.setTextColor(getResources().getColor(R.color.green_button));
         } else {
-            StringBuilder sb = new StringBuilder("Đã chọn: ");
-            for (int i = 0; i < selectedVouchers.size(); i++) {
-                sb.append(selectedVouchers.get(i).getCode());
-                if (i < selectedVouchers.size() - 1) sb.append(", ");
+            // ✅ Theo yêu cầu: Chỉ ghi nhãn "Đã áp dụng mã vận chuyển" và số tiền giảm hàng
+            boolean hasShipping = false;
+            double itemDiscount = 0;
+            double itemsTotal = 0;
+            for (CartItem ci : cartItems) if (ci.isSelected()) itemsTotal += ci.getPrice() * ci.getQuantity();
+
+
+            for (Voucher v : selectedVouchers) {
+                // Kiểm tra điều kiện ngay tại đây để nhãn hiển thị chính xác
+                if (itemsTotal >= v.getMinOrderAmount()) {
+                    if (v.getType() == Voucher.Type.SHIPPING) hasShipping = true;
+                    else itemDiscount += calculateSavingForFooter(v, itemsTotal);
+                }
             }
-            tvVoucherInfo.setText(sb.toString());
-            tvVoucherInfo.setTextColor(getResources().getColor(R.color.text_dark));
+
+
+            StringBuilder sb = new StringBuilder();
+            if (hasShipping) {
+                sb.append("Đã áp dụng mã vận chuyển");
+            }
+
+            if (itemDiscount > 0) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append("Giảm sản phẩm ").append(currencyFormat.format(itemDiscount)).append("đ");
+            }
+            
+            if (sb.length() == 0) {
+                tvVoucherInfo.setText("Đơn hàng chưa đủ điều kiện để áp mã, bạn cần mua thêm");
+                tvVoucherInfo.setTextColor(Color.RED);
+            } else {
+                tvVoucherInfo.setText(sb.toString());
+                tvVoucherInfo.setTextColor(getResources().getColor(R.color.text_dark));
+            }
         }
     }
 
@@ -461,7 +488,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
 
+
         boolean isRebuyFlow = getArguments() != null && getArguments().getBoolean("is_rebuy_flow", false);
+
 
         List<CartItem> loadedItems = new ArrayList<>();
         if (snapshot != null && !snapshot.isEmpty()) {
@@ -472,13 +501,14 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         Boolean dbSelected = doc.getBoolean("selected");
                         item.setSelected(dbSelected != null ? dbSelected : false);
                     } else {
-                        Boolean wasSelected = selection.get(item.getId());
-                        item.setSelected(wasSelected != null ? wasSelected : true);
+                        // ✅ MẶC ĐỊNH CHỌN HẾT KHI LOAD
+                        item.setSelected(true);
                     }
                     loadedItems.add(item);
                 }
             }
         }
+
 
         loadedItems.sort((o1, o2) -> {
             com.google.firebase.Timestamp t1 = o1.getUpdatedAt();
@@ -489,8 +519,23 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             return t2.compareTo(t1);
         });
 
+
         cartItems.clear();
         cartItems.addAll(loadedItems);
+        
+        // ✅ Cập nhật trạng thái checkbox "Tất cả" và đồng bộ UI
+        if (cbSelectAll != null) {
+            cbSelectAll.setOnCheckedChangeListener(null);
+            cbSelectAll.setChecked(true);
+            attachSelectAllListener(cbSelectAll);
+        }
+        if (cbSelectAllEdit != null) {
+            cbSelectAllEdit.setOnCheckedChangeListener(null);
+            cbSelectAllEdit.setChecked(true);
+            attachSelectAllListener(cbSelectAllEdit);
+        }
+
+
         renderList();
         updateFooter();
         applyFavoriteStateToCartItems();
@@ -813,9 +858,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             return;
         }
 
+
         double itemsTotal = 0;
         double savings = 0;
         int selectedCount = 0;
+
 
         for (CartItem item : cartItems) {
             if (item.isSelected()) {
@@ -827,13 +874,23 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
 
-        // Tính toán giảm giá từ voucher
-        double totalDiscount = 0;
+
+        // ✅ ĐỒNG BỘ LOGIC: Tại giỏ hàng, chỉ trừ tiền giảm của Voucher Sản phẩm vào tổng tiền
+        // Vì phí vận chuyển chưa được cộng vào, nên không được trừ voucher vận chuyển ở đây.
+        double totalItemDiscount = 0;
+        int validVoucherCount = 0;
         for (Voucher v : selectedVouchers) {
-            totalDiscount += calculateSavingForFooter(v, itemsTotal);
+            if (itemsTotal >= v.getMinOrderAmount()) {
+                validVoucherCount++;
+                if (v.getType() != Voucher.Type.SHIPPING) {
+                    totalItemDiscount += calculateSavingForFooter(v, itemsTotal);
+                }
+            }
         }
 
-        double finalTotal = Math.max(0, itemsTotal - totalDiscount);
+
+        double finalTotal = Math.max(0, itemsTotal - totalItemDiscount);
+
 
         tvTotalPrice.setText(String.format(Locale.getDefault(), "%sđ", currencyFormat.format(finalTotal)));
         
@@ -841,9 +898,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (view != null) {
             TextView tvVoucherHint = view.findViewById(R.id.tvVoucherHint);
             if (tvVoucherHint != null) {
-                if (totalDiscount > 0) {
-                    tvVoucherHint.setText(String.format(Locale.getDefault(), "Đã áp dụng %d voucher (Giảm %,.0fđ)", 
-                        selectedVouchers.size(), totalDiscount).replace(",", "."));
+                if (validVoucherCount > 0) {
+                    tvVoucherHint.setText(String.format(Locale.getDefault(), "Đã áp dụng %d voucher", validVoucherCount));
                     tvVoucherHint.setTextColor(Color.parseColor("#36873A"));
                 } else {
                     tvVoucherHint.setText(R.string.cart_voucher_hint);
