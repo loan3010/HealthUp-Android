@@ -9,6 +9,7 @@
     android:background="@drawable/bg_rounded_rect"
     android:elevation="2dp">
 
+
     <CheckBox
         android:id="@+id/cbSelect"
         android:layout_width="24dp"
@@ -16,6 +17,7 @@
         android:layout_gravity="center_vertical"
         android:button="@drawable/cb_custom"
         app:buttonTint="@null" />
+
 
     <ImageView
         android:id="@+id/imgProduct"
@@ -26,6 +28,7 @@
         android:scaleType="centerCrop"
         android:contentDescription="Product Image" />
 
+
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -33,10 +36,12 @@
         android:layout_marginStart="12dp"
         android:orientation="vertical">
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal">
+
 
             <TextView
                 android:id="@+id/tvName"
@@ -48,15 +53,32 @@
                 android:textSize="14sp"
                 android:textColor="@color/text_dark" />
 
+
+            <!-- FIX (bug #2): icon trái tim thể hiện trạng thái Đã thích của sản phẩm trong
+                 giỏ hàng, có thể bấm để thêm/xóa yêu thích trực tiếp mà không mất sản phẩm
+                 khỏi giỏ hàng. -->
+            <ImageView
+                android:id="@+id/ivFavorite"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_marginStart="8dp"
+                android:padding="2dp"
+                app:tint="@color/text_gray_light"
+                android:src="@drawable/ic_heart_outline"
+                android:contentDescription="Favorite" />
+
+
             <ImageView
                 android:id="@+id/btnRemove"
                 android:layout_width="20dp"
                 android:layout_height="20dp"
+                android:layout_marginStart="8dp"
                 android:padding="2dp"
                 app:tint="@color/text_gray_light"
                 android:src="@drawable/ic_close"
                 android:contentDescription="Remove" />
         </LinearLayout>
+
 
         <TextView
             android:id="@+id/tvVariant"
@@ -70,6 +92,7 @@
             android:clickable="true"
             android:focusable="true" />
 
+
         <TextView
             android:id="@+id/tvStockWarning"
             android:layout_width="wrap_content"
@@ -79,12 +102,14 @@
             android:textColor="@color/yellow_progress"
             android:visibility="gone" />
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:orientation="horizontal"
             android:gravity="center_vertical">
+
 
             <TextView
                 android:id="@+id/tvPrice"
@@ -94,6 +119,7 @@
                 android:textSize="14sp"
                 android:textColor="@color/green_button" />
 
+
             <TextView
                 android:id="@+id/tvOriginalPrice"
                 android:layout_width="wrap_content"
@@ -102,10 +128,12 @@
                 android:textSize="12sp"
                 android:textColor="@color/text_gray_light" />
 
+
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1" />
+
 
             <LinearLayout
                 android:layout_width="wrap_content"
@@ -116,6 +144,7 @@
                 android:backgroundTint="@color/bg_cream"
                 android:paddingHorizontal="4dp">
 
+
                 <TextView
                     android:id="@+id/btnDecrease"
                     android:layout_width="24dp"
@@ -125,6 +154,7 @@
                     android:textSize="16sp"
                     android:textColor="@color/text_dark" />
 
+
                 <TextView
                     android:id="@+id/tvQuantity"
                     android:layout_width="28dp"
@@ -133,6 +163,7 @@
                     android:text="1"
                     android:textSize="14sp"
                     android:textColor="@color/text_dark" />
+
 
                 <TextView
                     android:id="@+id/btnIncrease"

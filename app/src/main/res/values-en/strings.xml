@@ -314,6 +314,7 @@
     <string name="cart_shop_now">Continue Shopping</string>
     <string name="cart_select_items_required">Please select at least 1 item</string>
     <string name="cart_saved_to_wishlist">Saved to wishlist</string>
+    <string name="cart_savings_format">Save %1$s</string>
     <string name="wishlist_added">Added to wishlist</string>
     <string name="wishlist_removed">Removed from wishlist</string>
     <string name="wishlist_update_failed">Could not update wishlist</string>

@@ -137,26 +137,13 @@ public class ProfileFragment extends Fragment {
 
     private void applyHeaderWindowInsets(View view) {
         View header = view.findViewById(R.id.profile_header);
-        if (header == null) {
-            return;
-        }
-
-        final int basePaddingStart = header.getPaddingStart();
-        final int basePaddingTop = header.getPaddingTop();
-        final int basePaddingEnd = header.getPaddingEnd();
-        final int basePaddingBottom = header.getPaddingBottom();
-
+        if (header == null) return;
         ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPaddingRelative(
-                    basePaddingStart,
-                    basePaddingTop + systemBars.top,
-                    basePaddingEnd,
-                    basePaddingBottom
-            );
+            // ✅ Chỉ dùng systemBars.top để header đi lên sát mép
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
             return windowInsets;
         });
-        ViewCompat.requestApplyInsets(header);
     }
 
 

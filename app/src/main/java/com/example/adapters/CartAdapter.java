@@ -1,6 +1,8 @@
 package com.example.adapters;
 
 
+
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -9,13 +11,20 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 
+
+
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
+
+
 
 
 import com.example.healthup.R;
 import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.CartItem;
+
+
 
 
 import com.example.healthup.util.LocaleHelper;
@@ -25,7 +34,11 @@ import java.util.List;
 import java.util.Locale;
 
 
+
+
 public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
+
+
 
 
     public interface Listener {
@@ -34,7 +47,12 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         void onRemove(CartItem item);
         void onEditVariant(CartItem item);
         void onItemClick(CartItem item);
+        // FIX (bug #2): cho phép bấm trực tiếp icon trái tim trên từng sản phẩm trong giỏ hàng
+        // để thêm/xóa khỏi Đã thích, mà không xóa sản phẩm khỏi giỏ hàng.
+        void onToggleFavorite(CartItem item);
     }
+
+
 
 
     private final List<CartItem> items;
@@ -42,10 +60,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
 
 
+
+
     public CartAdapter(List<CartItem> items, Listener listener) {
         this.items = items;
         this.listener = listener;
     }
+
+
 
 
     @NonNull
@@ -57,18 +79,24 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
     }
 
 
+
+
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         CartItem item = items.get(position);
+
+
 
 
         // FIX (yêu cầu #1): trước đây chỉ ảnh sản phẩm và tên sản phẩm có thể bấm để mở
         // Chi tiết sản phẩm, phần còn lại của ô (giá, số lượng, khoảng trống...) không phản
         // hồi khi bấm, khiến người dùng có cảm giác "không click vào sản phẩm được". Gắn thêm
         // listener cho toàn bộ ô (itemView); các nút con đã có listener riêng (checkbox, tăng/
-        // giảm số lượng, xóa, chọn phân loại) sẽ tự nhận sự kiện chạm trước và không bị ảnh
-        // hưởng bởi listener này.
+        // giảm số lượng, xóa, trái tim, chọn phân loại) sẽ tự nhận sự kiện chạm trước và không
+        // bị ảnh hưởng bởi listener này.
         holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+
+
 
 
         if (holder.cbSelect != null) {
@@ -81,9 +109,12 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
 
 
+
+
         if (holder.tvName != null) {
             String name = item.getName();
             holder.tvName.setText(name != null ? name : "");
+
 
             String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
             if ("en".equals(currentLang) && name != null) {
@@ -94,9 +125,12 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
 
 
+
+
         if (holder.tvVariant != null) {
             String variantLabel = item.getVariantLabel();
             holder.tvVariant.setText(variantLabel != null ? variantLabel : "");
+
 
             String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
             if ("en".equals(currentLang) && variantLabel != null) {
@@ -107,16 +141,22 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
 
 
+
+
         if (holder.tvPrice != null) {
             double price = item.getPrice();
             holder.tvPrice.setText("đ " + currencyFormat.format(price));
         }
 
 
+
+
         if (holder.tvQuantity != null) {
             int quantity = Math.max(item.getQuantity(), 1);
             holder.tvQuantity.setText(String.valueOf(quantity));
         }
+
+
 
 
         if (holder.tvOriginalPrice != null) {
@@ -131,6 +171,8 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
 
 
+
+
         if (holder.tvStockWarning != null) {
             if (item.getStock() > 0 && item.getStock() <= 3) {
                 holder.tvStockWarning.setVisibility(View.VISIBLE);
@@ -139,6 +181,8 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
                 holder.tvStockWarning.setVisibility(View.GONE);
             }
         }
+
+
 
 
         if (holder.imgProduct != null) {
@@ -152,9 +196,13 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         }
 
 
+
+
         if (holder.tvName != null) {
             holder.tvName.setOnClickListener(v -> listener.onItemClick(item));
         }
+
+
 
 
         if (holder.tvVariant != null) {
@@ -163,6 +211,22 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         if (holder.btnRemove != null) {
             holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
         }
+
+
+
+
+        // FIX (bug #2): icon trái tim phản ánh đúng trạng thái yêu thích của sản phẩm; bấm vào
+        // để thêm/xóa khỏi Đã thích trực tiếp ngay tại Giỏ hàng, không làm mất sản phẩm khỏi giỏ.
+        if (holder.ivFavorite != null) {
+            boolean fav = item.isFavorite();
+            holder.ivFavorite.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+            int tintColor = ContextCompat.getColor(holder.itemView.getContext(),
+                    fav ? R.color.error : R.color.text_gray_light);
+            holder.ivFavorite.setColorFilter(tintColor);
+            holder.ivFavorite.setOnClickListener(v -> listener.onToggleFavorite(item));
+        }
+
+
 
 
         if (holder.btnIncrease != null) {
@@ -176,6 +240,8 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
                 listener.onQuantityChanged(item, newQty);
             });
         }
+
+
 
 
         if (holder.btnDecrease != null) {
@@ -192,14 +258,20 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
     }
 
 
+
+
     @Override
     public int getItemCount() { return items.size(); }
 
 
+
+
     static class ViewHolder extends RecyclerView.ViewHolder {
         CheckBox cbSelect;
-        ImageView imgProduct, btnRemove;
+        ImageView imgProduct, btnRemove, ivFavorite;
         TextView tvName, tvVariant, tvStockWarning, tvPrice, tvOriginalPrice, tvQuantity, btnDecrease, btnIncrease;
+
+
 
 
         ViewHolder(@NonNull View itemView) {
@@ -207,6 +279,7 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
             cbSelect = itemView.findViewById(R.id.cbSelect);
             imgProduct = itemView.findViewById(R.id.imgProduct);
             btnRemove = itemView.findViewById(R.id.btnRemove);
+            ivFavorite = itemView.findViewById(R.id.ivFavorite);
             tvName = itemView.findViewById(R.id.tvName);
             tvVariant = itemView.findViewById(R.id.tvVariant);
             tvStockWarning = itemView.findViewById(R.id.tvStockWarning);

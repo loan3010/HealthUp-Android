@@ -151,7 +151,7 @@ public class CheckoutFragment extends Fragment {
 
 
         bindViews(view);
-        applySystemBarInsets(view);
+        applyHeaderWindowInsets(view); // ✅ Đồng bộ header với Cart/Profile
         setupListeners();
         hydrateSelectedItemImages();
         renderProductList();
@@ -159,10 +159,21 @@ public class CheckoutFragment extends Fragment {
         loadDefaultAddress();
         loadUserTierAndVouchers(); 
         
-        // ✅ THÊM: Đồng bộ lại giao diện vận chuyển và tính toán tiền ngay khi view được tạo lại
+        // Đồng bộ giao diện vận chuyển
         updateShippingSelection();
 
         return view;
+    }
+
+    private void applyHeaderWindowInsets(View view) {
+        View header = view.findViewById(R.id.header);
+        if (header == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            // Chỉ dùng systemBars.top, không cộng thêm padding dư thừa để tránh bị "tụt xuống"
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return windowInsets;
+        });
     }
 
 
@@ -338,32 +349,34 @@ public class CheckoutFragment extends Fragment {
         }
 
         double val = v.getDiscountAmount();
+        String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
+        String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
 
-        // ✅ KIỂM TRA ĐIỀU KIỆN VẬN CHUYỂN
         if (v.getType() == Voucher.Type.SHIPPING) {
-            String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
-            String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
-            
-            // Nếu là mã chỉ dành cho Giao Nhanh (Fast)
-            boolean isFastVoucher = desc.contains("giao nhanh") || code.contains("fast") || desc.contains("2 giờ");
-            boolean isFastShippingSelected = (shippingFee > 25000); // 45k là fast, 21k là standard
-
-            if (isFastVoucher && !isFastShippingSelected) {
-                return 0; // Mã không áp dụng cho phương thức giao hàng hiện tại
+            // ✅ Chỉ giảm 100% nếu giá trị mã là 100 (%), không tự ý giảm theo tên mã nữa
+            if (val == 100) {
+                return shippingFee;
             }
-            
-            // Nếu là mã % (VD: FreeShip 100%)
-            if (val > 0 && val <= 100) {
+
+            // Kiểm tra mã chỉ dành cho Giao nhanh
+            boolean isFastVoucher = desc.contains("giao nhanh") || code.contains("fast") || desc.contains("2 giờ");
+            boolean isFastShippingSelected = (shippingFee > 25000); 
+            if (isFastVoucher && !isFastShippingSelected) return 0;
+
+            // Nếu giá trị mã nhỏ (VD: 10, 20, 50) thì coi là % phí ship
+            if (val > 0 && val < 100) {
                 return (val / 100.0) * shippingFee;
             }
+            
+            // ✅ Nếu giá trị mã lớn (VD: 20000, 21000) thì trả về đúng số tiền đó
+            return val;
         } else {
-            // Mã giảm giá sản phẩm %
+            // Giảm giá sản phẩm
             if (val > 0 && val <= 100) {
                 return (val / 100.0) * itemsTotal;
             }
+            return val;
         }
-
-        return val;
     }
 
 
@@ -486,6 +499,9 @@ public class CheckoutFragment extends Fragment {
             } else if (checkedId == R.id.rbMomo) {
                 selectedPaymentMethod = "momo";
                 provider = "MoMo";
+            } else if (checkedId == R.id.rbLinkedBank) {
+                selectedPaymentMethod = "linked_bank";
+                provider = "Tài khoản ngân hàng liên kết";
             }
 
             requestPaymentPermission(provider, checkedId);
@@ -668,17 +684,6 @@ public class CheckoutFragment extends Fragment {
     }
 
 
-    private void applySystemBarInsets(View view) {
-        View footer = view.findViewById(R.id.footer);
-        if (footer == null) return;
-
-        ViewCompat.setOnApplyWindowInsetsListener(footer, (v, windowInsets) -> {
-            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), systemBars.bottom);
-            return windowInsets;
-        });
-    }
-
     private void openAddressBook() {
         AddressBookFragment fragment = new AddressBookFragment();
         Bundle bundle = new Bundle();
@@ -792,12 +797,14 @@ public class CheckoutFragment extends Fragment {
             else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "ZaloPay Wallet";
             else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "VNPAY Wallet";
             else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Credit / Debit Card";
+            else if ("linked_bank".equals(selectedPaymentMethod)) paymentDisplay = "Linked Bank Account";
         } else {
             if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
             else if ("momo".equals(selectedPaymentMethod)) paymentDisplay = "Ví MoMo";
             else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
             else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
             else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
+            else if ("linked_bank".equals(selectedPaymentMethod)) paymentDisplay = "Tài khoản ngân hàng liên kết";
         }
 
         order.setPaymentMethod(paymentDisplay);
@@ -939,6 +946,13 @@ public class CheckoutFragment extends Fragment {
 
         dialogView.findViewById(R.id.btnTrackOrder).setOnClickListener(v -> {
             dialog.dismiss();
+            
+            // ✅ HIỆN LẠI NAV BAR khi chuyển sang Theo dõi đơn hàng
+            View navView = requireActivity().findViewById(R.id.bottom_navigation);
+            if (navView != null) {
+                navView.setVisibility(View.VISIBLE);
+            }
+
             OrderHistoryFragment fragment = new OrderHistoryFragment();
             Bundle args = new Bundle();
             args.putInt("initial_tab", 1); // Chuyển đến tab "Chờ xác nhận"

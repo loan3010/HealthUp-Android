@@ -320,6 +320,7 @@
     <string name="cart_shop_now">Tiếp tục mua sắm</string>
     <string name="cart_select_items_required">Vui lòng chọn ít nhất 1 sản phẩm</string>
     <string name="cart_saved_to_wishlist">Đã lưu vào yêu thích</string>
+    <string name="cart_savings_format">Tiết kiệm %1$s</string>
     <string name="wishlist_added">Đã thêm vào yêu thích</string>
     <string name="wishlist_removed">Đã xóa khỏi yêu thích</string>
     <string name="wishlist_update_failed">Không thể cập nhật yêu thích</string>
