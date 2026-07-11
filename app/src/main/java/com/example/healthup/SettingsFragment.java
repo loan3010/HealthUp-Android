@@ -100,6 +100,20 @@ public class SettingsFragment extends Fragment {
         ItemSettingRowBinding deleteBinding = ItemSettingRowBinding.bind(binding.itemDeleteAccount.getRoot());
         deleteBinding.tvTitle.setText("Xóa tài khoản");
         deleteBinding.tvTitle.setTextColor(getResources().getColor(R.color.action_error));
+
+        // FIX: Đăng xuất hoạt động
+        binding.btnLogout.setOnClickListener(v -> {
+            com.google.firebase.auth.FirebaseAuth.getInstance().signOut();
+            Toast.makeText(getActivity(), "Đã đăng xuất", Toast.LENGTH_SHORT).show();
+            
+            // Quay về màn hình Home hoặc Profile (đã logout)
+            Intent intent = new Intent(getActivity(), MainActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+            if (getActivity() != null) {
+                getActivity().finish();
+            }
+        });
     }
 
 

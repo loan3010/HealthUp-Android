@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -57,16 +58,16 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
 
         db = FirebaseFirestore.getInstance();
-        // FIX (bug: "Địa chỉ trong thanh toán không lưu vào Sổ địa chỉ"): bỏ fallback
-        // "guest_user". Trước đây nếu FirebaseAuth chưa kịp trả UID thật, danh sách địa chỉ
-        // được đọc/ghi từ document ảo "guest_user" — khác hẳn document của UID thật, khiến
-        // địa chỉ vừa thêm trong lúc thanh toán "biến mất" khỏi Sổ địa chỉ thật.
-        userId = FirebaseAuth.getInstance().getUid();
-
-
-        bindViews(view);
-        setupListeners();
-        loadAddressesFromFirestore();
+        String currentAuthId = FirebaseAuth.getInstance().getUid();
+        
+        if (currentAuthId == null) {
+            setupLoginRequired(view);
+        } else {
+            userId = currentAuthId;
+            bindViews(view);
+            setupListeners();
+            loadAddressesFromFirestore();
+        }
 
 
         getParentFragmentManager().setFragmentResultListener("address_form_result", getViewLifecycleOwner(), (requestKey, result) -> {
@@ -78,6 +79,23 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
 
         return view;
+    }
+
+
+    private void setupLoginRequired(View view) {
+        View layout = view.findViewById(R.id.layoutLoginRequired);
+        if (layout != null) {
+            layout.setVisibility(View.VISIBLE);
+            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
+                android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
+                startActivity(intent);
+            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            });
+        }
     }
 
 
@@ -94,7 +112,6 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
 
     private void setupListeners() {
-        // FIX: chặn thêm địa chỉ mới nếu chưa đăng nhập, tránh lưu vào nơi "vô hình".
         btnAddNewAddress.setOnClickListener(v -> {
             if (FirebaseAuth.getInstance().getUid() == null) {
                 Toast.makeText(getContext(), "Vui lòng đăng nhập để thêm địa chỉ", Toast.LENGTH_SHORT).show();
