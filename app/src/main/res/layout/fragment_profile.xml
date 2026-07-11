@@ -27,7 +27,7 @@
             android:paddingStart="20dp"
             android:paddingEnd="20dp"
             android:paddingTop="0dp"
-            android:paddingBottom="10dp">
+            android:paddingBottom="0dp">
 
             <FrameLayout
                 android:id="@+id/avatar_container"

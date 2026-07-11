@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:minHeight="48dp"
         android:paddingTop="0dp"
-        android:paddingBottom="4dp"
+        android:paddingBottom="0dp"
         android:orientation="horizontal"
         android:gravity="center_vertical"
         android:background="@color/bg_cream"

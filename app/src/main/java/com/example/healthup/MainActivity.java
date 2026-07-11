@@ -321,7 +321,6 @@ public class MainActivity extends AppCompatActivity {
                 fragment instanceof PhoneVerificationFragment ||
                 fragment instanceof AddressBookFragment ||
                 fragment instanceof PromoCouponFragment ||
-                fragment instanceof OrderHistoryFragment ||
                 fragment instanceof PolicyFragment ||
                 fragment instanceof FAQFragment);
     }
