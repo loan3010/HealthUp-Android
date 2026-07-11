@@ -342,12 +342,15 @@
     <string name="debug_chat_link">Chat Assistant</string>
 
     <string name="author_prefix">Bởi: %1$s</string>
-    <string name="faq_title">Câu hỏi thường gặp</string>
+    <string name="faq_title">Trung tâm trợ giúp</string>
+    <string name="faq_frequent">Câu hỏi thường gặp</string>
     <string name="blog_title">Cẩm nang sức khỏe</string>
     <string name="search_hint">Tìm granola, snack lành mạnh...</string>
     <string name="all_categories">Tất cả</string>
     <string name="faq_category_title">Danh mục trợ giúp</string>
     <string name="faq_search_result">Kết quả tìm kiếm</string>
+    <string name="faq_search_hint">Tìm câu hỏi của bạn...</string>
+    <string name="faq_suggestions">Gợi ý thêm</string>
     <string name="faq_category_prefix">Câu hỏi về %1$s</string>
     <string name="faq_not_found_title">Không tìm thấy câu trả lời?</string>
     <string name="faq_not_found_desc">Đừng lo lắng! Đội ngũ hỗ trợ của HealthUp luôn sẵn sàng giúp đỡ bạn 24/7.</string>
