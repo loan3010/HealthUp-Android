@@ -386,6 +386,7 @@
     <string name="cart_shop_now">Tiếp tục mua sắm</string>
     <string name="cart_select_items_required">Vui lòng chọn ít nhất 1 sản phẩm</string>
     <string name="cart_saved_to_wishlist">Đã lưu vào yêu thích</string>
+    <string name="cart_savings_format">Tiết kiệm %1$s</string>
     <string name="wishlist_added">Đã thêm vào yêu thích</string>
     <string name="wishlist_removed">Đã xóa khỏi yêu thích</string>
     <string name="wishlist_update_failed">Không thể cập nhật yêu thích</string>
@@ -657,4 +658,30 @@
     <string name="admin_customer_verified_yes">Đã xác minh</string>
     <string name="admin_customer_verified_no">Chưa xác minh</string>
     <string name="admin_product_hidden_success">Đã ẩn sản phẩm</string>
+    <string name="payment_bank_link">Liên kết tài khoản ngân hàng</string>
+
+    <!-- Loyalty / Member Tier -->
+    <string name="loyalty_title">Khách hàng thân thiết</string>
+    <string name="loyalty_rank_member">Member</string>
+    <string name="loyalty_rank_vip">VIP</string>
+    <string name="loyalty_points_format">%1$s điểm</string>
+    <string name="loyalty_value_equiv">Tương đương %1$s VND đã tích lũy</string>
+    <string name="loyalty_next_rank_hint">Chi thêm %1$s VND để lên hạng VIP</string>
+    <string name="loyalty_action_redeem">Đổi điểm lấy quà</string>
+    <string name="loyalty_action_redeem_sub">%1$d ưu đãi</string>
+    <string name="loyalty_action_birthday">Quà sinh nhật</string>
+    <string name="loyalty_action_birthday_sub">Còn %1$d ngày</string>
+    <string name="loyalty_benefits_title">Quyền lợi theo hạng</string>
+    <string name="loyalty_current_rank_label">Member — hạng hiện tại</string>
+    <string name="loyalty_member_benefits">Tích điểm mỗi đơn, đổi voucher, sinh nhật nhận quà</string>
+    <string name="loyalty_vip_benefits">Giảm 15% mọi đơn + Freeship + Ưu tiên sản phẩm mới + Tư vấn dinh dưỡng riêng</string>
+    <string name="loyalty_badges_title">Huy hiệu của bạn</string>
+    <string name="loyalty_badge_eat_clean">30 ngày eat\nclean</string>
+    <string name="loyalty_badge_granola">10kg granola</string>
+    <string name="loyalty_badge_referral">3 bạn giới\nthiệu</string>
+    <string name="loyalty_referral_title">Giới thiệu bạn bè</string>
+    <string name="loyalty_referral_sub">Cả hai nhận 50k khi bạn mua đơn đầu</string>
+    <string name="loyalty_btn_catalogue">Xem catalogue đổi điểm</string>
+    <string name="loyalty_vip_achieved">Bạn đã đạt hạng VIP!</string>
+    <string name="loyalty_rank_vip_label">VIP — hạng hiện tại</string>
 </resources>

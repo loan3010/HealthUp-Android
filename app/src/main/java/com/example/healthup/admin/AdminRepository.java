@@ -430,8 +430,7 @@ public class AdminRepository {
                 String returnStatus = doc.getString("returnStatus");
                 if (!TextUtils.isEmpty(returnStatus)) {
                     order.setReturnStatus(returnStatus);
-                } else if (order.getReturnHandling() != null
-                        || Order.STATUS_RETURNED.equalsIgnoreCase(order.getStatus())) {
+                } else if (order.getReturnHandling() != null || Order.STATUS_RETURNED.equalsIgnoreCase(order.getStatus())) {
                     if (Order.STATUS_COMPLETED.equalsIgnoreCase(order.getStatus())) {
                         order.setReturnStatus(Order.RETURN_COMPLETED);
                     } else {
@@ -491,6 +490,18 @@ public class AdminRepository {
         }
         advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_CONFIRMED,
                 "order_confirmed", "Admin đã xác nhận đơn hàng", callback);
+    }
+
+    /** Duyệt yêu cầu hủy đơn hàng (pending -> cancelled) */
+    public void approveCancelRequest(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        Map<String, Object> extra = new HashMap<>();
+        extra.put("cancelRequested", false);
+        advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_CANCELLED,
+                "cancel_approved", "Duyệt yêu cầu hủy đơn hàng", extra, callback);
     }
 
     /** confirmed → shipping */
@@ -859,6 +870,8 @@ public class AdminRepository {
                         return;
                     }
 
+                    WriteBatch batch = db.batch();
+
                     Map<String, Object> updates = new HashMap<>();
                     updates.put("status", toStatus);
                     updates.put("updatedAt", Timestamp.now());
@@ -867,6 +880,25 @@ public class AdminRepository {
                     }
                     if (extraUpdates != null) {
                         updates.putAll(extraUpdates);
+                    }
+                    batch.update(db.collection("orders").document(orderId), updates);
+
+                    // Xử lý hạng thành viên (Loyalty)
+                    String buyerId = order.getUserId();
+                    double total = order.getTotalPrice();
+                    String currentStatus = order.getStatus();
+
+                    if (!TextUtils.isEmpty(buyerId)) {
+                        if (Order.STATUS_DELIVERED.equalsIgnoreCase(toStatus) && !Order.STATUS_DELIVERED.equalsIgnoreCase(currentStatus)) {
+                            // Chuyển sang Giao thành công -> Tăng tích lũy
+                            batch.update(db.collection("users").document(buyerId),
+                                    "spentAmount", FieldValue.increment(total));
+                        } else if ((Order.STATUS_RETURNED.equalsIgnoreCase(toStatus) || Order.STATUS_CANCELLED.equalsIgnoreCase(toStatus))
+                                && Order.STATUS_DELIVERED.equalsIgnoreCase(currentStatus)) {
+                            // Nếu đã từng Delivered mà giờ bị Trả hoặc Hủy -> Giảm tích lũy
+                            batch.update(db.collection("users").document(buyerId),
+                                    "spentAmount", FieldValue.increment(-total));
+                        }
                     }
 
                     String resolvedEvent = event != null ? event : "status_changed";
@@ -891,8 +923,6 @@ public class AdminRepository {
                             break;
                     }
 
-                    WriteBatch batch = db.batch();
-                    batch.update(db.collection("orders").document(orderId), updates);
                     appendHistory(batch, orderId, user, resolvedEvent,
                             fromStatus != null ? fromStatus : order.getStatus(), toStatus,
                             note, null, order.getDeliveryAttempts());

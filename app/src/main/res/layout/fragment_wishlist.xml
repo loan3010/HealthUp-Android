@@ -279,6 +279,9 @@
 
 
     <!-- Selection Bottom Bar (Visible in Edit Mode) -->
+    <!-- FIX: thêm checkbox "Tất cả" bên trái nút Xóa, giống thanh chọn ở Giỏ hàng, để
+         người dùng chọn/bỏ chọn toàn bộ sản phẩm yêu thích chỉ bằng 1 lần chạm thay vì
+         phải bấm từng sản phẩm khi ở chế độ Chỉnh sửa. -->
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/card_delete_bar"
         android:layout_width="match_parent"
@@ -293,14 +296,28 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:gravity="center"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
             android:paddingHorizontal="16dp">
+
+
+            <CheckBox
+                android:id="@+id/cb_select_all_wishlist"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:buttonTint="@color/primary_green"
+                android:paddingStart="4dp"
+                android:text="Tất cả"
+                android:textColor="@color/text_dark"
+                android:textSize="14sp" />
 
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_delete_selected"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="56dp"
+                android:layout_weight="1"
+                android:layout_marginStart="12dp"
                 android:backgroundTint="#E53935"
                 android:text="Xóa (0)"
                 android:textAllCaps="false"

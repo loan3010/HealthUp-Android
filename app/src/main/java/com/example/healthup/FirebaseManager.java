@@ -16,6 +16,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.Query;
 import com.google.firebase.firestore.QuerySnapshot;
+import com.google.firebase.firestore.WriteBatch;
 import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import java.util.ArrayList;
@@ -207,10 +208,42 @@ public class FirebaseManager {
         if (orderId == null || orderId.isEmpty()) {
             return com.google.android.gms.tasks.Tasks.forException(new Exception("OrderId is missing"));
         }
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", status);
-        updates.put("updatedAt", new java.util.Date());
-        return db.collection("orders").document(orderId).update(updates);
+
+        return db.collection("orders").document(orderId).get().continueWithTask(task -> {
+            DocumentSnapshot orderDoc = task.getResult();
+            if (!orderDoc.exists()) throw new Exception("Order not found");
+
+            String userId = orderDoc.getString("userId");
+            String fromStatus = orderDoc.getString("status");
+            Double total = orderDoc.getDouble("totalPrice");
+            if (total == null) total = 0.0;
+
+            WriteBatch batch = db.batch();
+
+            // 1. Cập nhật trạng thái đơn hàng
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("status", status);
+            updates.put("updatedAt", new java.util.Date());
+            if ("delivered".equals(status)) {
+                updates.put("deliveredAt", new java.util.Date());
+            }
+            batch.update(db.collection("orders").document(orderId), updates);
+
+            // 2. Cập nhật tích lũy và hạng thành viên
+            if (userId != null) {
+                if ("delivered".equals(status) && !"delivered".equals(fromStatus)) {
+                    // Chuyển sang Delivered -> Tăng tích lũy
+                    batch.update(db.collection("users").document(userId),
+                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(total));
+                } else if (("returned".equals(status) || "cancelled".equals(status)) && "delivered".equals(fromStatus)) {
+                    // Nếu đã từng Delivered mà giờ bị Trả hoặc Hủy -> Giảm tích lũy
+                    batch.update(db.collection("users").document(userId),
+                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
+                }
+            }
+
+            return batch.commit();
+        });
     }
 
     public Task<Void> cancelOrder(String orderId, String reason, double amount) {
@@ -331,12 +364,21 @@ public class FirebaseManager {
             if (buyerId == null) buyerId = doc.getString("buyerId");
             if (buyerId == null) buyerId = uid;
 
+            Double total = doc.getDouble("totalPrice");
+            if (total == null) total = 0.0;
+
             com.google.firebase.firestore.WriteBatch batch = db.batch();
             Map<String, Object> updates = new HashMap<>();
             updates.put("status", Order.STATUS_DELIVERED);
             updates.put("updatedAt", Timestamp.now());
             updates.put("deliveredAt", Timestamp.now());
             batch.update(db.collection("orders").document(orderId), updates);
+
+            // Cập nhật tích lũy và hạng thành viên
+            if (buyerId != null) {
+                batch.update(db.collection("users").document(buyerId),
+                        "spentAmount", com.google.firebase.firestore.FieldValue.increment(total));
+            }
 
             Map<String, Object> history = new HashMap<>();
             history.put("event", "customer_received");
@@ -423,6 +465,9 @@ public class FirebaseManager {
             if (buyerId == null) buyerId = doc.getString("buyerId");
             if (buyerId == null) buyerId = uid;
 
+            Double total = doc.getDouble("totalPrice");
+            if (total == null) total = 0.0;
+
             com.google.firebase.firestore.WriteBatch batch = db.batch();
             Map<String, Object> updates = new HashMap<>();
             // Keep delivered so order stays in Đã giao; returnStatus drives Trả hàng tab
@@ -440,6 +485,12 @@ public class FirebaseManager {
             }
             updates.put("updatedAt", Timestamp.now());
             batch.update(db.collection("orders").document(orderId), updates);
+
+            // Giảm tích lũy vì đơn hàng đang bị yêu cầu trả (Logic từ main)
+            if (buyerId != null) {
+                batch.update(db.collection("users").document(buyerId),
+                        "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
+            }
 
             Map<String, Object> history = new HashMap<>();
             history.put("event", "return_requested");
@@ -604,7 +655,7 @@ public class FirebaseManager {
     public Task<Uri> uploadImage(Uri fileUri) {
         if (fileUri == null) return com.google.android.gms.tasks.Tasks.forException(new Exception("File URI is null"));
 
-        com.google.android.gms.tasks.TaskCompletionSource<Uri> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
+        com.google.android.gms.tasks.TaskCompletionSource<Uri> tcs = new com.google.android.gms.tasks.TaskCompletionSource<Uri>();
         
         // Chạy xử lý ảnh trong một thread riêng để không làm lag giao diện
         new Thread(() -> {

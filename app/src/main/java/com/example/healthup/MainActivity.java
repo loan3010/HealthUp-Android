@@ -138,6 +138,24 @@ public class MainActivity extends AppCompatActivity {
 
         setupCartBadgeListener();
         setupNotificationBadgeListener();
+
+        // ✅ FIX: Lắng nghe thay đổi BackStack để hiện lại thanh Nav Bar khi quay về các tab chính
+        getSupportFragmentManager().addOnBackStackChangedListener(this::updateNavigationVisibility);
+    }
+
+    private void updateNavigationVisibility() {
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if (currentFragment != null) {
+            boolean hideNavigation = isCheckoutFlow(currentFragment);
+            if (navView != null) {
+                navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
+            }
+            if (fabChat != null) {
+                boolean showBubble = !hideNavigation
+                        && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
+                fabChat.setVisibility(showBubble ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 
     private void setupCartBadgeListener() {
@@ -322,6 +340,7 @@ public class MainActivity extends AppCompatActivity {
                 fragment instanceof AddressBookFragment ||
                 fragment instanceof PromoCouponFragment ||
                 fragment instanceof PolicyFragment ||
+                fragment instanceof MemberTierFragment ||
                 fragment instanceof FAQFragment);
     }
 
@@ -455,21 +474,12 @@ public class MainActivity extends AppCompatActivity {
 
 
     private void loadFragment(Fragment fragment) {
-        // ✅ QUY TẮC: Ẩn BottomNav và FAB khi vào quy trình mua hàng hoặc các trang con sâu
-        boolean hideNavigation = isCheckoutFlow(fragment);
-
-        if (navView != null) {
-            navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
-        }
-        if (fabChat != null) {
-            boolean showBubble = !hideNavigation
-                    && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
-            fabChat.setVisibility(showBubble ? View.VISIBLE : View.GONE);
-        }
-
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
+        
+        // Cập nhật hiển thị Nav Bar dựa trên Fragment mới
+        navView.post(this::updateNavigationVisibility);
     }
 
     public void showCartTab() {

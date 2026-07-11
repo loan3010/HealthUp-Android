@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="12dp"
+    app:cardCornerRadius="16dp"
+    app:cardElevation="2dp">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="12dp">
+
+        <ImageView
+            android:id="@+id/ivVoucherType"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@drawable/bg_circle_green"
+            android:backgroundTint="#F5FDF9"
+            android:contentDescription="@null"
+            android:padding="12dp"
+            android:src="@drawable/ic_gift"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="@color/green_button" />
+
+        <TextView
+            android:id="@+id/tvVoucherTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_dark"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            app:layout_constraintEnd_toStartOf="@+id/btnUseNow"
+            app:layout_constraintStart_toEndOf="@id/ivVoucherType"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="Giảm giá 15%" />
+
+        <TextView
+            android:id="@+id/tvVoucherDesc"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_gray"
+            android:textSize="13sp"
+            app:layout_constraintEnd_toStartOf="@+id/btnUseNow"
+            app:layout_constraintStart_toStartOf="@id/tvVoucherTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvVoucherTitle"
+            tools:text="Áp dụng cho mọi đơn hàng" />
+
+        <TextView
+            android:id="@+id/tvVoucherExpiry"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:layout_marginEnd="8dp"
+            android:textColor="@color/text_gray_muted"
+            android:textSize="11sp"
+            app:layout_constraintEnd_toStartOf="@+id/btnUseNow"
+            app:layout_constraintStart_toStartOf="@id/tvVoucherTitle"
+            app:layout_constraintTop_toBottomOf="@id/tvVoucherDesc"
+            tools:text="HSD: 31/12/2027" />
+
+        <Button
+            android:id="@+id/btnUseNow"
+            android:layout_width="wrap_content"
+            android:layout_height="36dp"
+            android:background="@drawable/bg_button_rounded"
+            android:minHeight="0dp"
+            android:paddingHorizontal="16dp"
+            android:text="Dùng ngay"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            app:backgroundTint="@color/green_button"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <TextView
+            android:id="@+id/tvIneligibleHint"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="#FFF5F5"
+            android:padding="8dp"
+            android:text="Mua thêm để lên hạng VIP và nhận ưu đãi này!"
+            android:textColor="#FF5252"
+            android:textSize="12sp"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvVoucherExpiry" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</androidx.cardview.widget.CardView>

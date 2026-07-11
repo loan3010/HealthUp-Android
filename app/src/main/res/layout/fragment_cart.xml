@@ -9,6 +9,7 @@
     android:clipChildren="false"
     android:clipToPadding="false">
 
+
     <!-- ===== HEADER kiểu Shopee: Quay lại | Giỏ hàng (n) | Sửa ===== -->
     <LinearLayout
         android:id="@+id/header"
@@ -28,6 +29,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
+
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="40dp"
@@ -36,6 +38,7 @@
             android:src="@drawable/ic_back"
             app:tint="@color/text_dark"
             android:contentDescription="@string/cart_back" />
+
 
         <TextView
             android:id="@+id/tvCartTitle"
@@ -48,6 +51,7 @@
             android:textStyle="bold"
             android:textSize="18sp"
             android:textColor="@color/text_dark" />
+
 
         <TextView
             android:id="@+id/tvEditToggle"
@@ -62,6 +66,7 @@
             android:focusable="true"
             android:background="?attr/selectableItemBackgroundBorderless" />
     </LinearLayout>
+
 
     <LinearLayout
         android:id="@+id/guestSyncBanner"
@@ -78,11 +83,13 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/header">
 
+
         <ImageView
             android:layout_width="18dp"
             android:layout_height="18dp"
             android:contentDescription="@null"
             android:src="@drawable/ic_info" />
+
 
         <TextView
             android:layout_width="0dp"
@@ -93,6 +100,7 @@
             android:textColor="@color/green_button"
             android:textSize="13sp" />
     </LinearLayout>
+
 
     <!-- ===== NỘI DUNG CUỘN: danh sách SP hoặc trạng thái trống + Có thể bạn quan tâm =====
          FIX (bug #6): "Có thể bạn quan tâm" nằm TRONG cùng khối cuộn này nên LUÔN hiển thị
@@ -107,11 +115,13 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/footer">
 
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingBottom="16dp">
+
 
             <!-- ===== DANH SÁCH SẢN PHẨM ===== -->
             <androidx.recyclerview.widget.RecyclerView
@@ -120,6 +130,7 @@
                 android:layout_height="wrap_content"
                 android:padding="12dp"
                 tools:listitem="@layout/item_cart" />
+
 
             <!-- ===== TRẠNG THÁI GIỎ HÀNG TRỐNG ===== -->
             <LinearLayout
@@ -133,6 +144,7 @@
                 android:paddingHorizontal="32dp"
                 android:visibility="gone">
 
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -140,6 +152,7 @@
                     android:textSize="15sp"
                     android:textColor="@color/text_gray"
                     android:gravity="center" />
+
 
                 <TextView
                     android:id="@+id/btnContinueShopping"
@@ -157,6 +170,7 @@
                     android:focusable="true" />
             </LinearLayout>
 
+
             <!-- ===== CÓ THỂ BẠN QUAN TÂM (luôn hiển thị) ===== -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -165,9 +179,11 @@
                 android:orientation="vertical"
                 android:paddingHorizontal="16dp">
 
+
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content">
+
 
                     <TextView
                         android:layout_width="wrap_content"
@@ -176,6 +192,7 @@
                         android:textColor="@color/neutral_black"
                         android:textSize="16sp"
                         android:textStyle="bold" />
+
 
                     <TextView
                         android:id="@+id/tvViewAllRecommend"
@@ -189,6 +206,7 @@
                         android:focusable="true" />
                 </RelativeLayout>
 
+
                 <androidx.recyclerview.widget.RecyclerView
                     android:id="@+id/rvCartRecommendations"
                     android:layout_width="match_parent"
@@ -200,11 +218,14 @@
                     tools:spanCount="2" />
             </LinearLayout>
 
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- ===== FOOTER: LUÔN hiển thị (kể cả giỏ hàng trống) để không chặn luồng người dùng
-         (FIX bug #7). Có 2 trạng thái: totalsRow (bình thường) / editRow (chế độ Sửa). ===== -->
+
+    <!-- ===== FOOTER: chỉ hiển thị khi giỏ hàng CÓ sản phẩm (FIX yêu cầu #3) — ẩn hoàn toàn khi
+         cartItems rỗng để không chiếm chỗ màn hình. Có 2 trạng thái: totalsRow (bình thường) /
+         editRow (chế độ Sửa). ===== -->
     <LinearLayout
         android:id="@+id/footer"
         android:layout_width="0dp"
@@ -215,6 +236,7 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
+
 
         <LinearLayout
             android:id="@+id/rowVoucher"
@@ -228,6 +250,7 @@
             android:foreground="?attr/selectableItemBackground"
             android:visibility="gone">
 
+
             <ImageView
                 android:layout_width="18dp"
                 android:layout_height="18dp"
@@ -235,7 +258,9 @@
                 android:src="@drawable/ic_gift"
                 android:contentDescription="Voucher" />
 
+
             <TextView
+                android:id="@+id/tvVoucherHint"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
@@ -243,6 +268,7 @@
                 android:text="@string/cart_voucher_hint"
                 android:textSize="13sp"
                 android:textColor="@color/green_button" />
+
 
             <ImageView
                 android:layout_width="14dp"
@@ -252,15 +278,28 @@
                 android:contentDescription="Next" />
         </LinearLayout>
 
-        <!-- ===== Footer chế độ THƯỜNG: Tổng tiền | Quay lại | Tiếp tục ===== -->
+
+        <!-- ===== Footer chế độ THƯỜNG (FIX yêu cầu #4): ô tick "Tất cả" | Tổng tiền + Tiết
+             kiệm | Tiếp tục. Nút "Quay lại" đã được bỏ vì header đã có nút back riêng. ===== -->
         <LinearLayout
             android:id="@+id/totalsRow"
             android:layout_width="match_parent"
-            android:layout_height="68dp"
+            android:layout_height="wrap_content"
+            android:minHeight="68dp"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp"
-            android:paddingBottom="8dp">
+            android:paddingVertical="8dp">
+
+
+            <CheckBox
+                android:id="@+id/cbSelectAll"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:layout_marginEnd="10dp"
+                android:button="@drawable/cb_custom"
+                app:buttonTint="@null" />
+
 
             <LinearLayout
                 android:layout_width="0dp"
@@ -268,12 +307,14 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
+
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="@string/cart_total"
                     android:textSize="12sp"
                     android:textColor="@color/text_gray" />
+
 
                 <TextView
                     android:id="@+id/tvTotalPrice"
@@ -283,22 +324,18 @@
                     android:textStyle="bold"
                     android:textSize="18sp"
                     android:textColor="@color/green_button" />
+
+
+                <TextView
+                    android:id="@+id/tvSavings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="11sp"
+                    android:textColor="@color/error"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <TextView
-                android:id="@+id/btnBackFooter"
-                android:layout_width="wrap_content"
-                android:layout_height="44dp"
-                android:layout_marginEnd="8dp"
-                android:paddingHorizontal="24dp"
-                android:gravity="center"
-                android:text="@string/cart_back"
-                android:textColor="@color/white"
-                android:textStyle="bold"
-                android:textSize="14sp"
-                android:background="@drawable/bg_button_rounded"
-                android:clickable="true"
-                android:focusable="true" />
 
             <TextView
                 android:id="@+id/btnCheckout"
@@ -315,6 +352,7 @@
                 android:focusable="true" />
         </LinearLayout>
 
+
         <!-- ===== Footer chế độ SỬA (giống Shopee): Tất cả | Lưu vào Đã thích | Xóa ===== -->
         <LinearLayout
             android:id="@+id/editRow"
@@ -326,11 +364,13 @@
             android:paddingBottom="8dp"
             android:visibility="gone">
 
+
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="horizontal"
                 android:gravity="center_vertical">
+
 
                 <CheckBox
                     android:id="@+id/cbSelectAllEdit"
@@ -338,6 +378,7 @@
                     android:layout_height="24dp"
                     android:button="@drawable/cb_custom"
                     app:buttonTint="@null" />
+
 
                 <TextView
                     android:layout_width="wrap_content"
@@ -348,10 +389,12 @@
                     android:textColor="@color/text_dark" />
             </LinearLayout>
 
+
             <View
                 android:layout_width="0dp"
                 android:layout_height="1dp"
                 android:layout_weight="1" />
+
 
             <TextView
                 android:id="@+id/btnSaveToWishlist"
@@ -368,6 +411,7 @@
                 android:clickable="true"
                 android:focusable="true" />
 
+
             <TextView
                 android:id="@+id/btnDeleteSelected"
                 android:layout_width="wrap_content"
@@ -383,6 +427,8 @@
                 android:focusable="true" />
         </LinearLayout>
 
+
     </LinearLayout>
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

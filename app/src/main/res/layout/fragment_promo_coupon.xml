@@ -99,10 +99,11 @@
                     android:textStyle="bold" />
 
                 <TextView
+                    android:id="@+id/tvBestVoucherHeader"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
-                    android:text="Chúng tôi đã chọn 2 voucher tốt nhất giúp bạn tiết kiệm nhiều nhất."
+                    android:text="HeathUp đã chọn 2 voucher tốt nhất giúp bạn tiết kiệm nhiều nhất."
                     android:textColor="@color/text_gray"
                     android:textSize="13sp" />
 
@@ -129,16 +130,32 @@
             </LinearLayout>
 
             <!-- VẬN CHUYỂN -->
-            <TextView
-                android:id="@+id/tvShippingHeader"
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:layout_marginBottom="12dp"
-                android:text="VẬN CHUYỂN"
-                android:textColor="@color/text_gray"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="12dp">
+                <TextView
+                    android:id="@+id/tvShippingHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="VẬN CHUYỂN"
+                    android:textColor="@color/text_gray"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/btnViewAllShipping"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="Xem tất cả"
+                    android:textColor="@color/green_button"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </RelativeLayout>
 
             <!-- List Voucher (Shipping) -->
             <androidx.recyclerview.widget.RecyclerView
@@ -148,16 +165,32 @@
                 android:nestedScrollingEnabled="false" />
 
             <!-- GIẢM GIÁ SẢN PHẨM -->
-            <TextView
-                android:id="@+id/tvDiscountHeader"
-                android:layout_width="wrap_content"
+            <RelativeLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
-                android:layout_marginBottom="12dp"
-                android:text="GIẢM GIÁ SẢN PHẨM"
-                android:textColor="@color/text_gray"
-                android:textSize="12sp"
-                android:textStyle="bold" />
+                android:layout_marginBottom="12dp">
+                <TextView
+                    android:id="@+id/tvDiscountHeader"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="GIẢM GIÁ SẢN PHẨM"
+                    android:textColor="@color/text_gray"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:id="@+id/btnViewAllDiscount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="Xem tất cả"
+                    android:textColor="@color/green_button"
+                    android:textSize="12sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </RelativeLayout>
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvVouchersDiscount"
@@ -219,9 +252,10 @@
         android:padding="16dp">
 
         <TextView
+            android:id="@+id/tvSelectedCountFooter"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="ĐÃ CHỌN 2 VOUCHER"
+            android:text="ĐÃ CHỌN 0 VOUCHER"
             android:textColor="@color/text_gray"
             android:textSize="12sp" />
 

@@ -14,6 +14,7 @@ public class Voucher implements Serializable {
     private String expiryDate;
     private Type type;
     private boolean selected;
+    private String requiredTier; // "Member", "VIP", null/empty for all
 
     public Voucher() {}
 
@@ -26,6 +27,9 @@ public class Voucher implements Serializable {
         this.type = type;
         this.selected = false;
     }
+
+    public String getRequiredTier() { return requiredTier; }
+    public void setRequiredTier(String requiredTier) { this.requiredTier = requiredTier; }
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

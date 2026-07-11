@@ -67,6 +67,7 @@ public class CheckoutFragment extends Fragment {
     private final Set<Integer> authorizedMethods = new HashSet<>();
     private boolean isManualSelection = false;
     private List<DocumentSnapshot> cachedVoucherDocs = null;
+    private String userTier = "Member";
 
 
     private double shippingFee = 0; // ✅ Mặc định Giao tiêu chuẩn là 0đ
@@ -141,6 +142,13 @@ public class CheckoutFragment extends Fragment {
             if (data instanceof List) {
                 selectedItems = (List<CartItem>) data;
             }
+            
+            // ✅ Read selected vouchers from Cart
+            Serializable voucherData = getArguments().getSerializable("selected_vouchers");
+            if (voucherData instanceof List) {
+                selectedVouchers = (List<Voucher>) voucherData;
+                isManualSelection = !selectedVouchers.isEmpty();
+            }
         }
 
 
@@ -151,7 +159,7 @@ public class CheckoutFragment extends Fragment {
         renderProductList();
         renderVouchers();
         loadDefaultAddress();
-        loadVouchers(); 
+        loadUserTierAndVouchers(); 
         
         // Đồng bộ giao diện vận chuyển
         updateShippingSelection();
@@ -168,6 +176,21 @@ public class CheckoutFragment extends Fragment {
             v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
             return windowInsets;
         });
+    }
+
+
+    private void loadUserTierAndVouchers() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            FirebaseFirestore.getInstance().collection("users").document(user.getUid())
+                    .get().addOnSuccessListener(doc -> {
+                        String tier = doc.getString("tier");
+                        if (tier != null) userTier = tier;
+                        loadVouchers();
+                    }).addOnFailureListener(e -> loadVouchers());
+        } else {
+            loadVouchers();
+        }
     }
 
 
@@ -202,7 +225,7 @@ public class CheckoutFragment extends Fragment {
 
         for (DocumentSnapshot doc : cachedVoucherDocs) {
             Voucher v = parseVoucherFromDoc(doc);
-            if (v == null || itemsTotal < v.getMinOrderAmount()) continue;
+            if (v == null || itemsTotal < v.getMinOrderAmount() || !isTierMatch(v)) continue;
 
             double saving = calculateSaving(v, itemsTotal);
 
@@ -247,6 +270,16 @@ public class CheckoutFragment extends Fragment {
         v.setDescription(desc);
 
         v.setMinOrderAmount(getDouble(doc, "minOrderValue"));
+
+        // ✅ ĐỌC HẠNG YÊU CẦU: Ưu tiên requiredTier, fallback sang tier
+        String reqTier = doc.getString("requiredTier");
+        if (reqTier == null) reqTier = doc.getString("tier");
+        
+        // ✅ ÉP BUỘC VIP NẾU TÊN MÃ BẮT ĐẦU BẰNG VIP
+        if (code.toUpperCase().startsWith("VIP")) {
+            reqTier = "VIP";
+        }
+        v.setRequiredTier(reqTier);
 
         // ✅ ĐỌC GIÁ TRỊ GIẢM GIÁ ĐA LUỒNG
         double amount = getDouble(doc, "discountAmount");
@@ -304,7 +337,19 @@ public class CheckoutFragment extends Fragment {
     }
 
 
+    private boolean isTierMatch(Voucher v) {
+        String req = v.getRequiredTier();
+        if (req == null || req.isEmpty() || req.equalsIgnoreCase("Member")) return true;
+        return userTier.equalsIgnoreCase(req);
+    }
+
+
     private double calculateSaving(Voucher v, double itemsTotal) {
+        // ✅ KIỂM TRA ĐIỀU KIỆN ĐƠN TỐI THIỂU VÀ TIER
+        if (itemsTotal < v.getMinOrderAmount() || !isTierMatch(v)) {
+            return 0;
+        }
+
         double val = v.getDiscountAmount();
         String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
         String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
@@ -317,8 +362,8 @@ public class CheckoutFragment extends Fragment {
 
             // Kiểm tra mã chỉ dành cho Giao nhanh
             boolean isFastVoucher = desc.contains("giao nhanh") || code.contains("fast") || desc.contains("2 giờ");
-            boolean isFastShipping = (shippingFee > 25000); 
-            if (isFastVoucher && !isFastShipping) return 0;
+            boolean isFastShippingSelected = (shippingFee > 25000); 
+            if (isFastVoucher && !isFastShippingSelected) return 0;
 
             // Nếu giá trị mã nhỏ (VD: 10, 20, 50) thì coi là % phí ship
             if (val > 0 && val < 100) {
@@ -473,14 +518,28 @@ public class CheckoutFragment extends Fragment {
         FirebaseFirestore.getInstance()
                 .collection("users").document(effectiveUserId)
                 .collection("addresses")
-                .whereEqualTo("default", true)
-                .limit(1)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     if (!queryDocumentSnapshots.isEmpty()) {
-                        selectedAddress = queryDocumentSnapshots.getDocuments().get(0).toObject(Address.class);
-                        if (selectedAddress != null) {
-                            selectedAddress.setId(queryDocumentSnapshots.getDocuments().get(0).getId());
+                        // 1. Tìm địa chỉ mặc định
+                        for (DocumentSnapshot doc : queryDocumentSnapshots.getDocuments()) {
+                            Address addr = doc.toObject(Address.class);
+                            if (addr != null) {
+                                addr.setId(doc.getId());
+                                if (addr.isDefault()) {
+                                    selectedAddress = addr;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // 2. Nếu không có mặc định, lấy địa chỉ đầu tiên
+                        if (selectedAddress == null) {
+                            DocumentSnapshot firstDoc = queryDocumentSnapshots.getDocuments().get(0);
+                            selectedAddress = firstDoc.toObject(Address.class);
+                            if (selectedAddress != null) {
+                                selectedAddress.setId(firstDoc.getId());
+                            }
                         }
                         renderAddress();
                     } else {
@@ -537,10 +596,18 @@ public class CheckoutFragment extends Fragment {
             rowVoucherNoSelect.setVisibility(View.GONE);
             layoutVoucherApplied.setVisibility(View.VISIBLE);
             
-            // ✅ Hiển thị tóm tắt tất cả các mã đã áp dụng tự động, lọc bỏ null
+            // ✅ HIỂN THỊ TẤT CẢ CÁC MÃ ĐÃ CHỌN (GỒM CẢ SHIP VÀ GIẢM GIÁ)
             StringBuilder sb = new StringBuilder();
+            int shipCount = 0;
+            int discountCount = 0;
+            
             for (Voucher v : selectedVouchers) {
+                if (v.getType() == Voucher.Type.SHIPPING) shipCount++;
+                else discountCount++;
+                
                 String code = v.getCode();
+                if (code == null || code.isEmpty()) code = v.getTitle();
+                
                 if (code != null && !code.equalsIgnoreCase("null")) {
                     if (sb.length() > 0) sb.append(", ");
                     sb.append(code);
@@ -548,7 +615,14 @@ public class CheckoutFragment extends Fragment {
             }
             
             tvAppliedVoucherTitle.setText(sb.length() > 0 ? sb.toString() : "Mã giảm giá đã áp dụng");
-            tvAppliedVoucherDesc.setText("Hệ thống đã tự động áp dụng mã hời nhất cho bạn");
+            
+            if (shipCount > 0 && discountCount > 0) {
+                tvAppliedVoucherDesc.setText("Đã áp dụng mã vận chuyển & giảm giá hời nhất");
+            } else if (shipCount > 0) {
+                tvAppliedVoucherDesc.setText("Đã áp dụng mã miễn phí vận chuyển");
+            } else {
+                tvAppliedVoucherDesc.setText("Đã áp dụng mã giảm giá sản phẩm");
+            }
         }
     }
 
@@ -798,10 +872,6 @@ public class CheckoutFragment extends Fragment {
 
 
                                 // FIX (yêu cầu #3 - "đặt hàng thành công nhưng không có thông báo"):
-                                // Trước đây sau khi đặt hàng thành công, code chỉ hiện dialog chúc mừng
-                                // (showSuccessDialog) mà KHÔNG hề ghi document vào
-                                // users/{uid}/notifications -> NotificationsFragment không có gì để
-                                // đọc, nên trang Thông báo luôn trống đối với đơn hàng vừa đặt.
                                 DocumentReference notificationRef = db.collection("users").document(userId)
                                         .collection("notifications").document();
                                 Map<String, Object> notification = new HashMap<>();
@@ -838,22 +908,8 @@ public class CheckoutFragment extends Fragment {
                                 batch.set(adminNotifRef, adminNotif);
 
 
-                                Map<String, Object> userUpdates = new HashMap<>();
-                                userUpdates.put("spentAmount",
-                                        com.google.firebase.firestore.FieldValue.increment(finalAmount));
-
-
-                                long currentSpent = readSpentAmount(userDoc);
-                                if (currentSpent + (long) finalAmount >= 5_000_000L) {
-                                    userUpdates.put("tier", "VIP");
-                                }
-
-
-                                batch.set(
-                                        db.collection("users").document(userId),
-                                        userUpdates,
-                                        SetOptions.merge()
-                                );
+                                // ✅ FIX: Hạng thành viên chỉ tính đơn đã giao.
+                                // Gỡ bỏ việc tăng spentAmount và cập nhật tier ngay khi đặt hàng.
 
 
                                 for (CartItem ci : selectedItems) {
