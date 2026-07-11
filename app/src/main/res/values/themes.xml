@@ -10,6 +10,8 @@
         <item name="colorError">@color/error</item>
         <item name="colorOnError">@color/white</item>
         <item name="colorContainer">@color/navbar_active_pill_light</item>
+        <item name="colorSurface">@color/bg_cream</item>
+        <item name="colorSurfaceVariant">@color/bg_cream</item>
         <item name="android:windowBackground">@color/bg_cream</item>
         <item name="android:statusBarColor">@color/bg_cream</item>
         <item name="android:windowLightStatusBar">true</item>
@@ -18,6 +20,12 @@
 
     <style name="Theme.HealthUp" parent="Base.Theme.HealthUp">
         <item name="bottomNavigationStyle">@style/Widget.HealthUp.Navbar</item>
+        <item name="appBarLayoutStyle">@style/Widget.HealthUp.AppBarLayout</item>
+    </style>
+
+    <style name="Widget.HealthUp.AppBarLayout" parent="Widget.Material3.AppBarLayout">
+        <item name="android:background">@color/bg_cream</item>
+        <item name="elevation">0dp</item>
     </style>
 
     <style name="Theme.HealthUp.Dialog.Transparent" parent="Theme.Material3.DayNight.Dialog">
@@ -157,4 +165,3 @@
         <item name="android:windowNoTitle">true</item>
     </style>
 </resources>
-
