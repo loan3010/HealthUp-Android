@@ -1,12 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:clickable="false"
+    android:focusable="false">
 
     <ImageView
         android:id="@+id/iv_slider"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:scaleType="centerInside"
-        android:adjustViewBounds="true" />
+        android:clickable="false"
+        android:focusable="false"
+        android:scaleType="centerCrop" />
 </FrameLayout>

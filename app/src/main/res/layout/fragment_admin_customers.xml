@@ -32,66 +32,30 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="@id/tilSearchCustomers" />
 
-    <HorizontalScrollView
-        android:id="@+id/scrollCustomerChips"
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabCustomerFilters"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         android:layout_marginTop="8dp"
-        android:clipToPadding="false"
-        android:paddingHorizontal="16dp"
-        android:scrollbars="none"
+        android:background="@android:color/transparent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tilSearchCustomers">
+        app:layout_constraintTop_toBottomOf="@id/tilSearchCustomers"
+        app:tabIndicatorColor="@color/primary"
+        app:tabIndicatorFullWidth="false"
+        app:tabIndicatorHeight="3dp"
+        app:tabMode="scrollable"
+        app:tabRippleColor="@android:color/transparent"
+        app:tabSelectedTextColor="@color/primary"
+        app:tabTextAppearance="@style/TabTextAppearance"
+        app:tabTextColor="@color/text_secondary" />
 
-        <com.google.android.material.chip.ChipGroup
-            android:id="@+id/chipGroupCustomerFilter"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            app:singleSelection="true">
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipAllCustomers"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="@string/admin_filter_all" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipActiveCustomers"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/admin_customer_active" />
-
-            <com.google.android.material.chip.Chip
-                android:id="@+id/chipLockedCustomers"
-                style="@style/Widget.MaterialComponents.Chip.Choice"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="@string/admin_customer_locked" />
-        </com.google.android.material.chip.ChipGroup>
-    </HorizontalScrollView>
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvAdminCustomers"
+    <androidx.viewpager2.widget.ViewPager2
+        android:id="@+id/vpAdminCustomers"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/scrollCustomerChips" />
-
-    <TextView
-        android:id="@+id/tvEmptyCustomers"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="@string/admin_empty_customers"
-        android:textColor="@color/text_secondary"
-        android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/tabCustomerFilters" />
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -13,7 +13,6 @@ import java.util.Map;
 public final class AdminOrderSearchHelper {
 
     public static final String FILTER_ALL = "all";
-    public static final String FILTER_CANCEL_REQUESTED = "cancel_requested";
     public static final String FILTER_RETURNED = "returned";
     public static final String FILTER_OVERDUE = "overdue";
 
@@ -61,21 +60,11 @@ public final class AdminOrderSearchHelper {
         }
         String normalized = status.toLowerCase(Locale.ROOT).trim();
 
-        if (FILTER_CANCEL_REQUESTED.equals(statusFilter)) {
-            return order.isCancelRequested()
-                    && Order.STATUS_PENDING.equals(normalized);
-        }
         if (FILTER_RETURNED.equals(statusFilter)) {
-            return "returned".equals(normalized)
-                    || "refunded".equals(normalized)
-                    || "reshipped".equals(normalized)
-                    || ("completed".equals(normalized) && order.getReturnHandling() != null);
+            return order.hasActiveReturn();
         }
         if (FILTER_OVERDUE.equals(statusFilter)) {
             return AdminOrderListHelper.isOverdue(order, AdminOrderListHelper.hoursToMillis(24));
-        }
-        if (Order.STATUS_PENDING.equals(statusFilter)) {
-            return Order.STATUS_PENDING.equals(normalized) && !order.isCancelRequested();
         }
         return statusFilter.equals(normalized);
     }

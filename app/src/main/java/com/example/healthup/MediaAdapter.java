@@ -25,6 +25,10 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
         void onRemoveClick(int position);
     }
 
+    public interface OnImageClickListener {
+        void onImageClick(int position, Uri uri);
+    }
+
     public MediaAdapter(List<Uri> mediaUris, OnMediaClickListener listener) {
         this.mediaUris = mediaUris;
         this.listener = listener;
@@ -32,6 +36,12 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
 
     public void setViewOnly(boolean viewOnly) {
         this.isViewOnly = viewOnly;
+    }
+
+    private OnImageClickListener imageClickListener;
+
+    public void setOnImageClickListener(OnImageClickListener imageClickListener) {
+        this.imageClickListener = imageClickListener;
     }
 
     @Override
@@ -91,6 +101,11 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
             
             if (isViewOnly) {
                 binding.btnRemove.setVisibility(View.GONE);
+                itemView.setOnClickListener(v -> {
+                    if (imageClickListener != null) {
+                        imageClickListener.onImageClick(position, uri);
+                    }
+                });
             } else {
                 binding.btnRemove.setVisibility(View.VISIBLE);
                 binding.btnRemove.setOnClickListener(v -> {
@@ -98,6 +113,7 @@ public class MediaAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> 
                         listener.onRemoveClick(position);
                     }
                 });
+                itemView.setOnClickListener(null);
             }
         }
     }

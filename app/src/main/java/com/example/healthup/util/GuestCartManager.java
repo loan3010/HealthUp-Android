@@ -75,6 +75,9 @@ public final class GuestCartManager {
             newItem.setVariantName(variant.getName());
             newItem.setPrice(variant.getPrice());
             newItem.setOriginalPrice(variant.getPrice());
+            if (variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
+                newItem.setImageUrl(variant.getImageUrl());
+            }
         } else {
             newItem.setPrice(product.getPrice());
             newItem.setOriginalPrice(product.getOriginalPrice());

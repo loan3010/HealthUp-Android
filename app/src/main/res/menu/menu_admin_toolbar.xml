@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <item
+        android:id="@+id/action_admin_notifications"
+        android:title="@string/admin_notifications"
+        app:actionLayout="@layout/menu_admin_notification_action"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_admin_chat"
+        android:icon="@drawable/ic_chat"
+        android:title="@string/admin_chat_customers"
+        app:iconTint="@color/white"
+        app:showAsAction="always" />
+</menu>

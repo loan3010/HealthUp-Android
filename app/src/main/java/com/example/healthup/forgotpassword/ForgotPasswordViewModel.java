@@ -75,6 +75,10 @@ public class ForgotPasswordViewModel extends ViewModel {
                     phoneError.postValue("not_registered");
                     uiState.postValue(UiState.ERROR);
                     break;
+                case GOOGLE_LINKED:
+                    phoneError.postValue("google_linked");
+                    uiState.postValue(UiState.ERROR);
+                    break;
                 case ERROR:
                 default:
                     generalError.postValue(new Event<>("generic"));

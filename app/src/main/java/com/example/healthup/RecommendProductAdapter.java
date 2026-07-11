@@ -68,30 +68,7 @@ public class RecommendProductAdapter extends RecyclerView.Adapter<RecommendProdu
                 binding.tvSold.setText("Đã bán " + product.getSoldCount());
             }
 
-            // Sử dụng logic load ảnh thông minh từ assets/web giống ProductAdapter
-            String imagePath = product.getImageUrl();
-            Object loadTarget = R.drawable.ic_launcher_background;
-
-            if (imagePath != null && !imagePath.isEmpty()) {
-                if (imagePath.startsWith("http") || imagePath.startsWith("file://") || imagePath.startsWith("content://")) {
-                    loadTarget = imagePath;
-                } else {
-                    String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                    if (cleanPath.startsWith("images/products/")) {
-                        loadTarget = "file:///android_asset/" + cleanPath;
-                    } else if (cleanPath.startsWith("images/")) {
-                        loadTarget = "file:///android_asset/" + cleanPath;
-                    } else {
-                        loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                    }
-                }
-            }
-
-            Glide.with(context)
-                    .load(loadTarget)
-                    .placeholder(R.drawable.ic_launcher_background)
-                    .error(R.drawable.ic_launcher_background)
-                    .into(binding.imgProduct);
+            com.example.healthup.util.ImageLoadHelper.loadInto(binding.imgProduct, product.getImageUrl());
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) {

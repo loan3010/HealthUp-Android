@@ -72,7 +72,9 @@
         <activity android:name="com.example.healthup.LoginActivity" />
         <activity android:name="com.example.healthup.RegisterActivity" />
         <activity android:name="com.example.healthup.auth.SocialCompleteProfileActivity" />
+        <activity android:name="com.example.healthup.auth.LinkGooglePasswordActivity" />
         <activity android:name="com.example.healthup.OTPActivity" />
+        <activity android:name="com.example.healthup.EmailVerificationPendingActivity" />
         <activity android:name="com.example.healthup.ForgotPasswordActivity" />
         <activity
             android:name="com.example.healthup.forgotpassword.ForgotPasswordOtpActivity"
@@ -113,7 +115,39 @@
         <activity android:name="com.example.healthup.PaymentInfoActivity" />
         <activity android:name="com.example.healthup.ChangeUsernameActivity" />
         <activity android:name="com.example.healthup.ChangePasswordActivity" />
-        <activity android:name="com.example.healthup.ChangeEmailActivity" />
+        <activity
+            android:name="com.example.healthup.ChangeEmailActivity"
+            android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name="com.example.healthup.auth.EmailActionHandlerActivity"
+            android:exported="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.HealthUp">
+            <!-- Firebase Auth email action links (Hosting domain). -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="healthup-f6eff.firebaseapp.com"
+                    android:pathPrefix="/__/auth/action"
+                    android:scheme="https" />
+                <data
+                    android:host="healthup-f6eff.firebaseapp.com"
+                    android:pathPrefix="/emailAction"
+                    android:scheme="https" />
+            </intent-filter>
+            <!-- Custom scheme fallback if Hosting App Links are not verified. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="email-action"
+                    android:scheme="healthup" />
+            </intent-filter>
+        </activity>
         <activity android:name="com.example.healthup.ChangePhoneActivity" />
         <activity android:name="com.example.healthup.NotificationSettingsActivity" />
         <activity android:name="com.example.healthup.LanguageSettingsActivity" />
@@ -134,6 +168,7 @@
 
         <activity android:name="com.example.healthup.admin.AdminLoginActivity" />
         <activity android:name="com.example.healthup.admin.AdminActivity" />
+        <activity android:name="com.example.healthup.admin.AdminNotificationsActivity" />
         <activity android:name="com.example.healthup.admin.AdminProductEditActivity" />
         <activity android:name="com.example.healthup.admin.AdminOrderDetailActivity" />
         <activity android:name="com.example.healthup.admin.AdminCustomerDetailActivity" />

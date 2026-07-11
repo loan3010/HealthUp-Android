@@ -64,6 +64,7 @@ public class MainActivity extends AppCompatActivity {
     private View rootLayout;
     private boolean isKeyboardShowing = false;
     private ListenerRegistration cartListener;
+    private ListenerRegistration notifBadgeListener;
     private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
@@ -136,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setupCartBadgeListener();
+        setupNotificationBadgeListener();
 
         // ✅ FIX: Lắng nghe thay đổi BackStack để hiện lại thanh Nav Bar khi quay về các tab chính
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateNavigationVisibility);
@@ -198,6 +200,47 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    private void setupNotificationBadgeListener() {
+        if (notifBadgeListener != null) {
+            notifBadgeListener.remove();
+            notifBadgeListener = null;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            updateNotificationBadge(0);
+            return;
+        }
+
+        notifBadgeListener = FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(user.getUid())
+                .collection("notifications")
+                .addSnapshotListener((value, error) -> {
+                    if (error != null || value == null) return;
+                    int unread = 0;
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                        Boolean read = doc.getBoolean("read");
+                        if (read == null || !read) {
+                            unread++;
+                        }
+                    }
+                    updateNotificationBadge(unread);
+                });
+    }
+
+    private void updateNotificationBadge(int count) {
+        if (navView == null) return;
+        BadgeDrawable badge = navView.getOrCreateBadge(R.id.nav_notifications);
+        if (count > 0) {
+            badge.setVisible(true);
+            badge.setNumber(Math.min(count, 99));
+        } else {
+            badge.setVisible(false);
+            badge.clearNumber();
+        }
+    }
+
     public void refreshGuestCartBadge() {
         if (FirebaseAuth.getInstance().getCurrentUser() != null) return;
 
@@ -216,6 +259,7 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         // Refresh listener in case user logged in/out
         setupCartBadgeListener();
+        setupNotificationBadgeListener();
         accountDisabledWatcher.attach(this);
 
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
@@ -233,6 +277,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onDestroy() {
         if (cartListener != null) {
             cartListener.remove();
+        }
+        if (notifBadgeListener != null) {
+            notifBadgeListener.remove();
         }
         super.onDestroy();
     }

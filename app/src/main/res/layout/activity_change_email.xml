@@ -5,14 +5,13 @@
     android:layout_height="match_parent"
     android:background="@color/neutral_cream">
 
-    <!-- Header -->
     <RelativeLayout
         android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
-        android:paddingBottom="16dp"
         android:paddingTop="30dp"
+        android:paddingBottom="16dp"
         app:layout_constraintTop_toTopOf="parent">
 
         <ImageView
@@ -20,6 +19,7 @@
             android:layout_width="24dp"
             android:layout_height="24dp"
             android:layout_centerVertical="true"
+            android:contentDescription="@null"
             android:src="@drawable/ic_back"
             app:tint="@color/neutral_black" />
 
@@ -28,7 +28,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="Thay đổi email"
+            android:text="@string/change_email_title"
             android:textColor="@color/neutral_black"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -44,36 +44,19 @@
             style="@style/TextAppearance.HealthUp.SubContent.Bold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Nhập địa chỉ email mới" />
+            android:text="@string/change_email_label" />
 
-        <RelativeLayout
+        <EditText
+            android:id="@+id/etNewEmail"
+            style="@style/Widget.HealthUp.EditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/input_default">
-
-            <EditText
-                android:id="@+id/etNewEmail"
-                style="@style/Widget.HealthUp.EditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="Nhập địa chỉ email mới"
-                android:inputType="textEmailAddress"
-                android:paddingEnd="80dp" />
-
-            <TextView
-                android:id="@+id/tvGetOtp"
-                style="@style/TextAppearance.HealthUp.CaptionLabel"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_alignParentEnd="true"
-                android:layout_centerVertical="true"
-                android:layout_marginEnd="12dp"
-                android:text="Gửi OTP"
-                android:textColor="@color/primary_default"
-                android:textStyle="bold" />
-        </RelativeLayout>
+            android:background="@drawable/input_default"
+            android:hint="@string/change_email_hint"
+            android:inputType="textEmailAddress"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="14dp" />
 
         <TextView
             android:id="@+id/tvErrorEmail"
@@ -81,32 +64,52 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Cấu trúc email không hợp lệ."
+            android:text="@string/register_email_invalid_error"
             android:textColor="@color/action_error"
             android:visibility="gone" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSendVerify"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="20dp"
+            android:text="@string/change_email_send_code"
+            android:textAllCaps="false" />
+
         <TextView
+            android:id="@+id/tvDebugOtp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:gravity="center"
+            android:textColor="@color/brand_primary"
+            android:textSize="15sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/tvOtpLabel"
             style="@style/TextAppearance.HealthUp.SubContent.Bold"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="Nhập mã OTP được gửi tới email của bạn" />
+            android:layout_marginTop="20dp"
+            android:text="@string/change_email_otp_label"
+            android:visibility="gone" />
 
-        <RelativeLayout
+        <EditText
+            android:id="@+id/etOtp"
+            style="@style/Widget.HealthUp.EditText"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="@drawable/input_default">
-
-            <EditText
-                android:id="@+id/etOtp"
-                style="@style/Widget.HealthUp.EditText"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@null"
-                android:hint="Nhập mã OTP"
-                android:inputType="number" />
-        </RelativeLayout>
+            android:background="@drawable/input_default"
+            android:hint="@string/change_email_otp_hint"
+            android:inputType="number"
+            android:maxLength="6"
+            android:paddingHorizontal="14dp"
+            android:paddingVertical="14dp"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/tvErrorOtp"
@@ -114,7 +117,6 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:text="Mã OTP không hợp lệ."
             android:textColor="@color/action_error"
             android:visibility="gone" />
 
@@ -123,11 +125,31 @@
             style="@style/Widget.HealthUp.Button.LargeFilled"
             android:layout_width="match_parent"
             android:layout_height="54dp"
-            android:layout_marginTop="32dp"
-            android:text="Lưu thay đổi"
+            android:layout_marginTop="24dp"
+            android:text="@string/change_email_confirm"
             android:textAllCaps="false"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:visibility="gone" />
 
     </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/loadingOverlay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:background="#66000000"
+        android:clickable="true"
+        android:focusable="true"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <ProgressBar
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center" />
+    </FrameLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -202,7 +202,21 @@ public class ReturnRefundDetailActivity extends AppCompatActivity {
             String handling = isMissingItemsRequest ? binding.tvSelectedHandling.getText().toString() : "Trả hàng & Hoàn tiền";
 
             // 2. Submit request to Firestore
-            FirebaseManager.getInstance().submitReturnRequest(orderId, reason, description, stringUrls, handling)
+            java.util.List<java.util.Map<String, Object>> returnItems = new java.util.ArrayList<>();
+            for (Map.Entry<OrderItem, Integer> entry : selectedItemsMap.entrySet()) {
+                OrderItem item = entry.getKey();
+                java.util.Map<String, Object> row = new java.util.HashMap<>();
+                row.put("productId", item.getProductId() != null ? item.getProductId() : "");
+                row.put("variantId", item.getVariantId() != null ? item.getVariantId() : "");
+                row.put("name", item.getName() != null ? item.getName() : "");
+                row.put("variantLabel", item.getVariantLabel() != null ? item.getVariantLabel() : "");
+                row.put("quantity", entry.getValue());
+                row.put("price", item.getPrice());
+                row.put("imageUrl", item.getImageUrl() != null ? item.getImageUrl() : "");
+                returnItems.add(row);
+            }
+
+            FirebaseManager.getInstance().submitReturnRequest(orderId, reason, description, stringUrls, handling, returnItems)
                 .addOnSuccessListener(aVoid -> {
                     loadingDialog.dismiss();
                     showSuccessDialog("Gửi yêu cầu thành công", "returned_tab");

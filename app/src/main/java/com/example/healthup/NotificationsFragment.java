@@ -121,6 +121,7 @@ public class NotificationsFragment extends Fragment {
     public void onResume() {
         super.onResume();
         userId = FirebaseAuth.getInstance().getUid();
+        loadNotifications();
     }
 
     private void setupHeaderActions() {
@@ -337,6 +338,20 @@ public class NotificationsFragment extends Fragment {
             }
             item.setRefId(refId);
         }
+        if (item.getOrderId() == null || item.getOrderId().isEmpty()) {
+            String orderId = doc.getString("orderId");
+            if (orderId == null) {
+                orderId = item.getRefId();
+            }
+            item.setOrderId(orderId);
+        }
+        if (item.getReturnId() == null || item.getReturnId().isEmpty()) {
+            String returnId = doc.getString("returnId");
+            if (returnId == null) {
+                returnId = doc.getString("returnRequestId");
+            }
+            item.setReturnId(returnId);
+        }
         if (item.getCreatedAt() == null) {
             item.setCreatedAt(doc.getTimestamp("createdAt"));
             if (item.getCreatedAt() == null && doc.getDate("createdAt") != null) {
@@ -387,6 +402,16 @@ public class NotificationsFragment extends Fragment {
 
     private static boolean isOrderNotification(NotificationType type) {
         return type == NotificationType.ORDER_SHIPPING
+                || type == NotificationType.ORDER_CONFIRMED
+                || type == NotificationType.ORDER_DELIVERY_CONFIRMED
+                || type == NotificationType.ORDER_DELIVERY_FAILED
+                || type == NotificationType.ORDER_REDELIVERY
+                || type == NotificationType.ORDER_DELIVERED
+                || type == NotificationType.ORDER_CANCELLED
+                || type == NotificationType.ORDER_RETURN_REQUESTED
+                || type == NotificationType.ORDER_RETURN_APPROVED
+                || type == NotificationType.ORDER_RETURN_REJECTED
+                || type == NotificationType.ORDER_UPDATE
                 || type == NotificationType.PAYMENT
                 || type == NotificationType.REVIEW_REMINDER;
     }
@@ -525,15 +550,34 @@ public class NotificationsFragment extends Fragment {
 
     private void navigateForNotification(NotificationItem item) {
         NotificationType type = item.getNotificationType();
-        String refId = item.getRefId();
+        String orderId = resolveOrderId(item);
+        String returnId = resolveReturnId(item);
 
         switch (type) {
+            case ORDER_RETURN_REQUESTED:
+            case ORDER_RETURN_APPROVED:
+            case ORDER_RETURN_REJECTED:
+                openReturnDetail(orderId, returnId);
+                break;
             case ORDER_SHIPPING:
+            case ORDER_CONFIRMED:
+            case ORDER_DELIVERY_CONFIRMED:
+            case ORDER_DELIVERY_FAILED:
+            case ORDER_REDELIVERY:
+            case ORDER_DELIVERED:
+            case ORDER_CANCELLED:
+            case ORDER_UPDATE:
             case PAYMENT:
-                if (refId != null && !refId.isEmpty()) {
+            case REVIEW_REMINDER:
+                if (orderId != null && !orderId.isEmpty()) {
                     Intent orderIntent = new Intent(requireContext(), OrderDetailActivity.class);
-                    orderIntent.putExtra(OrderDetailActivity.EXTRA_ORDER_ID, refId);
+                    orderIntent.putExtra(OrderDetailActivity.EXTRA_ORDER_ID, orderId);
                     startActivity(orderIntent);
+                } else if (type == NotificationType.ORDER_CANCELLED) {
+                    navigateToOrderTab("cancelled_tab");
+                } else if (type == NotificationType.ORDER_DELIVERED
+                        || type == NotificationType.REVIEW_REMINDER) {
+                    navigateToOrderTab("delivered_tab");
                 } else {
                     navigateToOrderTab("shipping_tab");
                 }
@@ -548,18 +592,42 @@ public class NotificationsFragment extends Fragment {
             case WISHLIST_SALE:
                 loadMainFragment(new WishlistFragment());
                 break;
-            case REVIEW_REMINDER:
-                if (refId != null && !refId.isEmpty()) {
-                    Intent reviewOrderIntent = new Intent(requireContext(), OrderDetailActivity.class);
-                    reviewOrderIntent.putExtra(OrderDetailActivity.EXTRA_ORDER_ID, refId);
-                    startActivity(reviewOrderIntent);
-                } else {
-                    navigateToOrderTab("delivered_tab");
-                }
-                break;
             default:
                 break;
         }
+    }
+
+    @Nullable
+    private static String resolveOrderId(@NonNull NotificationItem item) {
+        if (item.getOrderId() != null && !item.getOrderId().isEmpty()) {
+            return item.getOrderId();
+        }
+        if (item.getRefId() != null && !item.getRefId().isEmpty()) {
+            return item.getRefId();
+        }
+        return null;
+    }
+
+    @Nullable
+    private static String resolveReturnId(@NonNull NotificationItem item) {
+        if (item.getReturnId() != null && !item.getReturnId().isEmpty()) {
+            return item.getReturnId();
+        }
+        return resolveOrderId(item);
+    }
+
+    private void openReturnDetail(@Nullable String orderId, @Nullable String returnId) {
+        String targetId = orderId != null && !orderId.isEmpty() ? orderId : returnId;
+        if (targetId == null || targetId.isEmpty()) {
+            navigateToOrderTab("returned_tab");
+            return;
+        }
+        Intent intent = new Intent(requireContext(), ReturnRefundHistoryDetailActivity.class);
+        intent.putExtra("extra_order_id", targetId);
+        if (returnId != null && !returnId.isEmpty()) {
+            intent.putExtra("returnId", returnId);
+        }
+        startActivity(intent);
     }
 
     private void navigateToOrderTab(String tabTarget) {
@@ -570,6 +638,10 @@ public class NotificationsFragment extends Fragment {
             tabIndex = 3;
         } else if ("delivered_tab".equals(tabTarget)) {
             tabIndex = 4;
+        } else if ("cancelled_tab".equals(tabTarget)) {
+            tabIndex = 5;
+        } else if ("returned_tab".equals(tabTarget)) {
+            tabIndex = 6;
         }
         args.putInt("initial_tab", tabIndex);
         fragment.setArguments(args);

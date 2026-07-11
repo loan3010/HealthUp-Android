@@ -77,7 +77,7 @@ public class AdminDashboardFragment extends Fragment {
         MaterialCardView cardLowStock = view.findViewById(R.id.cardActionLowStock);
 
         cardPending.setOnClickListener(v -> navigateToOrders(Order.STATUS_PENDING));
-        cardCancel.setOnClickListener(v -> navigateToOrders(AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED));
+        cardCancel.setOnClickListener(v -> navigateToOrders(Order.STATUS_CANCELLED));
         cardOverdue.setOnClickListener(v -> navigateToOrders(AdminOrderSearchHelper.FILTER_OVERDUE));
         cardReturn.setOnClickListener(v -> navigateToOrders(AdminOrderSearchHelper.FILTER_RETURNED));
         cardLowStock.setOnClickListener(v -> navigateToProducts("low_stock"));
@@ -154,7 +154,7 @@ public class AdminDashboardFragment extends Fragment {
     private void bindActionCards(@NonNull AdminRepository.DashboardData data) {
         if (getView() == null) return;
         setActionText(R.id.tvActionPending, R.string.admin_dashboard_action_pending, data.pendingOrders);
-        setActionText(R.id.tvActionCancel, R.string.admin_dashboard_action_cancel, data.cancelRequestedOrders);
+        setActionText(R.id.tvActionCancel, R.string.admin_dashboard_action_cancel, data.cancelledOrders);
         setActionText(R.id.tvActionOverdue, R.string.admin_dashboard_action_overdue, data.overdueOrders);
         setActionText(R.id.tvActionReturn, R.string.admin_dashboard_action_return, data.returnRequests);
         setActionText(R.id.tvActionLowStock, R.string.admin_dashboard_action_low_stock, data.lowStockProducts);

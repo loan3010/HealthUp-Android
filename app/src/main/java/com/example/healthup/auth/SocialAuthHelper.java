@@ -172,6 +172,7 @@ public class SocialAuthHelper {
                 notifyError(activity.getString(R.string.social_auth_google_no_id_token));
                 return;
             }
+            PendingGoogleLink.set(account.getIdToken(), account.getEmail());
             signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
         } catch (ApiException e) {
             setLoading(false);
@@ -187,6 +188,11 @@ public class SocialAuthHelper {
                         setLoading(false);
                         Exception exception = task.getException();
                         logDebug("Firebase signInWithCredential failed", exception);
+                        if (isAccountExistsWithDifferentCredential(exception)) {
+                            PendingGoogleLink.clear();
+                            notifyError(activity.getString(R.string.social_auth_email_exists_use_password));
+                            return;
+                        }
                         notifyError(withDebugDetail(
                                 activity.getString(R.string.social_auth_failed),
                                 exception == null ? null : exception.getMessage()
@@ -201,6 +207,23 @@ public class SocialAuthHelper {
                     }
                     routeAfterSocialAuth(user);
                 });
+    }
+
+    private boolean isAccountExistsWithDifferentCredential(@Nullable Exception exception) {
+        if (exception == null) {
+            return false;
+        }
+        if (exception instanceof com.google.firebase.auth.FirebaseAuthUserCollisionException) {
+            return true;
+        }
+        String message = exception.getMessage();
+        if (message == null) {
+            return false;
+        }
+        String lower = message.toLowerCase();
+        return lower.contains("account-exists-with-different-credential")
+                || lower.contains("already in use")
+                || lower.contains("email address is already");
     }
 
     private void routeAfterSocialAuth(@NonNull FirebaseUser user) {
@@ -224,10 +247,10 @@ public class SocialAuthHelper {
             @NonNull String authProvider,
             @NonNull DocumentSnapshot doc
     ) {
-        setLoading(false);
-
         String phone = doc.exists() ? doc.getString("phone") : null;
         if (doc.exists() && !TextUtils.isEmpty(phone)) {
+            setLoading(false);
+            PendingGoogleLink.clear();
             Toast.makeText(activity, R.string.login_success, Toast.LENGTH_SHORT).show();
             GuestCartManager.getInstance(activity).mergeToFirestore(user.getUid(), () ->
                     activity.runOnUiThread(() -> {
@@ -236,6 +259,128 @@ public class SocialAuthHelper {
                     }));
             return;
         }
+
+        // Case 7 (revised): Gmail matches existing phone/password profile → OTP phone → password → link.
+        maybeLinkExistingAccountByEmail(user, authProvider, doc);
+    }
+
+    private void maybeLinkExistingAccountByEmail(
+            @NonNull FirebaseUser user,
+            @NonNull String authProvider,
+            @NonNull DocumentSnapshot currentDoc
+    ) {
+        String socialEmail = user.getEmail();
+        if (TextUtils.isEmpty(socialEmail)) {
+            socialEmail = PendingGoogleLink.getEmail();
+        }
+        if (TextUtils.isEmpty(socialEmail) || UserProfileBuilder.isSyntheticAuthEmail(socialEmail)) {
+            openCompleteProfile(user, authProvider, currentDoc);
+            return;
+        }
+
+        final String normalized = socialEmail.trim().toLowerCase(java.util.Locale.ROOT);
+        final String currentUid = user.getUid();
+
+        firebaseFirestore.collection("users")
+                .whereEqualTo("displayEmail", normalized)
+                .limit(1)
+                .get()
+                .addOnSuccessListener(byDisplay -> {
+                    if (!byDisplay.isEmpty()) {
+                        DocumentSnapshot existing = byDisplay.getDocuments().get(0);
+                        if (!currentUid.equals(existing.getId())) {
+                            handleEmailMatchForLink(user, authProvider, existing, normalized);
+                            return;
+                        }
+                    }
+                    firebaseFirestore.collection("users")
+                            .whereEqualTo("email", normalized)
+                            .limit(1)
+                            .get()
+                            .addOnSuccessListener(byEmail -> {
+                                if (!byEmail.isEmpty()) {
+                                    DocumentSnapshot existing = byEmail.getDocuments().get(0);
+                                    if (!currentUid.equals(existing.getId())
+                                            && UserProfileBuilder.isRealEmail(existing.getString("email"))) {
+                                        handleEmailMatchForLink(user, authProvider, existing, normalized);
+                                        return;
+                                    }
+                                }
+                                openCompleteProfile(user, authProvider, currentDoc);
+                            })
+                            .addOnFailureListener(e -> openCompleteProfile(user, authProvider, currentDoc));
+                })
+                .addOnFailureListener(e -> openCompleteProfile(user, authProvider, currentDoc));
+    }
+
+    private void handleEmailMatchForLink(
+            @NonNull FirebaseUser tempGoogleUser,
+            @NonNull String authProvider,
+            @NonNull DocumentSnapshot existing,
+            @NonNull String googleEmail
+    ) {
+        Boolean linked = existing.getBoolean("googleLinked");
+        if (linked != null && linked) {
+            // Already Google-linked under another Auth UID — cannot attach a second Google here.
+            rejectSocialEmailConflict(tempGoogleUser);
+            return;
+        }
+
+        String phone = existing.getString("phone");
+        String existingAuthEmail = existing.getString("email");
+        if (TextUtils.isEmpty(phone) || TextUtils.isEmpty(existingAuthEmail)) {
+            rejectSocialEmailConflict(tempGoogleUser);
+            return;
+        }
+        if (!PendingGoogleLink.hasPending()) {
+            setLoading(false);
+            notifyError(activity.getString(R.string.social_link_session_invalid));
+            return;
+        }
+
+        String fullName = existing.getString("fullName");
+        if (TextUtils.isEmpty(fullName)) {
+            fullName = tempGoogleUser.getDisplayName();
+        }
+        if (TextUtils.isEmpty(fullName)) {
+            fullName = "";
+        }
+
+        setLoading(false);
+        Toast.makeText(activity, R.string.social_link_email_match_continue, Toast.LENGTH_LONG).show();
+
+        Intent intent = new Intent(activity, com.example.healthup.OTPActivity.class);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_FULL_NAME, fullName);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_PHONE, phone);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_EMAIL, googleEmail);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_PASSWORD, "");
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_IS_SOCIAL_AUTH, true);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_AUTH_PROVIDER, authProvider);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_LINK_EXISTING_ACCOUNT, true);
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_EXISTING_UID, existing.getId());
+        intent.putExtra(com.example.healthup.OTPActivity.EXTRA_EXISTING_AUTH_EMAIL, existingAuthEmail);
+        activity.startActivity(intent);
+        activity.finish();
+    }
+
+    /** Conflict when email/phone already tied to another Google-linked account. */
+    private void rejectSocialEmailConflict(@NonNull FirebaseUser tempGoogleUser) {
+        PendingGoogleLink.clear();
+        String message = activity.getString(R.string.social_auth_email_exists_use_password);
+        tempGoogleUser.delete()
+                .addOnCompleteListener(task -> {
+                    firebaseAuth.signOut();
+                    setLoading(false);
+                    notifyError(message);
+                });
+    }
+
+    private void openCompleteProfile(
+            @NonNull FirebaseUser user,
+            @NonNull String authProvider,
+            @NonNull DocumentSnapshot doc
+    ) {
+        setLoading(false);
 
         String displayName = user.getDisplayName();
         if (TextUtils.isEmpty(displayName) && doc.exists()) {
