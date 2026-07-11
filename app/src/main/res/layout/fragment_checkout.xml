@@ -456,6 +456,11 @@
                         android:text="Ví MoMo" />
 
                     <RadioButton
+                        android:id="@+id/rbLinkedBank"
+                        style="@style/PaymentOptionStyle"
+                        android:text="Tài khoản ngân hàng liên kết" />
+
+                    <RadioButton
                         android:id="@+id/rbCod"
                         style="@style/PaymentOptionStyle"
                         android:text="Thanh toán khi nhận hàng"

@@ -303,31 +303,30 @@ public class PromoCouponFragment extends Fragment {
 
     private double calculateSavingForTotal(Voucher v) {
         double val = v.getDiscountAmount();
+        String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
+        String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
 
-        // ✅ ĐỒNG BỘ LOGIC VỚI CHECKOUT: Kiểm tra điều kiện "Giao nhanh"
         if (v.getType() == Voucher.Type.SHIPPING) {
-            String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
-            String code = (v.getCode() != null) ? v.getCode().toLowerCase() : "";
-            
-            boolean isFastVoucher = desc.contains("giao nhanh") || code.contains("fast") || desc.contains("2 giờ");
-            boolean isFastShipping = (shippingFee > 25000); // 45k là fast
-            
-            if (isFastVoucher && !isFastShipping) {
-                return 0; // Không áp dụng cho giao thường
+            // ✅ Chỉ giảm 100% nếu giá trị là 100
+            if (val == 100) {
+                return shippingFee;
             }
 
-            // Nếu giá trị <= 100 thì đó là %
-            if (val > 0 && val <= 100) {
+            boolean isFastVoucher = desc.contains("giao nhanh") || code.contains("fast") || desc.contains("2 giờ");
+            boolean isFastShipping = (shippingFee > 25000); 
+            if (isFastVoucher && !isFastShipping) return 0;
+
+            if (val > 0 && val < 100) {
                 return (val / 100.0) * shippingFee;
             }
+            return val;
         } else {
             // Giảm giá sản phẩm %
             if (val > 0 && val <= 100) {
                 return (val / 100.0) * orderTotal;
             }
+            return val;
         }
-
-        return val;
     }
 
     private void confirmSelection() {

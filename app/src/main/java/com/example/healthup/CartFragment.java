@@ -24,6 +24,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.example.adapters.CartAdapter;
+import com.example.models.Voucher;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
@@ -52,6 +53,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
 
     private List<CartItem> cartItems = new ArrayList<>();
+    private List<Voucher> selectedVouchers = new ArrayList<>();
     private CartAdapter adapter;
     private ProductAdapter recommendAdapter;
 
@@ -78,6 +80,21 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
 
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        
+        // Nhận kết quả chọn voucher để hiển thị giảm giá ngay tại Giỏ hàng
+        getParentFragmentManager().setFragmentResultListener("voucher_result", this, (requestKey, result) -> {
+            List<Voucher> vouchers = (List<Voucher>) result.getSerializable("selected_vouchers");
+            if (vouchers != null) {
+                this.selectedVouchers = new ArrayList<>(vouchers);
+                renderVouchers();
+                updateFooter();
+            }
+        });
+    }
 
     @Nullable
     @Override
@@ -115,22 +132,12 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private void applyHeaderWindowInsets(View view) {
         View header = view.findViewById(R.id.header);
         if (header == null) return;
-
-
-        final int basePaddingTop = header.getPaddingTop();
-
-
         ViewCompat.setOnApplyWindowInsetsListener(header, (v, windowInsets) -> {
             Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPaddingRelative(
-                    header.getPaddingStart(),
-                    basePaddingTop + systemBars.top,
-                    header.getPaddingEnd(),
-                    header.getPaddingBottom()
-            );
+            // ✅ Bỏ basePaddingTop dư thừa để header đi lên cao nhất có thể
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
             return windowInsets;
         });
-        ViewCompat.requestApplyInsets(header);
     }
 
 
@@ -218,17 +225,14 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             rowVoucher.setOnClickListener(v -> openVoucherList());
         }
         if (btnContinueShopping != null) {
-            // FIX (bug: mất Thanh điều hướng khi vào Danh mục từ Giỏ hàng trống):
-            // Trước đây code tự beginTransaction().replace(...) trực tiếp trên
-            // fragment_container, bỏ qua MainActivity.loadFragment() — nơi DUY NHẤT có
-            // logic show/hide BottomNavigationView (navView.setVisibility(...)). Vì Cart nằm
-            // trong danh sách isCheckoutFlow() nên navbar đã bị ẩn trước đó, và việc replace
-            // "tay" như cũ khiến nó bị kẹt ẩn luôn khi sang trang Danh mục.
-            // Cách đúng: đi qua đúng luồng chuyển tab của MainActivity bằng
-            // navView.setSelectedItemId(R.id.nav_category) — tái sử dụng goToCategoryTab()
-            // đã có sẵn trong file này — để MainActivity tự load ProductListFragment và hiện
-            // lại Thanh điều hướng như mọi trang không thuộc quy trình mua hàng.
-            btnContinueShopping.setOnClickListener(v -> goToCategoryTab());
+            btnContinueShopping.setOnClickListener(v -> {
+                if (!isAdded()) return;
+                com.google.android.material.bottomnavigation.BottomNavigationView navView =
+                        requireActivity().findViewById(R.id.bottom_navigation);
+                if (navView != null) {
+                    navView.setSelectedItemId(R.id.nav_home);
+                }
+            });
         }
         if (tvViewAllRecommend != null) {
             tvViewAllRecommend.setOnClickListener(v -> goToCategoryTab());
@@ -291,11 +295,55 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
 
     private void openVoucherList() {
+        double selectedTotal = 0;
+        for (CartItem item : cartItems) {
+            if (item.isSelected()) {
+                selectedTotal += item.getPrice() * item.getQuantity();
+            }
+        }
+
+
+        if (selectedTotal == 0) {
+            Toast.makeText(getContext(), "Vui lòng chọn sản phẩm để xem voucher áp dụng", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+
+        PromoCouponFragment fragment = new PromoCouponFragment();
+        Bundle bundle = new Bundle();
+        // Truyền các mã đang chọn để trang Voucher hiển thị đúng trạng thái tích chọn
+        bundle.putSerializable("selected_vouchers", new ArrayList<>(selectedVouchers));
+        bundle.putDouble("order_total", selectedTotal);
+        bundle.putDouble("shipping_fee", 21000); 
+        bundle.putBoolean("has_visited", !selectedVouchers.isEmpty());
+        fragment.setArguments(bundle);
+
+
         requireActivity().getSupportFragmentManager()
                 .beginTransaction()
-                .replace(R.id.fragment_container, new PromoCouponFragment())
+                .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();
+    }
+
+    private void renderVouchers() {
+        if (rowVoucher == null) return;
+        TextView tvVoucherInfo = rowVoucher.findViewById(R.id.tvVoucherInfo);
+        if (tvVoucherInfo == null) return;
+
+
+        if (selectedVouchers.isEmpty()) {
+            tvVoucherInfo.setText("Chọn hoặc nhập mã khuyến mãi");
+            tvVoucherInfo.setTextColor(getResources().getColor(R.color.green_button));
+        } else {
+            StringBuilder sb = new StringBuilder("Đã chọn: ");
+            for (int i = 0; i < selectedVouchers.size(); i++) {
+                sb.append(selectedVouchers.get(i).getCode());
+                if (i < selectedVouchers.size() - 1) sb.append(", ");
+            }
+            tvVoucherInfo.setText(sb.toString());
+            tvVoucherInfo.setTextColor(getResources().getColor(R.color.text_dark));
+        }
     }
 
 
@@ -610,6 +658,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         emptyState.setVisibility(isEmpty ? View.VISIBLE : View.GONE);
         rvCartItems.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
+        
+        // ✅ ẨN THANH TỔNG TIỀN (footer) KHI GIỎ HÀNG TRỐNG
+        footer.setVisibility(isEmpty ? View.GONE : View.VISIBLE);
 
 
         if (tvEditToggle != null) {
@@ -740,24 +791,48 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
 
-        double total = 0;
+        double itemsTotal = 0;
         int selectedCount = 0;
 
 
         for (CartItem item : cartItems) {
             if (item.isSelected()) {
-                total += item.getPrice() * item.getQuantity();
+                itemsTotal += item.getPrice() * item.getQuantity();
                 selectedCount++;
             }
         }
 
 
-        tvTotalPrice.setText(currencyFormat.format(total) + "đ");
+        // Tính toán giảm giá giống bên Checkout
+        double totalDiscount = 0;
+        for (Voucher v : selectedVouchers) {
+            totalDiscount += calculateSavingForFooter(v, itemsTotal);
+        }
+
+
+        double finalTotal = Math.max(0, itemsTotal - totalDiscount);
+
+
+        tvTotalPrice.setText(currencyFormat.format(finalTotal) + "đ");
         btnCheckout.setText("Tiếp tục (" + selectedCount + ")");
 
 
         if (tvCartTitle != null) {
             tvCartTitle.setText("Giỏ hàng (" + cartItems.size() + ")");
+        }
+    }
+
+
+    private double calculateSavingForFooter(Voucher v, double itemsTotal) {
+        double val = v.getDiscountAmount();
+        if (v.getType() == Voucher.Type.SHIPPING) {
+            // Tại Giỏ hàng chưa tính phí ship thực tế nên chỉ tính theo phí ship giả định
+            if (val == 100) return 21000;
+            if (val > 0 && val < 100) return (val / 100.0) * 21000;
+            return Math.min(val, 21000);
+        } else {
+            if (val > 0 && val <= 100) return (val / 100.0) * itemsTotal;
+            return val;
         }
     }
 
@@ -820,7 +895,6 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
 
         WriteBatch batch = db.batch();
-        List<CartItem> validItems = new ArrayList<>();
         for (CartItem item : toSave) {
             if (item.getProductId() == null || item.getProductId().isEmpty()) continue;
 
@@ -832,24 +906,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     .collection("wishlist").document(item.getProductId()), data);
 
 
-            if (item.getId() != null) {
-                batch.delete(db.collection("users").document(userId)
-                        .collection("cart").document(item.getId()));
-            }
-            validItems.add(item);
-        }
-
-
-        if (validItems.isEmpty()) {
-            return;
+            // ✅ KHÔNG XOÁ sản phẩm khỏi giỏ hàng nữa
         }
 
 
         batch.commit().addOnSuccessListener(unused -> {
             if (!isAdded()) return;
-            cartItems.removeAll(validItems);
-            renderList();
-            updateFooter();
+            // Chỉ cần update UI để bỏ chọn các item vừa lưu (hoặc giữ nguyên tuỳ ý)
             Toast.makeText(getContext(), getString(R.string.cart_saved_to_wishlist), Toast.LENGTH_SHORT).show();
         }).addOnFailureListener(e -> {
             if (isAdded()) {
