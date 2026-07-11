@@ -162,7 +162,7 @@ public class ChatRepository {
         ref.get()
                 .addOnSuccessListener(doc -> {
                     if (doc.exists()) {
-                        callback.onReady(convId);
+                        syncBuyerProfile(buyerId, ref, () -> callback.onReady(convId));
                         return;
                     }
                     Map<String, Object> data = new HashMap<>();
@@ -180,10 +180,58 @@ public class ChatRepository {
                         data.put("productId", productId);
                     }
                     ref.set(data)
-                            .addOnSuccessListener(unused -> callback.onReady(convId))
+                            .addOnSuccessListener(unused ->
+                                    syncBuyerProfile(buyerId, ref, () -> callback.onReady(convId)))
                             .addOnFailureListener(callback::onError);
                 })
                 .addOnFailureListener(callback::onError);
+    }
+
+    private void syncBuyerProfile(@NonNull String buyerId,
+                                  @NonNull DocumentReference ref,
+                                  @Nullable Runnable after) {
+        firestore.collection("users").document(buyerId).get()
+                .addOnSuccessListener(userDoc -> {
+                    if (!userDoc.exists()) {
+                        if (after != null) {
+                            after.run();
+                        }
+                        return;
+                    }
+                    Map<String, Object> patch = new HashMap<>();
+                    String username = userDoc.getString("username");
+                    String phone = userDoc.getString("phone");
+                    if (username != null && !username.trim().isEmpty()) {
+                        patch.put("buyerUsername", username.trim());
+                    }
+                    if (phone != null && !phone.trim().isEmpty()) {
+                        patch.put("buyerPhone", phone.trim());
+                    }
+                    String name = userDoc.getString("fullName");
+                    if (name == null || name.trim().isEmpty()) {
+                        name = userDoc.getString("name");
+                    }
+                    if (name != null && !name.trim().isEmpty()) {
+                        patch.put("buyerName", name.trim());
+                    }
+                    if (patch.isEmpty()) {
+                        if (after != null) {
+                            after.run();
+                        }
+                        return;
+                    }
+                    ref.set(patch, SetOptions.merge())
+                            .addOnCompleteListener(task -> {
+                                if (after != null) {
+                                    after.run();
+                                }
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    if (after != null) {
+                        after.run();
+                    }
+                });
     }
 
     public ListenerRegistration listenConversation(@NonNull String conversationId,
@@ -204,13 +252,71 @@ public class ChatRepository {
         Map<String, Object> data = new HashMap<>();
         data.put("mode", mode);
         data.put("updatedAt", FieldValue.serverTimestamp());
+        if (Conversation.MODE_HUMAN.equals(mode)) {
+            data.put("humanSessionStartedAt", FieldValue.serverTimestamp());
+            data.put("sessionBucket", Conversation.SESSION_ACTIVE);
+            data.put("lastSessionClosedAt", FieldValue.delete());
+        }
         firestore.collection("conversations").document(conversationId)
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(unused -> callback.onComplete(true))
                 .addOnFailureListener(e -> callback.onComplete(false));
     }
 
-    /** Assigns the current seller/admin to the thread when they reply. */
+    /** Ends the human session so the local bot can reply again. */
+    public void closeHumanSession(@NonNull String conversationId,
+                                  @NonNull String systemMessage,
+                                  @NonNull SimpleCallback callback) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("mode", Conversation.MODE_BOT);
+        data.put("sessionBucket", Conversation.SESSION_CLOSED);
+        data.put("lastSessionClosedAt", FieldValue.serverTimestamp());
+        data.put("humanSessionStartedAt", FieldValue.delete());
+        data.put("staffUnread", false);
+        data.put("updatedAt", FieldValue.serverTimestamp());
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    ChatMessage system = ChatMessage.system(systemMessage);
+                    sendMessage(conversationId, system, callback);
+                })
+                .addOnFailureListener(e -> callback.onComplete(false));
+    }
+
+    public void markStaffUnread(@NonNull String conversationId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("staffUnread", true);
+        data.put("updatedAt", FieldValue.serverTimestamp());
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge());
+    }
+
+    public void markStaffRead(@NonNull String conversationId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("staffUnread", false);
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge());
+    }
+
+    /** Reopens a closed session so staff can reply again. */
+    public void reopenHumanSession(@NonNull String conversationId,
+                                   @NonNull String systemMessage,
+                                   @NonNull SimpleCallback callback) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("mode", Conversation.MODE_HUMAN);
+        data.put("sessionBucket", Conversation.SESSION_ACTIVE);
+        data.put("humanSessionStartedAt", FieldValue.serverTimestamp());
+        data.put("lastSessionClosedAt", FieldValue.delete());
+        data.put("staffUnread", false);
+        data.put("updatedAt", FieldValue.serverTimestamp());
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge())
+                .addOnSuccessListener(unused -> {
+                    ChatMessage system = ChatMessage.system(systemMessage);
+                    sendMessage(conversationId, system, callback);
+                })
+                .addOnFailureListener(e -> callback.onComplete(false));
+    }
     public void assignSeller(@NonNull String conversationId, @NonNull String sellerId,
                              @NonNull SimpleCallback callback) {
         Map<String, Object> data = new HashMap<>();
@@ -311,10 +417,32 @@ public class ChatRepository {
     // ---- Seller inbox ----------------------------------------------------
 
     /**
-     * Streams conversations that need a human (mode == "human"). Sorted on the
-     * client by updatedAt desc to avoid requiring a composite index.
+     * Streams conversations in the given inbox bucket (active or closed).
      */
-    public ListenerRegistration listenHumanConversations(@NonNull ConversationsListener listener) {
+    public ListenerRegistration listenConversationsByBucket(@NonNull String sessionBucket,
+                                                            @NonNull ConversationsListener listener) {
+        return firestore.collection("conversations")
+                .whereEqualTo("sessionBucket", sessionBucket)
+                .addSnapshotListener((snapshot, error) -> {
+                    if (error != null) {
+                        listener.onError(error);
+                        return;
+                    }
+                    List<Conversation> conversations = new ArrayList<>();
+                    if (snapshot != null) {
+                        for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                            conversations.add(mapConversation(doc));
+                        }
+                    }
+                    sortConversations(conversations);
+                    listener.onConversations(conversations);
+                });
+    }
+
+    /**
+     * Active human sessions awaiting staff (mode == human).
+     */
+    public ListenerRegistration listenActiveSessions(@NonNull ConversationsListener listener) {
         return firestore.collection("conversations")
                 .whereEqualTo("mode", Conversation.MODE_HUMAN)
                 .addSnapshotListener((snapshot, error) -> {
@@ -328,13 +456,24 @@ public class ChatRepository {
                             conversations.add(mapConversation(doc));
                         }
                     }
-                    conversations.sort((a, b) -> {
+                    sortConversations(conversations);
+                    listener.onConversations(conversations);
+                });
+    }
+
+    /**
+     * Closed human sessions kept for staff lookup (sessionBucket == closed).
+     */
+    public ListenerRegistration listenClosedSessions(@NonNull ConversationsListener listener) {
+        return listenConversationsByBucket(Conversation.SESSION_CLOSED, listener);
+    }
+
+    private void sortConversations(@NonNull List<Conversation> conversations) {
+        conversations.sort((a, b) -> {
                         long ta = a.getUpdatedAt() != null ? a.getUpdatedAt().getTime() : 0L;
                         long tb = b.getUpdatedAt() != null ? b.getUpdatedAt().getTime() : 0L;
                         return Long.compare(tb, ta);
                     });
-                    listener.onConversations(conversations);
-                });
     }
 
     // ---- Mapping ---------------------------------------------------------
@@ -378,6 +517,13 @@ public class ChatRepository {
         c.setMode(mode != null ? mode : Conversation.MODE_BOT);
         c.setLastMessage(doc.getString("lastMessage"));
         c.setProductId(doc.getString("productId"));
+        c.setHumanSessionStartedAt(doc.getDate("humanSessionStartedAt"));
+        c.setLastSessionClosedAt(doc.getDate("lastSessionClosedAt"));
+        c.setSessionBucket(doc.getString("sessionBucket"));
+        Boolean staffUnread = doc.getBoolean("staffUnread");
+        c.setStaffUnread(staffUnread != null && staffUnread);
+        c.setBuyerUsername(doc.getString("buyerUsername"));
+        c.setBuyerPhone(doc.getString("buyerPhone"));
         Object participants = doc.get("participantIds");
         if (participants instanceof List) {
             c.setParticipantIds((List<String>) participants);

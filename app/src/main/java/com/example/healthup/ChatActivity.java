@@ -7,6 +7,9 @@ import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
 
 /**
  * Hosts the single chat screen ({@link ChatBotFragment}). Opened by a buyer
@@ -90,18 +93,12 @@ public class ChatActivity extends AppCompatActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(ContextCompat.getColor(this, R.color.brand_primary));
+        WindowInsetsControllerCompat insetsController =
+                WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        insetsController.setAppearanceLightStatusBars(false);
         setContentView(R.layout.activity_chat);
-
-        // Fix: Xử lý lề hệ thống để tránh bị thanh điều hướng che mất nội dung dưới cùng (Input bar)
-        View root = findViewById(R.id.chat_root);
-        if (root != null) {
-            root.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
-            androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (v, windowInsets) -> {
-                androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
-                v.setPadding(0, 0, 0, systemBars.bottom);
-                return windowInsets;
-            });
-        }
 
         if (savedInstanceState == null) {
             boolean sellerMode = getIntent().getBooleanExtra(EXTRA_SELLER_MODE, false);

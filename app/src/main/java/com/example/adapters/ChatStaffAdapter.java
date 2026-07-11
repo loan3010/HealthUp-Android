@@ -1,11 +1,13 @@
 package com.example.adapters;
 
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.healthup.R;
@@ -55,17 +57,39 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Conversation c = items.get(position);
 
-        String name = c.getBuyerName();
-        if (name == null || name.trim().isEmpty()) {
-            name = holder.itemView.getContext().getString(R.string.conversation_buyer_fallback);
+        String username = c.getBuyerUsername();
+        String displayName;
+        if (!TextUtils.isEmpty(username)) {
+            displayName = username.startsWith("@") ? username : "@" + username;
+        } else {
+            displayName = c.getBuyerName();
+            if (displayName == null || displayName.trim().isEmpty()) {
+                displayName = holder.itemView.getContext().getString(R.string.conversation_buyer_fallback);
+            }
         }
-        holder.name.setText(name);
+        holder.name.setText(displayName);
 
-        String last = c.getLastMessage();
-        holder.lastMessage.setText(last != null ? last : "");
+        String subtitle = c.getBuyerPhone();
+        if (TextUtils.isEmpty(subtitle)) {
+            subtitle = c.getLastMessage();
+        }
+        holder.lastMessage.setText(subtitle != null ? subtitle : "");
 
         Date updated = c.getUpdatedAt() != null ? c.getUpdatedAt() : c.getLastMessageAt();
         holder.time.setText(updated != null ? timeFormat.format(updated) : "");
+
+        boolean unread = c.isStaffUnread();
+        if (holder.unreadDot != null) {
+            holder.unreadDot.setVisibility(unread ? View.VISIBLE : View.GONE);
+        }
+        holder.name.setTypeface(null, unread ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        holder.lastMessage.setTypeface(null, unread ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        int primaryColor = androidx.core.content.ContextCompat.getColor(
+                holder.itemView.getContext(), R.color.text_primary);
+        int secondaryColor = androidx.core.content.ContextCompat.getColor(
+                holder.itemView.getContext(), R.color.text_secondary);
+        holder.name.setTextColor(primaryColor);
+        holder.lastMessage.setTextColor(unread ? primaryColor : secondaryColor);
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {
@@ -83,12 +107,15 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
         final TextView name;
         final TextView lastMessage;
         final TextView time;
+        @Nullable
+        final View unreadDot;
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
             name = itemView.findViewById(R.id.convName);
             lastMessage = itemView.findViewById(R.id.convLastMessage);
             time = itemView.findViewById(R.id.convTime);
+            unreadDot = itemView.findViewById(R.id.convUnreadDot);
         }
     }
 }

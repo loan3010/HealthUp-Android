@@ -737,22 +737,42 @@
             <ImageView android:layout_width="50dp" android:layout_height="50dp" android:layout_margin="8dp" android:src="@drawable/ic_tiktok" />
         </LinearLayout>
 
-        <!-- ===== NÚT ĐĂNG XUẤT (Hiện khi đã đăng nhập) ===== -->
-        <Button
-            android:id="@+id/btn_logout"
+        <!-- ===== TÀI KHOẢN (Hiện khi đã đăng nhập) ===== -->
+        <LinearLayout
+            android:id="@+id/group_account_actions"
             android:layout_width="match_parent"
-            android:layout_height="50dp"
+            android:layout_height="wrap_content"
             android:layout_marginStart="20dp"
             android:layout_marginEnd="20dp"
             android:layout_marginTop="24dp"
-            android:background="@drawable/bg_badge_tier"
-            app:backgroundTint="@color/green_button"
-            android:text="Chuyển tài khoản / Đăng xuất"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:visibility="gone"/>
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/btn_switch_account"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_badge_tier"
+                app:backgroundTint="@color/green_button"
+                android:text="@string/profile_switch_account"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+            <Button
+                android:id="@+id/btn_logout"
+                android:layout_width="match_parent"
+                android:layout_height="50dp"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_badge_tier"
+                app:backgroundTint="@color/text_gray_muted"
+                android:text="@string/profile_logout"
+                android:textAllCaps="false"
+                android:textColor="@color/white"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+        </LinearLayout>
 
         <TextView
             android:layout_width="match_parent"

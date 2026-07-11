@@ -19,7 +19,9 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.auth.AuthOrphanCleaner;
 import com.example.healthup.auth.SocialAuthHelper;
+import com.example.healthup.auth.SyntheticAuthProbe;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.PhoneNormalizer;
 import com.example.healthup.util.UserPhoneLookup;
@@ -204,6 +206,10 @@ public class RegisterActivity extends AppCompatActivity {
         TextView loginTextView = findViewById(R.id.loginTextView);
 
         registerButton.setOnClickListener(v -> attemptRegister());
+        View btnHome = findViewById(R.id.btnHome);
+        if (btnHome != null) {
+            btnHome.setOnClickListener(v -> CheckoutIntentHelper.openMainHome(this));
+        }
         loginTextView.setOnClickListener(v -> {
             startActivity(new Intent(RegisterActivity.this, LoginActivity.class));
             finish();
@@ -277,17 +283,78 @@ public class RegisterActivity extends AppCompatActivity {
                         return;
                     }
 
-                    if (TextUtils.isEmpty(email)) {
-                        launchOtpScreen(fullName, phone, email, password);
-                        return;
-                    }
-
-                    checkEmailAvailableThenContinue(fullName, phone, email.trim(), password);
+                    probeSyntheticAuthPhoneThenContinue(fullName, phone, email, password);
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
                     handleApiError(RegisterApiErrorHandler.mapException(e));
                 });
+    }
+
+    /**
+     * Firestore may be empty while Auth still has {@code phone@healthup.app} from a
+     * failed/incomplete registration — probe Auth before OTP to avoid the mismatch
+     * with forgot-password (Firestore-only) vs register (OTP collision).
+     */
+    private void probeSyntheticAuthPhoneThenContinue(
+            String fullName,
+            String phone,
+            String email,
+            String password
+    ) {
+        SyntheticAuthProbe.probePhoneAccount(firebaseAuth, phone, new SyntheticAuthProbe.Callback() {
+            @Override
+            public void onExists() {
+                AuthOrphanCleaner.deleteSyntheticAuthOrphan(phone, new AuthOrphanCleaner.Callback() {
+                    @Override
+                    public void onDeleted() {
+                        continueAfterSyntheticProbe(fullName, phone, email, password);
+                    }
+
+                    @Override
+                    public void onNotFound() {
+                        // Probe saw a collision but orphan is already gone — continue.
+                        continueAfterSyntheticProbe(fullName, phone, email, password);
+                    }
+
+                    @Override
+                    public void onProfileExists() {
+                        setLoading(false);
+                        handleApiError(RegisterApiErrorHandler.ErrorType.PHONE_ALREADY_EXISTS);
+                    }
+
+                    @Override
+                    public void onError(@NonNull Exception error) {
+                        setLoading(false);
+                        handleApiError(RegisterApiErrorHandler.mapException(error));
+                    }
+                });
+            }
+
+            @Override
+            public void onNotExists() {
+                continueAfterSyntheticProbe(fullName, phone, email, password);
+            }
+
+            @Override
+            public void onError(@NonNull Exception error) {
+                setLoading(false);
+                handleApiError(RegisterApiErrorHandler.mapException(error));
+            }
+        });
+    }
+
+    private void continueAfterSyntheticProbe(
+            String fullName,
+            String phone,
+            String email,
+            String password
+    ) {
+        if (TextUtils.isEmpty(email)) {
+            launchOtpScreen(fullName, phone, email, password);
+            return;
+        }
+        checkEmailAvailableThenContinue(fullName, phone, email.trim(), password);
     }
 
     /**

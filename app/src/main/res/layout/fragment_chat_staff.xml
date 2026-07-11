@@ -38,6 +38,33 @@
             android:textStyle="bold" />
     </LinearLayout>
 
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/sellerInboxTabs"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white" />
+
+    <EditText
+        android:id="@+id/sellerInboxSearch"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp"
+        android:background="@drawable/bg_chat_input_field"
+        android:drawableStart="@drawable/ic_search"
+        android:drawablePadding="8dp"
+        android:hint="@string/seller_inbox_search_hint"
+        android:imeOptions="actionSearch"
+        android:inputType="text"
+        android:maxLines="1"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="10dp"
+        android:textColor="@color/text_primary"
+        android:textColorHint="@color/placeholder"
+        android:textSize="14sp"
+        android:importantForAutofill="no" />
+
     <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"

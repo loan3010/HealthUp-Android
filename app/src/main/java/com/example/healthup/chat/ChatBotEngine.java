@@ -43,13 +43,21 @@ public class ChatBotEngine {
         public final boolean needsOrderLookup;
         /** When true the UI should surface the "Chat với người bán" action. */
         public final boolean offerHumanHandoff;
+        /** When true the guest must sign in before continuing. */
+        public final boolean requiresLogin;
 
         BotResponse(Intent intent, List<ChatMessage> messages,
-                    boolean needsOrderLookup, boolean offerHumanHandoff) {
+                    boolean needsOrderLookup, boolean offerHumanHandoff, boolean requiresLogin) {
             this.intent = intent;
             this.messages = messages;
             this.needsOrderLookup = needsOrderLookup;
             this.offerHumanHandoff = offerHumanHandoff;
+            this.requiresLogin = requiresLogin;
+        }
+
+        BotResponse(Intent intent, List<ChatMessage> messages,
+                    boolean needsOrderLookup, boolean offerHumanHandoff) {
+            this(intent, messages, needsOrderLookup, offerHumanHandoff, false);
         }
     }
 
@@ -132,8 +140,8 @@ public class ChatBotEngine {
 
         // 7) Fallback -> offer human handoff
         out.add(bot("Xin lỗi, mình chưa hiểu rõ câu hỏi của bạn. "
-                + "Bạn có thể chọn một chủ đề gợi ý, hoặc để mình kết nối với người bán để được hỗ trợ trực tiếp nhé."));
-        return new BotResponse(Intent.FALLBACK, out, false, true);
+                + "Bạn có thể chọn một chủ đề gợi ý, hoặc để mình kết nối với nhân viên để được hỗ trợ trực tiếp nhé."));
+        return new BotResponse(Intent.FALLBACK, out, false, true, true);
     }
 
     /** Bot greeting shown when the thread is opened. */

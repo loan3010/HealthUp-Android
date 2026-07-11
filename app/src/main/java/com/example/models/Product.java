@@ -1,6 +1,7 @@
 package com.example.models;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import com.google.firebase.Timestamp;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.PropertyName;
@@ -366,6 +367,62 @@ public class Product implements Serializable {
         return !getResolvableVariants().isEmpty() || !getGroupedVariants().isEmpty();
     }
 
+    /**
+     * True when the buyer must pick among multiple options (opens variant bottom sheet).
+     * Products with a single SKU — including one option per group (e.g. one weight + one flavor)
+     * — return false so the app can add to cart directly.
+     */
+    public boolean requiresVariantSelection() {
+        Map<String, List<ProductVariant>> grouped = getGroupedVariants();
+        if (!grouped.isEmpty()) {
+            for (List<ProductVariant> options : grouped.values()) {
+                if (options != null && options.size() > 1) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        return getResolvableVariants().size() > 1;
+    }
+
+    /**
+     * Resolves the variant to use without a picker: explicit name, sole resolvable variant,
+     * or the only option in each grouped dimension.
+     */
+    @Nullable
+    public ProductVariant getDefaultVariant(@Nullable String preferredName) {
+        if (preferredName != null && !preferredName.trim().isEmpty()) {
+            ProductVariant named = findVariantByName(preferredName.trim());
+            if (named != null) {
+                return named;
+            }
+        }
+        List<ProductVariant> resolved = getResolvableVariants();
+        if (resolved.size() == 1) {
+            return resolved.get(0);
+        }
+        Map<String, List<ProductVariant>> grouped = getGroupedVariants();
+        if (grouped.isEmpty()) {
+            return null;
+        }
+        ProductVariant best = null;
+        for (List<ProductVariant> options : grouped.values()) {
+            if (options == null || options.isEmpty()) {
+                continue;
+            }
+            if (options.size() > 1) {
+                return null;
+            }
+            ProductVariant candidate = options.get(0);
+            if (best == null) {
+                best = candidate;
+            } else if (candidate.getPrice() > 0 && candidate.getPrice() != getPrice()) {
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
     /** Finds a variant by display name (e.g. "100g", "200g"). */
     public ProductVariant findVariantByName(String name) {
         if (name == null || name.isEmpty()) return null;
@@ -373,6 +430,14 @@ public class Product implements Serializable {
         for (ProductVariant variant : getResolvableVariants()) {
             if (variant.getName() != null && variant.getName().trim().toLowerCase().equals(searchName)) {
                 return variant;
+            }
+        }
+        for (List<ProductVariant> options : getGroupedVariants().values()) {
+            if (options == null) continue;
+            for (ProductVariant variant : options) {
+                if (variant.getName() != null && variant.getName().trim().toLowerCase().equals(searchName)) {
+                    return variant;
+                }
             }
         }
         return null;

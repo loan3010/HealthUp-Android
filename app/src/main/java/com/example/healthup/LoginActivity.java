@@ -19,13 +19,18 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.account.AccountManagementActivity;
+import com.example.healthup.account.AccountSessionRecorder;
+import com.example.healthup.account.SavedAccountStore;
 import com.example.healthup.admin.AdminLoginActivity;
 import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.auth.SocialAuthHelper;
 import com.example.healthup.auth.UserProfileBuilder;
+import com.example.healthup.util.AppEntryRouter;
 import com.example.healthup.util.AccountDisabledWatcher;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
@@ -44,6 +49,9 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 public class LoginActivity extends AppCompatActivity {
+
+    public static final String EXTRA_ADD_ACCOUNT = "extra_add_account";
+    public static final String EXTRA_PREFILL_IDENTIFIER = "extra_prefill_identifier";
 
     private static final int BORDER_ANIMATION_MS = 200;
 
@@ -67,6 +75,7 @@ public class LoginActivity extends AppCompatActivity {
     private ProgressBar loginProgressBar;
     private LinearLayout googleButton;
     private LinearLayout facebookButton;
+    private TextView tvSavedAccounts;
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firebaseFirestore;
     private SocialAuthHelper socialAuthHelper;
@@ -77,6 +86,7 @@ public class LoginActivity extends AppCompatActivity {
     private boolean passwordHasError;
     private int identifierBorderRes = R.drawable.bg_input_default;
     private int passwordBorderRes = R.drawable.bg_input_default;
+    private boolean addingAccount;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -85,6 +95,7 @@ public class LoginActivity extends AppCompatActivity {
 
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
+        addingAccount = getIntent().getBooleanExtra(EXTRA_ADD_ACCOUNT, false);
 
         bindViews();
         applyPrefillIdentifier();
@@ -93,12 +104,31 @@ public class LoginActivity extends AppCompatActivity {
         setupActions();
         setupLegalLinks();
         updateLoginButtonState();
+        updateSavedAccountsLink();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateSavedAccountsLink();
+    }
+
+    private void updateSavedAccountsLink() {
+        if (tvSavedAccounts == null) {
+            return;
+        }
+        boolean hasSavedAccounts = !SavedAccountStore.getAll(this).isEmpty();
+        tvSavedAccounts.setVisibility(hasSavedAccounts ? View.VISIBLE : View.GONE);
     }
 
     private void applyPrefillIdentifier() {
         String prefillPhone = getIntent().getStringExtra(CheckoutIntentHelper.EXTRA_PREFILL_PHONE);
         if (!android.text.TextUtils.isEmpty(prefillPhone)) {
             identifierEditText.setText(PhoneNormalizer.normalize(prefillPhone));
+        }
+        String prefillIdentifier = getIntent().getStringExtra(EXTRA_PREFILL_IDENTIFIER);
+        if (!TextUtils.isEmpty(prefillIdentifier)) {
+            identifierEditText.setText(prefillIdentifier);
         }
         if (getIntent().getBooleanExtra(CheckoutIntentHelper.EXTRA_FOCUS_PASSWORD, false)) {
             passwordEditText.requestFocus();
@@ -120,6 +150,7 @@ public class LoginActivity extends AppCompatActivity {
         loginProgressBar = findViewById(R.id.loginProgressBar);
         googleButton = findViewById(R.id.googleButton);
         facebookButton = findViewById(R.id.facebookButton);
+        tvSavedAccounts = findViewById(R.id.tvSavedAccounts);
     }
 
     private void setupSocialAuth() {
@@ -151,12 +182,32 @@ public class LoginActivity extends AppCompatActivity {
         LinearLayout facebookButton = findViewById(R.id.facebookButton);
 
         loginButton.setOnClickListener(v -> attemptLogin());
+        View btnHome = findViewById(R.id.btnHome);
+        if (btnHome != null) {
+            btnHome.setOnClickListener(v -> CheckoutIntentHelper.openMainHome(this));
+        }
         forgotPasswordTextView.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, ForgotPasswordActivity.class)));
         registerTextView.setOnClickListener(v ->
                 startActivity(new Intent(LoginActivity.this, RegisterActivity.class)));
-        googleButton.setOnClickListener(v -> socialAuthHelper.signInWithGoogle());
-        facebookButton.setOnClickListener(v -> socialAuthHelper.signInWithFacebook());
+        if (tvSavedAccounts != null) {
+            tvSavedAccounts.setOnClickListener(v ->
+                    startActivity(new Intent(LoginActivity.this, AccountManagementActivity.class)));
+        }
+        googleButton.setOnClickListener(v -> {
+            if (shouldBlockSocialAddAccount()) {
+                showAccountLimitDialog();
+                return;
+            }
+            socialAuthHelper.signInWithGoogle();
+        });
+        facebookButton.setOnClickListener(v -> {
+            if (shouldBlockSocialAddAccount()) {
+                showAccountLimitDialog();
+                return;
+            }
+            socialAuthHelper.signInWithFacebook();
+        });
 
         TextView adminLoginLink = findViewById(R.id.tvAdminLoginLink);
         if (adminLoginLink != null) {
@@ -264,6 +315,11 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         String identifier = getInputValue(identifierEditText);
+        if (SavedAccountStore.isBlockedNewLogin(this, identifier)) {
+            showAccountLimitDialog();
+            return;
+        }
+
         String password = getInputValue(passwordEditText);
 
         if (LoginValidator.isEmailIdentifier(identifier)) {
@@ -573,8 +629,7 @@ public class LoginActivity extends AppCompatActivity {
                     setLoading(false);
                     updateLoginButtonState();
                     ensureProfileFromAuthEmail(user);
-                    Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
-                    openMainScreen();
+                    finishLoginAfterRecord(password);
                 });
     }
 
@@ -666,8 +721,7 @@ public class LoginActivity extends AppCompatActivity {
                                 setLoading(false);
                                 updateLoginButtonState();
                                 UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
-                                Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
-                                openMainScreen();
+                                finishLoginAfterRecord(userPassword);
                             });
                 });
     }
@@ -705,9 +759,42 @@ public class LoginActivity extends AppCompatActivity {
                     setLoading(false);
                     updateLoginButtonState();
                     UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
-                    Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
-                    openMainScreen();
+                    finishLoginAfterRecord(userPassword);
                 });
+    }
+
+    private void finishLoginAfterRecord(@Nullable String passwordForQuickLogin) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        AccountSessionRecorder.fetchAndRecord(this, user.getUid(), passwordForQuickLogin,
+                new AccountSessionRecorder.Listener() {
+                    @Override
+                    public void onRecorded() {
+                        Toast.makeText(LoginActivity.this, R.string.login_success, Toast.LENGTH_SHORT).show();
+                        openMainScreen();
+                    }
+
+                    @Override
+                    public void onRejectedAccountLimit() {
+                        firebaseAuth.signOut();
+                        Toast.makeText(LoginActivity.this,
+                                R.string.account_management_full_blocked, Toast.LENGTH_LONG).show();
+                    }
+                });
+    }
+
+    private boolean shouldBlockSocialAddAccount() {
+        return addingAccount && SavedAccountStore.isFull(this);
+    }
+
+    private void showAccountLimitDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.account_management_full_title)
+                .setMessage(R.string.account_management_full_message)
+                .setPositiveButton(android.R.string.ok, null)
+                .show();
     }
 
     private void syncEmailVerifiedFlag(@NonNull FirebaseUser user, @NonNull String profileDocId) {
@@ -752,10 +839,8 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         GuestCartManager.getInstance(this).mergeToFirestore(user.getUid(), () -> runOnUiThread(() ->
-                AccountDisabledWatcher.checkBeforeEnterApp(LoginActivity.this, () -> {
-                    startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(LoginActivity.this));
-                    finish();
-                })));
+                AccountDisabledWatcher.checkBeforeEnterApp(LoginActivity.this, () ->
+                        AppEntryRouter.navigateHomeAndFinish(LoginActivity.this))));
     }
 
     private abstract static class SimpleTextWatcher implements TextWatcher {

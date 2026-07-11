@@ -6,6 +6,7 @@
     android:background="@color/screen_background">
 
     <ScrollView
+        android:id="@+id/loginScrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:fillViewport="true"
@@ -256,10 +257,26 @@
                     android:background="@color/divider_color" />
             </LinearLayout>
 
+            <TextView
+                android:id="@+id/tvSavedAccounts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="?attr/selectableItemBackground"
+                android:clickable="true"
+                android:focusable="true"
+                android:gravity="center"
+                android:paddingVertical="4dp"
+                android:text="@string/login_saved_accounts"
+                android:textColor="@color/green_button"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
+                android:layout_marginTop="16dp"
                 android:orientation="horizontal">
 
                 <LinearLayout
@@ -420,5 +437,22 @@
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
+
+    <ImageView
+        android:id="@+id/btnHome"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/auth_home_button"
+        android:elevation="8dp"
+        android:focusable="true"
+        android:padding="10dp"
+        android:src="@drawable/ic_home"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/green_button" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

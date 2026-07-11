@@ -10,15 +10,18 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
+import com.example.healthup.admin.AdminActivity;
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
 import com.example.healthup.util.AccountDisabledWatcher;
+import com.example.healthup.util.AppEntryRouter;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.FloatingChatBubbleController;
@@ -63,6 +66,10 @@ public class MainActivity extends AppCompatActivity {
     private FloatingChatBubbleController floatingChatBubble;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
+    /** Prevents bottom-nav listener from loading fragments during programmatic tab changes. */
+    private boolean suppressNavSelection;
+    @Nullable
+    private Intent deferredIntent;
     private ListenerRegistration cartListener;
     private ListenerRegistration notifBadgeListener;
     private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
@@ -87,12 +94,14 @@ public class MainActivity extends AppCompatActivity {
 
         fabChat = findViewById(R.id.fabChat);
         View mainRoot = findViewById(R.id.main_root);
+        View dismissZone = findViewById(R.id.chatDismissZone);
         if (fabChat != null && mainRoot instanceof ViewGroup) {
             floatingChatBubble = new FloatingChatBubbleController(
                     this,
                     fabChat,
                     (ViewGroup) mainRoot,
-                    () -> openBuyerChat());
+                    () -> openBuyerChat(),
+                    dismissZone);
             floatingChatBubble.attach();
             fabChat.setOnClickListener(v -> openBuyerChat());
         }
@@ -100,6 +109,9 @@ public class MainActivity extends AppCompatActivity {
         applySystemBarInsets();
 
         navView.setOnItemSelectedListener(item -> {
+            if (suppressNavSelection) {
+                return true;
+            }
             int id = item.getItemId();
             if (id == R.id.nav_home) {
                 loadFragment(new HomeFragment());
@@ -132,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
         FirebaseManager.getInstance().seedProductsIfEmpty();
 
         if (savedInstanceState == null) {
+            routeAdminAwayIfNeeded();
             handleIntent(getIntent());
             maybeShowWelcomePromo();
         }
@@ -141,6 +154,15 @@ public class MainActivity extends AppCompatActivity {
 
         // ✅ FIX: Lắng nghe thay đổi BackStack để hiện lại thanh Nav Bar khi quay về các tab chính
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateNavigationVisibility);
+    }
+
+    private void routeAdminAwayIfNeeded() {
+        AppEntryRouter.resolveHomeIntent(this, intent -> {
+            if (AdminActivity.class.getName().equals(intent.getComponent().getClassName())) {
+                startActivity(intent);
+                finish();
+            }
+        });
     }
 
     private void updateNavigationVisibility() {
@@ -264,6 +286,12 @@ public class MainActivity extends AppCompatActivity {
 
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
         ContextCompat.registerReceiver(this, guestCartReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED);
+
+        if (deferredIntent != null) {
+            Intent intent = deferredIntent;
+            deferredIntent = null;
+            handleIntent(intent);
+        }
     }
 
     @Override
@@ -347,7 +375,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
-        handleIntent(intent);
+        setIntent(intent);
+        // Defer navigation until onResume so fragment transactions are safe after CLEAR_TOP.
+        deferredIntent = intent;
     }
 
     @SuppressWarnings("unchecked")
@@ -357,8 +387,11 @@ public class MainActivity extends AppCompatActivity {
 
             // FIX: điều hướng nhanh sang tab Giỏ hàng (sau khi "Mua ngay") hoặc tab Danh mục
             // (sau khi bấm "Xem tất cả"), không cần tạo OrderHistoryFragment cho các case này.
-            if ("cart_tab".equals(target) || "cart".equals(target)) {
-                navView.setSelectedItemId(R.id.nav_cart);
+            if ("home_tab".equals(target)) {
+                showHomeTab();
+                return;
+            } else if ("cart_tab".equals(target) || "cart".equals(target)) {
+                selectNavTab(R.id.nav_cart);
                 boolean isRebuy = intent.getBooleanExtra("is_rebuy", false);
                 // FIX (bug #4): truyền cờ "return_to_previous" xuống CartFragment để nút
                 // "Quay lại" biết cần finish() Activity này (quay về ProductDetailActivity)
@@ -375,14 +408,14 @@ public class MainActivity extends AppCompatActivity {
                 if (!args.isEmpty()) {
                     fragment.setArguments(args);
                 }
-                loadFragment(fragment);
+                loadFragmentAllowingStateLoss(fragment);
                 return;
             } else if ("category_tab".equals(target)) {
-                navView.setSelectedItemId(R.id.nav_category);
+                selectNavTab(R.id.nav_category);
                 return;
             } else if ("phone_verification".equals(target)) {
-                navView.setSelectedItemId(R.id.nav_cart);
-                loadFragment(new PhoneVerificationFragment());
+                selectNavTab(R.id.nav_cart);
+                loadFragmentAllowingStateLoss(new PhoneVerificationFragment());
                 return;
             } else if ("checkout".equals(target)) {
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
@@ -391,9 +424,9 @@ public class MainActivity extends AppCompatActivity {
                     Bundle args = new Bundle();
                     args.putSerializable("selected_items", (Serializable) checkoutItems);
                     fragment.setArguments(args);
-                    loadFragment(fragment);
+                    loadFragmentAllowingStateLoss(fragment);
                 } else {
-                    navView.setSelectedItemId(R.id.nav_cart);
+                    selectNavTab(R.id.nav_cart);
                 }
                 return;
             }
@@ -445,19 +478,19 @@ public class MainActivity extends AppCompatActivity {
             // Fix Nav Bar: dùng padding bottom thay vì bóp nghẹt chiều cao
             navView.setPadding(0, 0, 0, systemBars.bottom);
 
-            updateFloatingChatReservedSpace(systemBars.bottom);
+            updateFloatingChatReservedSpace(systemBars.top, systemBars.bottom);
             return windowInsets;
         });
     }
 
-    private void updateFloatingChatReservedSpace(int systemBottomInset) {
+    private void updateFloatingChatReservedSpace(int topInset, int systemBottomInset) {
         if (floatingChatBubble == null || navView == null) {
             return;
         }
         navView.post(() -> {
             int margin = (int) (16 * getResources().getDisplayMetrics().density);
             int reserved = navView.getHeight() + systemBottomInset + margin;
-            floatingChatBubble.updateBottomReservedPx(reserved);
+            floatingChatBubble.updateInsets(topInset, reserved);
         });
     }
 
@@ -477,19 +510,64 @@ public class MainActivity extends AppCompatActivity {
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .commit();
-        
-        // Cập nhật hiển thị Nav Bar dựa trên Fragment mới
+
         navView.post(this::updateNavigationVisibility);
     }
 
+    private void loadFragmentAllowingStateLoss(Fragment fragment) {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commitAllowingStateLoss();
+
+        navView.post(this::updateNavigationVisibility);
+    }
+
+    private void selectNavTab(int itemId) {
+        if (navView == null) {
+            return;
+        }
+        suppressNavSelection = true;
+        try {
+            navView.setSelectedItemId(itemId);
+        } finally {
+            suppressNavSelection = false;
+        }
+    }
+
     public void showCartTab() {
-        navView.setSelectedItemId(R.id.nav_cart);
-        loadFragment(new CartFragment());
+        if (navView == null) {
+            return;
+        }
+        Runnable action = () -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            selectNavTab(R.id.nav_cart);
+            loadFragmentAllowingStateLoss(new CartFragment());
+        };
+        if (navView.isAttachedToWindow()) {
+            action.run();
+        } else {
+            navView.post(action);
+        }
     }
 
     public void showHomeTab() {
-        navView.setSelectedItemId(R.id.nav_home);
-        loadFragment(new HomeFragment());
+        if (navView == null) {
+            return;
+        }
+        Runnable action = () -> {
+            if (isFinishing() || isDestroyed()) {
+                return;
+            }
+            selectNavTab(R.id.nav_home);
+            loadFragmentAllowingStateLoss(new HomeFragment());
+        };
+        if (navView.isAttachedToWindow()) {
+            action.run();
+        } else {
+            navView.post(action);
+        }
     }
 
     @SuppressWarnings("unchecked")

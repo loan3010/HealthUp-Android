@@ -8,12 +8,13 @@
 
     <!-- Header -->
     <LinearLayout
+        android:id="@+id/chatHeaderBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/brand_primary"
         android:orientation="horizontal"
         android:paddingHorizontal="8dp"
-        android:paddingTop="36dp">
+        android:paddingTop="8dp">
 
         <ImageView
             android:id="@+id/chatBack"
@@ -137,6 +138,7 @@
 
     <!-- Input bar -->
     <LinearLayout
+        android:id="@+id/chatInputBar"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/white"

@@ -15,6 +15,7 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
@@ -99,7 +100,25 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
 
         setupInputBehavior();
         setupActions();
+        setupBackNavigation();
         updateContinueButtonState();
+    }
+
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                abortIncompleteRegistration();
+            }
+        });
+    }
+
+    private void abortIncompleteRegistration() {
+        setLoading(true);
+        IncompleteSocialSessionCleaner.cleanup(() -> runOnUiThread(() -> {
+            setLoading(false);
+            finish();
+        }));
     }
 
     private void bindViews() {
@@ -118,7 +137,7 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
     }
 
     private void setupActions() {
-        findViewById(R.id.backTextView).setOnClickListener(v -> finish());
+        findViewById(R.id.backTextView).setOnClickListener(v -> abortIncompleteRegistration());
         continueButton.setOnClickListener(v -> attemptContinue());
     }
 

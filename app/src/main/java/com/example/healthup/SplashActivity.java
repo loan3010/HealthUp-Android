@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 import android.content.Context;
+import com.example.healthup.util.AppEntryRouter;
 import com.example.healthup.util.LocaleHelper;
 import android.content.Intent;
 import android.os.Bundle;
@@ -56,12 +57,15 @@ public class SplashActivity extends AppCompatActivity {
         FirebaseManager.getInstance().seedProductsIfEmpty();
         FirebaseManager.getInstance().upgradeAllProductsDataStructure();
 
-        // Chuyển màn hình nhanh; seed Firebase chạy nền, không chặn navigation
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            Intent intent = new Intent(SplashActivity.this, MainActivity.class);
-            startActivity(intent);
-            overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
-            finish();
-        }, 1500);
+        // Route to buyer or admin home; Firebase may still have a saved session.
+        final long splashEndMs = System.currentTimeMillis() + 1500L;
+        AppEntryRouter.resolveHomeIntent(this, intent -> {
+            long delay = splashEndMs - System.currentTimeMillis();
+            new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                startActivity(intent);
+                overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out);
+                finish();
+            }, Math.max(0L, delay));
+        });
     }
 }

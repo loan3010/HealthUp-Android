@@ -90,9 +90,47 @@
 
         android:src="@drawable/ic_chat_bot"
 
-        app:backgroundTint="@color/chat_user_bubble"
+        app:backgroundTint="@color/brand_primary"
 
         app:tint="@color/white" />
+
+
+
+    <FrameLayout
+
+        android:id="@+id/chatDismissZone"
+
+        android:layout_width="match_parent"
+
+        android:layout_height="88dp"
+
+        android:layout_gravity="bottom"
+
+        android:background="#33E53835"
+
+        android:clickable="false"
+
+        android:focusable="false"
+
+        android:visibility="gone">
+
+
+
+        <ImageView
+
+            android:layout_width="44dp"
+
+            android:layout_height="44dp"
+
+            android:layout_gravity="center"
+
+            android:contentDescription="@string/chat_dismiss_zone"
+
+            android:src="@drawable/ic_close"
+
+            app:tint="@color/error" />
+
+    </FrameLayout>
 
 
 

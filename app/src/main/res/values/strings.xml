@@ -9,6 +9,8 @@
     <string name="forgot_password">Quên mật khẩu?</string>
     <string name="login_button">Đăng nhập</string>
     <string name="login_or_continue">HOẶC TIẾP TỤC VỚI</string>
+    <string name="auth_home_button">Về trang chủ</string>
+    <string name="login_saved_accounts">Tài khoản đã lưu</string>
     <string name="google_label">Google</string>
     <string name="facebook_label">Facebook</string>
     <string name="login_no_account">Bạn chưa có tài khoản?</string>
@@ -25,6 +27,35 @@
     <string name="login_password_short">Mật khẩu phải có ít nhất 8 ký tự</string>
     <string name="login_credentials_wrong">Số điện thoại hoặc mật khẩu không đúng. Vui lòng nhập lại!</string>
     <string name="login_success">Đăng nhập thành công</string>
+
+    <string name="account_management_title">Quản lý tài khoản</string>
+    <string name="account_management_hint">Chọn tài khoản để đăng nhập nhanh hoặc gỡ bỏ tài khoản khác.</string>
+    <string name="account_management_hint_full">Đã lưu tối đa %1$d tài khoản. Gỡ bớt một tài khoản để thêm tài khoản mới.</string>
+    <string name="account_management_empty">Chưa có tài khoản nào được lưu trên máy.</string>
+    <string name="account_management_add">Thêm tài khoản mới</string>
+    <string name="account_management_active">Đang hoạt động</string>
+    <string name="account_management_logout">Đăng xuất</string>
+    <string name="account_management_remove">Gỡ bỏ</string>
+    <string name="account_management_unnamed">Tài khoản</string>
+    <string name="account_management_google">Đăng nhập Google</string>
+    <string name="account_management_facebook">Đăng nhập Facebook</string>
+    <string name="account_management_logout_title">Đăng xuất</string>
+    <string name="account_management_logout_message">Bạn có chắc muốn đăng xuất khỏi tài khoản này?</string>
+    <string name="account_management_logged_out">Đã đăng xuất</string>
+    <string name="account_management_remove_title">Gỡ tài khoản</string>
+    <string name="account_management_remove_message">Gỡ \"%1$s\" khỏi danh sách trên máy? (Không xóa tài khoản trên server)</string>
+    <string name="account_management_removed">Đã gỡ khỏi danh sách</string>
+    <string name="account_management_cancel">Hủy</string>
+    <string name="account_management_wrong_password">Mật khẩu đã đổi. Vui lòng đăng nhập lại.</string>
+    <string name="account_management_switch_failed">Không thể chuyển tài khoản. Vui lòng thử đăng nhập lại.</string>
+    <string name="account_management_switch_wrong_account">Tài khoản Google không khớp. Vui lòng chọn đúng tài khoản đã lưu.</string>
+    <string name="account_management_full_title">Đã đủ 3 tài khoản</string>
+    <string name="account_management_full_message">Danh sách đã đầy. Gỡ bớt một tài khoản trước khi thêm tài khoản mới.</string>
+    <string name="account_management_full_blocked">Đã lưu tối đa 3 tài khoản. Gỡ bớt một tài khoản trong danh sách trước.</string>
+    <string name="profile_switch_account">Chuyển tài khoản</string>
+    <string name="profile_logout">Đăng xuất</string>
+    <string name="profile_logout_title">Đăng xuất</string>
+    <string name="profile_logout_message">Đăng xuất và gỡ tài khoản này khỏi danh sách đã lưu trên máy?</string>
     <string name="login_phone_not_registered">Số điện thoại chưa được đăng ký</string>
     <string name="login_failed_generic">Đăng nhập thất bại, vui lòng thử lại</string>
     <string name="splash_tagline">Your health, your daily companion.</string>
@@ -295,9 +326,10 @@
 
     <string name="chat_open">Trợ lý HealthUp</string>
     <string name="chat_bubble_dismissed">Đã ẩn chat — mở lại từ Tài khoản hoặc Hỗ trợ</string>
+    <string name="chat_dismiss_zone">Thả vào đây để ẩn chat</string>
     <string name="chat_title">HealthUp Assistant</string>
     <string name="chat_status_online">Đang online</string>
-    <string name="chat_status_human">Đang chat với người bán</string>
+    <string name="chat_status_human">Đang chat với nhân viên</string>
     <string name="chat_input_hint">Xin chào, HealthUp có thể giúp…</string>
     <string name="chat_send">Gửi</string>
     <string name="chat_attach">Đính kèm</string>
@@ -330,12 +362,30 @@
 
     <string name="seller_inbox_title">Hộp thư hỗ trợ khách</string>
     <string name="seller_inbox_empty">Chưa có cuộc trò chuyện nào cần hỗ trợ.\nKhách cần bấm \"Chat với người bán\" trong màn chat trước.</string>
+    <string name="seller_inbox_empty_closed">Chưa có phiên nào đã kết thúc.</string>
+    <string name="seller_inbox_tab_active">Đang xử lý</string>
+    <string name="seller_inbox_tab_closed">Đã kết thúc</string>
+    <string name="chat_product_add_cart">Thêm giỏ hàng</string>
+    <string name="chat_product_buy_now">Mua ngay</string>
+    <string name="chat_login_action">Đăng nhập</string>
+    <string name="seller_inbox_search_hint">Tìm theo username hoặc số điện thoại…</string>
     <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
     <string name="profile_seller_inbox">Hộp thư hỗ trợ khách</string>
     <string name="profile_staff_inbox_card_title">Hộp thư hỗ trợ khách</string>
     <string name="profile_staff_inbox_card_subtitle">Xem và trả lời tin nhắn từ khách hàng</string>
     <string name="seller_reply_hint">Nhập tin nhắn trả lời…</string>
     <string name="conversation_buyer_fallback">Khách hàng</string>
+    <string name="chat_sender_bot">Trợ lý ảo</string>
+    <string name="chat_sender_staff">Nhân viên</string>
+    <string name="chat_sender_customer">Khách hàng</string>
+    <string name="chat_close_session_title">Kết thúc phiên chat</string>
+    <string name="chat_close_session_message">Kết thúc phiên hỗ trợ với khách? Sau khi kết thúc, khách có thể tiếp tục chat với trợ lý ảo.</string>
+    <string name="chat_close_session_confirm">Kết thúc phiên</string>
+    <string name="chat_status_session_closed">Phiên đã kết thúc</string>
+    <string name="chat_session_closed_hint">Phiên đã đóng — xem lịch sử hoặc mở lại</string>
+    <string name="chat_reopen_session_title">Mở lại phiên hỗ trợ</string>
+    <string name="chat_reopen_session_message">Mở lại phiên với khách này? Cuộc chat sẽ chuyển về tab Đang xử lý.</string>
+    <string name="chat_reopen_session_confirm">Mở lại phiên</string>
 
     <string name="debug_test_section">Kiểm thử (debug)</string>
     <string name="debug_about_link">Về HealthUp</string>

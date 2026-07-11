@@ -9,12 +9,13 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.example.healthup.R;
 
 /**
  * Messenger-style draggable chat bubble: snap to screen corners;
- * drag to the center zone to dismiss.
+ * drag to the bottom dismiss zone to hide.
  */
 public final class FloatingChatBubbleController {
 
@@ -22,9 +23,8 @@ public final class FloatingChatBubbleController {
     private static final String KEY_DISMISSED = "dismissed";
     private static final String KEY_CORNER = "corner";
 
-    private static final float DISMISS_ZONE_WIDTH_RATIO = 0.42f;
-    private static final float DISMISS_ZONE_HEIGHT_RATIO = 0.42f;
-    private static final int DRAG_THRESHOLD_PX = 10;
+    private static final float DISMISS_ZONE_HEIGHT_RATIO = 0.16f;
+    private static final int DRAG_THRESHOLD_PX = 6;
 
     public enum Corner {
         TOP_START, TOP_END, BOTTOM_START, BOTTOM_END
@@ -34,6 +34,8 @@ public final class FloatingChatBubbleController {
     private final ViewGroup parent;
     private final Runnable onOpenChat;
     private final SharedPreferences prefs;
+    @Nullable
+    private final View dismissZone;
 
     private float touchStartRawX;
     private float touchStartRawY;
@@ -41,15 +43,25 @@ public final class FloatingChatBubbleController {
     private float bubbleStartY;
     private boolean dragging;
     private int bottomReservedPx;
+    private int topReservedPx;
     private int edgeMarginPx;
 
     public FloatingChatBubbleController(@NonNull Context context,
                                         @NonNull View bubble,
                                         @NonNull ViewGroup parent,
                                         @NonNull Runnable onOpenChat) {
+        this(context, bubble, parent, onOpenChat, null);
+    }
+
+    public FloatingChatBubbleController(@NonNull Context context,
+                                        @NonNull View bubble,
+                                        @NonNull ViewGroup parent,
+                                        @NonNull Runnable onOpenChat,
+                                        @Nullable View dismissZone) {
         this.bubble = bubble;
         this.parent = parent;
         this.onOpenChat = onOpenChat;
+        this.dismissZone = dismissZone;
         this.prefs = context.getApplicationContext().getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         this.edgeMarginPx = dp(context, 12);
     }
@@ -71,11 +83,16 @@ public final class FloatingChatBubbleController {
         }
     }
 
-    public void updateBottomReservedPx(int px) {
-        bottomReservedPx = Math.max(0, px);
+    public void updateInsets(int topPx, int bottomPx) {
+        topReservedPx = Math.max(0, topPx);
+        bottomReservedPx = Math.max(0, bottomPx);
         if (bubble.getVisibility() == View.VISIBLE) {
             bubble.post(this::snapToSavedOrNearestCorner);
         }
+    }
+
+    public void updateBottomReservedPx(int px) {
+        updateInsets(topReservedPx, px);
     }
 
     public void markDismissed(boolean dismissed) {
@@ -100,12 +117,13 @@ public final class FloatingChatBubbleController {
     private boolean handleTouch(@NonNull View v, @NonNull MotionEvent event) {
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                bubble.animate().cancel();
                 touchStartRawX = event.getRawX();
                 touchStartRawY = event.getRawY();
                 bubbleStartX = bubble.getX();
                 bubbleStartY = bubble.getY();
                 dragging = false;
-                return false;
+                return true;
             case MotionEvent.ACTION_MOVE:
                 float dx = event.getRawX() - touchStartRawX;
                 float dy = event.getRawY() - touchStartRawY;
@@ -115,16 +133,25 @@ public final class FloatingChatBubbleController {
                 }
                 if (dragging) {
                     moveBubble(bubbleStartX + dx, bubbleStartY + dy);
+                    updateDismissZoneVisibility();
                     return true;
                 }
-                return false;
+                return true;
             case MotionEvent.ACTION_UP:
+                if (dragging) {
+                    finishDrag();
+                    hideDismissZone();
+                    return true;
+                }
+                onOpenChat.run();
+                return true;
             case MotionEvent.ACTION_CANCEL:
                 if (dragging) {
                     finishDrag();
+                    hideDismissZone();
                     return true;
                 }
-                return false;
+                return true;
             default:
                 return false;
         }
@@ -133,7 +160,7 @@ public final class FloatingChatBubbleController {
     private void finishDrag() {
         float centerX = bubble.getX() + bubble.getWidth() / 2f;
         float centerY = bubble.getY() + bubble.getHeight() / 2f;
-        if (isInDismissZone(centerX, centerY)) {
+        if (isInDismissZone(centerY)) {
             dismissBubble();
             return;
         }
@@ -158,20 +185,29 @@ public final class FloatingChatBubbleController {
                 .start();
     }
 
-    private boolean isInDismissZone(float centerX, float centerY) {
-        float parentWidth = parent.getWidth();
+    private boolean isInDismissZone(float centerY) {
         float parentHeight = getDraggableHeight();
-        if (parentWidth <= 0 || parentHeight <= 0) {
+        if (parentHeight <= 0) {
             return false;
         }
-        float zoneWidth = parentWidth * DISMISS_ZONE_WIDTH_RATIO;
         float zoneHeight = parentHeight * DISMISS_ZONE_HEIGHT_RATIO;
-        float zoneLeft = (parentWidth - zoneWidth) / 2f;
-        float zoneTop = (parentHeight - zoneHeight) / 2f;
-        return centerX >= zoneLeft
-                && centerX <= zoneLeft + zoneWidth
-                && centerY >= zoneTop
-                && centerY <= zoneTop + zoneHeight;
+        return centerY >= parentHeight - zoneHeight;
+    }
+
+    private void updateDismissZoneVisibility() {
+        if (dismissZone == null) {
+            return;
+        }
+        float centerY = bubble.getY() + bubble.getHeight() / 2f;
+        boolean show = dragging && centerY >= getDraggableHeight() * 0.55f;
+        dismissZone.setVisibility(show ? View.VISIBLE : View.GONE);
+        dismissZone.setAlpha(isInDismissZone(centerY) ? 1f : 0.65f);
+    }
+
+    private void hideDismissZone() {
+        if (dismissZone != null) {
+            dismissZone.setVisibility(View.GONE);
+        }
     }
 
     private void moveBubble(float x, float y) {
@@ -227,11 +263,11 @@ public final class FloatingChatBubbleController {
         switch (corner) {
             case TOP_START:
                 x = edgeMarginPx;
-                y = edgeMarginPx;
+                y = topReservedPx + edgeMarginPx;
                 break;
             case TOP_END:
                 x = maxX - edgeMarginPx;
-                y = edgeMarginPx;
+                y = topReservedPx + edgeMarginPx;
                 break;
             case BOTTOM_START:
                 x = edgeMarginPx;

@@ -10,18 +10,23 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.account.AccountSessionRecorder;
 import com.example.healthup.auth.AppPasswordHelper;
+import com.example.healthup.auth.AuthOrphanCleaner;
+import com.example.healthup.auth.IncompleteSocialSessionCleaner;
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.example.healthup.util.PhoneNormalizer;
+import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UsernameGenerator;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
@@ -88,6 +93,7 @@ public class OTPActivity extends AppCompatActivity {
         bindViews();
         setupOtpBoxes();
         setupActions();
+        setupBackNavigation();
         otpSubtitleTextView.setText(getString(R.string.otp_subtitle, PhoneNumberUtils.maskPhone(localPhone)));
 
         sendOtp(false);
@@ -163,13 +169,34 @@ public class OTPActivity extends AppCompatActivity {
     }
 
     private void setupActions() {
-        findViewById(R.id.backTextView).setOnClickListener(v -> finish());
+        findViewById(R.id.backTextView).setOnClickListener(v -> handleBackNavigation());
         verifyOtpButton.setOnClickListener(v -> verifyOtpCode());
         resendOtpTextView.setOnClickListener(v -> {
             if (resendOtpTextView.isEnabled()) {
                 sendOtp(true);
             }
         });
+    }
+
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackNavigation();
+            }
+        });
+    }
+
+    private void handleBackNavigation() {
+        if (isSocialAuth) {
+            setLoading(true);
+            IncompleteSocialSessionCleaner.cleanup(() -> runOnUiThread(() -> {
+                setLoading(false);
+                finish();
+            }));
+            return;
+        }
+        finish();
     }
 
     private void sendOtp(boolean isResend) {
@@ -255,11 +282,14 @@ public class OTPActivity extends AppCompatActivity {
         String authEmail = RegisterValidator.buildAuthEmail(localPhone, null);
         String normalizedPhone = PhoneNormalizer.normalize(localPhone);
         String authSecret = AppPasswordHelper.authSecretForPhone(normalizedPhone);
+        createPasswordRegistrationUser(authEmail, authSecret);
+    }
+
+    private void createPasswordRegistrationUser(@NonNull String authEmail, @NonNull String authSecret) {
         firebaseAuth.createUserWithEmailAndPassword(authEmail, authSecret)
                 .addOnCompleteListener(this, task -> {
                     if (!task.isSuccessful()) {
-                        setLoading(false);
-                        handleCreateUserFailure(task.getException());
+                        handleCreateUserFailure(task.getException(), authEmail, authSecret);
                         return;
                     }
 
@@ -274,29 +304,68 @@ public class OTPActivity extends AppCompatActivity {
                 });
     }
 
-    private void handleCreateUserFailure(@Nullable Exception exception) {
+    private void handleCreateUserFailure(
+            @Nullable Exception exception,
+            @NonNull String authEmail,
+            @NonNull String authSecret
+    ) {
         if (exception instanceof FirebaseAuthUserCollisionException) {
-            // Fallback only — RegisterActivity must catch this before OTP.
-            String message = RegisterValidator.hasRealEmail(email)
-                    ? getString(R.string.register_email_exists)
-                    : getString(R.string.register_phone_exists);
-            Intent intent = new Intent(this, RegisterActivity.class);
-            intent.putExtra(RegisterActivity.EXTRA_PHONE, localPhone);
-            intent.putExtra(RegisterActivity.EXTRA_PREFILL_FULL_NAME, fullName);
-            if (RegisterValidator.hasRealEmail(email)) {
-                intent.putExtra(RegisterActivity.EXTRA_PREFILL_EMAIL, email);
-                intent.putExtra(RegisterActivity.EXTRA_EMAIL_EXISTS, true);
-            }
-            startActivity(intent);
-            finish();
-            Toast.makeText(this, message, Toast.LENGTH_LONG).show();
+            UserPhoneLookup.queryUsers(localPhone)
+                    .addOnSuccessListener(query -> {
+                        if (!query.isEmpty()) {
+                            redirectPhoneExistsCollision();
+                            return;
+                        }
+                        AuthOrphanCleaner.deleteSyntheticAuthOrphan(localPhone,
+                                new AuthOrphanCleaner.Callback() {
+                                    @Override
+                                    public void onDeleted() {
+                                        createPasswordRegistrationUser(authEmail, authSecret);
+                                    }
+
+                                    @Override
+                                    public void onNotFound() {
+                                        createPasswordRegistrationUser(authEmail, authSecret);
+                                    }
+
+                                    @Override
+                                    public void onProfileExists() {
+                                        redirectPhoneExistsCollision();
+                                    }
+
+                                    @Override
+                                    public void onError(@NonNull Exception error) {
+                                        setLoading(false);
+                                        showSnackbar(getString(R.string.register_error_generic));
+                                    }
+                                });
+                    })
+                    .addOnFailureListener(e -> {
+                        setLoading(false);
+                        showSnackbar(getString(R.string.register_error_generic));
+                    });
             return;
         }
+        setLoading(false);
         String detail = exception != null && exception.getMessage() != null
                 ? exception.getMessage()
                 : getString(R.string.register_error_generic);
         android.util.Log.w("OTPActivity", "createUser failed", exception);
         showSnackbar(detail);
+    }
+
+    private void redirectPhoneExistsCollision() {
+        setLoading(false);
+        String message = getString(R.string.register_phone_exists);
+        Intent intent = new Intent(this, RegisterActivity.class);
+        intent.putExtra(RegisterActivity.EXTRA_PHONE, localPhone);
+        intent.putExtra(RegisterActivity.EXTRA_PREFILL_FULL_NAME, fullName);
+        if (RegisterValidator.hasRealEmail(email)) {
+            intent.putExtra(RegisterActivity.EXTRA_PREFILL_EMAIL, email);
+        }
+        startActivity(intent);
+        finish();
+        Toast.makeText(this, message, Toast.LENGTH_LONG).show();
     }
 
     private void navigateToLinkPassword() {
@@ -385,6 +454,11 @@ public class OTPActivity extends AppCompatActivity {
                 .set(userData)
                 .addOnSuccessListener(unused -> {
                     registrationRepository.deleteOtpDoc(localPhone);
+                    AccountSessionRecorder.fetchAndRecord(
+                            this,
+                            uid,
+                            isSocialAuth ? null : password
+                    );
                     boolean needsEmailVerify = !isSocialAuth && RegisterValidator.hasRealEmail(email);
                     if (needsEmailVerify) {
                         setLoading(false);

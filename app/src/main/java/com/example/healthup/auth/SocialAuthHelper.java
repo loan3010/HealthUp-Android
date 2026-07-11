@@ -12,8 +12,11 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.healthup.account.AccountQuickLogin;
+import com.example.healthup.account.AccountSessionRecorder;
 import com.example.healthup.BuildConfig;
 import com.example.healthup.R;
+import com.example.healthup.util.AppEntryRouter;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.facebook.AccessToken;
@@ -59,6 +62,10 @@ public class SocialAuthHelper {
     private final GoogleSignInClient googleSignInClient;
     @Nullable
     private final String webClientId;
+    @Nullable
+    private String expectedSwitchUid;
+    @Nullable
+    private String preferredGoogleEmail;
 
     public SocialAuthHelper(@NonNull AppCompatActivity activity, @NonNull Listener listener) {
         this.activity = activity;
@@ -84,6 +91,9 @@ public class SocialAuthHelper {
                 result -> {
                     if (result.getResultCode() != Activity.RESULT_OK) {
                         setLoading(false);
+                        clearSwitchTarget();
+                        clearSwitchTarget();
+                        clearSwitchTarget();
                         if (result.getResultCode() == Activity.RESULT_CANCELED) {
                             notifyError(activity.getString(R.string.social_auth_google_cancelled));
                         } else {
@@ -96,6 +106,8 @@ public class SocialAuthHelper {
                     }
                     if (result.getData() == null) {
                         setLoading(false);
+                        clearSwitchTarget();
+                        clearSwitchTarget();
                         notifyError(withDebugDetail(
                                 activity.getString(R.string.social_auth_google_failed),
                                 "sign-in intent returned null data"
@@ -115,9 +127,55 @@ public class SocialAuthHelper {
             return;
         }
 
+        clearSwitchTarget();
         setLoading(true);
         googleSignInClient.signOut().addOnCompleteListener(task ->
                 googleSignInLauncher.launch(googleSignInClient.getSignInIntent()));
+    }
+
+    /**
+     * Quick account switch: try silent Google sign-in for the saved email before showing UI.
+     */
+    public void signInWithGoogleForSwitch(
+            @Nullable String preferredEmail,
+            @NonNull String expectedUid
+    ) {
+        if (googleSignInClient == null || webClientId == null) {
+            notifyError(activity.getString(R.string.social_auth_google_not_configured));
+            return;
+        }
+
+        expectedSwitchUid = expectedUid;
+        preferredGoogleEmail = preferredEmail;
+        GoogleSignInClient switchClient = buildGoogleSignInClient(preferredEmail);
+        setLoading(true);
+        switchClient.silentSignIn().addOnCompleteListener(task -> {
+            if (task.isSuccessful()) {
+                GoogleSignInAccount account = task.getResult();
+                if (account != null && !TextUtils.isEmpty(account.getIdToken())) {
+                    PendingGoogleLink.set(account.getIdToken(), account.getEmail());
+                    signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
+                    return;
+                }
+            }
+            googleSignInLauncher.launch(switchClient.getSignInIntent());
+        });
+    }
+
+    @NonNull
+    private GoogleSignInClient buildGoogleSignInClient(@Nullable String accountEmail) {
+        GoogleSignInOptions.Builder builder = new GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+                .requestIdToken(webClientId)
+                .requestEmail();
+        if (!TextUtils.isEmpty(accountEmail)) {
+            builder.setAccountName(accountEmail);
+        }
+        return GoogleSignIn.getClient(activity, builder.build());
+    }
+
+    private void clearSwitchTarget() {
+        expectedSwitchUid = null;
+        preferredGoogleEmail = null;
     }
 
     public void signInWithFacebook() {
@@ -148,11 +206,13 @@ public class SocialAuthHelper {
             @Override
             public void onCancel() {
                 setLoading(false);
+                clearSwitchTarget();
             }
 
             @Override
             public void onError(@NonNull FacebookException error) {
                 setLoading(false);
+                clearSwitchTarget();
                 notifyError(withDebugDetail(
                         activity.getString(R.string.social_auth_facebook_failed),
                         error.getMessage()
@@ -167,6 +227,7 @@ public class SocialAuthHelper {
             GoogleSignInAccount account = task.getResult(ApiException.class);
             if (account == null || TextUtils.isEmpty(account.getIdToken())) {
                 setLoading(false);
+                clearSwitchTarget();
                 logDebug("Google account selected but idToken is empty. webClientId configured="
                         + GoogleWebClientIdResolver.isValidClientId(webClientId));
                 notifyError(activity.getString(R.string.social_auth_google_no_id_token));
@@ -176,6 +237,7 @@ public class SocialAuthHelper {
             signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
         } catch (ApiException e) {
             setLoading(false);
+            clearSwitchTarget();
             logDebug("Google Sign-In ApiException", e);
             notifyError(formatGoogleApiError(e));
         }
@@ -186,6 +248,7 @@ public class SocialAuthHelper {
                 .addOnCompleteListener(activity, task -> {
                     if (!task.isSuccessful()) {
                         setLoading(false);
+                        clearSwitchTarget();
                         Exception exception = task.getException();
                         logDebug("Firebase signInWithCredential failed", exception);
                         if (isAccountExistsWithDifferentCredential(exception)) {
@@ -202,6 +265,7 @@ public class SocialAuthHelper {
                     FirebaseUser user = firebaseAuth.getCurrentUser();
                     if (user == null) {
                         setLoading(false);
+                        clearSwitchTarget();
                         notifyError(activity.getString(R.string.social_auth_failed));
                         return;
                     }
@@ -234,6 +298,7 @@ public class SocialAuthHelper {
                 .addOnSuccessListener(doc -> handleProfileCheck(user, authProvider, doc))
                 .addOnFailureListener(e -> {
                     setLoading(false);
+                    clearSwitchTarget();
                     logDebug("Firestore profile check failed", e);
                     notifyError(withDebugDetail(
                             activity.getString(R.string.social_auth_profile_check_failed),
@@ -249,19 +314,59 @@ public class SocialAuthHelper {
     ) {
         String phone = doc.exists() ? doc.getString("phone") : null;
         if (doc.exists() && !TextUtils.isEmpty(phone)) {
-            setLoading(false);
-            PendingGoogleLink.clear();
-            Toast.makeText(activity, R.string.login_success, Toast.LENGTH_SHORT).show();
-            GuestCartManager.getInstance(activity).mergeToFirestore(user.getUid(), () ->
-                    activity.runOnUiThread(() -> {
-                        activity.startActivity(CheckoutIntentHelper.buildPostAuthMainIntent(activity));
-                        activity.finish();
-                    }));
+            completeAuthenticatedSession(user);
+            return;
+        }
+        if (expectedSwitchUid != null && doc.exists() && expectedSwitchUid.equals(user.getUid())) {
+            completeAuthenticatedSession(user);
             return;
         }
 
         // Case 7 (revised): Gmail matches existing phone/password profile → OTP phone → password → link.
         maybeLinkExistingAccountByEmail(user, authProvider, doc);
+    }
+
+    private void completeAuthenticatedSession(@NonNull FirebaseUser user) {
+        if (expectedSwitchUid != null && !expectedSwitchUid.equals(user.getUid())) {
+            setLoading(false);
+            clearSwitchTarget();
+            firebaseAuth.signOut();
+            notifyError(activity.getString(R.string.account_management_switch_wrong_account));
+            return;
+        }
+
+        final boolean switchingAccount = expectedSwitchUid != null;
+        clearSwitchTarget();
+        PendingGoogleLink.clear();
+        AccountSessionRecorder.fetchAndRecord(activity, user.getUid(), null,
+                new AccountSessionRecorder.Listener() {
+                    @Override
+                    public void onRecorded() {
+                        setLoading(false);
+                        Toast.makeText(activity, R.string.login_success, Toast.LENGTH_SHORT).show();
+                        GuestCartManager.getInstance(activity).mergeToFirestore(user.getUid(), () ->
+                                activity.runOnUiThread(() -> {
+                                    if (switchingAccount) {
+                                        AccountQuickLogin.openMainAfterSwitch(activity);
+                                    } else if (activity instanceof android.app.Activity) {
+                                        AppEntryRouter.navigateHomeAndFinish(
+                                                (android.app.Activity) activity);
+                                    } else {
+                                        activity.startActivity(
+                                                CheckoutIntentHelper.buildPostAuthMainIntent(activity));
+                                        activity.finish();
+                                    }
+                                }));
+                    }
+
+                    @Override
+                    public void onRejectedAccountLimit() {
+                        setLoading(false);
+                        firebaseAuth.signOut();
+                        Toast.makeText(activity, R.string.account_management_full_blocked,
+                                Toast.LENGTH_LONG).show();
+                    }
+                });
     }
 
     private void maybeLinkExistingAccountByEmail(

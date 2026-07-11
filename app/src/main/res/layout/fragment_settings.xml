@@ -327,7 +327,8 @@
             android:text="Chuyển tài khoản / Đăng xuất"
             android:textAllCaps="false"
             android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textStyle="bold"
+            android:visibility="gone" />
 
 
         <TextView

@@ -9,11 +9,13 @@ import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.R;
+import com.example.healthup.account.AccountSessionRecorder;
 import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.util.CheckoutIntentHelper;
@@ -84,8 +86,23 @@ public class LinkGooglePasswordActivity extends AppCompatActivity {
         TextView subtitle = findViewById(R.id.subtitleText);
         subtitle.setText(getString(R.string.social_link_password_subtitle, phone));
 
-        findViewById(R.id.backTextView).setOnClickListener(v -> finish());
+        findViewById(R.id.backTextView).setOnClickListener(v -> abortIncompleteLink());
         linkButton.setOnClickListener(v -> attemptLink());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                abortIncompleteLink();
+            }
+        });
+    }
+
+    private void abortIncompleteLink() {
+        setLoading(true);
+        IncompleteSocialSessionCleaner.cleanup(() -> runOnUiThread(() -> {
+            setLoading(false);
+            finish();
+        }));
     }
 
     private void attemptLink() {
@@ -201,6 +218,7 @@ public class LinkGooglePasswordActivity extends AppCompatActivity {
                         registrationRepository.deleteOtpDoc(phone);
                     }
                     PendingGoogleLink.clear();
+                    AccountSessionRecorder.fetchAndRecord(this, user.getUid(), null);
                     maybeDeleteOrphanProfile(orphanGoogleUid, () -> {
                         setLoading(false);
                         Toast.makeText(this, R.string.social_link_success, Toast.LENGTH_SHORT).show();

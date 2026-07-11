@@ -22,8 +22,11 @@ public class ChatMessage {
     public static final String TYPE_TEXT = "text";
     public static final String TYPE_ORDER_CARD = "order_card";
     public static final String TYPE_SYSTEM = "system";
-    /** Local-only view type used to render the "suggested questions" card. */
     public static final String TYPE_SUGGESTION = "suggestion";
+    /** Local card prompting guest to sign in. */
+    public static final String TYPE_LOGIN_ACTION = "login_action";
+    /** Local product context card from product detail. */
+    public static final String TYPE_PRODUCT_CARD = "product_card";
 
     private String id;
     private String senderId;
@@ -40,6 +43,13 @@ public class ChatMessage {
     private String orderStatus;
     private double orderTotal;
     private int orderItemCount;
+
+    // Denormalized product-card payload (present when type == product_card).
+    private String productId;
+    private String productName;
+    private String productImageUrl;
+    private double productPrice;
+    private String productVariant;
 
     /**
      * Client-side ordering key in millis. Persisted messages use their server
@@ -170,6 +180,46 @@ public class ChatMessage {
 
     public void setOrderItemCount(int orderItemCount) {
         this.orderItemCount = orderItemCount;
+    }
+
+    public String getProductId() {
+        return productId;
+    }
+
+    public void setProductId(String productId) {
+        this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductImageUrl() {
+        return productImageUrl;
+    }
+
+    public void setProductImageUrl(String productImageUrl) {
+        this.productImageUrl = productImageUrl;
+    }
+
+    public double getProductPrice() {
+        return productPrice;
+    }
+
+    public void setProductPrice(double productPrice) {
+        this.productPrice = productPrice;
+    }
+
+    public String getProductVariant() {
+        return productVariant;
+    }
+
+    public void setProductVariant(String productVariant) {
+        this.productVariant = productVariant;
     }
 
     public long getSortTime() {

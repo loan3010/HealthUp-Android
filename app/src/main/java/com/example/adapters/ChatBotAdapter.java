@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.healthup.util.ImageLoadHelper;
 import com.example.healthup.R;
 import com.example.healthup.chat.ChatBubbleHelper;
 import com.example.healthup.chat.SuggestionProvider;
@@ -34,6 +35,8 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int TYPE_SYSTEM = 3;
     private static final int TYPE_ORDER_CARD = 4;
     private static final int TYPE_SUGGESTION = 5;
+    private static final int TYPE_PRODUCT_CARD = 6;
+    private static final int TYPE_LOGIN_ACTION = 7;
 
     public interface Listener {
         void onOrderCardClick(@NonNull ChatMessage message);
@@ -41,14 +44,30 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void onSuggestionQuestionClick(@NonNull String question);
 
         void onSuggestionChange();
+
+        void onLoginActionClick();
+
+        void onProductAddToCart(@NonNull ChatMessage message);
+
+        void onProductBuyNow(@NonNull ChatMessage message);
     }
 
     private final List<ChatMessage> items = new ArrayList<>();
     private final Listener listener;
     private List<SuggestionProvider.Item> suggestionItems = SuggestionProvider.getSet(0);
+    /** When true (seller/admin view), own replies appear on the right. */
+    private boolean staffView;
 
     public ChatBotAdapter(Listener listener) {
         this.listener = listener;
+    }
+
+    public void setStaffView(boolean staffView) {
+        if (this.staffView == staffView) {
+            return;
+        }
+        this.staffView = staffView;
+        notifyDataSetChanged();
     }
 
     public void setSuggestionItems(@Nullable List<SuggestionProvider.Item> items) {
@@ -78,11 +97,24 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         if (ChatMessage.TYPE_ORDER_CARD.equals(m.getType())) {
             return TYPE_ORDER_CARD;
         }
+        if (ChatMessage.TYPE_PRODUCT_CARD.equals(m.getType())) {
+            return TYPE_PRODUCT_CARD;
+        }
+        if (ChatMessage.TYPE_LOGIN_ACTION.equals(m.getType())) {
+            return TYPE_LOGIN_ACTION;
+        }
         if (ChatMessage.TYPE_SYSTEM.equals(m.getType())
                 || ChatMessage.SENDER_SYSTEM.equals(m.getSenderType())) {
             return TYPE_SYSTEM;
         }
-        if (ChatMessage.SENDER_USER.equals(m.getSenderType())) {
+        if (staffView) {
+            if (ChatMessage.SENDER_SELLER.equals(m.getSenderType())) {
+                return TYPE_USER;
+            }
+            if (ChatMessage.SENDER_USER.equals(m.getSenderType())) {
+                return TYPE_BOT;
+            }
+        } else if (ChatMessage.SENDER_USER.equals(m.getSenderType())) {
             return TYPE_USER;
         }
         return TYPE_BOT;
@@ -101,6 +133,10 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 return new OrderCardVH(inflater.inflate(R.layout.item_chat_order_card, parent, false));
             case TYPE_SUGGESTION:
                 return new SuggestionVH(inflater.inflate(R.layout.item_chat_suggestion, parent, false));
+            case TYPE_PRODUCT_CARD:
+                return new ProductCardVH(inflater.inflate(R.layout.item_chat_product_card, parent, false));
+            case TYPE_LOGIN_ACTION:
+                return new LoginActionVH(inflater.inflate(R.layout.item_chat_login_action, parent, false));
             case TYPE_BOT:
             default:
                 return new BotVH(inflater.inflate(R.layout.item_chat_message, parent, false));
@@ -116,11 +152,15 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         } else if (holder instanceof SystemVH) {
             ((SystemVH) holder).text.setText(m.getText());
         } else if (holder instanceof BotVH) {
-            ((BotVH) holder).bind(m, groupPosition, items, position);
+            ((BotVH) holder).bind(m, groupPosition, items, position, staffView);
         } else if (holder instanceof OrderCardVH) {
             ((OrderCardVH) holder).bind(m, listener);
         } else if (holder instanceof SuggestionVH) {
             ((SuggestionVH) holder).bind(suggestionItems, listener);
+        } else if (holder instanceof ProductCardVH) {
+            ((ProductCardVH) holder).bind(m, listener);
+        } else if (holder instanceof LoginActionVH) {
+            ((LoginActionVH) holder).bind(m, listener);
         }
     }
 
@@ -168,6 +208,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
     static class BotVH extends RecyclerView.ViewHolder {
         final View avatarContainer;
+        final ImageView avatar;
         final TextView name;
         final TextView text;
         final TextView time;
@@ -175,6 +216,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         BotVH(@NonNull View v) {
             super(v);
             avatarContainer = v.findViewById(R.id.chatBotAvatarContainer);
+            avatar = v.findViewById(R.id.chatBotAvatar);
             name = v.findViewById(R.id.chatSenderName);
             text = v.findViewById(R.id.chatBotText);
             time = v.findViewById(R.id.chatBotTime);
@@ -183,7 +225,8 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void bind(@NonNull ChatMessage message,
                   @NonNull ChatBubbleHelper.GroupPosition groupPosition,
                   @NonNull List<ChatMessage> items,
-                  int position) {
+                  int position,
+                  boolean staffView) {
             text.setText(message.getText());
             text.setBackgroundResource(ChatBubbleHelper.incomingBubbleBackground(groupPosition));
             applyVerticalPadding(itemView, groupPosition);
@@ -192,13 +235,31 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 if (avatarContainer != null) {
                     avatarContainer.setVisibility(View.VISIBLE);
                 }
+                if (avatar != null) {
+                    if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
+                        avatar.setImageResource(R.drawable.ic_chat_person);
+                    } else {
+                        avatar.setImageResource(R.drawable.ic_chat_bot);
+                    }
+                }
             } else if (avatarContainer != null) {
                 avatarContainer.setVisibility(View.INVISIBLE);
             }
 
             if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                name.setText(message.getSenderName() != null ? message.getSenderName() : "Người bán");
+                String staffLabel = itemView.getContext().getString(R.string.chat_sender_staff);
+                if (message.getSenderName() != null && !message.getSenderName().trim().isEmpty()) {
+                    name.setText(staffLabel + " · " + message.getSenderName().trim());
+                } else {
+                    name.setText(staffLabel);
+                }
+            } else if (ChatMessage.SENDER_BOT.equals(message.getSenderType())) {
+                name.setVisibility(View.VISIBLE);
+                name.setText(R.string.chat_sender_bot);
+            } else if (staffView && ChatMessage.SENDER_USER.equals(message.getSenderType())) {
+                name.setVisibility(View.VISIBLE);
+                name.setText(R.string.chat_sender_customer);
             } else {
                 name.setVisibility(View.GONE);
             }
@@ -209,6 +270,72 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             } else {
                 time.setVisibility(View.GONE);
             }
+        }
+    }
+
+    static class ProductCardVH extends RecyclerView.ViewHolder {
+        final ImageView image;
+        final TextView name;
+        final TextView variant;
+        final TextView price;
+        final View btnAddCart;
+        final View btnBuyNow;
+
+        ProductCardVH(@NonNull View v) {
+            super(v);
+            image = v.findViewById(R.id.productCardImage);
+            name = v.findViewById(R.id.productCardName);
+            variant = v.findViewById(R.id.productCardVariant);
+            price = v.findViewById(R.id.productCardPrice);
+            btnAddCart = v.findViewById(R.id.btnProductAddCart);
+            btnBuyNow = v.findViewById(R.id.btnProductBuyNow);
+        }
+
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+            name.setText(message.getProductName() != null ? message.getProductName() : "");
+            if (message.getProductVariant() != null && !message.getProductVariant().isEmpty()) {
+                variant.setVisibility(View.VISIBLE);
+                variant.setText(message.getProductVariant());
+            } else {
+                variant.setVisibility(View.GONE);
+            }
+            price.setText(formatCurrency(message.getProductPrice()));
+            ImageLoadHelper.loadInto(image, message.getProductImageUrl());
+            btnAddCart.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onProductAddToCart(message);
+                }
+            });
+            btnBuyNow.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onProductBuyNow(message);
+                }
+            });
+        }
+
+        private String formatCurrency(double value) {
+            String formatted = new DecimalFormat("#,###").format(value);
+            return formatted.replace(',', '.') + "đ";
+        }
+    }
+
+    static class LoginActionVH extends RecyclerView.ViewHolder {
+        final TextView text;
+        final View loginButton;
+
+        LoginActionVH(@NonNull View v) {
+            super(v);
+            text = v.findViewById(R.id.chatLoginPromptText);
+            loginButton = v.findViewById(R.id.btnChatLogin);
+        }
+
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+            text.setText(message.getText());
+            loginButton.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onLoginActionClick();
+                }
+            });
         }
     }
 

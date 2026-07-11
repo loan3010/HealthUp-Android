@@ -6,13 +6,17 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
+import com.example.healthup.FirebaseManager;
 import com.example.healthup.data.repository.ChatRepository;
 import com.example.healthup.data.repository.OrderRepository;
 import com.example.healthup.util.Event;
+import com.example.healthup.chat.TextNormalizer;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.models.ChatMessage;
 import com.example.models.Conversation;
 import com.example.models.Order;
+import com.example.models.Product;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
@@ -59,6 +63,8 @@ public class ChatViewModel extends ViewModel {
 
     private boolean initialized;
     private boolean sellerMode;
+    private boolean buyerUiBootstrapped;
+    private boolean remoteHistoryReady;
     private String uid;
     private String conversationId;
     private String buyerId;
@@ -68,6 +74,7 @@ public class ChatViewModel extends ViewModel {
     private String pendingOrderCode;
     private String pendingProductName;
     private String pendingProductVariant;
+    private String pendingProductId;
 
     public ChatViewModel() {
         this(new ChatRepository(), new OrderRepository(), new ChatBotEngine());
@@ -96,7 +103,6 @@ public class ChatViewModel extends ViewModel {
         return suggestionItems;
     }
 
-    /** True when the signed-in user is a seller/admin (can open the inbox). */
     public LiveData<Boolean> getSellerAccess() {
         return sellerAccess;
     }
@@ -105,14 +111,20 @@ public class ChatViewModel extends ViewModel {
         return sellerMode;
     }
 
-    /** Context from order detail: auto-send a product or order inquiry when chat opens. */
+    public boolean isGuest() {
+        return uid == null;
+    }
+
     public void setInquiryContext(@Nullable String orderCode,
                                   @Nullable String productName,
-                                  @Nullable String productVariant) {
+                                  @Nullable String productVariant,
+                                  @Nullable String productId) {
+        pendingProductId = productId != null ? productId.trim() : null;
         pendingProductName = productName != null ? productName.trim() : null;
         pendingProductVariant = productVariant != null ? productVariant.trim() : null;
         if (orderCode == null || orderCode.trim().isEmpty()) {
-            pendingInquiry = pendingProductName != null && !pendingProductName.isEmpty();
+            pendingInquiry = (pendingProductName != null && !pendingProductName.isEmpty())
+                    || (pendingProductId != null && !pendingProductId.isEmpty());
             pendingOrderCode = null;
             return;
         }
@@ -121,28 +133,88 @@ public class ChatViewModel extends ViewModel {
     }
 
     public void dispatchPendingInquiry() {
-        if (!pendingInquiry || !initialized || sellerMode || conversationId == null) {
+        if (!pendingInquiry || !initialized || sellerMode) {
+            return;
+        }
+        if (isHumanMode()) {
+            pendingInquiry = false;
+            return;
+        }
+        if (pendingProductId != null && !pendingProductId.isEmpty()
+                && (conversationId == null || uid == null)) {
+            pendingInquiry = false;
+            loadAndShowProductCard(pendingProductId);
+            return;
+        }
+        if (conversationId == null) {
             return;
         }
         pendingInquiry = false;
-        
-        // Thay vì để User tự gõ, Bot sẽ chủ động chào và nhắc tới đơn hàng/sản phẩm
+
+        if (pendingProductId != null && !pendingProductId.isEmpty()) {
+            loadAndShowProductCard(pendingProductId);
+            return;
+        }
+
         if (pendingProductName != null && !pendingProductName.isEmpty()) {
             String variantPart = (pendingProductVariant != null && !pendingProductVariant.isEmpty())
                     ? " (" + pendingProductVariant + ")" : "";
             String orderPart = (pendingOrderCode != null && !pendingOrderCode.isEmpty())
                     ? " thuộc đơn hàng " + pendingOrderCode : "";
-            
-            String botMsg = "Chào bạn! Mình thấy bạn đang cần hỗ trợ về sản phẩm **" 
-                    + pendingProductName + variantPart + "**" + orderPart 
+
+            String botMsg = "Chào bạn! Mình thấy bạn đang cần hỗ trợ về sản phẩm "
+                    + pendingProductName + variantPart + orderPart
                     + ". Bạn cần mình tư vấn thêm gì về sản phẩm này không?";
             addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
         } else if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
-            String botMsg = "Chào bạn! Mình đã nhận được yêu cầu hỗ trợ cho đơn hàng **" 
-                    + pendingOrderCode + "**. Bạn đang gặp vấn đề gì với đơn hàng này (vận chuyển, thanh toán, đổi trả...) để mình giúp nhé?";
+            String botMsg = "Chào bạn! Mình đã nhận được yêu cầu hỗ trợ cho đơn hàng "
+                    + pendingOrderCode + ". Bạn đang gặp vấn đề gì với đơn hàng này (vận chuyển, thanh toán, đổi trả...) để mình giúp nhé?";
             addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
         }
         recompute();
+    }
+
+    private void loadAndShowProductCard(@NonNull String productId) {
+        FirebaseFirestore.getInstance().collection("products").document(productId).get()
+                .addOnSuccessListener(doc -> {
+                    Product product = Product.fromDocument(doc);
+                    if (product != null) {
+                        addLocal(buildProductCard(product, pendingProductVariant), nextLocalSort());
+                        String sellerMsg = "Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm giỏ hàng nhé.";
+                        ChatMessage hint = ChatMessage.text(ChatMessage.SENDER_SELLER, "healthup_shop", sellerMsg);
+                        hint.setSenderName("HealthUp");
+                        addLocal(hint, nextLocalSort());
+                    } else if (pendingProductName != null) {
+                        String botMsg = "Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
+                                + pendingProductName + ".";
+                        addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg),
+                                nextLocalSort());
+                    }
+                    recompute();
+                })
+                .addOnFailureListener(e -> {
+                    if (pendingProductName != null) {
+                        addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT,
+                                "Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm " + pendingProductName + "."),
+                                nextLocalSort());
+                        recompute();
+                    }
+                });
+    }
+
+    private ChatMessage buildProductCard(@NonNull Product product, @Nullable String variant) {
+        ChatMessage card = new ChatMessage();
+        card.setSenderType(ChatMessage.SENDER_SELLER);
+        card.setSenderId("healthup_shop");
+        card.setSenderName("HealthUp");
+        card.setType(ChatMessage.TYPE_PRODUCT_CARD);
+        card.setProductId(product.getId());
+        card.setProductName(product.getName());
+        card.setProductImageUrl(product.getImageUrl());
+        card.setProductPrice(product.getPrice());
+        card.setProductVariant(variant);
+        card.setText(product.getName());
+        return card;
     }
 
 
@@ -174,14 +246,15 @@ public class ChatViewModel extends ViewModel {
             this.conversationId = existingConversationId;
             this.buyerId = buyerIdArg;
             if (conversationId != null) {
+                chatRepository.markStaffRead(conversationId);
                 startListening(conversationId);
             }
             return;
         }
 
-        // Buyer mode
+        // Buyer mode — preserve active human sessions; only bootstrap bot UI in bot mode.
         this.buyerId = uid;
-        
+
         if (uid == null) {
             addLocal(botEngine.greeting(), SORT_GREETING);
             addSuggestionCard();
@@ -189,46 +262,69 @@ public class ChatViewModel extends ViewModel {
             return;
         }
 
-        // New Session logic: Always clear old messages for buyers upon entry
         chatRepository.fetchUserName(uid, name ->
                 chatRepository.getOrCreateConversation(uid, name, null,
                         new ChatRepository.ConversationIdCallback() {
                             @Override
                             public void onReady(@NonNull String id) {
                                 conversationId = id;
-                                // Pre-clear local UI state immediately to hide old messages while waiting for delete
-                                localMessages.clear();
-                                remoteMessages.clear();
-                                messages.setValue(new ArrayList<>());
-
-                                // Clear old messages from Firestore for a fresh session
-                                chatRepository.deleteConversationHistory(id, success -> {
-                                    // Reset mode to Bot upon new entry
-                                    chatRepository.setMode(id, Conversation.MODE_BOT, s -> {});
-
-                                    // Reset local items AFTER delete is triggered
-                                    localMessages.clear();
-                                    addLocal(botEngine.greeting(), SORT_GREETING);
-                                    addSuggestionCard();
-                                    
-                                    // Now start fresh listener
-                                    startListening(id);
-                                    
-                                    // If we have order context, send initial inquiry
-                                    dispatchPendingInquiry();
-                                    
-                                    recompute();
-                                });
+                                startListening(id);
                             }
 
                             @Override
                             public void onError(@NonNull Exception e) {
-                                // Fallback: still show bot greeting even if history clear fails
                                 addLocal(botEngine.greeting(), SORT_GREETING);
                                 addSuggestionCard();
                                 recompute();
                             }
                         }));
+    }
+
+    private void bootstrapBuyerUi() {
+        if (sellerMode || buyerUiBootstrapped || uid == null) {
+            return;
+        }
+        buyerUiBootstrapped = true;
+
+        if (!remoteMessages.isEmpty()) {
+            removeLocalGreetingAndSuggestion();
+        }
+
+        Conversation conv = conversation.getValue();
+        if (conv != null && conv.isHumanMode()) {
+            clearLocalBotContent();
+            recompute();
+            dispatchPendingInquiry();
+            return;
+        }
+
+        if (remoteMessages.isEmpty() && !hasLocalGreeting()) {
+            addLocal(botEngine.greeting(), SORT_GREETING);
+            addSuggestionCard();
+        }
+        recompute();
+        dispatchPendingInquiry();
+    }
+
+    private void removeLocalGreetingAndSuggestion() {
+        for (int i = localMessages.size() - 1; i >= 0; i--) {
+            ChatMessage local = localMessages.get(i);
+            if (local.getSortTime() == SORT_GREETING
+                    || local.getSortTime() == SORT_SUGGESTION
+                    || "local_suggestion".equals(local.getId())) {
+                localMessages.remove(i);
+            }
+        }
+    }
+
+    private boolean hasLocalGreeting() {
+        for (ChatMessage local : localMessages) {
+            if (ChatMessage.SENDER_BOT.equals(local.getSenderType())
+                    && local.getSortTime() == SORT_GREETING) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void startListening(@NonNull String id) {
@@ -238,6 +334,13 @@ public class ChatViewModel extends ViewModel {
             public void onMessages(@NonNull List<ChatMessage> msgs) {
                 remoteMessages.clear();
                 remoteMessages.addAll(msgs);
+                if (!msgs.isEmpty()) {
+                    removeLocalGreetingAndSuggestion();
+                }
+                if (!remoteHistoryReady) {
+                    remoteHistoryReady = true;
+                    bootstrapBuyerUi();
+                }
                 recompute();
             }
 
@@ -246,7 +349,21 @@ public class ChatViewModel extends ViewModel {
                 // Keep whatever we already have; nothing else to do.
             }
         });
-        conversationRegistration = chatRepository.listenConversation(id, conversation::setValue);
+        conversationRegistration = chatRepository.listenConversation(id, conv -> {
+            Conversation previous = conversation.getValue();
+            conversation.setValue(conv);
+            if (!sellerMode && conv != null && conv.isHumanMode()) {
+                clearLocalBotContent();
+                recompute();
+            } else if (!sellerMode && previous != null && previous.isHumanMode()
+                    && conv != null && !conv.isHumanMode()) {
+                if (remoteMessages.isEmpty() && !hasLocalGreeting()) {
+                    addLocal(botEngine.greeting(), SORT_GREETING);
+                    addSuggestionCard();
+                }
+                recompute();
+            }
+        });
     }
 
     // ---- Buyer actions ---------------------------------------------------
@@ -278,7 +395,22 @@ public class ChatViewModel extends ViewModel {
     }
 
     public void onSuggestedQuestionTapped(@NonNull String question) {
+        if (isHumanMode()) {
+            toast.setValue(new Event<>("Bạn đang chat với nhân viên. Vui lòng gửi tin nhắn trực tiếp."));
+            return;
+        }
+        if (uid == null && requiresLoginForQuestion(question)) {
+            addLoginPrompt("login_orders");
+            return;
+        }
         sendUserText(question);
+    }
+
+    private boolean requiresLoginForQuestion(@NonNull String question) {
+        String normalized = TextNormalizer.normalize(question);
+        return TextNormalizer.containsAny(normalized,
+                "kiem tra don", "tinh trang don", "don hang", "huy don", "huy dat hang",
+                "order status", "my order", "theo doi don");
     }
 
     /** Cycles the suggestion card to the next question set without removing it. */
@@ -293,10 +425,7 @@ public class ChatViewModel extends ViewModel {
             return;
         }
         if (uid == null) {
-            uid = chatRepository.currentUid();
-        }
-        if (uid == null) {
-            toast.setValue(new Event<>("Vui lòng đăng nhập để chat với người bán."));
+            addLoginPrompt("login_seller");
             return;
         }
         if (conversationId == null) {
@@ -335,12 +464,14 @@ public class ChatViewModel extends ViewModel {
         if (conversationId == null || uid == null) {
             return;
         }
+        clearLocalBotContent();
+        recompute();
         chatRepository.setMode(conversationId, Conversation.MODE_HUMAN, success -> {
             if (!success) {
                 toast.setValue(new Event<>("Không thể kết nối. Vui lòng thử lại."));
             }
         });
-        ChatMessage system = ChatMessage.system("Đang kết nối bạn với người bán của HealthUp...");
+        ChatMessage system = ChatMessage.system("Đang kết nối bạn với nhân viên HealthUp...");
         system.setSenderId(uid);
         chatRepository.sendMessage(conversationId, system, null);
     }
@@ -352,12 +483,21 @@ public class ChatViewModel extends ViewModel {
         addLocal(msg, nextLocalSort());
         if (conversationId != null && uid != null) {
             chatRepository.sendMessage(conversationId, msg, null);
+            if (isHumanMode()) {
+                chatRepository.markStaffUnread(conversationId);
+            }
         }
         recompute();
     }
 
     private void runBot(@NonNull String text) {
         ChatBotEngine.BotResponse response = botEngine.process(text);
+        if (uid == null && (response.needsOrderLookup || response.offerHumanHandoff
+                || response.requiresLogin)) {
+            addLoginPrompt(response.needsOrderLookup ? "login_orders" : "login_general");
+            recompute();
+            return;
+        }
         for (ChatMessage m : response.messages) {
             addLocal(m, nextLocalSort());
         }
@@ -366,6 +506,22 @@ public class ChatViewModel extends ViewModel {
         if (response.needsOrderLookup) {
             lookupOrders();
         }
+    }
+
+    private void addLoginPrompt(@NonNull String reason) {
+        ChatMessage card = new ChatMessage();
+        card.setId("local_login_" + reason);
+        card.setSenderType(ChatMessage.SENDER_BOT);
+        card.setSenderId(ChatMessage.SENDER_BOT);
+        card.setType(ChatMessage.TYPE_LOGIN_ACTION);
+        if ("login_orders".equals(reason)) {
+            card.setText("Bạn cần đăng nhập để mình tra cứu đơn hàng và hỗ trợ chính xác hơn.");
+        } else if ("login_seller".equals(reason)) {
+            card.setText("Bạn cần đăng nhập để chat với nhân viên HealthUp.");
+        } else {
+            card.setText("Đăng nhập để HealthUp hỗ trợ bạn tốt hơn với đơn hàng và tài khoản của bạn.");
+        }
+        addLocal(card, nextLocalSort());
     }
 
     private void lookupOrders() {
@@ -416,9 +572,46 @@ public class ChatViewModel extends ViewModel {
             return;
         }
         chatRepository.assignSeller(conversationId, uid, success -> { /* best effort */ });
-        ChatMessage msg = ChatMessage.text(ChatMessage.SENDER_SELLER, uid, text);
-        msg.setSenderName("Người bán");
-        chatRepository.sendMessage(conversationId, msg, null);
+        chatRepository.fetchUserName(uid, name -> {
+            ChatMessage msg = ChatMessage.text(ChatMessage.SENDER_SELLER, uid, text);
+            msg.setSenderName(name != null && !name.trim().isEmpty() ? name.trim() : "Nhân viên");
+            chatRepository.sendMessage(conversationId, msg, null);
+        });
+    }
+
+    /** Staff/admin ends the human session; bot can reply again for the buyer. */
+    public void closeHumanSession() {
+        if (!sellerMode || conversationId == null) {
+            return;
+        }
+        chatRepository.closeHumanSession(
+                conversationId,
+                "Phiên chat với nhân viên đã kết thúc. Bạn có thể tiếp tục hỏi trợ lý ảo.",
+                success -> {
+                    if (!success) {
+                        toast.setValue(new Event<>("Không thể kết thúc phiên. Vui lòng thử lại."));
+                    }
+                });
+    }
+
+    /** Reopens a closed session from the staff inbox history tab. */
+    public void reopenHumanSession() {
+        if (!sellerMode || conversationId == null) {
+            return;
+        }
+        chatRepository.reopenHumanSession(
+                conversationId,
+                "Nhân viên đã mở lại phiên hỗ trợ.",
+                success -> {
+                    if (!success) {
+                        toast.setValue(new Event<>("Không thể mở lại phiên. Vui lòng thử lại."));
+                    }
+                });
+    }
+
+    public boolean isClosedSessionView() {
+        Conversation c = conversation.getValue();
+        return sellerMode && c != null && c.isClosedSession() && !c.isHumanMode();
     }
 
     // ---- Local list helpers ---------------------------------------------
@@ -451,9 +644,41 @@ public class ChatViewModel extends ViewModel {
         return localSortCursor;
     }
 
+    private void clearLocalBotContent() {
+        removeLocalById("local_suggestion");
+        for (int i = localMessages.size() - 1; i >= 0; i--) {
+            ChatMessage local = localMessages.get(i);
+            if (isBotLocalContent(local)) {
+                localMessages.remove(i);
+            }
+        }
+    }
+
+    private boolean isBotLocalContent(@NonNull ChatMessage message) {
+        if (ChatMessage.TYPE_SUGGESTION.equals(message.getType())) {
+            return true;
+        }
+        if (ChatMessage.TYPE_ORDER_CARD.equals(message.getType())) {
+            return true;
+        }
+        if (ChatMessage.TYPE_PRODUCT_CARD.equals(message.getType())) {
+            return false;
+        }
+        if (ChatMessage.TYPE_LOGIN_ACTION.equals(message.getType())) {
+            return false;
+        }
+        return ChatMessage.SENDER_BOT.equals(message.getSenderType());
+    }
+
     private void recompute() {
+        boolean humanMode = isHumanMode();
         List<ChatMessage> merged = new ArrayList<>(localMessages.size() + remoteMessages.size());
-        merged.addAll(localMessages);
+        for (ChatMessage local : localMessages) {
+            if (humanMode && isBotLocalContent(local)) {
+                continue;
+            }
+            merged.add(local);
+        }
         for (ChatMessage remote : remoteMessages) {
             if (!isDuplicateOfLocalUserMessage(remote)) {
                 merged.add(remote);

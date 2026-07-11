@@ -15,6 +15,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.Insets;
@@ -26,6 +27,8 @@ import androidx.fragment.app.Fragment;
 import com.bumptech.glide.Glide;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.example.healthup.account.AccountManagementActivity;
+import com.example.healthup.account.SavedAccountStore;
 import com.example.healthup.admin.AdminActivity;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.healthup.util.UserPhoneLookup;
@@ -207,14 +210,15 @@ public class ProfileFragment extends Fragment {
                 openOrderHistoryWithTab(5));
 
 
+        View btnSwitchAccount = view.findViewById(R.id.btn_switch_account);
+        if (btnSwitchAccount != null) {
+            btnSwitchAccount.setOnClickListener(v ->
+                    startActivity(new Intent(requireContext(), AccountManagementActivity.class)));
+        }
+
         View btnLogout = view.findViewById(R.id.btn_logout);
         if (btnLogout != null) {
-            btnLogout.setOnClickListener(v -> {
-                mAuth.signOut();
-                Toast.makeText(requireContext(), "Đã đăng xuất", Toast.LENGTH_SHORT).show();
-                updateAuthUi(view);
-                loadUserData();
-            });
+            btnLogout.setOnClickListener(v -> confirmLogout());
         }
 
 
@@ -317,15 +321,43 @@ public class ProfileFragment extends Fragment {
     }
 
 
+    private void confirmLogout() {
+        new AlertDialog.Builder(requireContext())
+                .setTitle(R.string.profile_logout_title)
+                .setMessage(R.string.profile_logout_message)
+                .setNegativeButton(R.string.account_management_cancel, null)
+                .setPositiveButton(R.string.profile_logout, (dialog, which) -> performLogout())
+                .show();
+    }
+
+    private void performLogout() {
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user != null) {
+            SavedAccountStore.remove(requireContext(), user.getUid());
+        }
+        mAuth.signOut();
+
+        View view = getView();
+        if (view != null) {
+            updateAuthUi(view);
+            loadUserData();
+        }
+        if (getActivity() instanceof MainActivity) {
+            ((MainActivity) getActivity()).showHomeTab();
+        }
+        Toast.makeText(requireContext(), R.string.account_management_logged_out, Toast.LENGTH_SHORT).show();
+    }
+
+
     private void updateAuthUi(View view) {
         FirebaseUser currentUser = mAuth.getCurrentUser();
         boolean loggedIn = currentUser != null;
         groupLoggedOut.setVisibility(loggedIn ? View.GONE : View.VISIBLE);
         groupLoggedIn.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
         cardTichLuy.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
-        View btnLogout = view.findViewById(R.id.btn_logout);
-        if (btnLogout != null) {
-            btnLogout.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
+        View groupAccountActions = view.findViewById(R.id.group_account_actions);
+        if (groupAccountActions != null) {
+            groupAccountActions.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
         }
     }
 
@@ -346,9 +378,9 @@ public class ProfileFragment extends Fragment {
         cardTichLuy.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
 
 
-        View btnLogout = view.findViewById(R.id.btn_logout);
-        if (btnLogout != null) {
-            btnLogout.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
+        View groupAccountActions = view.findViewById(R.id.group_account_actions);
+        if (groupAccountActions != null) {
+            groupAccountActions.setVisibility(currentUser == null ? View.GONE : View.VISIBLE);
         }
 
 

@@ -554,6 +554,23 @@
         </LinearLayout>
     </ScrollView>
 
+    <ImageView
+        android:id="@+id/btnHome"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/auth_home_button"
+        android:elevation="8dp"
+        android:focusable="true"
+        android:padding="10dp"
+        android:src="@drawable/ic_home"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:tint="@color/green_button" />
+
     <FrameLayout
         android:id="@+id/loadingOverlay"
         android:layout_width="0dp"

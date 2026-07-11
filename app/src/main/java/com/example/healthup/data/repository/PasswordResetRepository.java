@@ -93,14 +93,21 @@ public class PasswordResetRepository {
                         return;
                     }
 
-                    String otp = otpRepository.generateOtp();
-                    otpRepository.savePasswordResetOtp(normalizedPhone, otp)
-                            .addOnSuccessListener(unused ->
-                                    callback.onResult(SendOtpResult.SUCCESS, otp))
-                            .addOnFailureListener(e ->
-                                    callback.onResult(SendOtpResult.ERROR, ""));
+                    sendOtpForRegisteredUser(normalizedPhone, callback);
                 })
                 .addOnFailureListener(e -> callback.onResult(SendOtpResult.ERROR, ""));
+    }
+
+    private void sendOtpForRegisteredUser(
+            @NonNull String normalizedPhone,
+            @NonNull SendOtpCallback callback
+    ) {
+        String otp = otpRepository.generateOtp();
+        otpRepository.savePasswordResetOtp(normalizedPhone, otp)
+                .addOnSuccessListener(unused ->
+                        callback.onResult(SendOtpResult.SUCCESS, otp))
+                .addOnFailureListener(e ->
+                        callback.onResult(SendOtpResult.ERROR, ""));
     }
 
     public void resendOtp(@NonNull String phone, @NonNull SendOtpCallback callback) {

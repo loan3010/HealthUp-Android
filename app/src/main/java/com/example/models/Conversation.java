@@ -18,6 +18,11 @@ public class Conversation {
     public static final String MODE_BOT = "bot";
     public static final String MODE_HUMAN = "human";
 
+    /** Inbox bucket: active human session awaiting staff. */
+    public static final String SESSION_ACTIVE = "active";
+    /** Inbox bucket: staff closed the session; history kept for lookup. */
+    public static final String SESSION_CLOSED = "closed";
+
     private String id;
     private List<String> participantIds = new ArrayList<>();
     private String buyerId;
@@ -28,6 +33,16 @@ public class Conversation {
     private Date lastMessageAt;
     private Date updatedAt;
     private String productId;
+    /** Server time when the buyer requested a human (seller) session. */
+    private Date humanSessionStartedAt;
+    /** Server time when staff closed the human session. */
+    private Date lastSessionClosedAt;
+    /** Inbox grouping: active / closed; null when buyer never requested human. */
+    private String sessionBucket;
+    /** True when the buyer sent a message staff has not opened yet. */
+    private boolean staffUnread;
+    private String buyerUsername;
+    private String buyerPhone;
 
     public Conversation() {
     }
@@ -114,5 +129,61 @@ public class Conversation {
 
     public void setProductId(String productId) {
         this.productId = productId;
+    }
+
+    public Date getHumanSessionStartedAt() {
+        return humanSessionStartedAt;
+    }
+
+    public void setHumanSessionStartedAt(Date humanSessionStartedAt) {
+        this.humanSessionStartedAt = humanSessionStartedAt;
+    }
+
+    public Date getLastSessionClosedAt() {
+        return lastSessionClosedAt;
+    }
+
+    public void setLastSessionClosedAt(Date lastSessionClosedAt) {
+        this.lastSessionClosedAt = lastSessionClosedAt;
+    }
+
+    public String getSessionBucket() {
+        return sessionBucket;
+    }
+
+    public void setSessionBucket(String sessionBucket) {
+        this.sessionBucket = sessionBucket;
+    }
+
+    public boolean isStaffUnread() {
+        return staffUnread;
+    }
+
+    public void setStaffUnread(boolean staffUnread) {
+        this.staffUnread = staffUnread;
+    }
+
+    public String getBuyerUsername() {
+        return buyerUsername;
+    }
+
+    public void setBuyerUsername(String buyerUsername) {
+        this.buyerUsername = buyerUsername;
+    }
+
+    public String getBuyerPhone() {
+        return buyerPhone;
+    }
+
+    public void setBuyerPhone(String buyerPhone) {
+        this.buyerPhone = buyerPhone;
+    }
+
+    public boolean isActiveSession() {
+        return SESSION_ACTIVE.equals(sessionBucket) || isHumanMode();
+    }
+
+    public boolean isClosedSession() {
+        return SESSION_CLOSED.equals(sessionBucket);
     }
 }

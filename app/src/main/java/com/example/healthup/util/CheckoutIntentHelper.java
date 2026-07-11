@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 
+import androidx.annotation.NonNull;
+
 import com.example.healthup.LoginActivity;
 import com.example.healthup.MainActivity;
 import com.example.healthup.RegisterActivity;
@@ -23,6 +25,7 @@ public final class CheckoutIntentHelper {
 
     public static final String NAV_CHECKOUT = "checkout";
     public static final String NAV_PHONE_VERIFICATION = "phone_verification";
+    public static final String NAV_HOME_TAB = "home_tab";
 
     private static final String PREFS_NAME = "pending_checkout_prefs";
     private static final String KEY_HAS_PENDING = "has_pending_checkout";
@@ -73,6 +76,22 @@ public final class CheckoutIntentHelper {
         }
 
         return intent;
+    }
+
+    /** Opens Main on the home tab; keeps the current Firebase session (guest or logged-in). */
+    public static Intent buildMainHomeIntent(@NonNull Context context) {
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra(EXTRA_NAVIGATE_TO, NAV_HOME_TAB);
+        return intent;
+    }
+
+    public static void openMainHome(@NonNull android.app.Activity activity) {
+        if (activity.isFinishing()) {
+            return;
+        }
+        // CLEAR_TOP finishes Login/AccountManagement above Main; avoid racing finish() here.
+        activity.startActivity(buildMainHomeIntent(activity));
     }
 
     public static boolean shouldReturnToCheckout(Intent intent) {

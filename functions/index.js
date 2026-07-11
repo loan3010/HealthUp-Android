@@ -1,12 +1,37 @@
+/**
+ * Optional server-side utilities (admin scripts / Blaze deploy).
+ *
+ * HealthUp Android is Spark-only and does NOT call any HTTPS callable here:
+ * - Registration / forgot-password / social flows use Firestore + client Auth only.
+ * - Orphan cleanup: AuthOrphanCleaner.java (sign-in + delete), not Cloud Functions.
+ * - Password reset: PasswordResetRepository writes passwordHash on users/{uid}; Auth secret unchanged.
+ *
+ * exports.resetPassword below is legacy / unused by the Android app — kept for manual ops only.
+ */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const {
+  previewOrphans,
+  cleanupOrphans,
+} = require('./lib/orphanCleanup');
 
 admin.initializeApp();
 
+async function assertAdminCallable(context) {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'Sign in required');
+  }
+  const doc = await admin.firestore().collection('users').doc(context.auth.uid).get();
+  const data = doc.data() || {};
+  const role = (data.role || data.userRole || '').toString().toLowerCase();
+  if (role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Admin only');
+  }
+}
+
 /**
- * Callable: reset Auth password after Firestore password_reset OTP was verified.
- * Prefer update by Auth UID (Firestore users/{uid} id) — reliable even when
- * Firestore.email is still synthetic after verifyBeforeUpdateEmail.
+ * Legacy callable — NOT used by HealthUp Android (Spark mock reset uses Firestore passwordHash).
+ * Deploy only if you need server-side Auth password updates outside the app.
  */
 exports.resetPassword = functions.https.onCall(async (data) => {
   const phone = data.phone;
@@ -70,4 +95,29 @@ exports.resetPassword = functions.https.onCall(async (data) => {
 
   await admin.firestore().collection('password_reset').doc(phone).delete();
   return {success: true};
+});
+
+/**
+ * Callable (admin): preview Firestore / Auth orphans blocking re-registration.
+ */
+exports.previewOrphanCleanup = functions.https.onCall(async (data, context) => {
+  await assertAdminCallable(context);
+  try {
+    return await previewOrphans(data || {});
+  } catch (err) {
+    throw new functions.https.HttpsError('invalid-argument', err.message || 'Invalid request');
+  }
+});
+
+/**
+ * Callable (admin): delete orphan Firestore profiles + Auth users (+ OTP aux docs).
+ */
+exports.cleanupOrphanUser = functions.https.onCall(async (data, context) => {
+  await assertAdminCallable(context);
+  try {
+    return await cleanupOrphans({...(data || {}), execute: true});
+  } catch (err) {
+    console.error('cleanupOrphanUser failed', err);
+    throw new functions.https.HttpsError('internal', err.message || 'Cleanup failed');
+  }
 });
