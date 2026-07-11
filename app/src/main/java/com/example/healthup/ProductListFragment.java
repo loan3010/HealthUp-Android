@@ -53,10 +53,9 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
 
 
-    private RecyclerView rvProducts, rvRecommendations;
-    private ProductAdapter productAdapter, recommendationAdapter;
+    private RecyclerView rvProducts;
+    private ProductAdapter productAdapter;
     private List<Product> productList = new ArrayList<>();
-    private List<Product> recommendationList = new ArrayList<>();
     private EditText etSearch;
     private ExtendedFloatingActionButton fabFilter;
     private ChipGroup chipGroupCategories;
@@ -131,7 +130,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
     private void initViews(View view) {
         rvProducts = view.findViewById(R.id.rv_products);
-        rvRecommendations = view.findViewById(R.id.rv_recommendations);
         etSearch = view.findViewById(R.id.et_search);
         fabFilter = view.findViewById(R.id.fab_filter);
         chipGroupCategories = view.findViewById(R.id.chip_group_categories);
@@ -198,18 +196,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         rvProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvProducts.setAdapter(productAdapter);
         rvProducts.setNestedScrollingEnabled(false);
-
-
-
-
-
-
-
-
-        recommendationAdapter = new ProductAdapter(recommendationList, this);
-        rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
-        rvRecommendations.setAdapter(recommendationAdapter);
-        rvRecommendations.setNestedScrollingEnabled(false);
     }
 
 
@@ -358,28 +344,6 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             if (progressBar != null) progressBar.setVisibility(View.GONE);
             updateEmptyState();
             updateFilterButtonLabel(0);
-        });
-
-
-
-
-
-
-
-
-        FirestoreManager.getInstance().getProductsCollection().limit(4).get().addOnSuccessListener(snapshots -> {
-            recommendationList.clear();
-            for (DocumentSnapshot doc : snapshots) {
-                if (!Product.isVisibleToBuyers(doc)) {
-                    continue;
-                }
-                Product p = doc.toObject(Product.class);
-                if (p != null) {
-                    p.setId(doc.getId());
-                    recommendationList.add(p);
-                }
-            }
-            recommendationAdapter.updateData(new ArrayList<>(recommendationList));
         });
     }
 
