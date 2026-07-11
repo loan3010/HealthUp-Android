@@ -279,51 +279,72 @@
 
 
     <!-- Selection Bottom Bar (Visible in Edit Mode) -->
-    <!-- FIX: thêm checkbox "Tất cả" bên trái nút Xóa, giống thanh chọn ở Giỏ hàng, để
-         người dùng chọn/bỏ chọn toàn bộ sản phẩm yêu thích chỉ bằng 1 lần chạm thay vì
-         phải bấm từng sản phẩm khi ở chế độ Chỉnh sửa. -->
-    <com.google.android.material.card.MaterialCardView
+    <!-- FIX: đồng bộ layout + màu sắc với thanh "Tất cả | Lưu vào Đã thích | Xóa" của trang
+         Giỏ hàng (fragment_cart.xml -> editRow): dùng cùng loại CheckBox (drawable cb_custom,
+         24dp, không dùng buttonTint màu xanh mặc định), cùng kiểu nút Xóa (TextView bo góc
+         bg_button_rounded + backgroundTint @color/error, cao 40dp) thay vì MaterialCardView
+         bo tròn cao 80dp + MaterialButton to bản như trước đây. -->
+    <LinearLayout
         android:id="@+id/card_delete_bar"
         android:layout_width="match_parent"
-        android:layout_height="80dp"
+        android:layout_height="60dp"
         android:layout_gravity="bottom"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="@color/neutral_cream"
+        android:elevation="4dp"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="8dp"
         android:visibility="gone"
-        app:cardCornerRadius="0dp"
-        app:cardElevation="16dp"
         tools:visibility="visible">
 
 
         <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:gravity="center_vertical"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:paddingHorizontal="16dp">
+            android:gravity="center_vertical">
 
 
             <CheckBox
                 android:id="@+id/cb_select_all_wishlist"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:button="@drawable/cb_custom"
+                app:buttonTint="@null" />
+
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:buttonTint="@color/primary_green"
-                android:paddingStart="4dp"
+                android:layout_marginStart="4dp"
                 android:text="Tất cả"
-                android:textColor="@color/text_dark"
-                android:textSize="14sp" />
-
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_delete_selected"
-                android:layout_width="0dp"
-                android:layout_height="56dp"
-                android:layout_weight="1"
-                android:layout_marginStart="12dp"
-                android:backgroundTint="#E53935"
-                android:text="Xóa (0)"
-                android:textAllCaps="false"
-                app:cornerRadius="12dp" />
+                android:textSize="12sp"
+                android:textColor="@color/text_dark" />
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
+
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+
+        <TextView
+            android:id="@+id/btn_delete_selected"
+            android:layout_width="wrap_content"
+            android:layout_height="40dp"
+            android:paddingHorizontal="16dp"
+            android:gravity="center"
+            android:text="Xóa (0)"
+            android:textColor="@color/white"
+            android:textStyle="bold"
+            android:textSize="13sp"
+            android:background="@drawable/bg_button_rounded"
+            android:backgroundTint="@color/error"
+            android:clickable="true"
+            android:focusable="true" />
+    </LinearLayout>
 
     <include
         layout="@layout/layout_login_required"

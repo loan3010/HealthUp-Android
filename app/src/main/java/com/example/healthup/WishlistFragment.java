@@ -1,6 +1,8 @@
 package com.example.healthup;
 
 
+
+
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -26,7 +28,11 @@ import java.util.Collections;
 import java.util.List;
 
 
+
+
 public class WishlistFragment extends Fragment implements ProductAdapter.OnProductClickListener {
+
+
 
 
     private RecyclerView rvWishlist, rvRecommendations;
@@ -37,10 +43,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     private List<Product> recommendationBackupPool = new ArrayList<>();
 
 
+
+
     private View layoutEmpty, layoutList, cardDeleteBar;
     private View layoutHeaderActions, layoutSearchBar;
     private TextView tvTitle, btnEdit, tvRecommendationTitle, btnCancelSearch, tvViewAllWishlist;
-    private com.google.android.material.button.MaterialButton btnDelete;
+    // FIX (đồng bộ với Giỏ hàng): nút Xóa giờ dùng TextView bo góc giống btnDeleteSelected
+    // của Cart, thay vì MaterialButton to bản như trước — khớp với item mới trong
+    // fragment_wishlist.xml.
+    private TextView btnDelete;
     // FIX: checkbox "Tất cả" ở thanh dưới cùng khi vào chế độ Chỉnh sửa — cho phép chọn/bỏ
     // chọn toàn bộ sản phẩm yêu thích thay vì phải bấm từng sản phẩm một.
     private CheckBox cbSelectAll;
@@ -49,6 +60,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     private boolean isEditMode = false;
     private String currentSearchQuery = "";
     private List<Product> selectedProducts = new ArrayList<>();
+
+
 
 
     @Nullable
@@ -83,6 +96,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     @Override
     public void onResume() {
         super.onResume();
@@ -90,6 +105,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             fetchWishlist();
         }
     }
+
+
 
 
     private void initViews(View view) {
@@ -107,17 +124,25 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         cbSelectAll = view.findViewById(R.id.cb_select_all_wishlist);
 
 
+
+
         layoutHeaderActions = view.findViewById(R.id.layout_header_actions);
         layoutSearchBar = view.findViewById(R.id.layout_search_bar);
         etSearch = view.findViewById(R.id.et_search_wishlist);
         btnCancelSearch = view.findViewById(R.id.btn_cancel_search);
 
 
+
+
         btnEdit.setOnClickListener(v -> toggleEditMode());
+
+
 
 
         btnSearch.setOnClickListener(v -> showSearchBar(true));
         btnCancelSearch.setOnClickListener(v -> showSearchBar(false));
+
+
 
 
         etSearch.addTextChangedListener(new TextWatcher() {
@@ -131,11 +156,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         });
 
 
+
+
         view.findViewById(R.id.btn_shop_now).setOnClickListener(v -> {
             if (getActivity() instanceof MainActivity) {
                 ((MainActivity) getActivity()).findViewById(R.id.nav_category).performClick();
             }
         });
+
+
 
 
         if (tvViewAllWishlist != null) {
@@ -147,9 +176,13 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         }
 
 
+
+
         btnDelete.setOnClickListener(v -> {
             deleteSelected();
         });
+
+
 
 
         // FIX: gắn listener cho checkbox "Tất cả" — khi tick/bỏ tick, chọn hoặc bỏ chọn toàn
@@ -157,10 +190,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         attachSelectAllListener();
 
 
+
+
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
             if (getActivity() != null) getActivity().onBackPressed();
         });
     }
+
+
 
 
     private void setupRecyclerViews() {
@@ -170,11 +207,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         rvWishlist.setNestedScrollingEnabled(false);
 
 
+
+
         recommendationAdapter = new ProductAdapter(recommendationList, this);
         rvRecommendations.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvRecommendations.setAdapter(recommendationAdapter);
         rvRecommendations.setNestedScrollingEnabled(false);
     }
+
+
 
 
     private void fetchWishlist() {
@@ -188,6 +229,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         }
 
 
+
+
         WishlistManager.loadWishlistProducts(uid, products -> {
             if (!isAdded()) {
                 return;
@@ -199,6 +242,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             fetchRecommendations();
         });
     }
+
+
 
 
     private void applyFilters() {
@@ -215,6 +260,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         // "Tất cả" cho khớp (ví dụ: đang chọn hết rồi gõ tìm kiếm làm số lượng hiển thị đổi).
         syncSelectAllCheckbox();
     }
+
+
 
 
     private void showSearchBar(boolean show) {
@@ -236,6 +283,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void fetchRecommendations() {
         FirestoreManager.getInstance().getProductsCollection().limit(30)
                 .get()
@@ -248,6 +297,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                             product.setId(doc.getId());
 
 
+
+
                             boolean alreadyInWishlist = false;
                             for (Product wp : wishlist) {
                                 if (wp.getId() != null && wp.getId().equals(product.getId())) {
@@ -255,6 +306,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                                     break;
                                 }
                             }
+
+
 
 
                             if (!alreadyInWishlist) {
@@ -273,6 +326,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void syncRecommendationFavoriteState() {
         String uid = WishlistManager.currentUserId();
         if (uid == null) {
@@ -288,6 +343,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void updateUI() {
         if (wishlist.isEmpty()) {
             layoutEmpty.setVisibility(View.VISIBLE);
@@ -300,6 +357,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             layoutEmpty.setVisibility(View.GONE);
             layoutList.setVisibility(View.VISIBLE);
             btnEdit.setVisibility(View.VISIBLE);
+
+
 
 
             if (isEditMode) {
@@ -321,6 +380,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void toggleEditMode() {
         isEditMode = !isEditMode;
         wishlistAdapter.setSelectionMode(isEditMode);
@@ -332,6 +393,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     // FIX: logic xử lý khi người dùng tick/bỏ tick checkbox "Tất cả".
     private void attachSelectAllListener() {
         if (cbSelectAll == null) return;
@@ -340,6 +403,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             selectAllProducts(isChecked);
         });
     }
+
+
 
 
     private void selectAllProducts(boolean selectAll) {
@@ -355,6 +420,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     // FIX: đồng bộ 1 chiều từ selectedProducts -> checkbox "Tất cả", tránh vòng lặp gọi lại
     // listener (tạm gỡ listener trước khi setChecked(), sau đó gắn lại).
     private void syncSelectAllCheckbox() {
@@ -368,6 +435,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void deleteSelected() {
         if (selectedProducts.isEmpty()) {
             Toast.makeText(getContext(), "Vui lòng chọn sản phẩm cần xóa", Toast.LENGTH_SHORT).show();
@@ -375,10 +444,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         }
 
 
+
+
         List<Product> toRemove = new ArrayList<>(selectedProducts);
         int total = toRemove.size();
         final int[] successCount = {0};
         final int[] failCount = {0};
+
+
 
 
         for (Product p : toRemove) {
@@ -404,8 +477,12 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     });
 
 
+
+
             wishlist.remove(p);
         }
+
+
 
 
         selectedProducts.clear();
@@ -414,6 +491,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         applyFilters();
         updateUI();
     }
+
+
 
 
     private void handleDeleteResult(int success, int fail) {
@@ -427,6 +506,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void updateDeleteButtonText() {
         btnDelete.setText("Xóa (" + selectedProducts.size() + ")");
         tvTitle.setText("Đã chọn (" + selectedProducts.size() + ")");
@@ -436,11 +517,15 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     @Override
     public void onProductClick(Product product) {
         if (isEditMode) {
             boolean isCurrentlySelected = product.isSelected();
             product.setSelected(!isCurrentlySelected);
+
+
 
 
             if (!isCurrentlySelected) {
@@ -463,12 +548,16 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     @Override
     public void onAddToCart(Product product) {
         if (!isEditMode) {
             showVariantSheet(product);
         }
     }
+
+
 
 
     private void showVariantSheet(Product product) {
@@ -478,26 +567,18 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
-    // FIX GỐC (bug #2 và #4 trong ảnh vừa gửi): trước đây toàn bộ việc cập nhật danh sách
-    // (thêm/xóa khỏi "wishlist", thay thế item trong "Có thể bạn quan tâm") chỉ chạy BÊN
-    // TRONG callback "success ->" của WishlistManager.toggle() — tức là phải đợi Firestore
-    // phản hồi (round-trip mạng) mới cập nhật UI. Với mạng chậm/độ trễ, người dùng thấy y
-    // hệt hiện tượng trong ảnh: icon trái tim đổi màu (do ProductAdapter tự cập nhật) nhưng
-    // sản phẩm KHÔNG di chuyển/biến mất ngay, chỉ đúng lại khi rời trang rồi quay lại (khi đó
-    // onResume() gọi fetchWishlist() tải lại toàn bộ từ đầu).
-    // Sửa: coi WishlistManager.toggle() là optimistic (đã đổi product.isFavorite() ĐỒNG BỘ
-    // trước khi trả về) → cập nhật NGAY danh sách "wishlist"/"recommendationList" mà không
-    // đợi callback. Callback giờ chỉ dùng để ROLLBACK khi Firestore thực sự thất bại.
+
+
     @Override
     public void onFavoriteClick(Product product) {
         if (isEditMode) return;
 
 
+
+
         WishlistManager.toggle(requireContext(), product, success -> {
             if (!isAdded()) return;
             if (!success) {
-                // Rollback: WishlistManager đã tự trả lại product.isFavorite() về giá trị cũ,
-                // nên chỉ cần vẽ lại danh sách theo đúng trạng thái đã bị rollback đó.
                 applyFilters();
                 updateUI();
                 syncRecommendationFavoriteState();
@@ -505,7 +586,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         });
 
 
-        // Cập nhật UI NGAY LẬP TỨC (optimistic), không đợi Firestore trả kết quả.
+
+
         if (product.isFavorite()) {
             boolean alreadyInList = false;
             for (Product p : wishlist) {
@@ -517,9 +599,6 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             if (!alreadyInList) {
                 wishlist.add(0, product);
             }
-            // Sản phẩm vừa được yêu thích có thể đang nằm trong khu vực "Có thể bạn quan tâm"
-            // (ví dụ người dùng bấm ♥ ngay trên item gợi ý). Gỡ nó khỏi danh sách gợi ý và
-            // thay bằng 1 sản phẩm khác từ pool dự phòng để không hiển thị trùng lặp.
             replaceFavoritedRecommendation(product);
         } else {
             for (int i = 0; i < wishlist.size(); i++) {
@@ -534,10 +613,14 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     }
 
 
+
+
     private void replaceFavoritedRecommendation(Product favorited) {
         if (favorited == null || favorited.getId() == null || recommendationAdapter == null) {
             return;
         }
+
+
 
 
         int index = -1;
@@ -551,6 +634,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         if (index == -1) {
             return;
         }
+
+
 
 
         recommendationList.remove(index);
