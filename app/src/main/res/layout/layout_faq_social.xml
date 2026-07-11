@@ -8,11 +8,11 @@
 
     <ImageButton
         android:id="@+id/btn_fb"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_circle_translucent"
-        android:padding="10dp"
+        android:background="@drawable/bg_icon_circle_white"
+        android:padding="12dp"
         android:scaleType="centerInside"
         android:src="@drawable/ic_facebook"
         android:contentDescription="Facebook" />
@@ -20,11 +20,11 @@
 
     <ImageButton
         android:id="@+id/btn_ig"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_circle_translucent"
-        android:padding="10dp"
+        android:background="@drawable/bg_icon_circle_white"
+        android:padding="12dp"
         android:scaleType="centerInside"
         android:src="@drawable/ic_instagram"
         android:contentDescription="Instagram" />
@@ -32,11 +32,11 @@
 
     <ImageButton
         android:id="@+id/btn_threads"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
         android:layout_marginEnd="16dp"
-        android:background="@drawable/bg_circle_translucent"
-        android:padding="10dp"
+        android:background="@drawable/bg_icon_circle_white"
+        android:padding="12dp"
         android:scaleType="centerInside"
         android:src="@drawable/ic_threads"
         android:contentDescription="Threads" />
@@ -44,10 +44,10 @@
 
     <ImageButton
         android:id="@+id/btn_tiktok"
-        android:layout_width="52dp"
-        android:layout_height="52dp"
-        android:background="@drawable/bg_circle_translucent"
-        android:padding="10dp"
+        android:layout_width="60dp"
+        android:layout_height="60dp"
+        android:background="@drawable/bg_icon_circle_white"
+        android:padding="12dp"
         android:scaleType="centerInside"
         android:src="@drawable/ic_tiktok"
         android:contentDescription="TikTok" />

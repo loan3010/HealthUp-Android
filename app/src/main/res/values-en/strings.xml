@@ -373,12 +373,15 @@
     <string name="debug_chat_link">Chat Assistant</string>
 
     <string name="author_prefix">By: %1$s</string>
-    <string name="faq_title">Frequently Asked Questions</string>
+    <string name="faq_title">Help Center</string>
+    <string name="faq_frequent">Frequently Asked Questions</string>
     <string name="blog_title">Health Guide</string>
     <string name="search_hint">Search granola, healthy snacks...</string>
     <string name="all_categories">All</string>
     <string name="faq_category_title">Help Categories</string>
     <string name="faq_search_result">Search Results</string>
+    <string name="faq_search_hint">Search your question...</string>
+    <string name="faq_suggestions">Suggestions</string>
     <string name="faq_category_prefix">Questions about %1$s</string>
     <string name="faq_not_found_title">Didn\'t find your answer?</string>
     <string name="faq_not_found_desc">Don\'t worry! HealthUp support team is always ready to help you 24/7.</string>

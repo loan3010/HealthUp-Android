@@ -12,9 +12,10 @@
         android:layout_width="64dp"
         android:layout_height="64dp"
         app:cardBackgroundColor="@color/white"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="2dp"
-        app:strokeWidth="0dp">
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeWidth="1dp"
+        app:strokeColor="#F0F0F0">
 
         <ImageView
             android:id="@+id/iv_faq_category_icon"

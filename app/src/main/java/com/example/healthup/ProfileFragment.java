@@ -153,11 +153,7 @@ public class ProfileFragment extends Fragment {
     private void setupNavigation(View view) {
         View avatarContainer = view.findViewById(R.id.avatar_container);
         View.OnClickListener avatarClickListener = v -> {
-            if (mAuth.getCurrentUser() != null) {
-                startActivity(new Intent(requireContext(), AccountInfoActivity.class));
-            } else {
-                startActivity(new Intent(requireContext(), LoginActivity.class));
-            }
+            startActivity(new Intent(requireContext(), AccountInfoActivity.class));
         };
         if (imgAvatar != null) {
             imgAvatar.setOnClickListener(avatarClickListener);

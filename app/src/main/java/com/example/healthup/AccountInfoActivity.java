@@ -93,10 +93,13 @@ public class AccountInfoActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         mAuth = FirebaseAuth.getInstance();
         
-        if (mAuth.getCurrentUser() != null) {
-            userId = mAuth.getCurrentUser().getUid();
-            loadUserInfo();
+        if (mAuth.getCurrentUser() == null) {
+            setupLoginRequired();
+            return;
         }
+
+        userId = mAuth.getCurrentUser().getUid();
+        loadUserInfo();
 
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnSave.setOnClickListener(v -> {
@@ -161,6 +164,17 @@ public class AccountInfoActivity extends AppCompatActivity {
         binding.containerAvatar.setOnClickListener(avatarPickerListener);
         binding.ivAvatar.setOnClickListener(avatarPickerListener);
         binding.ivEditAvatar.setOnClickListener(avatarPickerListener);
+    }
+
+    private void setupLoginRequired() {
+        View layout = findViewById(R.id.layoutLoginRequired);
+        if (layout != null) {
+            layout.setVisibility(View.VISIBLE);
+            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
+                startActivity(new Intent(this, LoginActivity.class));
+            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> finish());
+        }
     }
 
     private void setupKeyboardHandling() {
