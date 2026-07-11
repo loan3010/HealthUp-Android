@@ -19,6 +19,7 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -116,6 +117,7 @@ public class AdminRepository {
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+    @SuppressWarnings("unused")
     public void loadDashboard(@NonNull DashboardCallback callback) {
         loadDashboardData(new DashboardDataCallback() {
             @Override
@@ -312,7 +314,7 @@ public class AdminRepository {
                             list.add(order);
                         }
                     }
-                    list.sort((a, b) -> Long.compare(getOrderSortTime(b), getOrderSortTime(a)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getOrderSortTime).reversed());
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -469,6 +471,7 @@ public class AdminRepository {
         return entry.createdAt != null ? entry.createdAt.getSeconds() : 0L;
     }
 
+    @SuppressWarnings("unused")
     public void updateOrderStatus(@NonNull String orderId,
                                   @Nullable String fromStatus,
                                   @NonNull String toStatus,
@@ -478,7 +481,7 @@ public class AdminRepository {
 
     /** pending → confirmed */
     public void confirmOrder(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -492,7 +495,7 @@ public class AdminRepository {
 
     /** confirmed → shipping */
     public void startShipping(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -509,7 +512,7 @@ public class AdminRepository {
 
     /** shipping → shopConfirmedDelivery=true (status stays shipping) */
     public void confirmShopDelivery(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -556,7 +559,7 @@ public class AdminRepository {
                                       @NonNull String reason,
                                       @Nullable String note,
                                       @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -646,7 +649,7 @@ public class AdminRepository {
 
     /** After a failure: clear needsRedelivery and log "Giao lại lần N". */
     public void scheduleRedelivery(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -685,7 +688,7 @@ public class AdminRepository {
     }
 
     public void approveReturn(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -727,7 +730,7 @@ public class AdminRepository {
      * Final step marks return completed + refunded/reshipped as appropriate.
      */
     public void advanceReturnProgress(@NonNull Order order, @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -787,7 +790,7 @@ public class AdminRepository {
     public void rejectReturn(@NonNull Order order,
                              @NonNull String rejectReason,
                              @NonNull SimpleCallback callback) {
-        if (order == null || TextUtils.isEmpty(order.getId())) {
+        if (TextUtils.isEmpty(order.getId())) {
             callback.onError("Thiếu đơn hàng");
             return;
         }
@@ -934,7 +937,7 @@ public class AdminRepository {
                                      @NonNull String adminBody) {
         String buyerId = order.getUserId();
         String code = displayCode(order);
-        boolean isReturn = type != null && type.toUpperCase(Locale.US).contains("RETURN");
+        boolean isReturn = type.toUpperCase(Locale.US).contains("RETURN");
         if (!TextUtils.isEmpty(buyerId)) {
             Map<String, Object> buyerNotif = new HashMap<>();
             buyerNotif.put("type", type);
@@ -998,7 +1001,7 @@ public class AdminRepository {
                         entry.createdAt = doc.getTimestamp("createdAt");
                         list.add(entry);
                     }
-                    list.sort((a, b) -> Long.compare(getHistorySortTime(a), getHistorySortTime(b)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getHistorySortTime));
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -1102,7 +1105,7 @@ public class AdminRepository {
                             list.add(order);
                         }
                     }
-                    list.sort((a, b) -> Long.compare(getOrderSortTime(b), getOrderSortTime(a)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getOrderSortTime).reversed());
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -1129,7 +1132,7 @@ public class AdminRepository {
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
     }
 
-    @Nullable
+    @NonNull
     private static AdminCustomer mapCustomer(@NonNull DocumentSnapshot doc) {
         String role = doc.getString("role");
         if (role == null) {
