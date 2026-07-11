@@ -733,8 +733,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 .addOnSuccessListener(queryDocumentSnapshots -> {
                     List<Product> allFetched = new ArrayList<>();
                     List<Product> flashSales = new ArrayList<>();
-                    List<Product> adminNewProducts = new ArrayList<>();
-                    List<Product> catalogProducts = new ArrayList<>();
                     Map<String, Long> createdAtById = new HashMap<>();
 
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
@@ -757,13 +755,6 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                             if (isNewObj instanceof Boolean && (Boolean)isNewObj) {
                                 product.setNew(true);
                             }
-
-                            if (Product.isAdminListedProduct(doc)) {
-                                adminNewProducts.add(product);
-                            }
-                            if (Product.isCatalogFeaturedProduct(doc)) {
-                                catalogProducts.add(product);
-                            }
                         }
                     }
 
@@ -779,19 +770,23 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     }
                     flashSaleAdapter.updateData(new ArrayList<>(flashSaleList));
 
-                    adminNewProducts.sort((a, b) -> Long.compare(
+                    // Newest: 6 products added most recently (by createdAt)
+                    List<Product> newest = new ArrayList<>(allFetched);
+                    newest.sort((a, b) -> Long.compare(
                             createdAtById.getOrDefault(b.getId(), 0L),
                             createdAtById.getOrDefault(a.getId(), 0L)));
                     newProductList.clear();
-                    if (!adminNewProducts.isEmpty()) {
-                        newProductList.addAll(adminNewProducts.subList(0, Math.min(adminNewProducts.size(), 10)));
+                    if (!newest.isEmpty()) {
+                        newProductList.addAll(newest.subList(0, Math.min(newest.size(), 6)));
                     }
                     newProductAdapter.updateData(new ArrayList<>(newProductList));
 
-                    catalogProducts.sort((a, b) -> Integer.compare(b.getSold(), a.getSold()));
+                    // Featured: best-selling first
+                    List<Product> featured = new ArrayList<>(allFetched);
+                    featured.sort((a, b) -> Integer.compare(b.getSoldCount(), a.getSoldCount()));
                     featuredProductList.clear();
-                    if (!catalogProducts.isEmpty()) {
-                        featuredProductList.addAll(catalogProducts.subList(0, Math.min(catalogProducts.size(), 10)));
+                    if (!featured.isEmpty()) {
+                        featuredProductList.addAll(featured.subList(0, Math.min(featured.size(), 10)));
                     } else {
                         featuredProductList.addAll(Product.getDummyProducts());
                     }

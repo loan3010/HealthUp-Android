@@ -1,6 +1,7 @@
 package com.example.healthup.forgotpassword;
 
 import android.app.Activity;
+import android.content.Context;
 
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
@@ -92,38 +93,46 @@ public class ResetPasswordViewModel extends ViewModel {
         }
 
         uiState.setValue(UiState.LOADING);
+        Context appContext = activity.getApplicationContext();
         String e164 = PhoneNumberUtils.toE164(phone);
-        repository.completePasswordReset(phone, e164, password, activity, new PasswordResetRepository.ResetPasswordCallback() {
-            @Override
-            public void onSmsCodeRequired() {
-                uiState.postValue(UiState.WAITING_SMS);
-                smsCodeRequiredEvent.postValue(new Event<>(null));
-            }
+        repository.completePasswordReset(
+                appContext,
+                phone,
+                e164,
+                password,
+                activity,
+                new PasswordResetRepository.ResetPasswordCallback() {
+                    @Override
+                    public void onSmsCodeRequired() {
+                        uiState.postValue(UiState.WAITING_SMS);
+                        smsCodeRequiredEvent.postValue(new Event<>(null));
+                    }
 
-            @Override
-            public void onResult(PasswordResetRepository.ResetPasswordResult result, String errorMessage) {
-                switch (result) {
-                    case SUCCESS:
-                        uiState.postValue(UiState.SUCCESS);
-                        break;
-                    case SESSION_INVALID:
-                        generalError.postValue("session_invalid");
-                        uiState.postValue(UiState.ERROR);
-                        break;
-                    case USER_NOT_FOUND:
-                        generalError.postValue("user_not_found");
-                        uiState.postValue(UiState.ERROR);
-                        break;
-                    case ERROR:
-                    default:
-                        generalError.postValue(errorMessage != null && !errorMessage.isEmpty()
-                                ? errorMessage
-                                : "generic");
-                        uiState.postValue(UiState.ERROR);
-                        break;
+                    @Override
+                    public void onResult(PasswordResetRepository.ResetPasswordResult result, String errorMessage) {
+                        switch (result) {
+                            case SUCCESS:
+                                uiState.postValue(UiState.SUCCESS);
+                                break;
+                            case SESSION_INVALID:
+                                generalError.postValue("session_invalid");
+                                uiState.postValue(UiState.ERROR);
+                                break;
+                            case USER_NOT_FOUND:
+                                generalError.postValue("user_not_found");
+                                uiState.postValue(UiState.ERROR);
+                                break;
+                            case ERROR:
+                            default:
+                                generalError.postValue(errorMessage != null && !errorMessage.isEmpty()
+                                        ? errorMessage
+                                        : "generic");
+                                uiState.postValue(UiState.ERROR);
+                                break;
+                        }
+                    }
                 }
-            }
-        });
+        );
     }
 
     public void submitSmsCode(String smsCode) {

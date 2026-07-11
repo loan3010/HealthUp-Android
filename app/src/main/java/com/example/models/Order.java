@@ -1,8 +1,9 @@
 package com.example.models;
 
-import com.google.firebase.Timestamp;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 public class Order implements Serializable {
 
@@ -11,6 +12,30 @@ public class Order implements Serializable {
     public static final String STATUS_SHIPPING = "shipping";
     public static final String STATUS_DELIVERED = "delivered";
     public static final String STATUS_CANCELLED = "cancelled";
+    public static final String STATUS_RETURNED = "returned";
+    public static final String STATUS_COMPLETED = "completed";
+
+    public static final String RETURN_NONE = "none";
+    public static final String RETURN_REQUESTED = "requested";
+    public static final String RETURN_APPROVED = "approved";
+    public static final String RETURN_REJECTED = "rejected";
+    public static final String RETURN_COMPLETED = "completed";
+
+    public static final int MAX_DELIVERY_ATTEMPTS = 3;
+
+    public static final String FAIL_REFUSED = "Khách từ chối nhận";
+    public static final String FAIL_NO_CONTACT = "Không nghe máy / không liên lạc được";
+    public static final String FAIL_RESCHEDULE = "Khách hẹn giao lại";
+    public static final String FAIL_BAD_ADDRESS = "Sai địa chỉ / không tìm thấy địa chỉ";
+    public static final String FAIL_OTHER = "Lý do khác";
+
+    public static final String CANCEL_SOURCE_CUSTOMER = "customer";
+    public static final String CANCEL_SOURCE_DELIVERY_REFUSED = "delivery_refused";
+    public static final String CANCEL_SOURCE_DELIVERY_MAX = "delivery_max_attempts";
+    public static final String CANCEL_SOURCE_ADMIN = "admin";
+
+    public static final String CANCEL_REASON_MAX_ATTEMPTS = "Giao hàng không thành công quá 3 lần.";
+    public static final String CANCEL_REASON_REFUSED = "Khách từ chối nhận hàng";
 
     private String id;
     private String orderCode;
@@ -32,17 +57,27 @@ public class Order implements Serializable {
     private boolean returnExpired;
     private boolean reviewExpired;
     private boolean shopConfirmedDelivery;
+    private java.util.Date shopConfirmedAt;
+
+    private int deliveryAttempts;
+    private boolean needsRedelivery;
+    private List<DeliveryFailure> deliveryFailures;
 
     private boolean cancelRequested;
     private String cancelReason;
+    private String cancelSource;
     private java.util.Date cancelRequestedAt;
+    private java.util.Date cancelledAt;
 
+    private String returnStatus;
     private String returnReason;
     private String returnDescription;
     private List<String> returnMediaUris;
     private String returnHandling;
     private int returnStep;
     private java.util.Date returnRequestedAt;
+    private String returnRejectReason;
+    private List<Map<String, Object>> returnItems;
 
     public Order() {}
 
@@ -57,6 +92,36 @@ public class Order implements Serializable {
         this.updatedAt = this.createdAt;
         this.paymentMethod = paymentMethod;
         this.address = address;
+        this.returnStatus = RETURN_NONE;
+    }
+
+    public static String[] deliveryFailureReasons() {
+        return new String[]{
+                FAIL_REFUSED,
+                FAIL_NO_CONTACT,
+                FAIL_RESCHEDULE,
+                FAIL_BAD_ADDRESS,
+                FAIL_OTHER
+        };
+    }
+
+    public boolean hasActiveReturn() {
+        String rs = returnStatus != null ? returnStatus : RETURN_NONE;
+        return RETURN_REQUESTED.equals(rs)
+                || RETURN_APPROVED.equals(rs)
+                || RETURN_REJECTED.equals(rs)
+                || RETURN_COMPLETED.equals(rs)
+                || getReturnHandling() != null
+                || STATUS_RETURNED.equalsIgnoreCase(status);
+    }
+
+    public boolean isReturnRejected() {
+        return RETURN_REJECTED.equalsIgnoreCase(returnStatus);
+    }
+
+    public boolean isReturnCompleted() {
+        return RETURN_COMPLETED.equalsIgnoreCase(returnStatus)
+                || (STATUS_COMPLETED.equalsIgnoreCase(status) && getReturnHandling() != null);
     }
 
     public String getId() { return id; }
@@ -138,14 +203,81 @@ public class Order implements Serializable {
         this.shopConfirmedDelivery = shopConfirmedDelivery;
     }
 
+    public java.util.Date getShopConfirmedAt() { return shopConfirmedAt; }
+    public void setShopConfirmedAt(java.util.Date shopConfirmedAt) { this.shopConfirmedAt = shopConfirmedAt; }
+
+    public int getDeliveryAttempts() { return deliveryAttempts; }
+    public void setDeliveryAttempts(int deliveryAttempts) { this.deliveryAttempts = deliveryAttempts; }
+
+    public boolean isNeedsRedelivery() { return needsRedelivery; }
+    public void setNeedsRedelivery(boolean needsRedelivery) { this.needsRedelivery = needsRedelivery; }
+
+    public List<DeliveryFailure> getDeliveryFailures() {
+        return deliveryFailures != null ? deliveryFailures : new ArrayList<>();
+    }
+
+    public void setDeliveryFailures(List<DeliveryFailure> deliveryFailures) {
+        this.deliveryFailures = deliveryFailures;
+    }
+
     public boolean isCancelRequested() { return cancelRequested; }
     public void setCancelRequested(boolean cancelRequested) { this.cancelRequested = cancelRequested; }
 
     public String getCancelReason() { return cancelReason; }
     public void setCancelReason(String cancelReason) { this.cancelReason = cancelReason; }
 
+    public String getCancelSource() { return cancelSource; }
+    public void setCancelSource(String cancelSource) { this.cancelSource = cancelSource; }
+
+    /** Display text for the red "Lý do hủy" row on client order detail. */
+    public String getDisplayCancelReason() {
+        if (CANCEL_SOURCE_DELIVERY_MAX.equals(cancelSource)) {
+            return CANCEL_REASON_MAX_ATTEMPTS;
+        }
+        if (CANCEL_SOURCE_DELIVERY_REFUSED.equals(cancelSource)
+                || FAIL_REFUSED.equals(cancelReason)
+                || (cancelReason != null && cancelReason.startsWith(FAIL_REFUSED))) {
+            return CANCEL_REASON_REFUSED;
+        }
+        if (!CANCEL_SOURCE_CUSTOMER.equals(cancelSource)
+                && deliveryAttempts >= MAX_DELIVERY_ATTEMPTS
+                && cancelReason != null
+                && !cancelReason.isEmpty()) {
+            return CANCEL_REASON_MAX_ATTEMPTS;
+        }
+        return cancelReason != null ? cancelReason : "";
+    }
+
+    public String getDisplayCancelledBy() {
+        if (CANCEL_SOURCE_CUSTOMER.equals(cancelSource)) {
+            return "Khách hàng";
+        }
+        if (CANCEL_SOURCE_DELIVERY_REFUSED.equals(cancelSource)
+                || CANCEL_SOURCE_DELIVERY_MAX.equals(cancelSource)) {
+            return "Hệ thống";
+        }
+        if (CANCEL_SOURCE_ADMIN.equals(cancelSource)) {
+            return "Shop";
+        }
+        if (deliveryAttempts >= MAX_DELIVERY_ATTEMPTS
+                || FAIL_REFUSED.equals(cancelReason)
+                || (cancelReason != null && cancelReason.startsWith(FAIL_REFUSED))) {
+            return "Hệ thống";
+        }
+        return "Khách hàng";
+    }
+
     public java.util.Date getCancelRequestedAt() { return cancelRequestedAt; }
     public void setCancelRequestedAt(java.util.Date cancelRequestedAt) { this.cancelRequestedAt = cancelRequestedAt; }
+
+    public java.util.Date getCancelledAt() { return cancelledAt; }
+    public void setCancelledAt(java.util.Date cancelledAt) { this.cancelledAt = cancelledAt; }
+
+    public String getReturnStatus() {
+        return returnStatus != null ? returnStatus : RETURN_NONE;
+    }
+
+    public void setReturnStatus(String returnStatus) { this.returnStatus = returnStatus; }
 
     public String getReturnReason() { return returnReason; }
     public void setReturnReason(String returnReason) { this.returnReason = returnReason; }
@@ -164,4 +296,10 @@ public class Order implements Serializable {
 
     public java.util.Date getReturnRequestedAt() { return returnRequestedAt; }
     public void setReturnRequestedAt(java.util.Date returnRequestedAt) { this.returnRequestedAt = returnRequestedAt; }
+
+    public String getReturnRejectReason() { return returnRejectReason; }
+    public void setReturnRejectReason(String returnRejectReason) { this.returnRejectReason = returnRejectReason; }
+
+    public List<Map<String, Object>> getReturnItems() { return returnItems; }
+    public void setReturnItems(List<Map<String, Object>> returnItems) { this.returnItems = returnItems; }
 }

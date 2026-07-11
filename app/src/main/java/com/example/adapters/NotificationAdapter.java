@@ -186,6 +186,16 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
             }
             switch (type) {
                 case ORDER_SHIPPING:
+                case ORDER_CONFIRMED:
+                case ORDER_DELIVERY_CONFIRMED:
+                case ORDER_DELIVERY_FAILED:
+                case ORDER_REDELIVERY:
+                case ORDER_DELIVERED:
+                case ORDER_CANCELLED:
+                case ORDER_RETURN_REQUESTED:
+                case ORDER_RETURN_APPROVED:
+                case ORDER_RETURN_REJECTED:
+                case ORDER_UPDATE:
                     return R.drawable.ic_order_shipping;
                 case PROMO:
                     return R.drawable.ic_gift;

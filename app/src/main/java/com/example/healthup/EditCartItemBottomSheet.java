@@ -97,6 +97,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         });
 
         btnConfirm.setOnClickListener(v -> {
+            updateVariantImagePreview();
             listener.onConfirm(selectedWeight, selectedFlavor, selectedPackage, quantity, resolveSelectedPrice());
             dismiss();
         });
@@ -181,7 +182,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         }
 
         layoutGroups.removeAllViews();
-        
+
         Map<String, List<Product.ProductVariant>> grouped = product.getGroupedVariants();
         if (grouped.isEmpty()) {
             showFallbackOptions();
@@ -195,7 +196,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
             String groupName = entry.getKey();
             tvLabel.setText(groupName);
-            
+
             String currentValue = "";
             String normalizedName = groupName.toLowerCase();
             if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")) currentValue = selectedWeight;
@@ -214,15 +215,48 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                 if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")) selectedWeight = v;
                 else if (normalizedName.contains("hương vị") || normalizedName.contains("flavor")) selectedFlavor = v;
                 else if (normalizedName.contains("đóng gói") || normalizedName.contains("package") || normalizedName.contains("quy cách")) selectedPackage = v;
-                
+
                 updatePriceDisplay();
                 updateSelectedSummary();
+                updateVariantImagePreview();
             });
 
             layoutGroups.addView(groupView);
         }
         updatePriceDisplay();
         updateSelectedSummary();
+        updateVariantImagePreview();
+    }
+
+    private void updateVariantImagePreview() {
+        if (rootView == null || loadedProduct == null) return;
+        ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
+        String imageUrl = null;
+        if (selectedWeight != null && !selectedWeight.isEmpty()) {
+            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedWeight);
+            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
+                imageUrl = variant.getImageUrl();
+            }
+        }
+        if (imageUrl == null && selectedFlavor != null && !selectedFlavor.isEmpty()) {
+            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedFlavor);
+            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
+                imageUrl = variant.getImageUrl();
+            }
+        }
+        if (imageUrl == null && selectedPackage != null && !selectedPackage.isEmpty()) {
+            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedPackage);
+            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
+                imageUrl = variant.getImageUrl();
+            }
+        }
+        if (imageUrl == null) {
+            imageUrl = loadedProduct.getImageUrl();
+        }
+        if (imageUrl != null && !imageUrl.isEmpty()) {
+            item.setImageUrl(imageUrl);
+            ImageLoadHelper.loadInto(imgProduct, imageUrl);
+        }
     }
 
     private void updatePriceDisplay() {

@@ -22,10 +22,13 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import com.bumptech.glide.Glide;
+import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.databinding.ActivityAccountInfoBinding;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.SetOptions;
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -214,7 +217,13 @@ public class AccountInfoActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        FirebaseUser user = mAuth.getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        userId = user.getUid();
         refreshUsername();
+        refreshEmailField();
     }
 
     private void refreshUsername() {
@@ -227,6 +236,28 @@ public class AccountInfoActivity extends AppCompatActivity {
                 });
     }
 
+    /** Prefer real displayEmail; never show synthetic phone@healthup.app as the user's email. */
+    private void refreshEmailField() {
+        if (userId == null) return;
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) {
+                        return;
+                    }
+                    String display = doc.getString("displayEmail");
+                    String email = doc.getString("email");
+                    String show = UserProfileBuilder.isRealEmail(display)
+                            ? display
+                            : (UserProfileBuilder.isRealEmail(email) ? email : null);
+                    if (show != null) {
+                        binding.etEmail.setText(show);
+                    } else {
+                        // Prefer Firestore displayEmail; Auth email stays synthetic in app-password mode.
+                        binding.etEmail.setText(getString(R.string.account_email_empty));
+                    }
+                });
+    }
+
     private void loadUserInfo() {
         binding.progressBar.setVisibility(View.VISIBLE);
         db.collection("users").document(userId).get()
@@ -235,10 +266,10 @@ public class AccountInfoActivity extends AppCompatActivity {
                     if (documentSnapshot.exists()) {
                         binding.etFullName.setText(documentSnapshot.getString("fullName"));
                         binding.etUsername.setText(documentSnapshot.getString("username"));
-                        binding.etEmail.setText(documentSnapshot.getString("email"));
                         binding.etPhone.setText(documentSnapshot.getString("phone"));
                         binding.etDob.setText(documentSnapshot.getString("dob"));
-                        
+                        refreshEmailField();
+
                         String gender = documentSnapshot.getString("gender");
                         if ("Nam".equals(gender)) binding.rbMale.setChecked(true);
                         else if ("Nữ".equals(gender)) binding.rbFemale.setChecked(true);
@@ -262,6 +293,11 @@ public class AccountInfoActivity extends AppCompatActivity {
     }
 
     private void saveUserInfo() {
+        if (mAuth.getCurrentUser() == null || userId == null) {
+            Toast.makeText(this, R.string.account_save_session_expired, Toast.LENGTH_LONG).show();
+            return;
+        }
+
         String fullName = binding.etFullName.getText().toString().trim();
         String dob = binding.etDob.getText().toString().trim();
         String gender = "";
@@ -280,11 +316,15 @@ public class AccountInfoActivity extends AppCompatActivity {
         updates.put("gender", gender);
         updates.put("dob", dob);
 
-        if (selectedAvatarUri != null) {
-            uploadAvatarAndSave(updates);
-        } else {
-            updateFirestore(updates);
-        }
+        // Refresh token before write — avoids PERMISSION_DENIED after email-change flows.
+        mAuth.getCurrentUser().getIdToken(true)
+                .addOnCompleteListener(tokenTask -> {
+                    if (selectedAvatarUri != null) {
+                        uploadAvatarAndSave(updates);
+                    } else {
+                        updateFirestore(updates);
+                    }
+                });
     }
 
     private void uploadAvatarAndSave(Map<String, Object> updates) {
@@ -303,6 +343,11 @@ public class AccountInfoActivity extends AppCompatActivity {
     }
 
     private void updateFirestore(Map<String, Object> updates) {
+        if (mAuth.getCurrentUser() == null || userId == null) {
+            binding.progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, R.string.account_save_session_expired, Toast.LENGTH_LONG).show();
+            return;
+        }
         db.collection("users").document(userId).update(updates)
                 .addOnSuccessListener(aVoid -> {
                     binding.progressBar.setVisibility(View.GONE);
@@ -310,7 +355,12 @@ public class AccountInfoActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    String msg = e.getMessage() != null ? e.getMessage() : "";
+                    if (msg.toLowerCase(Locale.ROOT).contains("permission")) {
+                        Toast.makeText(this, R.string.account_save_session_expired, Toast.LENGTH_LONG).show();
+                    } else {
+                        Toast.makeText(this, "Lỗi: " + msg, Toast.LENGTH_SHORT).show();
+                    }
                 });
     }
 

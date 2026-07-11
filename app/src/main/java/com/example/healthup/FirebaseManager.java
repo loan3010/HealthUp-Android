@@ -247,52 +247,173 @@ public class FirebaseManager {
     }
 
     public Task<Void> cancelOrder(String orderId, String reason, double amount) {
+        return cancelOrder(orderId, reason, amount, null);
+    }
+
+    public Task<Void> cancelOrder(String orderId, String reason, double amount, String orderCode) {
         if (orderId == null || orderId.isEmpty()) {
-            return com.google.android.gms.tasks.Tasks.forException(new Exception("OrderId is missing"));
+            return Tasks.forException(new Exception("OrderId is missing"));
         }
-        
+
         String uid = getCurrentUserId();
         if (uid == null) return Tasks.forException(new Exception("User not logged in"));
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("cancelRequested", true);
-        updates.put("cancelReason", reason);
-        updates.put("cancelRequestedAt", new java.util.Date());
-        updates.put("updatedAt", new java.util.Date());
-        return db.collection("orders").document(orderId).update(updates);
+        return db.collection("orders").document(orderId).get().continueWithTask(task -> {
+            if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
+                return Tasks.forException(new Exception("Không tìm thấy đơn hàng"));
+            }
+            DocumentSnapshot doc = task.getResult();
+            String status = doc.getString("status");
+            if (status == null || !Order.STATUS_PENDING.equalsIgnoreCase(status.trim())) {
+                return Tasks.forException(new Exception("Chỉ hủy được đơn đang chờ xác nhận"));
+            }
+
+            String orderOwnerId = doc.getString("userId");
+            if (orderOwnerId == null || orderOwnerId.isEmpty()) {
+                orderOwnerId = doc.getString("buyerId");
+            }
+            if (orderOwnerId == null || orderOwnerId.isEmpty()) {
+                orderOwnerId = uid;
+            }
+
+            String displayCode = (orderCode != null && !orderCode.isEmpty())
+                    ? orderCode
+                    : (doc.getString("orderCode") != null ? doc.getString("orderCode") : orderId);
+
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("status", Order.STATUS_CANCELLED);
+            updates.put("cancelRequested", false);
+            updates.put("cancelReason", reason != null ? reason : "");
+            updates.put("cancelSource", Order.CANCEL_SOURCE_CUSTOMER);
+            updates.put("cancelledAt", Timestamp.now());
+            updates.put("updatedAt", Timestamp.now());
+            batch.update(db.collection("orders").document(orderId), updates);
+
+            if (amount > 0) {
+                batch.update(db.collection("users").document(orderOwnerId),
+                        "spentAmount", com.google.firebase.firestore.FieldValue.increment(-amount));
+            }
+
+            Map<String, Object> history = new HashMap<>();
+            history.put("event", "customer_cancelled");
+            history.put("fromStatus", Order.STATUS_PENDING);
+            history.put("toStatus", Order.STATUS_CANCELLED);
+            history.put("note", "Khách hủy đơn");
+            history.put("reason", reason != null ? reason : "");
+            history.put("adminUid", uid);
+            history.put("adminEmail", "");
+            history.put("actorRole", "buyer");
+            history.put("createdAt", Timestamp.now());
+            batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+
+            Map<String, Object> buyerNotif = new HashMap<>();
+            buyerNotif.put("type", "ORDER_CANCELLED");
+            buyerNotif.put("title", "Đơn hàng đã hủy");
+            buyerNotif.put("body", "Bạn đã hủy đơn #" + displayCode
+                    + (reason != null && !reason.isEmpty() ? (". Lý do: " + reason) : "."));
+            buyerNotif.put("message", buyerNotif.get("body"));
+            buyerNotif.put("refId", orderId);
+            buyerNotif.put("orderId", orderId);
+            buyerNotif.put("orderCode", displayCode);
+            buyerNotif.put("read", false);
+            buyerNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("users").document(orderOwnerId).collection("notifications").document(), buyerNotif);
+            if (!orderOwnerId.equals(uid)) {
+                batch.set(db.collection("users").document(uid).collection("notifications").document(), buyerNotif);
+            }
+
+            Map<String, Object> notification = new HashMap<>();
+            notification.put("type", "ORDER_CANCELLED");
+            notification.put("title", "Đơn hàng đã hủy");
+            notification.put("body", "Khách đã hủy đơn #" + displayCode
+                    + (reason != null && !reason.isEmpty() ? (". Lý do: " + reason) : "."));
+            notification.put("orderId", orderId);
+            notification.put("orderCode", displayCode);
+            notification.put("buyerId", orderOwnerId);
+            notification.put("reason", reason != null ? reason : "");
+            notification.put("read", false);
+            notification.put("createdAt", Timestamp.now());
+            batch.set(db.collection("admin_notifications").document(), notification);
+
+            return batch.commit();
+        });
     }
 
     public Task<Void> confirmReceived(String orderId) {
-        if (orderId == null) return Tasks.forException(new Exception("Order ID is null"));
+        if (orderId == null || orderId.isEmpty()) {
+            return Tasks.forException(new Exception("OrderId is missing"));
+        }
+        String uid = getCurrentUserId();
+        if (uid == null) return Tasks.forException(new Exception("User not logged in"));
 
         return db.collection("orders").document(orderId).get().continueWithTask(task -> {
-            DocumentSnapshot orderDoc = task.getResult();
-            if (!orderDoc.exists()) throw new Exception("Order not found");
+            if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
+                return Tasks.forException(new Exception("Không tìm thấy đơn hàng"));
+            }
+            DocumentSnapshot doc = task.getResult();
+            String status = doc.getString("status");
+            Boolean shopConfirmed = doc.getBoolean("shopConfirmedDelivery");
+            if (!Order.STATUS_SHIPPING.equals(status) || !Boolean.TRUE.equals(shopConfirmed)) {
+                return Tasks.forException(new Exception("Chỉ xác nhận khi shop đã giao hàng"));
+            }
 
-            String userId = orderDoc.getString("userId");
-            Double total = orderDoc.getDouble("totalPrice");
+            String displayCode = doc.getString("orderCode") != null ? doc.getString("orderCode") : orderId;
+            String buyerId = doc.getString("userId");
+            if (buyerId == null) buyerId = doc.getString("buyerId");
+            if (buyerId == null) buyerId = uid;
+
+            Double total = doc.getDouble("totalPrice");
             if (total == null) total = 0.0;
 
-            WriteBatch batch = db.batch();
-            
-            // 1. Cập nhật trạng thái đơn hàng
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
             Map<String, Object> updates = new HashMap<>();
-            updates.put("status", "delivered");
-            updates.put("updatedAt", new java.util.Date());
-            updates.put("deliveredAt", new java.util.Date());
+            updates.put("status", Order.STATUS_DELIVERED);
+            updates.put("updatedAt", Timestamp.now());
+            updates.put("deliveredAt", Timestamp.now());
             batch.update(db.collection("orders").document(orderId), updates);
 
-            // 2. Cập nhật tích lũy và hạng thành viên
-            if (userId != null) {
-                batch.update(db.collection("users").document(userId),
+            // Cập nhật tích lũy và hạng thành viên
+            if (buyerId != null) {
+                batch.update(db.collection("users").document(buyerId),
                         "spentAmount", com.google.firebase.firestore.FieldValue.increment(total));
-                
-                // Lưu ý: Việc thăng hạng VIP có thể cần check lại tổng tiền sau khi increment.
-                // Ở đây dùng increment trực tiếp, để triệt để hơn app nên có worker check hạng
-                // hoặc cập nhật hạng dựa trên spentAmount hiện tại + total.
-                // Để đơn giản và nhất quán với ProfileFragment (MUC_VIP = 5.000.000), 
-                // ta sẽ increment spentAmount trước.
             }
+
+            Map<String, Object> history = new HashMap<>();
+            history.put("event", "customer_received");
+            history.put("fromStatus", Order.STATUS_SHIPPING);
+            history.put("toStatus", Order.STATUS_DELIVERED);
+            history.put("note", "Khách xác nhận đã nhận hàng");
+            history.put("reason", "");
+            history.put("adminUid", uid);
+            history.put("adminEmail", "");
+            history.put("actorRole", "buyer");
+            history.put("createdAt", Timestamp.now());
+            batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+
+            Map<String, Object> buyerNotif = new HashMap<>();
+            buyerNotif.put("type", "ORDER_DELIVERED");
+            buyerNotif.put("title", "Đã nhận hàng");
+            buyerNotif.put("body", "Bạn đã xác nhận nhận đơn #" + displayCode + ".");
+            buyerNotif.put("message", buyerNotif.get("body"));
+            buyerNotif.put("refId", orderId);
+            buyerNotif.put("orderId", orderId);
+            buyerNotif.put("orderCode", displayCode);
+            buyerNotif.put("read", false);
+            buyerNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("users").document(buyerId).collection("notifications").document(), buyerNotif);
+
+            Map<String, Object> adminNotif = new HashMap<>();
+            adminNotif.put("type", "ORDER_DELIVERED");
+            adminNotif.put("title", "Khách đã nhận hàng");
+            adminNotif.put("body", "Khách xác nhận đã nhận đơn #" + displayCode);
+            adminNotif.put("orderId", orderId);
+            adminNotif.put("orderCode", displayCode);
+            adminNotif.put("buyerId", buyerId);
+            adminNotif.put("read", false);
+            adminNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("admin_notifications").document(), adminNotif);
 
             return batch.commit();
         });
@@ -304,41 +425,113 @@ public class FirebaseManager {
         }
         Map<String, Object> updates = new HashMap<>();
         updates.put("shopConfirmedDelivery", true);
+        updates.put("shopConfirmedAt", Timestamp.now());
         updates.put("updatedAt", Timestamp.now());
         return db.collection("orders").document(orderId).update(updates);
     }
 
-    public Task<Void> submitReturnRequest(String orderId, String reason, String desc, List<String> mediaUrls, String handling) {
-        if (orderId == null) return Tasks.forException(new Exception("Order ID is null"));
+    public Task<Void> submitReturnRequest(String orderId, String reason, String desc,
+                                          List<String> mediaUrls, String handling) {
+        return submitReturnRequest(orderId, reason, desc, mediaUrls, handling, null);
+    }
+
+    public Task<Void> submitReturnRequest(String orderId, String reason, String desc,
+                                          List<String> mediaUrls, String handling,
+                                          List<Map<String, Object>> returnItems) {
+        if (orderId == null || orderId.isEmpty()) {
+            return Tasks.forException(new Exception("OrderId is missing"));
+        }
+        String uid = getCurrentUserId();
+        if (uid == null) return Tasks.forException(new Exception("User not logged in"));
 
         return db.collection("orders").document(orderId).get().continueWithTask(task -> {
-            DocumentSnapshot orderDoc = task.getResult();
-            if (!orderDoc.exists()) throw new Exception("Order not found");
+            if (!task.isSuccessful() || task.getResult() == null || !task.getResult().exists()) {
+                return Tasks.forException(new Exception("Không tìm thấy đơn hàng"));
+            }
+            DocumentSnapshot doc = task.getResult();
+            String status = doc.getString("status");
+            if (!Order.STATUS_DELIVERED.equals(status)) {
+                return Tasks.forException(new Exception("Chỉ trả hàng khi đơn đã giao"));
+            }
+            String existingReturn = doc.getString("returnStatus");
+            if (Order.RETURN_REQUESTED.equals(existingReturn)
+                    || Order.RETURN_APPROVED.equals(existingReturn)
+                    || Order.RETURN_COMPLETED.equals(existingReturn)) {
+                return Tasks.forException(new Exception("Đơn đã có yêu cầu trả hàng"));
+            }
 
-            String userId = orderDoc.getString("userId");
-            String fromStatus = orderDoc.getString("status");
-            Double total = orderDoc.getDouble("totalPrice");
+            String displayCode = doc.getString("orderCode") != null ? doc.getString("orderCode") : orderId;
+            String buyerId = doc.getString("userId");
+            if (buyerId == null) buyerId = doc.getString("buyerId");
+            if (buyerId == null) buyerId = uid;
+
+            Double total = doc.getDouble("totalPrice");
             if (total == null) total = 0.0;
 
-            WriteBatch batch = db.batch();
-
-            // 1. Cập nhật trạng thái trả hàng
+            com.google.firebase.firestore.WriteBatch batch = db.batch();
             Map<String, Object> updates = new HashMap<>();
-            updates.put("status", "returned");
-            updates.put("returnReason", reason);
-            updates.put("returnDescription", desc);
-            updates.put("returnMediaUris", mediaUrls);
-            updates.put("returnHandling", handling);
-            updates.put("returnStep", 1); // Tự động duyệt -> Step 1
+            // Keep delivered so order stays in Đã giao; returnStatus drives Trả hàng tab
+            updates.put("status", Order.STATUS_DELIVERED);
+            updates.put("returnStatus", Order.RETURN_REQUESTED);
+            updates.put("returnReason", reason != null ? reason : "");
+            updates.put("returnDescription", desc != null ? desc : "");
+            updates.put("returnMediaUris", mediaUrls != null ? mediaUrls : new ArrayList<>());
+            updates.put("returnHandling", handling != null ? handling : "");
+            updates.put("returnStep", 0);
             updates.put("returnRequestedAt", Timestamp.now());
+            updates.put("returnRejectReason", com.google.firebase.firestore.FieldValue.delete());
+            if (returnItems != null) {
+                updates.put("returnItems", returnItems);
+            }
             updates.put("updatedAt", Timestamp.now());
             batch.update(db.collection("orders").document(orderId), updates);
 
-            // 2. Giảm tích lũy nếu đơn hàng đã từng được tính (trạng thái delivered)
-            if (userId != null && "delivered".equals(fromStatus)) {
-                batch.update(db.collection("users").document(userId),
+            // Giảm tích lũy vì đơn hàng đang bị yêu cầu trả (Logic từ main)
+            if (buyerId != null) {
+                batch.update(db.collection("users").document(buyerId),
                         "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
             }
+
+            Map<String, Object> history = new HashMap<>();
+            history.put("event", "return_requested");
+            history.put("fromStatus", Order.STATUS_DELIVERED);
+            history.put("toStatus", Order.STATUS_DELIVERED);
+            history.put("note", "Khách yêu cầu trả hàng: " + (reason != null ? reason : ""));
+            history.put("reason", reason != null ? reason : "");
+            history.put("adminUid", uid);
+            history.put("adminEmail", "");
+            history.put("actorRole", "buyer");
+            history.put("createdAt", Timestamp.now());
+            batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+
+            Map<String, Object> buyerNotif = new HashMap<>();
+            buyerNotif.put("type", "ORDER_RETURN_REQUESTED");
+            buyerNotif.put("title", "Đã gửi yêu cầu trả hàng");
+            buyerNotif.put("body", "Yêu cầu trả hàng đơn #" + displayCode + " đã được gửi. Vui lòng chờ shop xử lý.");
+            buyerNotif.put("message", buyerNotif.get("body"));
+            buyerNotif.put("refId", orderId);
+            buyerNotif.put("orderId", orderId);
+            buyerNotif.put("returnId", orderId);
+            buyerNotif.put("returnRequestId", orderId);
+            buyerNotif.put("orderCode", displayCode);
+            buyerNotif.put("read", false);
+            buyerNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("users").document(buyerId).collection("notifications").document(), buyerNotif);
+
+            Map<String, Object> adminNotif = new HashMap<>();
+            adminNotif.put("type", "ORDER_RETURN_REQUESTED");
+            adminNotif.put("title", "Yêu cầu trả hàng mới");
+            adminNotif.put("body", "Khách yêu cầu trả hàng đơn #" + displayCode
+                    + (reason != null && !reason.isEmpty() ? (". Lý do: " + reason) : "."));
+            adminNotif.put("orderId", orderId);
+            adminNotif.put("refId", orderId);
+            adminNotif.put("returnId", orderId);
+            adminNotif.put("returnRequestId", orderId);
+            adminNotif.put("orderCode", displayCode);
+            adminNotif.put("buyerId", buyerId);
+            adminNotif.put("read", false);
+            adminNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("admin_notifications").document(), adminNotif);
 
             return batch.commit();
         });
@@ -349,7 +542,8 @@ public class FirebaseManager {
         updates.put("returnStep", nextStep);
         updates.put("updatedAt", Timestamp.now());
         if (isFinal) {
-            updates.put("status", "completed");
+            updates.put("status", Order.STATUS_COMPLETED);
+            updates.put("returnStatus", Order.RETURN_COMPLETED);
         }
         return db.collection("orders").document(orderId).update(updates);
     }
@@ -461,7 +655,7 @@ public class FirebaseManager {
     public Task<Uri> uploadImage(Uri fileUri) {
         if (fileUri == null) return com.google.android.gms.tasks.Tasks.forException(new Exception("File URI is null"));
 
-        com.google.android.gms.tasks.TaskCompletionSource<Uri> tcs = new com.google.android.gms.tasks.TaskCompletionSource<>();
+        com.google.android.gms.tasks.TaskCompletionSource<Uri> tcs = new com.google.android.gms.tasks.TaskCompletionSource<Uri>();
         
         // Chạy xử lý ảnh trong một thread riêng để không làm lag giao diện
         new Thread(() -> {

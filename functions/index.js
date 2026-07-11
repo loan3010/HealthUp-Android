@@ -3,9 +3,16 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
+/**
+ * Callable: reset Auth password after Firestore password_reset OTP was verified.
+ * Prefer update by Auth UID (Firestore users/{uid} id) — reliable even when
+ * Firestore.email is still synthetic after verifyBeforeUpdateEmail.
+ */
 exports.resetPassword = functions.https.onCall(async (data) => {
   const phone = data.phone;
   const newPassword = data.newPassword;
+  const uidHint = data.uid;
+  const emailHint = data.email;
 
   if (!phone || !newPassword) {
     throw new functions.https.HttpsError('invalid-argument', 'Missing phone or password');
@@ -29,14 +36,38 @@ exports.resetPassword = functions.https.onCall(async (data) => {
     throw new functions.https.HttpsError('not-found', 'User not found');
   }
 
-  const email = users.docs[0].data().email;
-  if (!email) {
-    throw new functions.https.HttpsError('not-found', 'User email not found');
+  const userDoc = users.docs[0];
+  const uid = uidHint || userDoc.id;
+
+  try {
+    await admin.auth().updateUser(uid, {password: newPassword});
+  } catch (err) {
+    // Fallback: resolve Auth user by email (displayEmail / email on profile).
+    const profile = userDoc.data() || {};
+    const candidates = [emailHint, profile.displayEmail, profile.email]
+        .filter((e) => typeof e === 'string' && e.length > 0);
+
+    let updated = false;
+    let lastError = err;
+    for (const email of candidates) {
+      try {
+        const userRecord = await admin.auth().getUserByEmail(email);
+        await admin.auth().updateUser(userRecord.uid, {password: newPassword});
+        updated = true;
+        break;
+      } catch (e2) {
+        lastError = e2;
+      }
+    }
+    if (!updated) {
+      console.error('resetPassword updateUser failed', lastError);
+      throw new functions.https.HttpsError(
+          'not-found',
+          'Auth user not found for this phone/email'
+      );
+    }
   }
 
-  const userRecord = await admin.auth().getUserByEmail(email);
-  await admin.auth().updateUser(userRecord.uid, {password: newPassword});
   await admin.firestore().collection('password_reset').doc(phone).delete();
-
   return {success: true};
 });

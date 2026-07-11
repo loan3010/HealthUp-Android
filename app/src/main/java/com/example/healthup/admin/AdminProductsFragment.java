@@ -18,12 +18,13 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.healthup.R;
 import com.example.models.Product;
-import com.google.android.material.chip.Chip;
-import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
@@ -45,42 +46,47 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
     private static final int REQUEST_EDIT = 1001;
     private static final int LOW_STOCK_THRESHOLD = 10;
 
+    private static final List<String> FILTERS = Arrays.asList(
+            FILTER_ALL, FILTER_ACTIVE, FILTER_HIDDEN, FILTER_DRAFT
+    );
+
     private static final List<String> SORT_KEYS = Arrays.asList(
             "name_asc", "name_desc", "price_asc", "price_desc", "stock_asc", "stock_desc"
     );
 
     private final AdminRepository repository = new AdminRepository();
     private final List<Product> allProducts = new ArrayList<>();
-    private final List<Product> filteredProducts = new ArrayList<>();
-    private AdminProductAdapter adapter;
-    private TextView tvEmpty;
+
     private TextView tvResultSummary;
     private TextInputEditText etSearch;
     private Spinner spinnerSort;
-    private Chip chipAll;
-    private Chip chipActive;
-    private Chip chipHidden;
-    private Chip chipDraft;
+    private ViewPager2 viewPager;
+    private TabLayout tabFilters;
+    private TabLayoutMediator tabMediator;
+    private ProductPagerAdapter pagerAdapter;
+
     private String productFilter = FILTER_ALL;
-    private boolean suppressChipCallback;
+    private boolean lowStockMode;
+
+    private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
+        @Override
+        public void onPageSelected(int position) {
+            String next = FILTERS.get(position);
+            if (!FILTER_ACTIVE.equals(next)) {
+                lowStockMode = false;
+            }
+            productFilter = lowStockMode ? FILTER_LOW_STOCK : next;
+            updateSummaryAndTabs(currentQuery());
+        }
+    };
 
     public void applyProductFilter(@Nullable String filter) {
         productFilter = filter != null ? filter : FILTER_ALL;
-        if (!isAdded() || getView() == null) return;
-        ChipGroup chipGroup = getView().findViewById(R.id.chipGroupProductFilter);
-        if (chipGroup == null) return;
-        suppressChipCallback = true;
-        if (FILTER_LOW_STOCK.equals(productFilter) || FILTER_ACTIVE.equals(productFilter)) {
-            chipGroup.check(R.id.chipActiveProducts);
-        } else if (FILTER_HIDDEN.equals(productFilter)) {
-            chipGroup.check(R.id.chipHiddenProducts);
-        } else if (FILTER_DRAFT.equals(productFilter)) {
-            chipGroup.check(R.id.chipDraftProducts);
-        } else {
-            chipGroup.check(R.id.chipAllProducts);
-        }
-        suppressChipCallback = false;
-        applyFilters();
+        lowStockMode = FILTER_LOW_STOCK.equals(productFilter);
+        if (!isAdded() || getView() == null || viewPager == null) return;
+        int index = indexForFilter(lowStockMode ? FILTER_ACTIVE : productFilter);
+        viewPager.setCurrentItem(index, false);
+        refreshPagesAndSummary();
     }
 
     @Nullable
@@ -91,21 +97,12 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        tvEmpty = view.findViewById(R.id.tvEmptyProducts);
         tvResultSummary = view.findViewById(R.id.tvProductResultSummary);
         etSearch = view.findViewById(R.id.etSearchProducts);
         spinnerSort = view.findViewById(R.id.spinnerProductSort);
-        RecyclerView recyclerView = view.findViewById(R.id.rvAdminProducts);
+        viewPager = view.findViewById(R.id.vpAdminProducts);
         FloatingActionButton fab = view.findViewById(R.id.fabAddProduct);
-        ChipGroup chipGroup = view.findViewById(R.id.chipGroupProductFilter);
-        chipAll = view.findViewById(R.id.chipAllProducts);
-        chipActive = view.findViewById(R.id.chipActiveProducts);
-        chipHidden = view.findViewById(R.id.chipHiddenProducts);
-        chipDraft = view.findViewById(R.id.chipDraftProducts);
-
-        adapter = new AdminProductAdapter(filteredProducts, this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        recyclerView.setAdapter(adapter);
+        tabFilters = view.findViewById(R.id.tabProductFilters);
 
         List<String> sortLabels = Arrays.asList(
                 getString(R.string.admin_sort_name_asc),
@@ -119,7 +116,7 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         spinnerSort.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view1, int position, long id) {
-                applyFilters();
+                refreshPagesAndSummary();
             }
 
             @Override
@@ -127,26 +124,38 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
             }
         });
 
-        chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == View.NO_ID || suppressChipCallback) return;
-            if (checkedId == R.id.chipActiveProducts) {
-                productFilter = FILTER_ACTIVE;
-            } else if (checkedId == R.id.chipHiddenProducts) {
-                productFilter = FILTER_HIDDEN;
-            } else if (checkedId == R.id.chipDraftProducts) {
-                productFilter = FILTER_DRAFT;
-            } else {
-                productFilter = FILTER_ALL;
-            }
-            applyFilters();
-        });
+        pagerAdapter = new ProductPagerAdapter();
+        viewPager.setAdapter(pagerAdapter);
+        viewPager.setOffscreenPageLimit(FILTERS.size());
+        viewPager.registerOnPageChangeCallback(pageChangeCallback);
+
+        tabMediator = new TabLayoutMediator(tabFilters, viewPager, (tab, position) ->
+                tab.setText(baseLabelForFilter(FILTERS.get(position))));
+        tabMediator.attach();
 
         fab.setOnClickListener(v -> openEditScreen(null));
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { applyFilters(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                refreshPagesAndSummary();
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
+
+        int initialIndex = indexForFilter(lowStockMode ? FILTER_ACTIVE : productFilter);
+        viewPager.setCurrentItem(initialIndex, false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (viewPager != null) {
+            viewPager.unregisterOnPageChangeCallback(pageChangeCallback);
+        }
+        if (tabMediator != null) {
+            tabMediator.detach();
+            tabMediator = null;
+        }
+        super.onDestroyView();
     }
 
     @Override
@@ -162,7 +171,7 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                 if (!isAdded()) return;
                 allProducts.clear();
                 allProducts.addAll(products);
-                applyFilters();
+                refreshPagesAndSummary();
             }
 
             @Override
@@ -173,80 +182,82 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         });
     }
 
-    private void applyFilters() {
-        filteredProducts.clear();
-        String q = etSearch != null && etSearch.getText() != null
-                ? etSearch.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
+    private void refreshPagesAndSummary() {
+        if (pagerAdapter != null) {
+            pagerAdapter.notifyDataSetChanged();
+        }
+        updateSummaryAndTabs(currentQuery());
+    }
 
+    private String currentQuery() {
+        return etSearch != null && etSearch.getText() != null
+                ? etSearch.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
+    }
+
+    private List<Product> buildPageProducts(@NonNull String pageFilter) {
+        String effectiveFilter = pageFilter;
+        if (FILTER_ACTIVE.equals(pageFilter) && lowStockMode) {
+            effectiveFilter = FILTER_LOW_STOCK;
+        }
+        String q = currentQuery();
+        List<Product> result = new ArrayList<>();
         for (Product product : allProducts) {
-            if (!matchesProductFilter(product)) continue;
+            if (!matchesProductFilter(product, effectiveFilter)) continue;
             if (!q.isEmpty()) {
                 String name = product.getName() != null ? product.getName().toLowerCase(Locale.ROOT) : "";
                 String category = product.getCategory() != null ? product.getCategory().toLowerCase(Locale.ROOT) : "";
-                if (!name.contains(q) && !category.contains(q)) {
-                    continue;
-                }
+                if (!name.contains(q) && !category.contains(q)) continue;
             }
-            filteredProducts.add(product);
+            result.add(product);
         }
-
-        sortProducts();
-        adapter.notifyDataSetChanged();
-        updateSummaryAndChips(q);
-        tvEmpty.setVisibility(filteredProducts.isEmpty() ? View.VISIBLE : View.GONE);
+        sortProducts(result);
+        return result;
     }
 
-    private boolean matchesProductFilter(Product product) {
-        if (FILTER_LOW_STOCK.equals(productFilter)) {
+    private boolean matchesProductFilter(Product product, String filter) {
+        if (FILTER_LOW_STOCK.equals(filter)) {
             return !product.isDraft() && !product.isHidden() && product.getStock() < LOW_STOCK_THRESHOLD;
         }
-        if (FILTER_ACTIVE.equals(productFilter)) {
+        if (FILTER_ACTIVE.equals(filter)) {
             return !product.isHidden() && !product.isDraft();
         }
-        if (FILTER_HIDDEN.equals(productFilter)) {
+        if (FILTER_HIDDEN.equals(filter)) {
             return product.isHidden() && !product.isDraft();
         }
-        if (FILTER_DRAFT.equals(productFilter)) {
+        if (FILTER_DRAFT.equals(filter)) {
             return product.isDraft();
         }
         return true;
     }
 
-    private void updateSummaryAndChips(String query) {
+    private void updateSummaryAndTabs(String query) {
+        List<Product> current = buildPageProducts(FILTERS.get(Math.max(0,
+                Math.min(viewPager != null ? viewPager.getCurrentItem() : 0, FILTERS.size() - 1))));
         if (tvResultSummary != null) {
             tvResultSummary.setText(getString(R.string.admin_products_result_summary,
-                    filteredProducts.size(), filterLabelFor(productFilter)));
+                    current.size(), filterLabelFor(productFilter)));
         }
+        if (tabFilters == null) return;
         Map<String, Integer> counts = buildFilterCounts(query);
-        if (chipAll != null) {
-            chipAll.setText(AdminOrderListHelper.formatChipLabel(getString(R.string.admin_filter_all),
-                    counts.getOrDefault(FILTER_ALL, 0)));
+        for (int i = 0; i < FILTERS.size(); i++) {
+            TabLayout.Tab tab = tabFilters.getTabAt(i);
+            if (tab == null) continue;
+            String filter = FILTERS.get(i);
+            tab.setText(AdminOrderListHelper.formatChipLabel(
+                    baseLabelForFilter(filter), counts.getOrDefault(filter, 0)));
         }
-        if (chipActive != null) {
-            chipActive.setText(AdminOrderListHelper.formatChipLabel(getString(R.string.admin_filter_active),
-                    counts.getOrDefault(FILTER_ACTIVE, 0)));
-        }
-        if (chipHidden != null) {
-            chipHidden.setText(AdminOrderListHelper.formatChipLabel(getString(R.string.admin_filter_hidden),
-                    counts.getOrDefault(FILTER_HIDDEN, 0)));
-        }
-        if (chipDraft != null) {
-            chipDraft.setText(AdminOrderListHelper.formatChipLabel(getString(R.string.admin_filter_draft),
-                    counts.getOrDefault(FILTER_DRAFT, 0)));
-        }
+    }
+
+    private String baseLabelForFilter(String filter) {
+        return filterLabelFor(filter);
     }
 
     private Map<String, Integer> buildFilterCounts(String query) {
         Map<String, Integer> counts = new HashMap<>();
-        List<String> filters = Arrays.asList(FILTER_ALL, FILTER_ACTIVE, FILTER_HIDDEN, FILTER_DRAFT);
-        for (String filter : filters) {
+        for (String filter : FILTERS) {
             int count = 0;
             for (Product product : allProducts) {
-                String savedFilter = productFilter;
-                productFilter = filter;
-                boolean matches = matchesProductFilter(product);
-                productFilter = savedFilter;
-                if (!matches) continue;
+                if (!matchesProductFilter(product, filter)) continue;
                 if (!query.isEmpty()) {
                     String name = product.getName() != null ? product.getName().toLowerCase(Locale.ROOT) : "";
                     String category = product.getCategory() != null ? product.getCategory().toLowerCase(Locale.ROOT) : "";
@@ -267,7 +278,12 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         return getString(R.string.admin_filter_all);
     }
 
-    private void sortProducts() {
+    private int indexForFilter(@NonNull String filter) {
+        int index = FILTERS.indexOf(filter);
+        return Math.max(0, index);
+    }
+
+    private void sortProducts(List<Product> products) {
         int sortIndex = spinnerSort != null ? spinnerSort.getSelectedItemPosition() : 0;
         if (sortIndex < 0 || sortIndex >= SORT_KEYS.size()) sortIndex = 0;
         String sortKey = SORT_KEYS.get(sortIndex);
@@ -293,7 +309,7 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                 comparator = (a, b) -> safeName(a).compareToIgnoreCase(safeName(b));
                 break;
         }
-        filteredProducts.sort(comparator);
+        products.sort(comparator);
     }
 
     private String safeName(Product product) {
@@ -363,5 +379,51 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                         }))
                 .setNegativeButton(android.R.string.cancel, null)
                 .show();
+    }
+
+    private class ProductPagerAdapter extends RecyclerView.Adapter<ProductPagerAdapter.PageHolder> {
+
+        @NonNull
+        @Override
+        public PageHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View page = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_admin_filter_page, parent, false);
+            return new PageHolder(page);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PageHolder holder, int position) {
+            String filter = FILTERS.get(position);
+            List<Product> pageProducts = buildPageProducts(filter);
+            holder.bind(pageProducts, getString(R.string.admin_empty_products));
+        }
+
+        @Override
+        public int getItemCount() {
+            return FILTERS.size();
+        }
+
+        class PageHolder extends RecyclerView.ViewHolder {
+            private final List<Product> pageItems = new ArrayList<>();
+            private final AdminProductAdapter adapter;
+            private final TextView tvEmpty;
+
+            PageHolder(@NonNull View itemView) {
+                super(itemView);
+                RecyclerView rv = itemView.findViewById(R.id.rvFilterPage);
+                tvEmpty = itemView.findViewById(R.id.tvFilterPageEmpty);
+                adapter = new AdminProductAdapter(pageItems, AdminProductsFragment.this);
+                rv.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+                rv.setAdapter(adapter);
+            }
+
+            void bind(@NonNull List<Product> products, @NonNull String emptyText) {
+                pageItems.clear();
+                pageItems.addAll(products);
+                adapter.notifyDataSetChanged();
+                tvEmpty.setText(emptyText);
+                tvEmpty.setVisibility(pageItems.isEmpty() ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 }

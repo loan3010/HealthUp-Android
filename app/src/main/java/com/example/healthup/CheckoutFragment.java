@@ -27,7 +27,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 
 import com.example.adapters.CheckoutProductAdapter;
+import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.PhoneVerifiedHelper;
 import com.example.healthup.util.TranslationManager;
 import com.example.models.Address;
 import com.example.models.CartItem;
@@ -383,12 +385,30 @@ public class CheckoutFragment extends Fragment {
     private void requestPaymentPermission(String providerName, int rbId) {
         if (authorizedMethods.contains(rbId)) return;
 
+        String message;
+        if (rbId == R.id.rbLinkedBank) {
+            message = "Cho phép cấp quyền liên kết thẻ ngân hàng.";
+        } else if (rbId == R.id.rbCard) {
+            message = "Cho phép cấp quyền thẻ ATM nội địa/Thẻ tín dụng.";
+        } else {
+            message = "Để thực hiện thanh toán qua " + providerName + ", HealthUp cần quyền truy cập thông tin định danh để bảo mật giao dịch.";
+        }
+
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle("Cấp quyền truy cập " + providerName)
-                .setMessage("Để thực hiện thanh toán qua " + providerName + ", HealthUp cần quyền truy cập thông tin định danh để bảo mật giao dịch.")
+                .setMessage(message)
                 .setPositiveButton("Cho phép", (dialog, which) -> {
                     authorizedMethods.add(rbId);
-                    Toast.makeText(getContext(), "Đã cấp quyền truy cập " + providerName, Toast.LENGTH_SHORT).show();
+                    
+                    String toastMsg;
+                    if (rbId == R.id.rbLinkedBank) {
+                        toastMsg = "Đã cho phép cấp quyền liên kết thẻ ngân hàng";
+                    } else if (rbId == R.id.rbCard) {
+                        toastMsg = "Đã cho phép cấp quyền thẻ ATM nội địa/Thẻ tín dụng";
+                    } else {
+                        toastMsg = "Đã cấp quyền truy cập " + providerName;
+                    }
+                    Toast.makeText(getContext(), toastMsg, Toast.LENGTH_SHORT).show();
                 })
                 .setNegativeButton("Từ chối", (dialog, which) -> {
                     Toast.makeText(getContext(), "Bạn cần cấp quyền để sử dụng phương thức này", Toast.LENGTH_SHORT).show();
@@ -591,36 +611,65 @@ public class CheckoutFragment extends Fragment {
             rowVoucherNoSelect.setVisibility(View.VISIBLE);
             layoutVoucherApplied.setVisibility(View.GONE);
         } else {
-            rowVoucherNoSelect.setVisibility(View.GONE);
-            layoutVoucherApplied.setVisibility(View.VISIBLE);
-            
-            // ✅ HIỂN THỊ TẤT CẢ CÁC MÃ ĐÃ CHỌN (GỒM CẢ SHIP VÀ GIẢM GIÁ)
-            StringBuilder sb = new StringBuilder();
-            int shipCount = 0;
-            int discountCount = 0;
-            
+            // ✅ KIỂM TRA ĐIỀU KIỆN ÁP MÃ THỰC TẾ
+            double itemsTotal = getItemsTotal();
+            boolean hasEligible = false;
             for (Voucher v : selectedVouchers) {
-                if (v.getType() == Voucher.Type.SHIPPING) shipCount++;
-                else discountCount++;
-                
-                String code = v.getCode();
-                if (code == null || code.isEmpty()) code = v.getTitle();
-                
-                if (code != null && !code.equalsIgnoreCase("null")) {
-                    if (sb.length() > 0) sb.append(", ");
-                    sb.append(code);
+                if (itemsTotal >= v.getMinOrderAmount() && isTierMatch(v)) {
+                    hasEligible = true;
+                    break;
                 }
             }
-            
-            tvAppliedVoucherTitle.setText(sb.length() > 0 ? sb.toString() : "Mã giảm giá đã áp dụng");
-            
-            if (shipCount > 0 && discountCount > 0) {
-                tvAppliedVoucherDesc.setText("Đã áp dụng mã vận chuyển & giảm giá hời nhất");
-            } else if (shipCount > 0) {
-                tvAppliedVoucherDesc.setText("Đã áp dụng mã miễn phí vận chuyển");
-            } else {
-                tvAppliedVoucherDesc.setText("Đã áp dụng mã giảm giá sản phẩm");
+
+            if (!hasEligible) {
+                // ✅ HIỂN THỊ THÔNG BÁO THEO YÊU CẦU: Không đủ điều kiện
+                rowVoucherNoSelect.setVisibility(View.GONE);
+                layoutVoucherApplied.setVisibility(View.VISIBLE);
+                tvAppliedVoucherTitle.setText("Chưa đủ điều kiện áp mã");
+                tvAppliedVoucherTitle.setTextColor(getResources().getColor(R.color.red_price));
+                tvAppliedVoucherDesc.setText("Đơn hàng chưa đủ điều kiện để áp mã, bạn cần mua thêm");
+                return;
             }
+
+            rowVoucherNoSelect.setVisibility(View.GONE);
+            layoutVoucherApplied.setVisibility(View.VISIBLE);
+            tvAppliedVoucherTitle.setTextColor(getResources().getColor(R.color.green_button));
+            
+            // HIỂN THỊ THEO YÊU CẦU TẠI THANH TOÁN
+            boolean hasShipping = false;
+            double itemDiscount = 0;
+            boolean isFastShippingSelected = (shippingFee > 25000); 
+
+            for (Voucher v : selectedVouchers) {
+                if (itemsTotal >= v.getMinOrderAmount() && isTierMatch(v)) {
+                    if (v.getType() == Voucher.Type.SHIPPING) hasShipping = true;
+                    else itemDiscount += calculateSaving(v, itemsTotal);
+                }
+            }
+
+            StringBuilder sb = new StringBuilder();
+            if (hasShipping) {
+                if (!isFastShippingSelected) {
+                    sb.append("Đã áp dụng mã vận chuyển");
+                } else {
+                    double shipSaving = 0;
+                    for (Voucher v : selectedVouchers) {
+                        if (v.getType() == Voucher.Type.SHIPPING && itemsTotal >= v.getMinOrderAmount() && isTierMatch(v)) {
+                            shipSaving += calculateSaving(v, itemsTotal);
+                        }
+                    }
+                    double finalShipSaving = Math.min(shipSaving, shippingFee);
+                    sb.append("Giảm vận chuyển ").append(currencyFormat.format(finalShipSaving)).append("đ");
+                }
+            }
+
+            if (itemDiscount > 0) {
+                if (sb.length() > 0) sb.append(", ");
+                sb.append("Giảm sản phẩm ").append(currencyFormat.format(itemDiscount)).append("đ");
+            }
+            
+            tvAppliedVoucherTitle.setText(sb.length() > 0 ? sb.toString() : "Đã áp dụng voucher");
+            tvAppliedVoucherDesc.setText("Hệ thống đã tự động áp dụng mã hời nhất cho bạn");
         }
     }
 
@@ -728,7 +777,7 @@ public class CheckoutFragment extends Fragment {
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
-            com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
+            CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
             requireActivity().getSupportFragmentManager().beginTransaction()
                     .replace(R.id.fragment_container, new PhoneVerificationFragment())
                     .addToBackStack(null)
@@ -736,7 +785,39 @@ public class CheckoutFragment extends Fragment {
             return;
         }
 
+        PhoneVerifiedHelper.requireForCheckout(new PhoneVerifiedHelper.Callback() {
+            @Override
+            public void onVerified() {
+                if (!isAdded()) {
+                    return;
+                }
+                continuePlaceOrder(user);
+            }
 
+            @Override
+            public void onNeedPhoneVerification() {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.checkout_need_phone_verified, Toast.LENGTH_LONG).show();
+                CheckoutIntentHelper.savePendingCheckout(requireContext(), selectedItems);
+                requireActivity().getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragment_container, new PhoneVerificationFragment())
+                        .addToBackStack(null)
+                        .commit();
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                if (!isAdded()) {
+                    return;
+                }
+                Toast.makeText(getContext(), R.string.register_error_generic, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void continuePlaceOrder(@NonNull FirebaseUser user) {
         btnPlaceOrder.setEnabled(false);
         String currentLang = LocaleHelper.getLanguage(requireContext());
         btnPlaceOrder.setText(currentLang.equals("en") ? "Processing..." : "Đang xử lý...");
@@ -766,6 +847,10 @@ public class CheckoutFragment extends Fragment {
 
         List<com.example.models.OrderItem> orderItems = new ArrayList<>();
         for (CartItem ci : selectedItems) {
+            String imageUrl = ci.getImageUrl();
+            if ((imageUrl == null || imageUrl.isEmpty()) && ci.getProduct() != null) {
+                imageUrl = ci.getProduct().getImageUrl();
+            }
             orderItems.add(new com.example.models.OrderItem(
                     ci.getProductId(),
                     ci.getVariantId(),
@@ -774,7 +859,7 @@ public class CheckoutFragment extends Fragment {
                     ci.getPrice(),
                     ci.getOriginalPrice(),
                     ci.getQuantity(),
-                    ci.getImageUrl()
+                    imageUrl
             ));
         }
 
@@ -837,7 +922,7 @@ public class CheckoutFragment extends Fragment {
                                 DocumentReference notificationRef = db.collection("users").document(userId)
                                         .collection("notifications").document();
                                 Map<String, Object> notification = new HashMap<>();
-                                notification.put("type", "ORDER_SHIPPING");
+                                notification.put("type", "ORDER_UPDATE");
                                 if ("en".equals(currentLang)) {
                                     notification.put("title", "Order successful");
                                     notification.put("body", "Order #" + order.getOrderCode()
@@ -847,10 +932,27 @@ public class CheckoutFragment extends Fragment {
                                     notification.put("body", "Đơn hàng #" + order.getOrderCode()
                                             + " đã được đặt thành công. Tổng tiền: " + formatVnd(finalAmount) + ".");
                                 }
+                                notification.put("message", notification.get("body"));
                                 notification.put("refId", orderRef.getId());
+                                notification.put("orderId", orderRef.getId());
+                                notification.put("orderCode", order.getOrderCode());
                                 notification.put("createdAt", FieldValue.serverTimestamp());
                                 notification.put("read", false);
                                 batch.set(notificationRef, notification);
+
+                                DocumentReference adminNotifRef = db.collection("admin_notifications").document();
+                                Map<String, Object> adminNotif = new HashMap<>();
+                                adminNotif.put("type", "ORDER_UPDATE");
+                                adminNotif.put("title", "Đơn hàng mới");
+                                adminNotif.put("body", "Khách vừa đặt đơn #" + order.getOrderCode()
+                                        + ". Tổng tiền: " + formatVnd(finalAmount) + ".");
+                                adminNotif.put("message", adminNotif.get("body"));
+                                adminNotif.put("orderId", orderRef.getId());
+                                adminNotif.put("orderCode", order.getOrderCode());
+                                adminNotif.put("buyerId", userId);
+                                adminNotif.put("read", false);
+                                adminNotif.put("createdAt", FieldValue.serverTimestamp());
+                                batch.set(adminNotifRef, adminNotif);
 
 
                                 // ✅ FIX: Hạng thành viên chỉ tính đơn đã giao.
@@ -947,17 +1049,26 @@ public class CheckoutFragment extends Fragment {
         dialogView.findViewById(R.id.btnTrackOrder).setOnClickListener(v -> {
             dialog.dismiss();
             
-            // ✅ HIỆN LẠI NAV BAR khi chuyển sang Theo dõi đơn hàng
-            View navView = requireActivity().findViewById(R.id.bottom_navigation);
-            if (navView != null) {
-                navView.setVisibility(View.VISIBLE);
-            }
+            // 1. Xoá sạch stack cũ (Giỏ hàng, Thanh toán...) để về gốc
+            getParentFragmentManager().popBackStack(null, androidx.fragment.app.FragmentManager.POP_BACK_STACK_INCLUSIVE);
 
-            OrderHistoryFragment fragment = new OrderHistoryFragment();
-            Bundle args = new Bundle();
-            args.putInt("initial_tab", 1); // Chuyển đến tab "Chờ xác nhận"
-            fragment.setArguments(args);
-            loadFragment(fragment);
+            // 2. Chuyển sang tab Tài khoản (Profile)
+            MainActivity main = (MainActivity) requireActivity();
+            View bottomNav = main.findViewById(R.id.bottom_navigation);
+            if (bottomNav instanceof com.google.android.material.bottomnavigation.BottomNavigationView) {
+                ((com.google.android.material.bottomnavigation.BottomNavigationView) bottomNav).setSelectedItemId(R.id.nav_profile);
+                
+                // 3. Đè OrderHistoryFragment lên trên ProfileFragment để khi back thì về Profile
+                OrderHistoryFragment fragment = new OrderHistoryFragment();
+                Bundle args = new Bundle();
+                args.putInt("initial_tab", 1); 
+                fragment.setArguments(args);
+                
+                main.getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragment_container, fragment)
+                    .addToBackStack(null) 
+                    .commit();
+            }
         });
 
 

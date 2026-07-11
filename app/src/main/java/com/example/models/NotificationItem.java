@@ -17,6 +17,10 @@ public class NotificationItem implements Serializable {
     private String type;
     /** Related entity id (orderId, productId, promo code, …). */
     private String refId;
+    /** Explicit order id when present on the notification document. */
+    private String orderId;
+    /** Return/refund request id when present. */
+    private String returnId;
     /** True for sample/preview items not stored in Firestore. */
     private boolean mock;
 
@@ -101,6 +105,22 @@ public class NotificationItem implements Serializable {
 
     public void setRefId(String refId) {
         this.refId = refId;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getReturnId() {
+        return returnId;
+    }
+
+    public void setReturnId(String returnId) {
+        this.returnId = returnId;
     }
 
     public boolean isMock() {

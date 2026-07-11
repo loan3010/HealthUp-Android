@@ -169,6 +169,7 @@
                             android:textColor="@color/text_hint"
                             android:textSize="14sp" />
                         <TextView
+                            android:id="@+id/tvCancelledBy"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="2"
@@ -216,11 +217,12 @@
                             android:textColor="@color/text_hint"
                             android:textSize="14sp" />
                         <TextView
+                            android:id="@+id/tvCancelReason"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="2"
                             android:gravity="end"
-                            android:text="Đặt nhầm sản phẩm"
+                            android:text=""
                             android:textColor="@color/error"
                             android:textSize="14sp"
                             android:textStyle="bold" />

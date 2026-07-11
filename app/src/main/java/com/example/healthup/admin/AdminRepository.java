@@ -3,6 +3,7 @@ package com.example.healthup.admin;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.models.DeliveryFailure;
 import com.example.models.Order;
 import com.example.models.Product;
 import com.google.firebase.Timestamp;
@@ -12,11 +13,14 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -70,7 +74,7 @@ public class AdminRepository {
         public int productCount;
         public int orderCount;
         public int pendingOrders;
-        public int cancelRequestedOrders;
+        public int cancelledOrders;
         public int lowStockProducts;
         public double revenue;
     }
@@ -79,7 +83,7 @@ public class AdminRepository {
         public int productCount;
         public int lowStockProducts;
         public int pendingOrders;
-        public int cancelRequestedOrders;
+        public int cancelledOrders;
         public int overdueOrders;
         public int returnRequests;
         public List<Order> orders = new ArrayList<>();
@@ -99,15 +103,21 @@ public class AdminRepository {
 
     public static class OrderHistoryEntry {
         public String id;
+        public String event;
         public String fromStatus;
         public String toStatus;
+        public String note;
+        public String reason;
+        public int attempt;
         public String adminUid;
         public String adminEmail;
+        public String actorRole;
         public Timestamp createdAt;
     }
 
     private final FirebaseFirestore db = FirebaseFirestore.getInstance();
 
+    @SuppressWarnings("unused")
     public void loadDashboard(@NonNull DashboardCallback callback) {
         loadDashboardData(new DashboardDataCallback() {
             @Override
@@ -116,7 +126,7 @@ public class AdminRepository {
                 stats.productCount = data.productCount;
                 stats.orderCount = data.orders.size();
                 stats.pendingOrders = data.pendingOrders;
-                stats.cancelRequestedOrders = data.cancelRequestedOrders;
+                stats.cancelledOrders = data.cancelledOrders;
                 stats.lowStockProducts = data.lowStockProducts;
                 for (Order order : data.orders) {
                     if (Order.STATUS_DELIVERED.equalsIgnoreCase(order.getStatus())) {
@@ -160,11 +170,10 @@ public class AdminRepository {
 
                                     String status = order.getStatus();
                                     if (Order.STATUS_PENDING.equalsIgnoreCase(status)) {
-                                        if (order.isCancelRequested()) {
-                                            data.cancelRequestedOrders++;
-                                        } else {
-                                            data.pendingOrders++;
-                                        }
+                                        data.pendingOrders++;
+                                    }
+                                    if (Order.STATUS_CANCELLED.equalsIgnoreCase(status)) {
+                                        data.cancelledOrders++;
                                     }
                                     if (AdminOrderSearchHelper.matches(order, "",
                                             AdminOrderSearchHelper.FILTER_RETURNED, null)) {
@@ -305,7 +314,7 @@ public class AdminRepository {
                             list.add(order);
                         }
                     }
-                    list.sort((a, b) -> Long.compare(getOrderSortTime(b), getOrderSortTime(a)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getOrderSortTime).reversed());
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -363,11 +372,82 @@ public class AdminRepository {
             if (cancelRequested != null) {
                 order.setCancelRequested(cancelRequested);
             }
+            if (TextUtils.isEmpty(order.getCancelReason())) {
+                String cancelReason = doc.getString("cancelReason");
+                if (cancelReason != null) {
+                    order.setCancelReason(cancelReason);
+                }
+            }
+            if (TextUtils.isEmpty(order.getCancelSource())) {
+                String cancelSource = doc.getString("cancelSource");
+                if (cancelSource != null) {
+                    order.setCancelSource(cancelSource);
+                }
+            }
             if (order.getCancelRequestedAt() == null) {
                 Timestamp cancelRequestedAt = doc.getTimestamp("cancelRequestedAt");
                 if (cancelRequestedAt != null) {
                     order.setCancelRequestedAt(cancelRequestedAt.toDate());
                 }
+            }
+            if (order.getCancelledAt() == null) {
+                Timestamp cancelledAt = doc.getTimestamp("cancelledAt");
+                if (cancelledAt != null) {
+                    order.setCancelledAt(cancelledAt.toDate());
+                }
+            }
+            Boolean shopConfirmed = doc.getBoolean("shopConfirmedDelivery");
+            if (shopConfirmed != null) {
+                order.setShopConfirmedDelivery(shopConfirmed);
+            }
+            if (order.getShopConfirmedAt() == null) {
+                Timestamp shopConfirmedAt = doc.getTimestamp("shopConfirmedAt");
+                if (shopConfirmedAt != null) {
+                    order.setShopConfirmedAt(shopConfirmedAt.toDate());
+                }
+            }
+            Long attempts = doc.getLong("deliveryAttempts");
+            if (attempts != null) {
+                order.setDeliveryAttempts(attempts.intValue());
+            }
+            Boolean needsRedelivery = doc.getBoolean("needsRedelivery");
+            if (needsRedelivery != null) {
+                order.setNeedsRedelivery(needsRedelivery);
+            }
+            Object failuresRaw = doc.get("deliveryFailures");
+            if (failuresRaw instanceof List) {
+                List<DeliveryFailure> failures = new ArrayList<>();
+                for (Object item : (List<?>) failuresRaw) {
+                    if (item instanceof Map) {
+                        @SuppressWarnings("unchecked")
+                        DeliveryFailure failure = DeliveryFailure.fromMap((Map<String, Object>) item);
+                        if (failure != null) failures.add(failure);
+                    }
+                }
+                order.setDeliveryFailures(failures);
+            }
+            if (TextUtils.isEmpty(order.getReturnStatus())) {
+                String returnStatus = doc.getString("returnStatus");
+                if (!TextUtils.isEmpty(returnStatus)) {
+                    order.setReturnStatus(returnStatus);
+                } else if (order.getReturnHandling() != null || Order.STATUS_RETURNED.equalsIgnoreCase(order.getStatus())) {
+                    if (Order.STATUS_COMPLETED.equalsIgnoreCase(order.getStatus())) {
+                        order.setReturnStatus(Order.RETURN_COMPLETED);
+                    } else {
+                        order.setReturnStatus(Order.RETURN_REQUESTED);
+                    }
+                } else {
+                    order.setReturnStatus(Order.RETURN_NONE);
+                }
+            }
+            if (order.getReturnRejectReason() == null) {
+                order.setReturnRejectReason(doc.getString("returnRejectReason"));
+            }
+            Object returnItemsRaw = doc.get("returnItems");
+            if (returnItemsRaw instanceof List) {
+                @SuppressWarnings("unchecked")
+                List<Map<String, Object>> returnItems = (List<Map<String, Object>>) returnItemsRaw;
+                order.setReturnItems(returnItems);
             }
             return order;
         } catch (Exception e) {
@@ -390,72 +470,71 @@ public class AdminRepository {
         return entry.createdAt != null ? entry.createdAt.getSeconds() : 0L;
     }
 
+    @SuppressWarnings("unused")
     public void updateOrderStatus(@NonNull String orderId,
                                   @Nullable String fromStatus,
                                   @NonNull String toStatus,
                                   @NonNull SimpleCallback callback) {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
-        if (user == null) {
-            callback.onError("Chưa đăng nhập");
-            return;
-        }
-
-        // Fetch order first to get userId and total amount for loyalty update
-        db.collection("orders").document(orderId).get().addOnSuccessListener(doc -> {
-            if (!doc.exists()) {
-                callback.onError("Đơn hàng không tồn tại");
-                return;
-            }
-
-            String userId = doc.getString("userId");
-            Double total = doc.getDouble("totalPrice");
-            if (total == null) total = 0.0;
-
-            WriteBatch batch = db.batch();
-
-            // 1. Cập nhật đơn hàng
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("status", toStatus);
-            updates.put("updatedAt", Timestamp.now());
-            if ("delivered".equals(toStatus)) {
-                updates.put("deliveredAt", Timestamp.now());
-            }
-            batch.update(db.collection("orders").document(orderId), updates);
-
-            // 2. Cập nhật lịch sử
-            Map<String, Object> history = new HashMap<>();
-            history.put("fromStatus", fromStatus != null ? fromStatus : "");
-            history.put("toStatus", toStatus);
-            history.put("adminUid", user.getUid());
-            history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
-            history.put("createdAt", Timestamp.now());
-            batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
-
-            // 3. Xử lý hạng thành viên (Loyalty)
-            // Logic: Tăng khi sang Delivered, Giảm khi sang Returned/Cancelled (nếu từ Delivered)
-            if (userId != null) {
-                if ("delivered".equals(toStatus) && !"delivered".equals(fromStatus)) {
-                    // Chuyển sang Giao thành công -> Tăng tích lũy
-                    batch.update(db.collection("users").document(userId),
-                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(total));
-                } else if (("returned".equals(toStatus) || "cancelled".equals(toStatus)) && "delivered".equals(fromStatus)) {
-                    // Nếu đã từng Delivered mà giờ bị Trả hoặc Hủy -> Giảm tích lũy
-                    batch.update(db.collection("users").document(userId),
-                            "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
-                }
-            }
-
-            batch.commit()
-                    .addOnSuccessListener(unused -> callback.onSuccess())
-                    .addOnFailureListener(e -> callback.onError(errorMessage(e)));
-
-        }).addOnFailureListener(e -> callback.onError(errorMessage(e)));
+        advanceOrderLifecycle(orderId, fromStatus, toStatus, null, null, callback);
     }
 
-    public void approveCancelRequest(@NonNull String orderId,
-                                     @Nullable String userId,
-                                     double amount,
-                                     @NonNull SimpleCallback callback) {
+    /** pending → confirmed */
+    public void confirmOrder(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_PENDING.equals(order.getStatus())) {
+            callback.onError("Chỉ xác nhận đơn đang chờ xác nhận");
+            return;
+        }
+        advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_CONFIRMED,
+                "order_confirmed", "Admin đã xác nhận đơn hàng", callback);
+    }
+
+    /** Duyệt yêu cầu hủy đơn hàng (pending -> cancelled) */
+    public void approveCancelRequest(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        Map<String, Object> extra = new HashMap<>();
+        extra.put("cancelRequested", false);
+        advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_CANCELLED,
+                "cancel_approved", "Duyệt yêu cầu hủy đơn hàng", extra, callback);
+    }
+
+    /** confirmed → shipping */
+    public void startShipping(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_CONFIRMED.equals(order.getStatus())) {
+            callback.onError("Chỉ chuyển giao khi đơn đã xác nhận");
+            return;
+        }
+        Map<String, Object> extra = new HashMap<>();
+        extra.put("needsRedelivery", false);
+        extra.put("shopConfirmedDelivery", false);
+        advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_SHIPPING,
+                "shipping_started", "Đơn đã bắt đầu giao hàng", extra, callback);
+    }
+
+    /** shipping → shopConfirmedDelivery=true (status stays shipping) */
+    public void confirmShopDelivery(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_SHIPPING.equals(order.getStatus())) {
+            callback.onError("Chỉ xác nhận giao khi đơn đang giao");
+            return;
+        }
+        if (order.isNeedsRedelivery()) {
+            callback.onError("Vui lòng bấm Giao lại trước khi xác nhận giao thành công");
+            return;
+        }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             callback.onError("Chưa đăng nhập");
@@ -463,29 +542,137 @@ public class AdminRepository {
         }
 
         Map<String, Object> updates = new HashMap<>();
-        updates.put("status", Order.STATUS_CANCELLED);
-        updates.put("cancelRequested", false);
+        updates.put("shopConfirmedDelivery", true);
+        updates.put("shopConfirmedAt", Timestamp.now());
+        updates.put("needsRedelivery", false);
         updates.put("updatedAt", Timestamp.now());
 
         WriteBatch batch = db.batch();
-        batch.update(db.collection("orders").document(orderId), updates);
-
-
-        Map<String, Object> history = new HashMap<>();
-        history.put("fromStatus", Order.STATUS_PENDING);
-        history.put("toStatus", Order.STATUS_CANCELLED);
-        history.put("adminUid", user.getUid());
-        history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
-        history.put("createdAt", Timestamp.now());
-        history.put("note", "Duyệt yêu cầu hủy");
-        batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user, "shop_confirmed_delivery",
+                order.getStatus(), order.getStatus(),
+                "Shop xác nhận đã giao hàng thành công", null, order.getDeliveryAttempts());
+        notifyBuyerAndAdmin(batch, order, "ORDER_DELIVERY_CONFIRMED",
+                "Đơn hàng đã giao tới",
+                "Shop xác nhận đơn #" + displayCode(order) + " đã giao thành công. Vui lòng bấm Đã nhận được hàng.",
+                "Shop đã giao đơn #" + displayCode(order));
 
         batch.commit()
                 .addOnSuccessListener(unused -> callback.onSuccess())
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
     }
 
-    public void rejectCancelRequest(@NonNull String orderId, @NonNull SimpleCallback callback) {
+    /**
+     * Record a failed delivery attempt.
+     * Refused → cancelled. 3rd failure → cancelled. Else stay shipping + needsRedelivery.
+     */
+    public void recordDeliveryFailure(@NonNull Order order,
+                                      @NonNull String reason,
+                                      @Nullable String note,
+                                      @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_SHIPPING.equals(order.getStatus())) {
+            callback.onError("Chỉ ghi nhận thất bại khi đơn đang giao");
+            return;
+        }
+        if (order.isNeedsRedelivery()) {
+            callback.onError("Vui lòng bấm Giao lại trước khi ghi nhận lần giao tiếp theo");
+            return;
+        }
+        if (order.isShopConfirmedDelivery()) {
+            callback.onError("Đơn đã được shop xác nhận giao thành công");
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onError("Chưa đăng nhập");
+            return;
+        }
+
+        int nextAttempt = order.getDeliveryAttempts() + 1;
+        boolean refused = Order.FAIL_REFUSED.equals(reason);
+        boolean maxReached = nextAttempt >= Order.MAX_DELIVERY_ATTEMPTS;
+        boolean cancel = refused || maxReached;
+
+        DeliveryFailure failure = new DeliveryFailure(
+                nextAttempt, reason, note, new Date(),
+                user.getUid(), user.getEmail() != null ? user.getEmail() : "");
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("deliveryAttempts", nextAttempt);
+        updates.put("deliveryFailures", FieldValue.arrayUnion(failure.toMap()));
+        updates.put("updatedAt", Timestamp.now());
+        updates.put("shopConfirmedDelivery", false);
+
+        String toStatus = order.getStatus();
+        String event;
+        String historyNote;
+        String buyerTitle;
+        String buyerBody;
+        String adminBody;
+
+        if (cancel) {
+            toStatus = Order.STATUS_CANCELLED;
+            updates.put("status", Order.STATUS_CANCELLED);
+            if (refused) {
+                updates.put("cancelReason", Order.CANCEL_REASON_REFUSED);
+                updates.put("cancelSource", Order.CANCEL_SOURCE_DELIVERY_REFUSED);
+            } else {
+                updates.put("cancelReason", Order.CANCEL_REASON_MAX_ATTEMPTS);
+                updates.put("cancelSource", Order.CANCEL_SOURCE_DELIVERY_MAX);
+            }
+            updates.put("cancelledAt", Timestamp.now());
+            updates.put("needsRedelivery", false);
+            event = "delivery_failed_cancelled";
+            historyNote = refused
+                    ? "Hủy do khách từ chối nhận (lần " + nextAttempt + ")"
+                    : "Hủy sau " + nextAttempt + " lần giao thất bại";
+            buyerTitle = "Đơn hàng đã hủy";
+            buyerBody = "Đơn #" + displayCode(order) + " đã bị hủy. Lý do: "
+                    + (refused ? Order.CANCEL_REASON_REFUSED : Order.CANCEL_REASON_MAX_ATTEMPTS);
+            adminBody = "Đơn #" + displayCode(order) + " hủy sau giao thất bại: " + reason;
+        } else {
+            updates.put("needsRedelivery", true);
+            event = "delivery_failed";
+            historyNote = "Giao thất bại lần " + nextAttempt + ": " + reason
+                    + (TextUtils.isEmpty(note) ? "" : (" — " + note));
+            buyerTitle = "Giao hàng không thành công";
+            buyerBody = "Đơn #" + displayCode(order) + " giao lần " + nextAttempt
+                    + " không thành công. Lý do: " + reason
+                    + ". Shop sẽ giao lại lần " + (nextAttempt + 1) + ".";
+            adminBody = "Đơn #" + displayCode(order) + " giao thất bại lần " + nextAttempt + ": " + reason;
+        }
+
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user, event, order.getStatus(), toStatus,
+                historyNote, reason, nextAttempt);
+        notifyBuyerAndAdmin(batch, order, cancel ? "ORDER_CANCELLED" : "ORDER_DELIVERY_FAILED",
+                buyerTitle, buyerBody, adminBody);
+
+        batch.commit()
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    /** After a failure: clear needsRedelivery and log "Giao lại lần N". */
+    public void scheduleRedelivery(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_SHIPPING.equals(order.getStatus()) || !order.isNeedsRedelivery()) {
+            callback.onError("Không có lần giao lại đang chờ");
+            return;
+        }
+        int nextAttempt = order.getDeliveryAttempts() + 1;
+        if (nextAttempt > Order.MAX_DELIVERY_ATTEMPTS) {
+            callback.onError("Đã hết số lần giao cho phép");
+            return;
+        }
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             callback.onError("Chưa đăng nhập");
@@ -493,26 +680,333 @@ public class AdminRepository {
         }
 
         Map<String, Object> updates = new HashMap<>();
-        updates.put("cancelRequested", false);
-        updates.put("cancelReason", com.google.firebase.firestore.FieldValue.delete());
-        updates.put("cancelRequestedAt", com.google.firebase.firestore.FieldValue.delete());
+        updates.put("needsRedelivery", false);
         updates.put("updatedAt", Timestamp.now());
 
         WriteBatch batch = db.batch();
-        batch.update(db.collection("orders").document(orderId), updates);
-
-        Map<String, Object> history = new HashMap<>();
-        history.put("fromStatus", Order.STATUS_PENDING);
-        history.put("toStatus", Order.STATUS_PENDING);
-        history.put("adminUid", user.getUid());
-        history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
-        history.put("createdAt", Timestamp.now());
-        history.put("note", "Từ chối yêu cầu hủy");
-        batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user, "redelivery_scheduled",
+                order.getStatus(), order.getStatus(),
+                "Giao lại lần " + nextAttempt, null, nextAttempt);
+        notifyBuyerAndAdmin(batch, order, "ORDER_REDELIVERY",
+                "Đơn hàng sẽ được giao lại",
+                "Shop sẽ giao lại đơn #" + displayCode(order) + " (lần " + nextAttempt + ").",
+                "Đã lên lịch giao lại lần " + nextAttempt + " cho đơn #" + displayCode(order));
 
         batch.commit()
                 .addOnSuccessListener(unused -> callback.onSuccess())
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    public void approveReturn(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.RETURN_REQUESTED.equals(order.getReturnStatus())
+                && !Order.STATUS_RETURNED.equalsIgnoreCase(order.getStatus())) {
+            callback.onError("Không có yêu cầu trả hàng đang chờ");
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onError("Chưa đăng nhập");
+            return;
+        }
+
+        // Approve only — client timeline shows "HealthUp đã duyệt"; further steps via advanceReturnProgress.
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("returnStatus", Order.RETURN_APPROVED);
+        updates.put("returnStep", 1);
+        updates.put("status", Order.STATUS_DELIVERED);
+        updates.put("updatedAt", Timestamp.now());
+
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user, "return_approved",
+                order.getStatus(), Order.STATUS_DELIVERED,
+                "Admin đã duyệt yêu cầu trả hàng", null, 0);
+        notifyBuyerAndAdmin(batch, order, "ORDER_RETURN_APPROVED",
+                "Yêu cầu trả hàng được duyệt",
+                "Yêu cầu trả hàng đơn #" + displayCode(order) + " đã được duyệt. Shop đang xử lý.",
+                "Đã duyệt trả hàng đơn #" + displayCode(order));
+
+        batch.commit()
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    /**
+     * Advances return/refund/reship progress by one step to match client "Tiến trình xử lý".
+     * Final step marks return completed + refunded/reshipped as appropriate.
+     */
+    public void advanceReturnProgress(@NonNull Order order, @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.RETURN_APPROVED.equals(order.getReturnStatus())) {
+            callback.onError("Cần duyệt yêu cầu trước khi cập nhật tiến trình");
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onError("Chưa đăng nhập");
+            return;
+        }
+
+        int max = com.example.healthup.util.ReturnProgressHelper.maxStep(order);
+        int current = Math.max(order.getReturnStep(), 1);
+        if (current >= max) {
+            callback.onError("Yêu cầu đã hoàn tất");
+            return;
+        }
+        int next = current + 1;
+        boolean isFinal = next >= max;
+        String handling = com.example.healthup.util.ReturnProgressHelper.normalizeHandling(order.getReturnHandling());
+        String stepTitle = com.example.healthup.util.ReturnProgressHelper.stepTitle(handling, next);
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("returnStep", next);
+        updates.put("updatedAt", Timestamp.now());
+        if (isFinal) {
+            updates.put("returnStatus", Order.RETURN_COMPLETED);
+            updates.put("status", Order.STATUS_COMPLETED);
+            if (com.example.healthup.util.ReturnProgressHelper.isReship(handling)) {
+                updates.put("paymentStatus", "reshipped");
+            } else {
+                updates.put("paymentStatus", "refunded");
+            }
+        }
+
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user,
+                isFinal ? "return_completed" : "return_progress",
+                order.getStatus(),
+                isFinal ? Order.STATUS_COMPLETED : order.getStatus(),
+                stepTitle, null, 0);
+        if (isFinal) {
+            notifyBuyerAndAdmin(batch, order, "ORDER_RETURN_APPROVED",
+                    "Yêu cầu trả hàng hoàn tất",
+                    "Yêu cầu trả hàng đơn #" + displayCode(order) + " đã hoàn tất: " + stepTitle,
+                    "Hoàn tất trả hàng đơn #" + displayCode(order));
+        }
+
+        batch.commit()
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    public void rejectReturn(@NonNull Order order,
+                             @NonNull String rejectReason,
+                             @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.RETURN_REQUESTED.equals(order.getReturnStatus())
+                && !Order.RETURN_APPROVED.equals(order.getReturnStatus())
+                && !Order.STATUS_RETURNED.equalsIgnoreCase(order.getStatus())) {
+            callback.onError("Không có yêu cầu trả hàng đang chờ");
+            return;
+        }
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onError("Chưa đăng nhập");
+            return;
+        }
+
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("status", Order.STATUS_DELIVERED);
+        updates.put("returnStatus", Order.RETURN_REJECTED);
+        updates.put("returnRejectReason", rejectReason);
+        // Clear progress so client never shows "Hoàn tiền thành công" after reject.
+        updates.put("returnStep", 0);
+        updates.put("updatedAt", Timestamp.now());
+
+        WriteBatch batch = db.batch();
+        batch.update(db.collection("orders").document(order.getId()), updates);
+        appendHistory(batch, order.getId(), user, "return_rejected",
+                order.getStatus(), Order.STATUS_DELIVERED,
+                "Từ chối trả hàng: " + rejectReason, rejectReason, 0);
+        notifyBuyerAndAdmin(batch, order, "ORDER_RETURN_REJECTED",
+                "Yêu cầu trả hàng bị từ chối",
+                "Yêu cầu trả hàng đơn #" + displayCode(order) + " không được duyệt. Lý do: " + rejectReason,
+                "Từ chối trả hàng đơn #" + displayCode(order) + ": " + rejectReason);
+
+        batch.commit()
+                .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    private void advanceOrderLifecycle(@NonNull String orderId,
+                                       @Nullable String fromStatus,
+                                       @NonNull String toStatus,
+                                       @Nullable String event,
+                                       @Nullable String note,
+                                       @NonNull SimpleCallback callback) {
+        advanceOrderLifecycle(orderId, fromStatus, toStatus, event, note, null, callback);
+    }
+
+    private void advanceOrderLifecycle(@NonNull String orderId,
+                                       @Nullable String fromStatus,
+                                       @NonNull String toStatus,
+                                       @Nullable String event,
+                                       @Nullable String note,
+                                       @Nullable Map<String, Object> extraUpdates,
+                                       @NonNull SimpleCallback callback) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            callback.onError("Chưa đăng nhập");
+            return;
+        }
+
+        db.collection("orders").document(orderId).get()
+                .addOnSuccessListener(doc -> {
+                    Order order = parseOrderDocument(doc);
+                    if (order == null) {
+                        callback.onError("Không tìm thấy đơn hàng");
+                        return;
+                    }
+
+                    WriteBatch batch = db.batch();
+
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("status", toStatus);
+                    updates.put("updatedAt", Timestamp.now());
+                    if (Order.STATUS_DELIVERED.equals(toStatus)) {
+                        updates.put("deliveredAt", Timestamp.now());
+                    }
+                    if (extraUpdates != null) {
+                        updates.putAll(extraUpdates);
+                    }
+                    batch.update(db.collection("orders").document(orderId), updates);
+
+                    // Xử lý hạng thành viên (Loyalty)
+                    String buyerId = order.getUserId();
+                    double total = order.getTotalPrice();
+                    String currentStatus = order.getStatus();
+
+                    if (!TextUtils.isEmpty(buyerId)) {
+                        if (Order.STATUS_DELIVERED.equalsIgnoreCase(toStatus) && !Order.STATUS_DELIVERED.equalsIgnoreCase(currentStatus)) {
+                            // Chuyển sang Giao thành công -> Tăng tích lũy
+                            batch.update(db.collection("users").document(buyerId),
+                                    "spentAmount", FieldValue.increment(total));
+                        } else if ((Order.STATUS_RETURNED.equalsIgnoreCase(toStatus) || Order.STATUS_CANCELLED.equalsIgnoreCase(toStatus))
+                                && Order.STATUS_DELIVERED.equalsIgnoreCase(currentStatus)) {
+                            // Nếu đã từng Delivered mà giờ bị Trả hoặc Hủy -> Giảm tích lũy
+                            batch.update(db.collection("users").document(buyerId),
+                                    "spentAmount", FieldValue.increment(-total));
+                        }
+                    }
+
+                    String resolvedEvent = event != null ? event : "status_changed";
+                    String buyerTitle;
+                    String buyerBody;
+                    String notifType;
+                    switch (toStatus) {
+                        case Order.STATUS_CONFIRMED:
+                            buyerTitle = "Đơn hàng đã được xác nhận";
+                            buyerBody = "Đơn #" + displayCode(order) + " đã được xác nhận. Shop đang chuẩn bị hàng.";
+                            notifType = "ORDER_CONFIRMED";
+                            break;
+                        case Order.STATUS_SHIPPING:
+                            buyerTitle = "Đơn hàng đang giao";
+                            buyerBody = "Đơn #" + displayCode(order) + " đã bắt đầu giao hàng.";
+                            notifType = "ORDER_SHIPPING";
+                            break;
+                        default:
+                            buyerTitle = "Cập nhật đơn hàng";
+                            buyerBody = "Đơn #" + displayCode(order) + " đã cập nhật trạng thái.";
+                            notifType = "ORDER_UPDATE";
+                            break;
+                    }
+
+                    appendHistory(batch, orderId, user, resolvedEvent,
+                            fromStatus != null ? fromStatus : order.getStatus(), toStatus,
+                            note, null, order.getDeliveryAttempts());
+                    notifyBuyerAndAdmin(batch, order, notifType, buyerTitle, buyerBody,
+                            buyerTitle + " — #" + displayCode(order));
+
+                    batch.commit()
+                            .addOnSuccessListener(unused -> callback.onSuccess())
+                            .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+                })
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    private void appendHistory(@NonNull WriteBatch batch,
+                               @NonNull String orderId,
+                               @NonNull FirebaseUser user,
+                               @NonNull String event,
+                               @Nullable String fromStatus,
+                               @Nullable String toStatus,
+                               @Nullable String note,
+                               @Nullable String reason,
+                               int attempt) {
+        Map<String, Object> history = new HashMap<>();
+        history.put("event", event);
+        history.put("fromStatus", fromStatus != null ? fromStatus : "");
+        history.put("toStatus", toStatus != null ? toStatus : "");
+        history.put("note", note != null ? note : "");
+        history.put("reason", reason != null ? reason : "");
+        history.put("attempt", attempt);
+        history.put("adminUid", user.getUid());
+        history.put("adminEmail", user.getEmail() != null ? user.getEmail() : "");
+        history.put("actorRole", "admin");
+        history.put("createdAt", Timestamp.now());
+        batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
+    }
+
+    private void notifyBuyerAndAdmin(@NonNull WriteBatch batch,
+                                     @NonNull Order order,
+                                     @NonNull String type,
+                                     @NonNull String buyerTitle,
+                                     @NonNull String buyerBody,
+                                     @NonNull String adminBody) {
+        String buyerId = order.getUserId();
+        String code = displayCode(order);
+        boolean isReturn = type.toUpperCase(Locale.US).contains("RETURN");
+        if (!TextUtils.isEmpty(buyerId)) {
+            Map<String, Object> buyerNotif = new HashMap<>();
+            buyerNotif.put("type", type);
+            buyerNotif.put("title", buyerTitle);
+            buyerNotif.put("body", buyerBody);
+            buyerNotif.put("message", buyerBody);
+            buyerNotif.put("refId", order.getId());
+            buyerNotif.put("orderId", order.getId());
+            if (isReturn) {
+                buyerNotif.put("returnId", order.getId());
+                buyerNotif.put("returnRequestId", order.getId());
+            }
+            buyerNotif.put("orderCode", code);
+            buyerNotif.put("read", false);
+            buyerNotif.put("createdAt", Timestamp.now());
+            batch.set(db.collection("users").document(buyerId).collection("notifications").document(), buyerNotif);
+        }
+
+        Map<String, Object> adminNotif = new HashMap<>();
+        adminNotif.put("type", type);
+        adminNotif.put("title", buyerTitle);
+        adminNotif.put("body", adminBody);
+        adminNotif.put("message", adminBody);
+        adminNotif.put("orderId", order.getId());
+        adminNotif.put("refId", order.getId());
+        if (isReturn) {
+            adminNotif.put("returnId", order.getId());
+            adminNotif.put("returnRequestId", order.getId());
+        }
+        adminNotif.put("orderCode", code);
+        adminNotif.put("buyerId", buyerId != null ? buyerId : "");
+        adminNotif.put("read", false);
+        adminNotif.put("createdAt", Timestamp.now());
+        batch.set(db.collection("admin_notifications").document(), adminNotif);
+    }
+
+    @NonNull
+    private static String displayCode(@NonNull Order order) {
+        return !TextUtils.isEmpty(order.getOrderCode()) ? order.getOrderCode() : order.getId();
     }
 
     public void loadOrderHistory(@NonNull String orderId,
@@ -524,14 +1018,20 @@ public class AdminRepository {
                     for (DocumentSnapshot doc : snap) {
                         OrderHistoryEntry entry = new OrderHistoryEntry();
                         entry.id = doc.getId();
+                        entry.event = doc.getString("event");
                         entry.fromStatus = doc.getString("fromStatus");
                         entry.toStatus = doc.getString("toStatus");
+                        entry.note = doc.getString("note");
+                        entry.reason = doc.getString("reason");
+                        Long attempt = doc.getLong("attempt");
+                        entry.attempt = attempt != null ? attempt.intValue() : 0;
                         entry.adminUid = doc.getString("adminUid");
                         entry.adminEmail = doc.getString("adminEmail");
+                        entry.actorRole = doc.getString("actorRole");
                         entry.createdAt = doc.getTimestamp("createdAt");
                         list.add(entry);
                     }
-                    list.sort((a, b) -> Long.compare(getHistorySortTime(a), getHistorySortTime(b)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getHistorySortTime));
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -635,7 +1135,7 @@ public class AdminRepository {
                             list.add(order);
                         }
                     }
-                    list.sort((a, b) -> Long.compare(getOrderSortTime(b), getOrderSortTime(a)));
+                    list.sort(Comparator.comparingLong(AdminRepository::getOrderSortTime).reversed());
                     callback.onSuccess(list);
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
@@ -662,7 +1162,7 @@ public class AdminRepository {
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
     }
 
-    @Nullable
+    @NonNull
     private static AdminCustomer mapCustomer(@NonNull DocumentSnapshot doc) {
         String role = doc.getString("role");
         if (role == null) {

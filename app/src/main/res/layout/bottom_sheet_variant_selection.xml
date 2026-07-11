@@ -20,12 +20,22 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="24dp">
 
-        <com.google.android.material.imageview.ShapeableImageView
-            android:id="@+id/iv_variant_product"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_variant_image"
             android:layout_width="100dp"
             android:layout_height="100dp"
-            android:scaleType="centerCrop"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.SmallComponent" />
+            app:cardCornerRadius="8dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp">
+
+            <ImageView
+                android:id="@+id/iv_variant_image"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#F5F5F5"
+                android:contentDescription="@null"
+                android:scaleType="centerCrop" />
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -33,7 +43,7 @@
             android:layout_centerVertical="true"
             android:layout_marginStart="16dp"
             android:layout_marginEnd="32dp"
-            android:layout_toEndOf="@id/iv_variant_product"
+            android:layout_toEndOf="@id/card_variant_image"
             android:orientation="vertical">
 
             <TextView

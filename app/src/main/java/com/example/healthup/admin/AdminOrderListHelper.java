@@ -22,8 +22,7 @@ public final class AdminOrderListHelper {
     /** Statuses that need admin action and can become overdue. */
     private static final List<String> ACTION_STATUSES = List.of(
             Order.STATUS_PENDING,
-            Order.STATUS_CONFIRMED,
-            AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED
+            Order.STATUS_CONFIRMED
     );
 
     private AdminOrderListHelper() {
@@ -99,18 +98,12 @@ public final class AdminOrderListHelper {
     }
 
     private static boolean needsAction(@NonNull Order order) {
-        if (order.isCancelRequested() && Order.STATUS_PENDING.equalsIgnoreCase(order.getStatus())) {
-            return true;
-        }
         String status = order.getStatus();
         if (status == null) return false;
         return ACTION_STATUSES.contains(status.toLowerCase(Locale.ROOT).trim());
     }
 
     private static long getOverdueReferenceTime(@NonNull Order order) {
-        if (order.isCancelRequested() && order.getCancelRequestedAt() != null) {
-            return order.getCancelRequestedAt().getTime();
-        }
         if (order.getUpdatedAt() != null) {
             return order.getUpdatedAt().getTime();
         }
@@ -124,7 +117,6 @@ public final class AdminOrderListHelper {
         List<String> filters = new ArrayList<>();
         filters.add(AdminOrderSearchHelper.FILTER_ALL);
         filters.add(Order.STATUS_PENDING);
-        filters.add(AdminOrderSearchHelper.FILTER_CANCEL_REQUESTED);
         filters.add(AdminOrderSearchHelper.FILTER_OVERDUE);
         filters.add(Order.STATUS_CONFIRMED);
         filters.add(Order.STATUS_SHIPPING);

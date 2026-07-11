@@ -202,23 +202,73 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvSold.setText("Đã bán " + product.getSoldCount() + "+");
 
         updateWishlistIcon();
+        setupImagePager();
+    }
 
-        List<String> images = product.getImages();
-        if (images == null || images.isEmpty()) {
-            images = new ArrayList<>();
-            images.add(product.getImageUrl());
-        }
+    private void setupImagePager() {
+        final List<String> finalImages = collectProductImages(product);
+        viewPagerImages.setOrientation(ViewPager2.ORIENTATION_HORIZONTAL);
+        viewPagerImages.setOffscreenPageLimit(1);
+        viewPagerImages.setUserInputEnabled(finalImages.size() > 1);
+        viewPagerImages.setAdapter(new ImageSliderAdapter(finalImages, true));
 
-        final List<String> finalImages = images;
-        viewPagerImages.setAdapter(new ImageSliderAdapter(finalImages));
-
-        tvImageIndex.setText("1/" + finalImages.size());
-        viewPagerImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
-            @Override
-            public void onPageSelected(int position) {
-                tvImageIndex.setText((position + 1) + "/" + finalImages.size());
+        // ViewPager2's inner RecyclerView must not nest-scroll vertically or parents steal swipes.
+        viewPagerImages.post(() -> {
+            if (viewPagerImages.getChildCount() > 0
+                    && viewPagerImages.getChildAt(0) instanceof RecyclerView) {
+                RecyclerView inner = (RecyclerView) viewPagerImages.getChildAt(0);
+                inner.setNestedScrollingEnabled(false);
+                inner.setOverScrollMode(View.OVER_SCROLL_NEVER);
+                inner.setClipToPadding(false);
+            }
+            if (tvImageIndex != null) {
+                tvImageIndex.bringToFront();
             }
         });
+
+        if (tvImageIndex == null) return;
+        if (finalImages.size() > 1) {
+            tvImageIndex.setVisibility(View.VISIBLE);
+            tvImageIndex.setText("1/" + finalImages.size());
+            viewPagerImages.registerOnPageChangeCallback(new ViewPager2.OnPageChangeCallback() {
+                @Override
+                public void onPageSelected(int position) {
+                    tvImageIndex.setText((position + 1) + "/" + finalImages.size());
+                }
+            });
+        } else {
+            tvImageIndex.setVisibility(View.GONE);
+        }
+    }
+
+    @NonNull
+    private static List<String> collectProductImages(@NonNull Product product) {
+        List<String> images = new ArrayList<>();
+        if (product.getImages() != null) {
+            for (String url : product.getImages()) {
+                if (url != null && !url.trim().isEmpty() && !images.contains(url.trim())) {
+                    images.add(url.trim());
+                }
+            }
+        }
+        String fallback = product.getImageUrl();
+        // getImageUrl() may return images[0]; only add if list was empty or URL is distinct.
+        if (fallback != null && !fallback.trim().isEmpty() && !images.contains(fallback.trim())) {
+            images.add(fallback.trim());
+        }
+        if (product.getVariants() != null) {
+            for (Product.ProductVariant v : product.getVariants()) {
+                if (v == null || v.getImageUrl() == null) continue;
+                String url = v.getImageUrl().trim();
+                if (!url.isEmpty() && !images.contains(url)) {
+                    images.add(url);
+                }
+            }
+        }
+        if (images.isEmpty()) {
+            images.add("");
+        }
+        return images;
     }
 
     private void updatePriceDisplay() {
@@ -521,16 +571,45 @@ public class ProductDetailActivity extends AppCompatActivity {
         Intent intent = new Intent(this, MainActivity.class);
         intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
 
-        if (user != null) {
-            buyNowItem.setUserId(user.getUid());
-            intent.putExtra("navigate_to", "checkout");
-            intent.putExtra("checkout_items", checkoutItems);
-        } else {
+        if (user == null) {
             com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(this, checkoutItems);
             intent.putExtra("navigate_to", "phone_verification");
+            startActivity(intent);
+            return;
         }
 
-        startActivity(intent);
+        buyNowItem.setUserId(user.getUid());
+        com.example.healthup.util.PhoneVerifiedHelper.requireForCheckout(
+                new com.example.healthup.util.PhoneVerifiedHelper.Callback() {
+                    @Override
+                    public void onVerified() {
+                        intent.putExtra("navigate_to", "checkout");
+                        intent.putExtra("checkout_items", checkoutItems);
+                        startActivity(intent);
+                    }
+
+                    @Override
+                    public void onNeedPhoneVerification() {
+                        Toast.makeText(
+                                ProductDetailActivity.this,
+                                R.string.checkout_need_phone_verified,
+                                Toast.LENGTH_LONG
+                        ).show();
+                        com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(
+                                ProductDetailActivity.this, checkoutItems);
+                        intent.putExtra("navigate_to", "phone_verification");
+                        startActivity(intent);
+                    }
+
+                    @Override
+                    public void onError(@NonNull String message) {
+                        Toast.makeText(
+                                ProductDetailActivity.this,
+                                R.string.register_error_generic,
+                                Toast.LENGTH_SHORT
+                        ).show();
+                    }
+                });
     }
 
     private void addToCart(int quantity) {

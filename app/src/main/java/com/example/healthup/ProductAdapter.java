@@ -49,7 +49,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     // CartFragment.replaceRecommendation() sửa trực tiếp recommendDisplayed rồi gọi lại
     // updateData(recommendDisplayed)), DiffUtil.calculateDiff so sánh this.products (danh sách
     // "cũ") với newList (danh sách "mới") — nhưng vì cả hai là cùng 1 object đã bị sửa đổi từ
-    // trước, DiffUtil luôn thấy "không có khác biệt gì" và không dispatch update nào cả. Dữ liệu
+    // trước, DiffUtil always thấy "không có khác biệt gì" và không dispatch update nào cả. Dữ liệu
     // nền đã đổi nhưng RecyclerView không được vẽ lại, nên sản phẩm vừa thêm vẫn hiển thị y
     // nguyên trên màn hình.
     //
@@ -196,21 +196,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             String imagePath = product.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                Object loadTarget;
-
-                if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (imagePath.startsWith("http")) {
-                    loadTarget = imagePath;
-                } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                }
-
-                Glide.with(itemView.getContext())
-                        .load(loadTarget)
-                        .placeholder(R.color.neutral_light_grey)
-                        .into(ivProduct);
+                com.example.healthup.util.ImageLoadHelper.loadInto(ivProduct, imagePath);
             } else {
                 ivProduct.setImageResource(R.color.neutral_light_grey);
             }

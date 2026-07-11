@@ -3,7 +3,12 @@ package com.example.healthup;
 import android.text.TextUtils;
 import android.util.Patterns;
 
+import androidx.annotation.Nullable;
+
+import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.util.PhoneNormalizer;
+
+import java.util.Locale;
 
 public final class RegisterValidator {
 
@@ -34,7 +39,7 @@ public final class RegisterValidator {
         if (TextUtils.isEmpty(email)) {
             return null;
         }
-        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+        if (!Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()) {
             return "invalid";
         }
         return null;
@@ -83,10 +88,25 @@ public final class RegisterValidator {
                 && validateConfirmPassword(password, confirmPassword) == null;
     }
 
-    public static String buildAuthEmail(String phone, String email) {
-        if (!TextUtils.isEmpty(email)) {
-            return email;
+    /** Trim + lowercase for unique checks / Auth / Firestore storage. */
+    @Nullable
+    public static String normalizeEmail(@Nullable String email) {
+        if (TextUtils.isEmpty(email)) {
+            return null;
         }
-        return phone + "@healthup.app";
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    public static String buildAuthEmail(String phone, String email) {
+        String normalized = normalizeEmail(email);
+        if (hasRealEmail(normalized)) {
+            return normalized;
+        }
+        return phone + UserProfileBuilder.SYNTHETIC_EMAIL_DOMAIN;
+    }
+
+    /** True when the user typed a real email (not the synthetic phone@healthup.app). */
+    public static boolean hasRealEmail(@Nullable String email) {
+        return UserProfileBuilder.isRealEmail(email);
     }
 }

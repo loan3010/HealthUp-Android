@@ -6,6 +6,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Toast;
@@ -15,7 +16,6 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
-import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityOrderDetailBinding;
 import com.example.healthup.databinding.DialogLoadingBinding;
 import com.example.healthup.databinding.DialogSuccessBinding;
@@ -171,6 +171,23 @@ public class OrderDetailActivity extends AppCompatActivity {
     }
 
     private void normalizeOrderItems(DocumentSnapshot doc, Order order) {
+        if (TextUtils.isEmpty(order.getCancelSource())) {
+            String cancelSource = doc.getString("cancelSource");
+            if (cancelSource != null) {
+                order.setCancelSource(cancelSource);
+            }
+        }
+        if (TextUtils.isEmpty(order.getCancelReason())) {
+            String cancelReason = doc.getString("cancelReason");
+            if (cancelReason != null) {
+                order.setCancelReason(cancelReason);
+            }
+        }
+        Long attempts = doc.getLong("deliveryAttempts");
+        if (attempts != null) {
+            order.setDeliveryAttempts(attempts.intValue());
+        }
+
         if (order.getItems() == null) return;
         Object rawItems = doc.get("items");
         if (!(rawItems instanceof List)) return;
@@ -178,17 +195,28 @@ public class OrderDetailActivity extends AppCompatActivity {
         List<OrderItem> items = order.getItems();
         for (int i = 0; i < items.size() && i < rawList.size(); i++) {
             OrderItem item = items.get(i);
-            if (item.getVariantLabel() != null && !item.getVariantLabel().trim().isEmpty()) {
+            if (!(rawList.get(i) instanceof Map)) {
                 continue;
             }
-            if (rawList.get(i) instanceof Map) {
-                Map<?, ?> map = (Map<?, ?>) rawList.get(i);
+            Map<?, ?> map = (Map<?, ?>) rawList.get(i);
+            if (item.getVariantLabel() == null || item.getVariantLabel().trim().isEmpty()) {
                 Object variantName = map.get("variantName");
                 if (variantName == null) variantName = map.get("variantLabel");
                 if (variantName != null) {
                     String label = String.valueOf(variantName).trim();
                     if (!label.isEmpty() && !"null".equalsIgnoreCase(label)) {
                         item.setVariantLabel(label);
+                    }
+                }
+            }
+            if (item.getImageUrl() == null || item.getImageUrl().isEmpty()) {
+                Object image = map.get("imageUrl");
+                if (image == null) image = map.get("image");
+                if (image == null) image = map.get("variantImageUrl");
+                if (image != null) {
+                    String imageUrl = String.valueOf(image).trim();
+                    if (!imageUrl.isEmpty() && !"null".equalsIgnoreCase(imageUrl)) {
+                        item.setImageUrl(imageUrl);
                     }
                 }
             }
@@ -304,16 +332,11 @@ public class OrderDetailActivity extends AppCompatActivity {
         }
 
         if ("cancelled".equals(targetStatus)) {
-            updateTask = FirebaseManager.getInstance().cancelOrder(orderId, reason, currentOrder.getTotalPrice());
-            targetTab = "pending_tab";
+            updateTask = FirebaseManager.getInstance().cancelOrder(
+                    orderId, reason, currentOrder.getTotalPrice(), currentOrder.getOrderCode());
+            targetTab = "cancelled_tab";
         } else {
-            // Update to delivered
-            java.util.Map<String, Object> updates = new java.util.HashMap<>();
-            updates.put("status", "delivered");
-            updates.put("updatedAt", new java.util.Date());
-            updates.put("deliveredAt", new java.util.Date());
-            updateTask = com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                    .collection("orders").document(orderId).update(updates);
+            updateTask = FirebaseManager.getInstance().confirmReceived(orderId);
             targetTab = "delivered_tab";
         }
 
@@ -322,7 +345,7 @@ public class OrderDetailActivity extends AppCompatActivity {
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                 loadingDialog.dismiss();
                 if ("cancelled".equals(targetStatus)) {
-                    Toast.makeText(this, "Đã gửi yêu cầu hủy. Shop sẽ xác nhận trong thời gian sớm nhất.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "Đã hủy đơn hàng thành công.", Toast.LENGTH_LONG).show();
                 }
                 Intent intent = new Intent(this, MainActivity.class);
                 intent.putExtra("navigate_to", navigateTab);
@@ -438,6 +461,9 @@ public class OrderDetailActivity extends AppCompatActivity {
 
         binding.lnItemsContainer.removeAllViews();
         List<OrderItem> items = order.getItems();
+        if (items == null) {
+            items = new java.util.ArrayList<>();
+        }
         for (OrderItem item : items) {
             ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
                     LayoutInflater.from(this), binding.lnItemsContainer, false);
@@ -454,28 +480,7 @@ public class OrderDetailActivity extends AppCompatActivity {
                 pBinding.tvPriceOld.setVisibility(View.GONE);
             }
 
-            // Xử lý hiển thị ảnh sản phẩm từ assets hoặc URL
-            String imagePath = item.getImageUrl();
-            if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                Object loadTarget;
-
-                if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (imagePath.startsWith("http")) {
-                    loadTarget = imagePath;
-                } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
-                }
-
-                Glide.with(this)
-                        .load(loadTarget)
-                        .placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .into(pBinding.imgProduct);
-            } else {
-                pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
-            }
+            com.example.healthup.util.ImageLoadHelper.loadInto(pBinding.imgProduct, item.getImageUrl());
 
             pBinding.btnAskProduct.setOnClickListener(v -> openProductChat(item));
 
@@ -498,8 +503,13 @@ public class OrderDetailActivity extends AppCompatActivity {
             binding.tvOrderTime.setText("Đơn hàng sẽ được gửi đi trước " + sdf.format(new java.util.Date(shipBeforeTime)));
         } else if ("shipping".equals(status)) {
             if (order.isShopConfirmedDelivery()) {
-                java.util.Date deliveredDate = order.getDeliveredAt() != null ? order.getDeliveredAt() : new java.util.Date();
+                java.util.Date deliveredDate = order.getShopConfirmedAt() != null
+                        ? order.getShopConfirmedAt()
+                        : (order.getDeliveredAt() != null ? order.getDeliveredAt() : new java.util.Date());
                 binding.tvOrderTime.setText("Đơn hàng đã được giao thành công vào " + sdf.format(deliveredDate));
+            } else if (order.isNeedsRedelivery()) {
+                binding.tvOrderTime.setText("Giao không thành công. Shop sẽ giao lại lần "
+                        + (order.getDeliveryAttempts() + 1));
             } else {
                 long deliveryBeforeTime = (order.getCreatedAt() != null ? order.getCreatedAt().getTime() : System.currentTimeMillis()) + 3 * 86400000L;
                 binding.tvOrderTime.setText("Đơn hàng sẽ được giao đến bạn trước ngày " + sdfDate.format(new java.util.Date(deliveryBeforeTime)));
@@ -520,11 +530,7 @@ public class OrderDetailActivity extends AppCompatActivity {
         binding.btnRebuyFull.setVisibility(View.GONE);
 
         if ("pending".equals(status)) {
-            if (order.isCancelRequested()) {
-                binding.btnCancelOrder.setVisibility(View.GONE);
-            } else {
-                binding.btnCancelOrder.setVisibility(View.VISIBLE);
-            }
+            binding.btnCancelOrder.setVisibility(View.VISIBLE);
         } else if ("shipping".equals(status)) {
             binding.btnConfirmReceived.setVisibility(View.VISIBLE);
             if (order.isShopConfirmedDelivery()) {
@@ -559,9 +565,16 @@ public class OrderDetailActivity extends AppCompatActivity {
             binding.cvCancelledInfo.setVisibility(View.VISIBLE);
             binding.btnRebuyFull.setVisibility(View.VISIBLE);
             binding.btnRebuyFull.setOnClickListener(v -> performRebuy());
-            if (order.getUpdatedAt() != null) {
+            if (order.getCancelledAt() != null) {
+                binding.tvCancelledTime.setText(sdf.format(order.getCancelledAt()));
+            } else if (order.getUpdatedAt() != null) {
                 binding.tvCancelledTime.setText(sdf.format(order.getUpdatedAt()));
             }
+            binding.tvCancelledBy.setText(order.getDisplayCancelledBy());
+            String displayReason = order.getDisplayCancelReason();
+            binding.tvCancelReason.setText(
+                    displayReason != null && !displayReason.isEmpty() ? displayReason : "—");
+
             String method = order.getPaymentMethod();
             String displayMethod = method;
             if (method != null) {

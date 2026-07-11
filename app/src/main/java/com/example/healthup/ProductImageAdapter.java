@@ -25,19 +25,7 @@ public class ProductImageAdapter extends RecyclerView.Adapter<ProductImageAdapte
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        String imagePath = images.get(position);
-        String fullPath;
-        if (imagePath.startsWith("http")) {
-            fullPath = imagePath;
-        } else {
-            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-            fullPath = "file:///android_asset/" + cleanPath;
-        }
-
-        Glide.with(holder.imageView.getContext())
-                .load(fullPath)
-                .placeholder(R.drawable.ic_blog) // fallback placeholder
-                .into(holder.imageView);
+        com.example.healthup.util.ImageLoadHelper.loadInto(holder.imageView, images.get(position));
     }
 
     @Override

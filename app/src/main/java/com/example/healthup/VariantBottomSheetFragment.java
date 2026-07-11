@@ -1,6 +1,7 @@
 package com.example.healthup;
 
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,7 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import com.bumptech.glide.Glide;
+import com.example.healthup.util.ImageLoadHelper;
 import com.example.models.Product;
 import com.example.models.Product.ProductVariant;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
@@ -37,7 +38,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     private int quantity = 1;
     private boolean isBuyNow = false;
 
-    private ImageView ivProduct;
+    private ImageView ivImage;
     private TextView tvPrice, tvStock, tvSelectedName, tvQuantity;
     private LinearLayout layoutGroups;
     private MaterialButton btnConfirm;
@@ -65,7 +66,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        ivProduct = view.findViewById(R.id.iv_variant_product);
+        ivImage = view.findViewById(R.id.iv_variant_image);
         tvPrice = view.findViewById(R.id.tv_variant_price);
         tvStock = view.findViewById(R.id.tv_variant_stock);
         tvSelectedName = view.findViewById(R.id.tv_variant_selected_name);
@@ -82,26 +83,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     private void setupUI() {
         if (product == null) return;
 
-        String imagePath = product.getImageUrl();
-        Object loadTarget;
-        if (imagePath != null && !imagePath.isEmpty()) {
-            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-            if (cleanPath.startsWith("images/")) {
-                loadTarget = "file:///android_asset/" + cleanPath;
-            } else if (imagePath.startsWith("http")) {
-                loadTarget = imagePath;
-            } else {
-                loadTarget = "file:///android_asset/images/products/" + cleanPath;
-            }
-        } else {
-            loadTarget = R.drawable.ic_launcher_background;
-        }
-
-        Glide.with(this)
-                .load(loadTarget)
-                .placeholder(R.drawable.ic_launcher_background)
-                .into(ivProduct);
-
+        refreshPreviewImage();
         updateDisplay();
 
         Map<String, List<ProductVariant>> grouped = product.getGroupedVariants();
@@ -170,23 +152,35 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
                 chip.setChecked(true);
             }
         }
-        
+
         selectedVariantsMap.put(groupName, variant);
         
         // Cập nhật selectedVariant để hiển thị giá/kho chính xác
         // Ưu tiên variant có giá khác biệt (thường là khối lượng)
         ProductVariant bestVariant = null;
-        for (ProductVariant v : selectedVariantsMap.values()) {
-            if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
+
+        if (selectedVariantsMap.containsKey("Khối lượng")) {
+            ProductVariant v = selectedVariantsMap.get("Khối lượng");
+            if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
                 bestVariant = v;
-                break;
             }
         }
+
+        if (bestVariant == null) {
+            for (ProductVariant v : selectedVariantsMap.values()) {
+                if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
+                    bestVariant = v;
+                    break;
+                }
+            }
+        }
+
         if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
             bestVariant = selectedVariantsMap.values().iterator().next();
         }
         selectedVariant = bestVariant;
 
+        refreshPreviewImage();
         updateDisplay();
     }
 
@@ -201,6 +195,31 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
             chip.setChipStrokeWidth(getResources().getDisplayMetrics().density);
             chip.setChipStrokeColorResource(R.color.primary_default);
         }
+    }
+
+    private void refreshPreviewImage() {
+        if (ivImage == null || product == null) return;
+        String imageUrl = resolvePreviewImageUrl();
+        ImageLoadHelper.loadInto(ivImage, imageUrl);
+    }
+
+    @Nullable
+    private String resolvePreviewImageUrl() {
+        if (selectedVariant != null && !TextUtils.isEmpty(selectedVariant.getImageUrl())) {
+            return selectedVariant.getImageUrl();
+        }
+        for (ProductVariant v : selectedVariantsMap.values()) {
+            if (v != null && !TextUtils.isEmpty(v.getImageUrl())) {
+                return v.getImageUrl();
+            }
+        }
+        List<String> productImages = product.getImages();
+        if (productImages != null) {
+            for (String img : productImages) {
+                if (!TextUtils.isEmpty(img)) return img;
+            }
+        }
+        return product.getImageUrl();
     }
 
     private void updateDisplay() {

@@ -55,10 +55,19 @@ public class ForgotPasswordActivity extends AppCompatActivity {
         viewModel = new ViewModelProvider(this).get(ForgotPasswordViewModel.class);
 
         bindViews();
+        applyPrefillPhone();
         setupInputBehavior();
         setupActions();
         observeViewModel();
         updateSendButtonState();
+    }
+
+    private void applyPrefillPhone() {
+        String prefill = getIntent().getStringExtra(
+                com.example.healthup.util.CheckoutIntentHelper.EXTRA_PREFILL_PHONE);
+        if (prefill != null && !prefill.trim().isEmpty()) {
+            phoneEditText.setText(com.example.healthup.util.PhoneNormalizer.normalize(prefill));
+        }
     }
 
     private void bindViews() {
@@ -129,6 +138,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
             }
             if ("not_registered".equals(errorCode)) {
                 showFieldError(getString(R.string.forgot_password_phone_not_registered));
+            } else if ("google_linked".equals(errorCode)) {
+                showFieldError(getString(R.string.forgot_password_use_google));
             } else {
                 showFieldError(resolvePhoneError(errorCode));
             }

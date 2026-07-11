@@ -17,18 +17,30 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.viewpager2.widget.ViewPager2;
 
 import com.example.healthup.R;
-import com.google.android.material.chip.ChipGroup;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 import com.google.android.material.textfield.TextInputEditText;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class AdminCustomersFragment extends Fragment implements AdminCustomerAdapter.Listener {
+
+    public static final String FILTER_ALL = "all";
+    public static final String FILTER_ACTIVE = "active";
+    public static final String FILTER_LOCKED = "locked";
+
+    private static final List<String> FILTERS = Arrays.asList(
+            FILTER_ALL, FILTER_ACTIVE, FILTER_LOCKED
+    );
 
     private static final List<String> SORT_KEYS = Arrays.asList(
             "name_asc", "name_desc", "spent_desc", "spent_asc"
@@ -36,12 +48,22 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
 
     private final AdminRepository repository = new AdminRepository();
     private final List<AdminRepository.AdminCustomer> allCustomers = new ArrayList<>();
-    private final List<AdminRepository.AdminCustomer> filteredCustomers = new ArrayList<>();
-    private AdminCustomerAdapter adapter;
-    private TextView tvEmpty;
+
     private TextInputEditText etSearch;
     private Spinner spinnerSort;
-    private String statusFilter = "all";
+    private ViewPager2 viewPager;
+    private TabLayout tabFilters;
+    private TabLayoutMediator tabMediator;
+    private CustomerPagerAdapter pagerAdapter;
+    private String statusFilter = FILTER_ALL;
+
+    private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
+        @Override
+        public void onPageSelected(int position) {
+            statusFilter = FILTERS.get(position);
+            updateTabLabels();
+        }
+    };
 
     @Nullable
     @Override
@@ -51,15 +73,10 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
-        tvEmpty = view.findViewById(R.id.tvEmptyCustomers);
         etSearch = view.findViewById(R.id.etSearchCustomers);
         spinnerSort = view.findViewById(R.id.spinnerCustomerSort);
-        RecyclerView recyclerView = view.findViewById(R.id.rvAdminCustomers);
-        ChipGroup chipGroup = view.findViewById(R.id.chipGroupCustomerFilter);
-
-        adapter = new AdminCustomerAdapter(filteredCustomers, this);
-        recyclerView.setLayoutManager(new LinearLayoutManager(requireContext()));
-        recyclerView.setAdapter(adapter);
+        viewPager = view.findViewById(R.id.vpAdminCustomers);
+        tabFilters = view.findViewById(R.id.tabCustomerFilters);
 
         List<String> sortLabels = Arrays.asList(
                 getString(R.string.admin_sort_name_asc),
@@ -71,7 +88,7 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         spinnerSort.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(android.widget.AdapterView<?> parent, View view1, int position, long id) {
-                applyFilters();
+                refreshPages();
             }
 
             @Override
@@ -79,23 +96,36 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
             }
         });
 
-        chipGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == View.NO_ID) return;
-            if (checkedId == R.id.chipActiveCustomers) {
-                statusFilter = "active";
-            } else if (checkedId == R.id.chipLockedCustomers) {
-                statusFilter = "locked";
-            } else {
-                statusFilter = "all";
-            }
-            applyFilters();
-        });
+        pagerAdapter = new CustomerPagerAdapter();
+        viewPager.setAdapter(pagerAdapter);
+        viewPager.setOffscreenPageLimit(FILTERS.size());
+        viewPager.registerOnPageChangeCallback(pageChangeCallback);
+
+        tabMediator = new TabLayoutMediator(tabFilters, viewPager, (tab, position) ->
+                tab.setText(baseLabelForFilter(FILTERS.get(position))));
+        tabMediator.attach();
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-            @Override public void onTextChanged(CharSequence s, int start, int before, int count) { applyFilters(); }
+            @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
+                refreshPages();
+            }
             @Override public void afterTextChanged(Editable s) {}
         });
+
+        viewPager.setCurrentItem(indexForFilter(statusFilter), false);
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (viewPager != null) {
+            viewPager.unregisterOnPageChangeCallback(pageChangeCallback);
+        }
+        if (tabMediator != null) {
+            tabMediator.detach();
+            tabMediator = null;
+        }
+        super.onDestroyView();
     }
 
     @Override
@@ -111,7 +141,7 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
                 if (!isAdded()) return;
                 allCustomers.clear();
                 allCustomers.addAll(customers);
-                applyFilters();
+                refreshPages();
             }
 
             @Override
@@ -122,24 +152,60 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         });
     }
 
-    private void applyFilters() {
-        filteredCustomers.clear();
-        String q = etSearch != null && etSearch.getText() != null
-                ? etSearch.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
-
-        for (AdminRepository.AdminCustomer customer : allCustomers) {
-            if (!matchesStatusFilter(customer)) continue;
-            if (!q.isEmpty() && !matchesCustomer(customer, q)) continue;
-            filteredCustomers.add(customer);
+    private void refreshPages() {
+        if (pagerAdapter != null) {
+            pagerAdapter.notifyDataSetChanged();
         }
-        sortCustomers();
-        adapter.notifyDataSetChanged();
-        tvEmpty.setVisibility(filteredCustomers.isEmpty() ? View.VISIBLE : View.GONE);
+        updateTabLabels();
     }
 
-    private boolean matchesStatusFilter(AdminRepository.AdminCustomer customer) {
-        if ("active".equals(statusFilter)) return !customer.disabled;
-        if ("locked".equals(statusFilter)) return customer.disabled;
+    private void updateTabLabels() {
+        if (tabFilters == null) return;
+        Map<String, Integer> counts = countByFilter();
+        for (int i = 0; i < FILTERS.size(); i++) {
+            TabLayout.Tab tab = tabFilters.getTabAt(i);
+            if (tab == null) continue;
+            String filter = FILTERS.get(i);
+            tab.setText(AdminOrderListHelper.formatChipLabel(
+                    baseLabelForFilter(filter), counts.getOrDefault(filter, 0)));
+        }
+    }
+
+    private Map<String, Integer> countByFilter() {
+        Map<String, Integer> counts = new HashMap<>();
+        String q = currentQuery();
+        for (String filter : FILTERS) {
+            int count = 0;
+            for (AdminRepository.AdminCustomer customer : allCustomers) {
+                if (!matchesStatusFilter(customer, filter)) continue;
+                if (!q.isEmpty() && !matchesCustomer(customer, q)) continue;
+                count++;
+            }
+            counts.put(filter, count);
+        }
+        return counts;
+    }
+
+    private List<AdminRepository.AdminCustomer> buildPageCustomers(@NonNull String filter) {
+        List<AdminRepository.AdminCustomer> page = new ArrayList<>();
+        String q = currentQuery();
+        for (AdminRepository.AdminCustomer customer : allCustomers) {
+            if (!matchesStatusFilter(customer, filter)) continue;
+            if (!q.isEmpty() && !matchesCustomer(customer, q)) continue;
+            page.add(customer);
+        }
+        sortCustomers(page);
+        return page;
+    }
+
+    private String currentQuery() {
+        return etSearch != null && etSearch.getText() != null
+                ? etSearch.getText().toString().trim().toLowerCase(Locale.ROOT) : "";
+    }
+
+    private boolean matchesStatusFilter(AdminRepository.AdminCustomer customer, String filter) {
+        if (FILTER_ACTIVE.equals(filter)) return !customer.disabled;
+        if (FILTER_LOCKED.equals(filter)) return customer.disabled;
         return true;
     }
 
@@ -151,7 +217,7 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         return contains(customer.username, query);
     }
 
-    private void sortCustomers() {
+    private void sortCustomers(List<AdminRepository.AdminCustomer> customers) {
         int sortIndex = spinnerSort != null ? spinnerSort.getSelectedItemPosition() : 0;
         if (sortIndex < 0 || sortIndex >= SORT_KEYS.size()) sortIndex = 0;
         String sortKey = SORT_KEYS.get(sortIndex);
@@ -171,11 +237,22 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
                 comparator = (a, b) -> safeName(a).compareToIgnoreCase(safeName(b));
                 break;
         }
-        filteredCustomers.sort(comparator);
+        customers.sort(comparator);
     }
 
     private String safeName(AdminRepository.AdminCustomer customer) {
         return customer.fullName != null ? customer.fullName : "";
+    }
+
+    private String baseLabelForFilter(String filter) {
+        if (FILTER_ACTIVE.equals(filter)) return getString(R.string.admin_customer_active);
+        if (FILTER_LOCKED.equals(filter)) return getString(R.string.admin_customer_locked);
+        return getString(R.string.admin_filter_all);
+    }
+
+    private int indexForFilter(@NonNull String filter) {
+        int index = FILTERS.indexOf(filter);
+        return Math.max(0, index);
     }
 
     private static boolean contains(String value, String query) {
@@ -192,11 +269,11 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         if (disabled) {
             AdminDisableDialogHelper.showLockReasonDialog(requireContext(),
                     reason -> lockCustomer(customer, reason),
-                    () -> adapter.notifyDataSetChanged());
+                    this::refreshPages);
         } else {
             AdminDisableDialogHelper.showUnlockReasonDialog(requireContext(),
                     reason -> unlockCustomer(customer, reason),
-                    () -> adapter.notifyDataSetChanged());
+                    this::refreshPages);
         }
     }
 
@@ -206,13 +283,13 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
             public void onSuccess() {
                 customer.disabled = true;
                 customer.disabledReason = reason;
-                adapter.notifyDataSetChanged();
+                refreshPages();
                 Toast.makeText(requireContext(), "Đã khóa và gửi thông báo", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(@NonNull String message) {
-                adapter.notifyDataSetChanged();
+                refreshPages();
                 Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
             }
         });
@@ -224,13 +301,13 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
             public void onSuccess() {
                 customer.disabled = false;
                 customer.disabledReason = null;
-                adapter.notifyDataSetChanged();
+                refreshPages();
                 Toast.makeText(requireContext(), "Đã mở khóa và gửi thông báo", Toast.LENGTH_SHORT).show();
             }
 
             @Override
             public void onError(@NonNull String message) {
-                adapter.notifyDataSetChanged();
+                refreshPages();
                 Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
             }
         });
@@ -241,5 +318,50 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         Intent intent = new Intent(requireContext(), AdminCustomerDetailActivity.class);
         intent.putExtra(AdminCustomerDetailActivity.EXTRA_CUSTOMER_UID, customer.uid);
         startActivity(intent);
+    }
+
+    private class CustomerPagerAdapter extends RecyclerView.Adapter<CustomerPagerAdapter.PageHolder> {
+
+        @NonNull
+        @Override
+        public PageHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View page = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_admin_filter_page, parent, false);
+            return new PageHolder(page);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull PageHolder holder, int position) {
+            String filter = FILTERS.get(position);
+            holder.bind(buildPageCustomers(filter), getString(R.string.admin_empty_customers));
+        }
+
+        @Override
+        public int getItemCount() {
+            return FILTERS.size();
+        }
+
+        class PageHolder extends RecyclerView.ViewHolder {
+            private final List<AdminRepository.AdminCustomer> pageItems = new ArrayList<>();
+            private final AdminCustomerAdapter adapter;
+            private final TextView tvEmpty;
+
+            PageHolder(@NonNull View itemView) {
+                super(itemView);
+                RecyclerView rv = itemView.findViewById(R.id.rvFilterPage);
+                tvEmpty = itemView.findViewById(R.id.tvFilterPageEmpty);
+                adapter = new AdminCustomerAdapter(pageItems, AdminCustomersFragment.this);
+                rv.setLayoutManager(new LinearLayoutManager(itemView.getContext()));
+                rv.setAdapter(adapter);
+            }
+
+            void bind(@NonNull List<AdminRepository.AdminCustomer> customers, @NonNull String emptyText) {
+                pageItems.clear();
+                pageItems.addAll(customers);
+                adapter.notifyDataSetChanged();
+                tvEmpty.setText(emptyText);
+                tvEmpty.setVisibility(pageItems.isEmpty() ? View.VISIBLE : View.GONE);
+            }
+        }
     }
 }
