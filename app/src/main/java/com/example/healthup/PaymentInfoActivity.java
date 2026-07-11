@@ -28,6 +28,7 @@ public class PaymentInfoActivity extends AppCompatActivity {
         binding.cardAddZalo.setOnClickListener(linkListener);
         binding.cardAddMoMo.setOnClickListener(linkListener);
         binding.cardAddBank.setOnClickListener(linkListener);
+        binding.cardAddCard.setOnClickListener(linkListener);
     }
 
     private void updateUI() {
@@ -37,12 +38,14 @@ public class PaymentInfoActivity extends AppCompatActivity {
             binding.cardAddZalo.setVisibility(View.GONE);
             binding.cardAddMoMo.setVisibility(View.GONE);
             binding.cardAddBank.setVisibility(View.VISIBLE);
+            binding.cardAddCard.setVisibility(View.VISIBLE);
         } else {
             binding.layoutEmpty.setVisibility(View.VISIBLE);
             binding.layoutLinked.setVisibility(View.GONE);
             binding.cardAddZalo.setVisibility(View.VISIBLE);
             binding.cardAddMoMo.setVisibility(View.VISIBLE);
             binding.cardAddBank.setVisibility(View.VISIBLE);
+            binding.cardAddCard.setVisibility(View.VISIBLE);
         }
     }
 }

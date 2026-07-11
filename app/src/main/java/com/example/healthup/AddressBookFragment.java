@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -47,11 +48,15 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
         db = FirebaseFirestore.getInstance();
         String currentAuthId = FirebaseAuth.getInstance().getUid();
-        userId = (currentAuthId != null) ? currentAuthId : "guest_user";
-
-        bindViews(view);
-        setupListeners();
-        loadAddressesFromFirestore();
+        
+        if (currentAuthId == null) {
+            setupLoginRequired(view);
+        } else {
+            userId = currentAuthId;
+            bindViews(view);
+            setupListeners();
+            loadAddressesFromFirestore();
+        }
 
         // Lắng nghe kết quả từ form nhập địa chỉ (khi thêm/sửa xong)
         getParentFragmentManager().setFragmentResultListener("address_form_result", getViewLifecycleOwner(), (requestKey, result) -> {
@@ -63,6 +68,22 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
         });
 
         return view;
+    }
+
+    private void setupLoginRequired(View view) {
+        View layout = view.findViewById(R.id.layoutLoginRequired);
+        if (layout != null) {
+            layout.setVisibility(View.VISIBLE);
+            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
+                android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
+                startActivity(intent);
+            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            });
+        }
     }
 
     private void bindViews(View view) {

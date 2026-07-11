@@ -55,17 +55,40 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_wishlist, container, false);
-        initViews(view);
-        setupRecyclerViews();
-        fetchWishlist();
+        
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
+            setupLoginRequired(view);
+        } else {
+            initViews(view);
+            setupRecyclerViews();
+            fetchWishlist();
+        }
         return view;
+    }
+
+    private void setupLoginRequired(View view) {
+        View layout = view.findViewById(R.id.layoutLoginRequired);
+        if (layout != null) {
+            layout.setVisibility(View.VISIBLE);
+            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
+                android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
+                startActivity(intent);
+            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            });
+        }
     }
 
 
     @Override
     public void onResume() {
         super.onResume();
-        fetchWishlist();
+        if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null) {
+            fetchWishlist();
+        }
     }
 
 

@@ -61,34 +61,53 @@ public class MemberTierFragment extends Fragment {
         mAuth = FirebaseAuth.getInstance();
         db = FirebaseFirestore.getInstance();
 
-        // Setup views
-        view.findViewById(R.id.btnBack).setOnClickListener(v -> {
-            if (getActivity() != null) {
-                getActivity().getOnBackPressedDispatcher().onBackPressed();
-            }
-        });
+        if (mAuth.getCurrentUser() == null) {
+            setupLoginRequired(view);
+        } else {
+            // Setup views
+            view.findViewById(R.id.btnBack).setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            });
 
-        tvSpentAmount = view.findViewById(R.id.tvSpentAmount);
-        tvNextRankInfo = view.findViewById(R.id.tvNextRankInfo);
-        tvMemberBadge = view.findViewById(R.id.tvMemberBadge);
-        tvCurrentRankTitle = view.findViewById(R.id.tvCurrentRankTitle);
-        tvVipTitle = view.findViewById(R.id.tvVipTitle);
-        pbLoyalty = view.findViewById(R.id.pbLoyalty);
-        ivCheckMember = view.findViewById(R.id.ivCheck);
-        ivCheckVip = view.findViewById(R.id.ivCheckVip);
-        ivLockVip = view.findViewById(R.id.ivLock);
-        cardMember = (View) tvCurrentRankTitle.getParent();
-        cardVip = view.findViewById(R.id.cardVip);
-        
-        setupVoucherSections(view);
+            tvSpentAmount = view.findViewById(R.id.tvSpentAmount);
+            tvNextRankInfo = view.findViewById(R.id.tvNextRankInfo);
+            tvMemberBadge = view.findViewById(R.id.tvMemberBadge);
+            tvCurrentRankTitle = view.findViewById(R.id.tvCurrentRankTitle);
+            tvVipTitle = view.findViewById(R.id.tvVipTitle);
+            pbLoyalty = view.findViewById(R.id.pbLoyalty);
+            ivCheckMember = view.findViewById(R.id.ivCheck);
+            ivCheckVip = view.findViewById(R.id.ivCheckVip);
+            ivLockVip = view.findViewById(R.id.ivLock);
+            cardMember = (View) tvCurrentRankTitle.getParent();
+            cardVip = view.findViewById(R.id.cardVip);
+            
+            setupVoucherSections(view);
 
-        view.findViewById(R.id.rowNutritionSuggestion).setOnClickListener(v -> {
-            startActivity(new Intent(requireContext(), DietLandingActivity.class));
-        });
+            view.findViewById(R.id.rowNutritionSuggestion).setOnClickListener(v -> {
+                startActivity(new Intent(requireContext(), DietLandingActivity.class));
+            });
 
-        loadUserData();
+            loadUserData();
+        }
 
         return view;
+    }
+
+    private void setupLoginRequired(View view) {
+        View layout = view.findViewById(R.id.layoutLoginRequired);
+        if (layout != null) {
+            layout.setVisibility(View.VISIBLE);
+            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
+                startActivity(new Intent(getActivity(), LoginActivity.class));
+            });
+            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
+                if (getActivity() != null) {
+                    getActivity().getOnBackPressedDispatcher().onBackPressed();
+                }
+            });
+        }
     }
 
     private void setupVoucherSections(View view) {
