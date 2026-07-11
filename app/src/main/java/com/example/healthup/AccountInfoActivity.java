@@ -238,21 +238,8 @@ public class AccountInfoActivity extends AppCompatActivity {
                     if (show != null) {
                         binding.etEmail.setText(show);
                     } else {
-                        // Auth may already have the new email while Firestore is stale — recover.
-                        FirebaseUser authUser = mAuth.getCurrentUser();
-                        if (authUser != null
-                                && UserProfileBuilder.isRealEmail(authUser.getEmail())
-                                && authUser.isEmailVerified()) {
-                            String authEmail = authUser.getEmail().trim().toLowerCase(Locale.ROOT);
-                            binding.etEmail.setText(authEmail);
-                            Map<String, Object> sync = new HashMap<>();
-                            sync.put("email", authEmail);
-                            sync.put("displayEmail", authEmail);
-                            sync.put("emailVerified", true);
-                            db.collection("users").document(userId).set(sync, SetOptions.merge());
-                        } else {
-                            binding.etEmail.setText(getString(R.string.account_email_empty));
-                        }
+                        // Prefer Firestore displayEmail; Auth email stays synthetic in app-password mode.
+                        binding.etEmail.setText(getString(R.string.account_email_empty));
                     }
                 });
     }

@@ -200,7 +200,14 @@ public class SocialCompleteProfileActivity extends AppCompatActivity {
                     if (!query.isEmpty()) {
                         DocumentSnapshot existing = query.getDocuments().get(0);
                         if (!currentUid.equals(existing.getId())) {
-                            // Phone already belongs to another account → OTP then password link (option B).
+                            Boolean googleLinked = existing.getBoolean("googleLinked");
+                            if (googleLinked != null && googleLinked) {
+                                // Phone already tied to another Google account — do not OTP/link.
+                                setLoading(false);
+                                showPhoneError(getString(R.string.social_complete_phone_already_google));
+                                return;
+                            }
+                            // Case 5: phone exists (password account) → OTP then password link.
                             String existingAuthEmail = existing.getString("email");
                             if (TextUtils.isEmpty(existingAuthEmail)) {
                                 setLoading(false);

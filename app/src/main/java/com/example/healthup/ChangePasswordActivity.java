@@ -13,15 +13,17 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.databinding.ActivityChangePasswordBinding;
-import com.google.firebase.auth.EmailAuthProvider;
+import com.example.healthup.util.PhoneNormalizer;
 import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 public class ChangePasswordActivity extends AppCompatActivity {
     private ActivityChangePasswordBinding binding;
     private FirebaseAuth firebaseAuth;
+    private FirebaseFirestore firestore;
     private boolean isShowCurrent = false;
     private boolean isShowNew = false;
     private boolean isShowConfirm = false;
@@ -33,6 +35,7 @@ public class ChangePasswordActivity extends AppCompatActivity {
         setContentView(binding.getRoot());
 
         firebaseAuth = FirebaseAuth.getInstance();
+        firestore = FirebaseFirestore.getInstance();
 
         binding.btnBack.setOnClickListener(v -> finish());
         binding.btnForgotPassword.setOnClickListener(v -> {
@@ -44,7 +47,6 @@ public class ChangePasswordActivity extends AppCompatActivity {
         });
 
         setupPasswordVisibility();
-
         binding.btnSave.setOnClickListener(v -> attemptChangePassword());
     }
 
@@ -83,44 +85,72 @@ public class ChangePasswordActivity extends AppCompatActivity {
         }
 
         FirebaseUser user = firebaseAuth.getCurrentUser();
-        if (user == null || TextUtils.isEmpty(user.getEmail())) {
+        if (user == null) {
             Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
             return;
         }
 
         setLoading(true);
-        user.reauthenticate(EmailAuthProvider.getCredential(user.getEmail(), current))
-                .addOnSuccessListener(unused -> user.updatePassword(newPass)
-                        .addOnSuccessListener(done -> {
+        firestore.collection("users").document(user.getUid()).get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) {
+                        setLoading(false);
+                        Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (AppPasswordHelper.isAppPasswordMode(doc)) {
+                        if (!AppPasswordHelper.matchesUserPassword(
+                                current, doc.getString(AppPasswordHelper.FIELD_PASSWORD_HASH))) {
                             setLoading(false);
-                            UIUtils.showSuccessDialog(this, this::finish);
-                        })
-                        .addOnFailureListener(e -> {
-                            setLoading(false);
-                            showUpdateError(e);
-                        }))
+                            binding.tvErrorCurrent.setVisibility(View.VISIBLE);
+                            Toast.makeText(this, R.string.login_credentials_wrong, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        writeNewPasswordHash(user.getUid(), newPass);
+                        return;
+                    }
+
+                    // Legacy: verify via Auth reauthenticate, then migrate to app hash.
+                    String email = user.getEmail();
+                    if (TextUtils.isEmpty(email)) {
+                        setLoading(false);
+                        Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    user.reauthenticate(
+                                    com.google.firebase.auth.EmailAuthProvider.getCredential(email, current))
+                            .addOnSuccessListener(unused -> {
+                                String phone = doc.getString("phone");
+                                String normalized = PhoneNormalizer.normalize(phone != null ? phone : "");
+                                if (!normalized.isEmpty()) {
+                                    user.updatePassword(AppPasswordHelper.authSecretForPhone(normalized));
+                                }
+                                writeNewPasswordHash(user.getUid(), newPass);
+                            })
+                            .addOnFailureListener(e -> {
+                                setLoading(false);
+                                binding.tvErrorCurrent.setVisibility(View.VISIBLE);
+                                Toast.makeText(this, R.string.login_credentials_wrong, Toast.LENGTH_SHORT).show();
+                            });
+                })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    if (e instanceof FirebaseAuthInvalidCredentialsException) {
-                        binding.tvErrorCurrent.setVisibility(View.VISIBLE);
-                        Toast.makeText(this, R.string.login_credentials_wrong, Toast.LENGTH_SHORT).show();
-                    } else {
-                        showUpdateError(e);
-                    }
+                    Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
                 });
     }
 
-    private void showUpdateError(@NonNull Exception error) {
-        String code = FirebaseAuthErrorMapper.map(error);
-        if ("recent_auth_required".equals(code)) {
-            Toast.makeText(this, R.string.reset_password_recent_auth_required, Toast.LENGTH_LONG).show();
-            return;
-        }
-        if ("weak_password".equals(code)) {
-            binding.tvErrorNew.setVisibility(View.VISIBLE);
-            return;
-        }
-        Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
+    private void writeNewPasswordHash(@NonNull String uid, @NonNull String newPass) {
+        firestore.collection("users").document(uid)
+                .update(AppPasswordHelper.passwordFieldsForNewPassword(newPass))
+                .addOnSuccessListener(done -> {
+                    setLoading(false);
+                    UIUtils.showSuccessDialog(this, this::finish);
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
+                });
     }
 
     private void setLoading(boolean loading) {

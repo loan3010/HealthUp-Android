@@ -90,6 +90,7 @@
     <string name="forgot_password_support_prefix">Bạn gặp sự cố?</string>
     <string name="forgot_password_support_link">Liên hệ hỗ trợ</string>
     <string name="forgot_password_phone_not_registered">Số điện thoại chưa được đăng ký</string>
+    <string name="forgot_password_use_google">Số điện thoại này đã có tài khoản liên kết Google. Vui lòng tiếp tục đăng nhập bằng Google.</string>
     <string name="forgot_password_error_generic">Có lỗi xảy ra. Vui lòng thử lại.</string>
 
     <string name="reset_password_title">Đặt lại mật khẩu</string>
@@ -100,7 +101,7 @@
     <string name="reset_password_session_invalid">Phiên đặt lại mật khẩu đã hết hạn. Vui lòng thử lại.</string>
     <string name="reset_password_error_generic">Không thể cập nhật mật khẩu. Vui lòng thử lại.</string>
     <string name="reset_password_provider_disabled">Không thể đổi mật khẩu (nhà cung cấp đăng nhập bị tắt). Kiểm tra Email/Password trong Firebase Console.</string>
-    <string name="reset_password_function_not_deployed">Chưa deploy Cloud Function resetPassword (cần Blaze, free tier). Chạy: firebase deploy --only functions:resetPassword</string>
+    <string name="reset_password_function_not_deployed">Không đổi được mật khẩu. Thử lại hoặc đăng ký lại tài khoản test.</string>
     <string name="reset_password_link_open_login">Nếu đã đặt mật khẩu trên trang web Firebase, hãy đăng nhập lại.</string>
     <string name="reset_password_phone_not_linked">Số điện thoại chưa được liên kết với tài khoản. Vui lòng đăng ký lại hoặc liên hệ hỗ trợ.</string>
     <string name="reset_password_sms_title">Xác minh số điện thoại</string>
@@ -130,9 +131,11 @@
     <string name="social_auth_google_no_id_token">Google không trả về idToken. Kiểm tra Web client ID và SHA-1 trong Firebase Console.</string>
     <string name="social_auth_facebook_failed">Đăng nhập Facebook thất bại. Vui lòng thử lại.</string>
     <string name="social_auth_profile_check_failed">Không thể kiểm tra hồ sơ. Vui lòng thử lại.</string>
-    <string name="social_auth_email_exists_use_password">Email đã đăng ký bằng mật khẩu. Vui lòng đăng nhập bằng số điện thoại + mật khẩu, rồi liên kết Google trong Cài đặt tài khoản.</string>
+    <string name="social_link_email_match_continue">Email này đã có tài khoản. Xác thực OTP số điện thoại rồi nhập mật khẩu để liên kết Google.</string>
+    <string name="social_auth_email_exists_use_password">Email đã gắn với tài khoản liên kết Google khác. Vui lòng đăng nhập bằng Google của tài khoản đó, hoặc dùng số điện thoại + mật khẩu.</string>
+    <string name="social_complete_phone_already_google">Số điện thoại này đã có tài khoản. Vui lòng nhập số khác.</string>
     <string name="social_link_password_title">Liên kết Google</string>
-    <string name="social_link_password_subtitle">Số %1$s đã có tài khoản. Nhập mật khẩu để liên kết Google.</string>
+    <string name="social_link_password_subtitle">Số %1$s đã có tài khoản (trùng email đã xác thực). Nhập mật khẩu để liên kết Google và đăng nhập.</string>
     <string name="social_link_password_button">Liên kết tài khoản</string>
     <string name="social_link_password_wrong">Mật khẩu không đúng</string>
     <string name="social_link_failed">Không thể liên kết Google. Vui lòng thử lại.</string>
@@ -141,6 +144,8 @@
     <string name="register_email_verify_sent">Đã gửi email xác thực. Vui lòng kiểm tra hộp thư.</string>
     <string name="email_verify_title">Xác thực email</string>
     <string name="email_verify_subtitle">Đã gửi link xác thực tới\n%1$s</string>
+    <string name="email_verify_subtitle_mock">Nhập mã OTP mock để xác thực email\n%1$s</string>
+    <string name="email_verify_show_otp">Hiện mã OTP</string>
     <string name="email_verify_open_mail">Mở email</string>
     <string name="email_verify_resend">Gửi lại</string>
     <string name="email_verify_resend_success">Đã gửi lại email xác thực</string>
@@ -168,8 +173,10 @@
     <string name="change_email_sent_hint">Đã gửi link tới %1$s\nMở link trong hộp thư (cả Spam). Nếu thấy trang Continue / Site not found — bỏ qua, quay app bấm Tôi đã xác thực (hoặc nhập MK nếu được hỏi).</string>
     <string name="change_email_confirm_password_title">Xác nhận mật khẩu</string>
     <string name="change_email_confirm_password_message">Cần xác nhận mật khẩu trước khi gửi email xác thực.</string>
-    <string name="change_email_send_failed">Không gửi được email xác thực. Thử lại sau.</string>
-    <string name="change_email_not_verified_yet">Email chưa đổi trên Firebase. Mở link mới nhất trong hộp thư (hoặc Gửi lại), rồi thử lại.</string>
+    <string name="change_email_send_failed">Không tạo được mã xác thực. Thử lại sau.</string>
+    <string name="change_email_otp_wrong">Mã xác thực không đúng hoặc đã hết hạn.</string>
+    <string name="change_email_success">Đã cập nhật email.</string>
+    <string name="change_email_not_verified_yet">Email chưa xác thực. Nhập đúng mã OTP rồi thử lại.</string>
     <string name="change_email_send_first">Vui lòng gửi email xác thực trước.</string>
     <string name="change_email_session_expired">Chưa đăng nhập. Đăng nhập lại rồi thêm email.</string>
     <string name="change_email_permission_denied">Không lưu được email. Nhập mật khẩu để hoàn tất (không cần ra màn Đăng nhập).</string>

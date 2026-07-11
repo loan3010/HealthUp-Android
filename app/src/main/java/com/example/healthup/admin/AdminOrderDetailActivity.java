@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.R;
 import com.example.healthup.util.ImageLoadHelper;
+import com.example.healthup.util.ReturnProgressHelper;
 import com.example.models.Address;
 import com.example.models.DeliveryFailure;
 import com.example.models.Order;
@@ -174,17 +175,17 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         }
 
         if (returnRequested) {
-            addActionButton(getString(R.string.admin_action_approve_return), true, v ->
+            addActionButton(ReturnProgressHelper.approveLabel(currentOrder), true, v ->
                     runAction(() -> repository.approveReturn(currentOrder, refreshCallback())));
-            addActionButton(getString(R.string.admin_action_reject_return), false, v ->
+            addActionButton(ReturnProgressHelper.rejectLabel(currentOrder), false, v ->
                     showRejectReturnDialog());
         } else if (returnApproved) {
-            String advanceLabel = com.example.healthup.util.ReturnProgressHelper.nextAdvanceLabel(currentOrder);
+            String advanceLabel = ReturnProgressHelper.nextAdvanceLabel(currentOrder);
             if (advanceLabel != null) {
                 addActionButton(advanceLabel, true, v ->
                         runAction(() -> repository.advanceReturnProgress(currentOrder, refreshCallback())));
             }
-            addActionButton(getString(R.string.admin_action_reject_return), false, v ->
+            addActionButton(ReturnProgressHelper.rejectLabel(currentOrder), false, v ->
                     showRejectReturnDialog());
         }
 
@@ -246,7 +247,7 @@ public class AdminOrderDetailActivity extends AppCompatActivity {
         input.setPadding(pad, pad, pad, pad);
 
         new AlertDialog.Builder(this)
-                .setTitle(R.string.admin_action_reject_return)
+                .setTitle(ReturnProgressHelper.rejectLabel(currentOrder))
                 .setView(input)
                 .setPositiveButton(R.string.admin_confirm, (d, w) -> {
                     String reason = input.getText() != null ? input.getText().toString().trim() : "";

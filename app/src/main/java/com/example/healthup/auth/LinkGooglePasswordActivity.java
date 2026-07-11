@@ -14,9 +14,11 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.R;
+import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
+import com.example.healthup.util.PhoneNormalizer;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.AuthCredential;
@@ -117,35 +119,57 @@ public class LinkGooglePasswordActivity extends AppCompatActivity {
         AuthCredential googleCredential = GoogleAuthProvider.getCredential(idToken, null);
         final String orphanGoogleUid = googleUidToDelete;
 
-        Runnable signInAndLink = () -> firebaseAuth.signInWithEmailAndPassword(authEmail, password)
-                .addOnSuccessListener(result -> {
-                    FirebaseUser user = firebaseAuth.getCurrentUser();
-                    if (user == null || !existingUid.equals(user.getUid())) {
-                        setLoading(false);
-                        showError(getString(R.string.social_link_password_wrong));
-                        return;
+        Runnable signInAndLink = () -> firestore.collection("users").document(existingUid).get()
+                .addOnSuccessListener(doc -> {
+                    String authPassword = password;
+                    if (AppPasswordHelper.isAppPasswordMode(doc)) {
+                        if (!AppPasswordHelper.matchesUserPassword(
+                                password, doc.getString(AppPasswordHelper.FIELD_PASSWORD_HASH))) {
+                            setLoading(false);
+                            passwordErrorText.setVisibility(View.VISIBLE);
+                            passwordErrorText.setText(R.string.social_link_password_wrong);
+                            return;
+                        }
+                        String phoneForSecret = !TextUtils.isEmpty(phone)
+                                ? phone
+                                : doc.getString("phone");
+                        authPassword = AppPasswordHelper.authSecretForPhone(
+                                PhoneNormalizer.normalize(phoneForSecret != null ? phoneForSecret : ""));
                     }
-                    user.linkWithCredential(googleCredential)
-                            .addOnSuccessListener(linked -> finishLinkSuccess(user, orphanGoogleUid))
-                            .addOnFailureListener(e -> {
-                                // Already linked or provider conflict — still update profile if same email.
-                                if (e.getMessage() != null
-                                        && e.getMessage().toLowerCase().contains("already")) {
-                                    finishLinkSuccess(user, orphanGoogleUid);
-                                } else {
+                    final String signInPassword = authPassword;
+                    firebaseAuth.signInWithEmailAndPassword(authEmail, signInPassword)
+                            .addOnSuccessListener(result -> {
+                                FirebaseUser user = firebaseAuth.getCurrentUser();
+                                if (user == null || !existingUid.equals(user.getUid())) {
                                     setLoading(false);
+                                    showError(getString(R.string.social_link_password_wrong));
+                                    return;
+                                }
+                                user.linkWithCredential(googleCredential)
+                                        .addOnSuccessListener(linked -> finishLinkSuccess(user, orphanGoogleUid))
+                                        .addOnFailureListener(e -> {
+                                            if (e.getMessage() != null
+                                                    && e.getMessage().toLowerCase().contains("already")) {
+                                                finishLinkSuccess(user, orphanGoogleUid);
+                                            } else {
+                                                setLoading(false);
+                                                showError(getString(R.string.social_link_failed));
+                                            }
+                                        });
+                            })
+                            .addOnFailureListener(e -> {
+                                setLoading(false);
+                                if (e instanceof FirebaseAuthInvalidCredentialsException) {
+                                    passwordErrorText.setVisibility(View.VISIBLE);
+                                    passwordErrorText.setText(R.string.social_link_password_wrong);
+                                } else {
                                     showError(getString(R.string.social_link_failed));
                                 }
                             });
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    if (e instanceof FirebaseAuthInvalidCredentialsException) {
-                        passwordErrorText.setVisibility(View.VISIBLE);
-                        passwordErrorText.setText(R.string.social_link_password_wrong);
-                    } else {
-                        showError(getString(R.string.social_link_failed));
-                    }
+                    showError(getString(R.string.social_link_failed));
                 });
 
         FirebaseUser googleUser = firebaseAuth.getCurrentUser();

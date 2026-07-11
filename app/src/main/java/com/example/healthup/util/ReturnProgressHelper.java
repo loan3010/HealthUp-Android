@@ -46,6 +46,44 @@ public final class ReturnProgressHelper {
         return HANDLING_RETURN_REFUND.equals(normalizeHandling(handling));
     }
 
+    /**
+     * Admin approve button when status is return_requested.
+     */
+    @NonNull
+    public static String approveLabel(@Nullable String handling) {
+        if (isMissingRefund(handling)) {
+            return "Duyệt hoàn tiền";
+        }
+        if (isReship(handling)) {
+            return "Duyệt gửi bổ sung hàng";
+        }
+        return "Duyệt trả hàng";
+    }
+
+    @NonNull
+    public static String approveLabel(@NonNull Order order) {
+        return approveLabel(order.getReturnHandling());
+    }
+
+    /**
+     * Admin reject button (requested or approved, before complete).
+     */
+    @NonNull
+    public static String rejectLabel(@Nullable String handling) {
+        if (isMissingRefund(handling)) {
+            return "Từ chối hoàn tiền";
+        }
+        if (isReship(handling)) {
+            return "Từ chối gửi bổ sung hàng";
+        }
+        return "Từ chối trả hàng";
+    }
+
+    @NonNull
+    public static String rejectLabel(@NonNull Order order) {
+        return rejectLabel(order.getReturnHandling());
+    }
+
     /** Final step number for this handling type (completed when returnStep >= maxStep). */
     public static int maxStep(@Nullable String handling) {
         return isReturnRefund(handling) ? 4 : 3;

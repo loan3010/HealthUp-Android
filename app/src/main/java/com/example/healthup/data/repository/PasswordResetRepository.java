@@ -2,34 +2,31 @@ package com.example.healthup.data.repository;
 
 import android.app.Activity;
 import android.content.Context;
-import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.healthup.FirebaseAuthErrorMapper;
+import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.util.PhoneNormalizer;
 import com.example.healthup.util.UserPhoneLookup;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
-import com.google.firebase.functions.FirebaseFunctions;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Forgot password (product flow):
- * <ol>
- *   <li>Firestore OTP proves phone ownership (email not required)</li>
- *   <li>User enters new password</li>
- *   <li>Callable {@code resetPassword} updates Firebase Auth via Admin SDK</li>
- * </ol>
- * Email is optional on accounts — reset must not require it.
+ * Forgot password on Spark (no Cloud Functions):
+ * Firestore OTP → write {@code passwordHash} on the user profile.
+ * Auth password stays the derived phone secret (unchanged).
  */
 public class PasswordResetRepository {
 
     public enum SendOtpResult {
         SUCCESS,
         PHONE_NOT_REGISTERED,
+        /** Phone belongs to a Google-linked account — reset via Google login instead. */
+        GOOGLE_LINKED,
         ERROR
     }
 
@@ -48,15 +45,15 @@ public class PasswordResetRepository {
     }
 
     private final OtpRepository otpRepository;
-    private final FirebaseFunctions functions;
+    private final FirebaseFirestore firestore;
 
     public PasswordResetRepository() {
-        this(new OtpRepository(), FirebaseFunctions.getInstance());
+        this(new OtpRepository(), FirebaseFirestore.getInstance());
     }
 
-    public PasswordResetRepository(OtpRepository otpRepository, FirebaseFunctions functions) {
+    public PasswordResetRepository(OtpRepository otpRepository, FirebaseFirestore firestore) {
         this.otpRepository = otpRepository;
-        this.functions = functions;
+        this.firestore = firestore;
     }
 
     public interface SendOtpCallback {
@@ -85,6 +82,14 @@ public class PasswordResetRepository {
                 .addOnSuccessListener(query -> {
                     if (query.isEmpty()) {
                         callback.onResult(SendOtpResult.PHONE_NOT_REGISTERED, "");
+                        return;
+                    }
+
+                    QueryDocumentSnapshot userDoc =
+                            (QueryDocumentSnapshot) query.getDocuments().get(0);
+                    Boolean googleLinked = userDoc.getBoolean("googleLinked");
+                    if (googleLinked != null && googleLinked) {
+                        callback.onResult(SendOtpResult.GOOGLE_LINKED, "");
                         return;
                     }
 
@@ -152,9 +157,19 @@ public class PasswordResetRepository {
                                 QueryDocumentSnapshot userDoc =
                                         (QueryDocumentSnapshot) userQuery.getDocuments().get(0);
                                 String uid = userDoc.getId();
-                                String email = userDoc.getString("email");
-                                callResetPasswordFunction(
-                                        normalizedPhone, uid, email, newPassword, callback);
+                                Map<String, Object> updates =
+                                        AppPasswordHelper.passwordFieldsForNewPassword(newPassword);
+
+                                firestore.collection("users").document(uid)
+                                        .update(updates)
+                                        .addOnSuccessListener(unused -> {
+                                            otpRepository.deletePasswordResetDoc(normalizedPhone);
+                                            callback.onResult(ResetPasswordResult.SUCCESS, "");
+                                        })
+                                        .addOnFailureListener(e ->
+                                                callback.onResult(
+                                                        ResetPasswordResult.ERROR,
+                                                        FirebaseAuthErrorMapper.map(e)));
                             })
                             .addOnFailureListener(e ->
                                     callback.onResult(
@@ -167,34 +182,6 @@ public class PasswordResetRepository {
                                 FirebaseAuthErrorMapper.map(e)));
     }
 
-    private void callResetPasswordFunction(
-            @NonNull String phone,
-            @NonNull String uid,
-            @Nullable String email,
-            @NonNull String newPassword,
-            @NonNull ResetPasswordCallback callback
-    ) {
-        Map<String, Object> data = new HashMap<>();
-        data.put("phone", phone);
-        data.put("newPassword", newPassword);
-        data.put("uid", uid);
-        if (!TextUtils.isEmpty(email)) {
-            data.put("email", email);
-        }
-
-        functions.getHttpsCallable("resetPassword")
-                .call(data)
-                .addOnSuccessListener(unused -> {
-                    otpRepository.deletePasswordResetDoc(phone);
-                    callback.onResult(ResetPasswordResult.SUCCESS, "");
-                })
-                .addOnFailureListener(e ->
-                        callback.onResult(
-                                ResetPasswordResult.ERROR,
-                                FirebaseAuthErrorMapper.map(e)));
-    }
-
-    /** Kept for deep-link / legacy email-reset handlers; no-op in phone-OTP flow. */
     public void confirmPendingResetWithOobCode(
             @NonNull Context context,
             @NonNull String oobCode,
@@ -204,11 +191,9 @@ public class PasswordResetRepository {
     }
 
     public void submitResetSmsCode(@NonNull String smsCode) {
-        // unused — product flow uses Firestore OTP only
     }
 
     public void cancelResetVerification() {
-        // unused
     }
 
     public void getDebugOtp(@NonNull String phone, @NonNull DebugOtpCallback callback) {

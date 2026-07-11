@@ -138,6 +138,8 @@ public class ForgotPasswordActivity extends AppCompatActivity {
             }
             if ("not_registered".equals(errorCode)) {
                 showFieldError(getString(R.string.forgot_password_phone_not_registered));
+            } else if ("google_linked".equals(errorCode)) {
+                showFieldError(getString(R.string.forgot_password_use_google));
             } else {
                 showFieldError(resolvePhoneError(errorCode));
             }

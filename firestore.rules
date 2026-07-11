@@ -55,15 +55,17 @@ service cloud.firestore {
                 && request.auth.uid in convData.participantIds));
     }
 
-    function isPasswordResetEmailRotation(userId) {
+    // After password_reset OTP verified: allow updating app password hash (no Auth/Cloud).
+    function isPasswordResetHashUpdate(userId) {
       let userPhone = get(/databases/$(database)/documents/users/$(userId)).data.phone;
       let localPhone = userPhone is string ? userPhone : '';
-      // password_reset doc id is normalized local VN phone (09xxxxxxxx)
       return localPhone.matches('^0[0-9]{9}$')
         && exists(/databases/$(database)/documents/password_reset/$(localPhone))
         && get(/databases/$(database)/documents/password_reset/$(localPhone)).data.verified == true
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['email'])
-        && request.resource.data.email is string;
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['passwordHash', 'passwordAuthMode'])
+        && request.resource.data.passwordHash is string
+        && request.resource.data.passwordAuthMode == 'app';
     }
 
     // --- Users ------------------------------------------------------------
@@ -71,7 +73,7 @@ service cloud.firestore {
       allow read, list: if true;
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if (isSignedIn() && request.auth.uid == userId)
-                    || isPasswordResetEmailRotation(userId)
+                    || isPasswordResetHashUpdate(userId)
                     || (currentRole() == 'admin'
                         && request.resource.data.diff(resource.data).affectedKeys()
                             .hasOnly(['disabled', 'updatedAt', 'disabledReason', 'disabledAt', 'unlockedReason', 'unlockedAt']));
@@ -116,8 +118,7 @@ service cloud.firestore {
       allow read, write: if phone is string;
     }
 
-    // Email OTP legacy (in-app OTP đã bỏ — Cài đặt dùng verifyBeforeUpdateEmail).
-    // Giữ rules để doc cũ không lỗi permission nếu còn sót.
+    // Email OTP (Spark — không phụ thuộc Firebase Auth email delivery)
     match /email_verification/{uid} {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }

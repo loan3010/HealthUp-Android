@@ -367,7 +367,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     boolean canStillReview = !order.isReviewExpired();
 
                     if (hasReturn) {
-                        setupButton(binding.btnActionLeft, "Xem trả hàng", "outline");
+                        setupButton(binding.btnActionLeft, "Xem chi tiết", "outline");
                         binding.btnActionLeft.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                             intent.putExtra("order", order);
@@ -424,7 +424,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     break;
                 case "completed":
                     if (order.getReturnHandling() != null) {
-                        setupButton(binding.btnActionMiddle, "Xem chi tiết hoàn tiền", "outline");
+                        setupButton(binding.btnActionMiddle, "Xem chi tiết", "outline");
                         binding.btnActionMiddle.setOnClickListener(v -> {
                             android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                             intent.putExtra("order", order);
@@ -438,7 +438,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                     break;
                 case "returned":
                 case "refunded":
-                    setupButton(binding.btnActionMiddle, "Xem chi tiết hoàn tiền", "outline");
+                    setupButton(binding.btnActionMiddle, "Xem chi tiết", "outline");
                     binding.btnActionMiddle.setOnClickListener(v -> {
                         android.content.Intent intent = new android.content.Intent(context, ReturnRefundHistoryDetailActivity.class);
                         intent.putExtra("order", order);

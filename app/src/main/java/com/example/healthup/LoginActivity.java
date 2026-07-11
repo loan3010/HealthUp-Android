@@ -18,10 +18,12 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.admin.AdminLoginActivity;
+import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.auth.SocialAuthHelper;
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.util.AccountDisabledWatcher;
@@ -530,22 +532,23 @@ public class LoginActivity extends AppCompatActivity {
         }
 
         DocumentSnapshot profileDoc = queryDocumentSnapshots.getDocuments().get(0);
-        String email = profileDoc.getString("email");
-        String displayEmail = profileDoc.getString("displayEmail");
-        // Prefer real displayEmail — Auth email may already be updated after verifyBeforeUpdateEmail.
-        if (UserProfileBuilder.isRealEmail(displayEmail)) {
-            email = displayEmail;
-        }
-        if (email == null || email.trim().isEmpty()) {
-            setLoading(false);
-            showPasswordError(getString(R.string.login_credentials_wrong));
-            return;
-        }
-
-        signInWithEmail(email, password, profileDoc);
+        completeLoginWithProfile(profileDoc, password, false);
     }
 
     private void signInWithEmail(String email, String password, DocumentSnapshot profileDoc) {
+        if (profileDoc != null) {
+            // Email login requires Firestore emailVerified (mock verify).
+            Boolean verified = profileDoc.getBoolean("emailVerified");
+            if (verified == null || !verified) {
+                setLoading(false);
+                updateLoginButtonState();
+                showIdentifierError(getString(R.string.login_email_not_verified));
+                return;
+            }
+            completeLoginWithProfile(profileDoc, password, true);
+            return;
+        }
+        // Legacy: no Firestore hit — try Auth with user password.
         setLoading(true);
         firebaseAuth.signInWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
@@ -561,52 +564,154 @@ public class LoginActivity extends AppCompatActivity {
                         }
                         return;
                     }
-
                     FirebaseUser user = firebaseAuth.getCurrentUser();
                     if (user == null) {
                         setLoading(false);
                         showPasswordError(getString(R.string.login_failed_generic));
                         return;
                     }
-
-                    // Email login requires Firebase Auth emailVerified (source of truth).
-                    // Phone login skips this. Sync Firestore flag after a successful Auth verify.
-                    boolean isEmailIdentifier = LoginValidator.isEmailIdentifier(
-                            getInputValue(identifierEditText));
-                    if (isEmailIdentifier && !UserProfileBuilder.isSyntheticAuthEmail(user.getEmail())) {
-                        if (!user.isEmailVerified()) {
-                            firebaseAuth.signOut();
-                            setLoading(false);
-                            updateLoginButtonState();
-                            showIdentifierError(getString(R.string.login_email_not_verified));
-                            return;
-                        }
-                    }
-
                     setLoading(false);
                     updateLoginButtonState();
-                    if (profileDoc != null) {
-                        UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
-                        syncEmailVerifiedFlag(user, profileDoc.getId());
-                    } else {
-                        ensureProfileFromAuthEmail(user);
-                        syncEmailVerifiedFlag(user, user.getUid());
+                    ensureProfileFromAuthEmail(user);
+                    Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
+                    openMainScreen();
+                });
+    }
+
+    /**
+     * App mode: verify Firestore hash, then Auth sign-in with derived phone secret.
+     * Legacy: Auth sign-in with user password, then migrate to app mode.
+     */
+    private void completeLoginWithProfile(
+            @NonNull DocumentSnapshot profileDoc,
+            @NonNull String password,
+            boolean emailIdentifier
+    ) {
+        String phone = profileDoc.getString("phone");
+        String authEmail = AppPasswordHelper.authEmailFromProfile(profileDoc);
+        if (TextUtils.isEmpty(authEmail)) {
+            String displayEmail = profileDoc.getString("displayEmail");
+            if (UserProfileBuilder.isRealEmail(displayEmail)) {
+                authEmail = displayEmail;
+            }
+        }
+        if (TextUtils.isEmpty(authEmail) || TextUtils.isEmpty(phone)) {
+            setLoading(false);
+            showPasswordError(getString(R.string.login_credentials_wrong));
+            return;
+        }
+
+        String normalizedPhone = PhoneNormalizer.normalize(phone);
+        if (AppPasswordHelper.isAppPasswordMode(profileDoc)) {
+            if (!AppPasswordHelper.matchesUserPassword(
+                    password, profileDoc.getString(AppPasswordHelper.FIELD_PASSWORD_HASH))) {
+                setLoading(false);
+                updateLoginButtonState();
+                showPasswordError(getString(R.string.login_credentials_wrong));
+                return;
+            }
+            String authSecret = AppPasswordHelper.authSecretForPhone(normalizedPhone);
+            signInAuthAndFinish(authEmail, authSecret, password, normalizedPhone, profileDoc);
+            return;
+        }
+
+        // Legacy Auth password == user password → migrate after success.
+        final String legacyAuthEmail = authEmail;
+        firebaseAuth.signInWithEmailAndPassword(legacyAuthEmail, password)
+                .addOnCompleteListener(this, task -> {
+                    if (!task.isSuccessful()
+                            && UserProfileBuilder.isRealEmail(profileDoc.getString("displayEmail"))
+                            && !legacyAuthEmail.equals(profileDoc.getString("displayEmail"))) {
+                        // Retry with displayEmail if Auth was updated previously.
+                        firebaseAuth.signInWithEmailAndPassword(
+                                        profileDoc.getString("displayEmail"), password)
+                                .addOnCompleteListener(this, retry -> {
+                                    if (!retry.isSuccessful()) {
+                                        setLoading(false);
+                                        updateLoginButtonState();
+                                        showPasswordError(getString(R.string.login_credentials_wrong));
+                                        return;
+                                    }
+                                    migrateLegacyPasswordThenFinish(password, normalizedPhone, profileDoc);
+                                });
+                        return;
                     }
+                    if (!task.isSuccessful()) {
+                        setLoading(false);
+                        updateLoginButtonState();
+                        showPasswordError(getString(R.string.login_credentials_wrong));
+                        return;
+                    }
+                    migrateLegacyPasswordThenFinish(password, normalizedPhone, profileDoc);
+                });
+    }
+
+    private void migrateLegacyPasswordThenFinish(
+            @NonNull String userPassword,
+            @NonNull String normalizedPhone,
+            @NonNull DocumentSnapshot profileDoc
+    ) {
+        FirebaseUser user = firebaseAuth.getCurrentUser();
+        if (user == null) {
+            setLoading(false);
+            showPasswordError(getString(R.string.login_failed_generic));
+            return;
+        }
+        String authSecret = AppPasswordHelper.authSecretForPhone(normalizedPhone);
+        user.updatePassword(authSecret)
+                .addOnCompleteListener(updateTask -> {
+                    firebaseFirestore.collection("users").document(profileDoc.getId())
+                            .update(AppPasswordHelper.passwordFieldsForNewPassword(userPassword))
+                            .addOnCompleteListener(ignored -> {
+                                setLoading(false);
+                                updateLoginButtonState();
+                                UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
+                                Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
+                                openMainScreen();
+                            });
+                });
+    }
+
+    private void signInAuthAndFinish(
+            @NonNull String authEmail,
+            @NonNull String authSecret,
+            @NonNull String userPassword,
+            @NonNull String normalizedPhone,
+            @NonNull DocumentSnapshot profileDoc
+    ) {
+        firebaseAuth.signInWithEmailAndPassword(authEmail, authSecret)
+                .addOnCompleteListener(this, task -> {
+                    if (!task.isSuccessful()) {
+                        // Auth may still be legacy user-password — migrate then continue.
+                        firebaseAuth.signInWithEmailAndPassword(authEmail, userPassword)
+                                .addOnCompleteListener(this, legacyTask -> {
+                                    if (!legacyTask.isSuccessful()) {
+                                        setLoading(false);
+                                        updateLoginButtonState();
+                                        showPasswordError(getString(R.string.login_credentials_wrong));
+                                        return;
+                                    }
+                                    migrateLegacyPasswordThenFinish(
+                                            userPassword, normalizedPhone, profileDoc);
+                                });
+                        return;
+                    }
+                    FirebaseUser user = firebaseAuth.getCurrentUser();
+                    if (user == null) {
+                        setLoading(false);
+                        showPasswordError(getString(R.string.login_failed_generic));
+                        return;
+                    }
+                    setLoading(false);
+                    updateLoginButtonState();
+                    UserProfileResolver.syncProfileAfterLogin(user.getUid(), profileDoc);
                     Toast.makeText(this, R.string.login_success, Toast.LENGTH_SHORT).show();
                     openMainScreen();
                 });
     }
 
     private void syncEmailVerifiedFlag(@NonNull FirebaseUser user, @NonNull String profileDocId) {
-        if (!user.isEmailVerified()) {
-            return;
-        }
-        if (!UserProfileBuilder.isRealEmail(user.getEmail())) {
-            firebaseFirestore.collection("users").document(profileDocId)
-                    .update("emailVerified", true);
-            return;
-        }
-        com.example.healthup.auth.EmailProfileSync.writeTask(profileDocId, user.getEmail());
+        // No-op: emailVerified is owned by Firestore (mock OTP).
     }
 
     private void ensureProfileFromAuthEmail(@NonNull FirebaseUser user) {

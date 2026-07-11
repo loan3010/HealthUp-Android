@@ -37,12 +37,14 @@ public final class UserProfileBuilder {
             String phone,
             String authEmail,
             String displayEmail,
-            String username
+            String username,
+            @Nullable String rawPassword
     ) {
         Map<String, Object> userData = new HashMap<>();
         userData.put("fullName", fullName);
         userData.put("phone", phone);
-        userData.put("email", isRealEmail(authEmail) ? normalizeStoredEmail(authEmail) : authEmail);
+        // Auth login email stays synthetic; real email (if any) is displayEmail only.
+        userData.put("email", authEmail);
         userData.put("phoneVerified", true);
         userData.put("role", "buyer");
         userData.put("authProvider", AUTH_PROVIDER_PASSWORD);
@@ -55,6 +57,9 @@ public final class UserProfileBuilder {
         }
         if (!TextUtils.isEmpty(username)) {
             userData.put("username", username);
+        }
+        if (!TextUtils.isEmpty(rawPassword)) {
+            userData.putAll(AppPasswordHelper.passwordFieldsForNewPassword(rawPassword));
         }
         return userData;
     }

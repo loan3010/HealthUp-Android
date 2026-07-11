@@ -15,7 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
-import com.example.healthup.auth.EmailVerificationHelper;
+import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
@@ -251,8 +251,11 @@ public class OTPActivity extends AppCompatActivity {
             return;
         }
 
-        String authEmail = RegisterValidator.buildAuthEmail(localPhone, email);
-        firebaseAuth.createUserWithEmailAndPassword(authEmail, password)
+        // Auth email is always synthetic — real email lives in displayEmail + mock verify.
+        String authEmail = RegisterValidator.buildAuthEmail(localPhone, null);
+        String normalizedPhone = PhoneNormalizer.normalize(localPhone);
+        String authSecret = AppPasswordHelper.authSecretForPhone(normalizedPhone);
+        firebaseAuth.createUserWithEmailAndPassword(authEmail, authSecret)
                 .addOnCompleteListener(this, task -> {
                     if (!task.isSuccessful()) {
                         setLoading(false);
@@ -370,7 +373,8 @@ public class OTPActivity extends AppCompatActivity {
                 localPhone,
                 authEmail,
                 email,
-                username
+                username,
+                password
         );
         persistUserProfile(uid, userData);
     }
@@ -383,10 +387,8 @@ public class OTPActivity extends AppCompatActivity {
                     registrationRepository.deleteOtpDoc(localPhone);
                     boolean needsEmailVerify = !isSocialAuth && RegisterValidator.hasRealEmail(email);
                     if (needsEmailVerify) {
-                        maybeSendEmailVerification(sent -> {
-                            setLoading(false);
-                            navigateToEmailVerification(uid, sent);
-                        });
+                        setLoading(false);
+                        navigateToEmailVerification(uid, false);
                     } else {
                         setLoading(false);
                         Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
@@ -399,40 +401,12 @@ public class OTPActivity extends AppCompatActivity {
                 });
     }
 
-    private void maybeSendEmailVerification(@NonNull java.util.function.Consumer<Boolean> onDone) {
-        if (isSocialAuth || !RegisterValidator.hasRealEmail(email)) {
-            onDone.accept(false);
-            return;
-        }
-        FirebaseUser user = firebaseAuth.getCurrentUser();
-        if (user == null) {
-            onDone.accept(false);
-            return;
-        }
-        EmailVerificationHelper.sendToCurrentEmail(user, new EmailVerificationHelper.Callback() {
-            @Override
-            public void onSuccess() {
-                onDone.accept(true);
-            }
-
-            @Override
-            public void onError(@NonNull String message) {
-                // Still open verify screen so user can resend / skip.
-                android.util.Log.w("OTPActivity", "Initial verify email failed: " + message);
-                onDone.accept(false);
-            }
-        });
-    }
-
-    private void navigateToEmailVerification(String uid, boolean mailSent) {
+    private void navigateToEmailVerification(String uid, boolean ignoredMailSent) {
         Toast.makeText(this, R.string.register_success, Toast.LENGTH_SHORT).show();
-        if (!mailSent) {
-            Toast.makeText(this, R.string.change_email_send_failed, Toast.LENGTH_LONG).show();
-        }
         GuestCartManager.getInstance(this).mergeToFirestore(uid, () -> runOnUiThread(() -> {
             Intent intent = new Intent(OTPActivity.this, EmailVerificationPendingActivity.class);
             intent.putExtra(EmailVerificationPendingActivity.EXTRA_EMAIL, email);
-            intent.putExtra(EmailVerificationPendingActivity.EXTRA_MAIL_ALREADY_SENT, mailSent);
+            intent.putExtra(EmailVerificationPendingActivity.EXTRA_MAIL_ALREADY_SENT, false);
             startActivity(intent);
             finish();
         }));

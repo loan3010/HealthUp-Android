@@ -1,19 +1,21 @@
 package com.example.healthup;
 
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.healthup.auth.EmailVerificationHelper;
+import com.example.healthup.data.repository.OtpRepository;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
 import com.google.android.material.button.MaterialButton;
@@ -22,11 +24,12 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
  * After registration when user provided a real email.
- * Uses Firebase Auth {@code sendEmailVerification} (worked for registration before).
+ * Mock email OTP in Firestore (no Firebase Auth mail / no Cloud).
  */
 public class EmailVerificationPendingActivity extends AppCompatActivity {
 
@@ -36,11 +39,14 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
     private String email;
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firestore;
+    private OtpRepository otpRepository;
     private FrameLayout loadingOverlay;
     private MaterialButton resendButton;
     private MaterialButton verifiedButton;
     private MaterialButton openMailButton;
     private TextView subtitle;
+    private TextView debugOtpText;
+    private String lastDebugOtp = "";
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -49,6 +55,7 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
 
         firebaseAuth = FirebaseAuth.getInstance();
         firestore = FirebaseFirestore.getInstance();
+        otpRepository = new OtpRepository();
 
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user == null) {
@@ -62,7 +69,7 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
         }
 
         subtitle = findViewById(R.id.subtitleText);
-        subtitle.setText(getString(R.string.email_verify_subtitle, email == null ? "" : email));
+        subtitle.setText(getString(R.string.email_verify_subtitle_mock, email == null ? "" : email));
 
         loadingOverlay = findViewById(R.id.loadingOverlay);
         openMailButton = findViewById(R.id.openMailButton);
@@ -70,84 +77,105 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
         verifiedButton = findViewById(R.id.verifiedButton);
         TextView skipText = findViewById(R.id.skipText);
 
-        openMailButton.setOnClickListener(v -> openMailApp());
-        resendButton.setOnClickListener(v -> sendVerification(true));
-        verifiedButton.setOnClickListener(v -> checkVerified());
-        skipText.setOnClickListener(v -> continueToApp(false));
+        // Reuse open-mail button as "show OTP" for mock flow.
+        openMailButton.setText(R.string.email_verify_show_otp);
+        openMailButton.setOnClickListener(v -> {
+            if (TextUtils.isEmpty(lastDebugOtp)) {
+                sendMockOtp(false);
+            } else {
+                Toast.makeText(this, getString(R.string.change_email_debug_otp, lastDebugOtp), Toast.LENGTH_LONG).show();
+            }
+        });
+        resendButton.setOnClickListener(v -> sendMockOtp(true));
+        verifiedButton.setOnClickListener(v -> promptOtpAndVerify());
+        skipText.setOnClickListener(v -> continueToApp());
 
-        boolean alreadySent = getIntent().getBooleanExtra(EXTRA_MAIL_ALREADY_SENT, false);
-        if (!alreadySent) {
-            sendVerification(false);
-        }
+        sendMockOtp(false);
     }
 
-    private void sendVerification(boolean fromResend) {
+    private void sendMockOtp(boolean fromResend) {
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user == null) {
             goToLogin();
             return;
         }
         setLoading(true);
-        EmailVerificationHelper.sendToCurrentEmail(user, new EmailVerificationHelper.Callback() {
-            @Override
-            public void onSuccess() {
-                setLoading(false);
-                if (fromResend) {
+        String otp = otpRepository.generateOtp();
+        String normalized = email == null ? "" : email.trim().toLowerCase(Locale.ROOT);
+        otpRepository.saveEmailVerificationOtp(user.getUid(), normalized, otp)
+                .addOnSuccessListener(unused -> {
+                    lastDebugOtp = otp;
+                    setLoading(false);
                     Toast.makeText(
-                            EmailVerificationPendingActivity.this,
-                            R.string.email_verify_resend_success,
-                            Toast.LENGTH_SHORT
+                            this,
+                            getString(R.string.change_email_debug_otp, otp),
+                            Toast.LENGTH_LONG
                     ).show();
-                }
-            }
-
-            @Override
-            public void onError(@NonNull String message) {
-                setLoading(false);
-                Toast.makeText(EmailVerificationPendingActivity.this, message, Toast.LENGTH_LONG).show();
-            }
-        });
+                    if (fromResend) {
+                        Toast.makeText(this, R.string.email_verify_resend_success, Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Toast.makeText(this, R.string.change_email_send_failed, Toast.LENGTH_LONG).show();
+                });
     }
 
-    private void checkVerified() {
+    private void promptOtpAndVerify() {
+        EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_NUMBER);
+        input.setHint(R.string.change_email_otp_hint);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.change_email_otp_label)
+                .setView(input)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.change_email_check_verified, (d, w) -> {
+                    String code = input.getText() == null ? "" : input.getText().toString().trim();
+                    verifyMockOtp(code);
+                })
+                .show();
+    }
+
+    private void verifyMockOtp(@NonNull String code) {
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user == null) {
             goToLogin();
             return;
         }
         setLoading(true);
-        user.reload().addOnCompleteListener(task -> {
-            FirebaseUser refreshed = firebaseAuth.getCurrentUser();
-            if (refreshed == null) {
-                setLoading(false);
-                goToLogin();
-                return;
-            }
-            if (!refreshed.isEmailVerified()) {
-                setLoading(false);
-                Toast.makeText(this, R.string.change_email_not_verified_yet, Toast.LENGTH_LONG).show();
-                return;
-            }
-
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("emailVerified", true);
-            String verifiedEmail = refreshed.getEmail();
-            if (!TextUtils.isEmpty(verifiedEmail)) {
-                String normalized = RegisterValidator.normalizeEmail(verifiedEmail);
-                updates.put("email", normalized);
-                updates.put("displayEmail", normalized);
-            }
-            firestore.collection("users").document(refreshed.getUid())
-                    .update(updates)
-                    .addOnCompleteListener(updateTask -> {
+        otpRepository.getEmailVerificationDoc(user.getUid())
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists() || otpRepository.isOtpExpired(doc)
+                            || !otpRepository.matchesOtp(doc, code)) {
                         setLoading(false);
-                        Toast.makeText(this, R.string.email_verify_success, Toast.LENGTH_SHORT).show();
-                        continueToApp(true);
-                    });
-        });
+                        Toast.makeText(this, R.string.change_email_otp_wrong, Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    Map<String, Object> updates = new HashMap<>();
+                    updates.put("emailVerified", true);
+                    if (!TextUtils.isEmpty(email)) {
+                        String normalized = RegisterValidator.normalizeEmail(email);
+                        updates.put("displayEmail", normalized);
+                    }
+                    firestore.collection("users").document(user.getUid())
+                            .update(updates)
+                            .addOnCompleteListener(updateTask -> {
+                                otpRepository.deleteEmailVerificationDoc(user.getUid());
+                                setLoading(false);
+                                Toast.makeText(this, R.string.email_verify_success, Toast.LENGTH_SHORT).show();
+                                continueToApp();
+                            });
+                })
+                .addOnFailureListener(e -> {
+                    setLoading(false);
+                    Toast.makeText(this, R.string.reset_password_error_generic, Toast.LENGTH_SHORT).show();
+                });
     }
 
-    private void continueToApp(boolean ignored) {
+    private void continueToApp() {
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user == null) {
             goToLogin();
@@ -158,21 +186,6 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
             startActivity(intent);
             finish();
         }));
-    }
-
-    private void openMailApp() {
-        try {
-            Intent intent = new Intent(Intent.ACTION_MAIN);
-            intent.addCategory(Intent.CATEGORY_APP_EMAIL);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-        } catch (Exception e) {
-            try {
-                startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("mailto:")));
-            } catch (Exception ignored) {
-                Toast.makeText(this, R.string.email_verify_open_mail_failed, Toast.LENGTH_SHORT).show();
-            }
-        }
     }
 
     private void goToLogin() {
@@ -191,6 +204,6 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        continueToApp(false);
+        continueToApp();
     }
 }
