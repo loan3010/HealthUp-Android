@@ -103,18 +103,24 @@ public final class StockManager {
                                          @NonNull List<OrderItem> items,
                                          boolean restore) throws FirebaseFirestoreException {
         Map<String, Map<String, Integer>> grouped = groupItems(items);
-        for (Map.Entry<String, Map<String, Integer>> entry : grouped.entrySet()) {
-            String productId = entry.getKey();
+
+        Map<String, DocumentSnapshot> snapshots = new HashMap<>();
+        for (String productId : grouped.keySet()) {
             if (productId == null || productId.isEmpty()) {
                 throw new IllegalStateException("Thiếu productId trong đơn hàng");
             }
-
             DocumentReference productRef = db.collection("products").document(productId);
             DocumentSnapshot snap = transaction.get(productRef);
             if (!snap.exists()) {
                 throw new IllegalStateException("Không tìm thấy sản phẩm: " + productId);
             }
+            snapshots.put(productId, snap);
+        }
 
+        for (Map.Entry<String, Map<String, Integer>> entry : grouped.entrySet()) {
+            String productId = entry.getKey();
+            DocumentReference productRef = db.collection("products").document(productId);
+            DocumentSnapshot snap = snapshots.get(productId);
             Map<String, Integer> deltas = new HashMap<>();
             for (Map.Entry<String, Integer> variantEntry : entry.getValue().entrySet()) {
                 int qty = variantEntry.getValue();

@@ -482,6 +482,7 @@
     <string name="phone_verification_login">Login Now</string>
     <string name="phone_verification_register">Register Now</string>
     <string name="phone_verification_back_to_cart">Back to Cart</string>
+    <string name="phone_verification_back_to_chat">Back to chat</string>
     <string name="phone_verification_continue_shopping">Continue Shopping</string>
     <string name="checkout_need_phone_verified">Phone verification is required before checkout.</string>
     <string name="payment_bank_link">Linked Bank Account</string>

@@ -22,6 +22,8 @@ import com.example.healthup.util.UserPhoneLookup;
 
 public class PhoneVerificationFragment extends Fragment {
 
+    public static final String ARG_RETURN_TO_PREVIOUS = "return_to_previous";
+
     private EditText etPhone;
     private TextView tvErrorPhone, tvStatusTitle, tvStatusDesc, tvTitle, tvDescription, tvPrefix, tvBackToShopping;
     private View layoutStatus, layoutBottomHint, tvChangePhone, layoutInputPhone;
@@ -29,7 +31,17 @@ public class PhoneVerificationFragment extends Fragment {
 
     private boolean isChecking = false;
     private boolean phoneExists = false;
+    private boolean returnToPrevious = false;
     private String normalizedPhone = "";
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        Bundle args = getArguments();
+        if (args != null) {
+            returnToPrevious = args.getBoolean(ARG_RETURN_TO_PREVIOUS, false);
+        }
+    }
 
     @Nullable
     @Override
@@ -60,9 +72,13 @@ public class PhoneVerificationFragment extends Fragment {
         tvBackToShopping = view.findViewById(R.id.tvBackToShopping);
 
         boolean hasPendingCheckout = CheckoutIntentHelper.hasPendingCheckout(requireContext());
-        tvBackToShopping.setText(hasPendingCheckout
-                ? R.string.phone_verification_back_to_cart
-                : R.string.phone_verification_continue_shopping);
+        if (returnToPrevious) {
+            tvBackToShopping.setText(R.string.phone_verification_back_to_chat);
+        } else {
+            tvBackToShopping.setText(hasPendingCheckout
+                    ? R.string.phone_verification_back_to_cart
+                    : R.string.phone_verification_continue_shopping);
+        }
     }
 
     private void setupListeners() {
@@ -72,6 +88,7 @@ public class PhoneVerificationFragment extends Fragment {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (isChecking) {
+                    resetUI();
                     return;
                 }
                 resetUI();
@@ -113,6 +130,11 @@ public class PhoneVerificationFragment extends Fragment {
     }
 
     private void navigateBack() {
+        if (returnToPrevious) {
+            requireActivity().finish();
+            return;
+        }
+
         FragmentManager fm = requireActivity().getSupportFragmentManager();
         if (fm.getBackStackEntryCount() > 0) {
             fm.popBackStack();
@@ -188,7 +210,8 @@ public class PhoneVerificationFragment extends Fragment {
         tvPrefix.setVisibility(View.VISIBLE);
         tvPrefix.setText("+84");
         etPhone.setText(phone.startsWith("0") ? phone.substring(1) : phone);
-        etPhone.setEnabled(false);
+        etPhone.setEnabled(true);
+        etPhone.requestFocus();
 
         layoutStatus.setVisibility(View.VISIBLE);
         layoutBottomHint.setVisibility(View.GONE);

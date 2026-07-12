@@ -416,8 +416,15 @@ public class MainActivity extends AppCompatActivity {
                 selectNavTab(R.id.nav_category);
                 return;
             } else if ("phone_verification".equals(target)) {
-                selectNavTab(R.id.nav_cart);
-                loadFragmentAllowingStateLoss(new PhoneVerificationFragment());
+                boolean returnToPrevious = intent.getBooleanExtra("return_to_previous", false);
+                if (!returnToPrevious) {
+                    selectNavTab(R.id.nav_cart);
+                }
+                PhoneVerificationFragment fragment = new PhoneVerificationFragment();
+                Bundle phoneArgs = new Bundle();
+                phoneArgs.putBoolean(PhoneVerificationFragment.ARG_RETURN_TO_PREVIOUS, returnToPrevious);
+                fragment.setArguments(phoneArgs);
+                loadFragmentAllowingStateLoss(fragment);
                 return;
             } else if ("checkout".equals(target)) {
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
