@@ -57,7 +57,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:paddingTop="12dp"
+            android:paddingBottom="100dp">
 
             <!-- ===== Địa chỉ giao hàng ===== -->
             <LinearLayout
@@ -218,11 +221,11 @@
                     android:background="@drawable/bg_shipping_selected">
 
                     <TextView
+                        android:id="@+id/tvShippingStandardTitle"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:text="Giao tiêu chuẩn"
-                        android:textColor="#36873A"
-                        android:textStyle="bold"
+                        android:textColor="@color/text_dark"
                         android:textSize="14sp" />
 
                     <RelativeLayout
@@ -230,18 +233,19 @@
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp">
                         <TextView
+                            android:id="@+id/tvShippingStandardInfo"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Đảm bảo nhận hàng từ 22 Tháng 6 -\n26 Tháng 6"
+                            android:text="Đảm bảo nhận hàng từ ..."
                             android:textColor="@color/text_gray"
                             android:textSize="12sp" />
                         <TextView
+                            android:id="@+id/tvShippingStandardPrice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
-                            android:text="Miễn Phí"
-                            android:textColor="#36873A"
-                            android:textStyle="bold"
+                            android:text="₫ 21.000"
+                            android:textColor="@color/text_dark"
                             android:textSize="14sp" />
                     </RelativeLayout>
                 </LinearLayout>
@@ -258,6 +262,7 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content">
                         <TextView
+                            android:id="@+id/tvShippingFastTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:text="Giao nhanh"
@@ -265,14 +270,16 @@
                             android:textStyle="bold"
                             android:textSize="14sp" />
                         <TextView
+                            android:id="@+id/tvShippingFastPrice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
                             android:text="₫ 45.000"
                             android:textColor="@color/text_dark"
-                            android:textSize="13sp" />
+                            android:textSize="14sp" />
                     </RelativeLayout>
                     <TextView
+                        android:id="@+id/tvShippingFastInfo"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"

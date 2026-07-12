@@ -88,13 +88,39 @@ public class ProductReviewsActivity extends AppCompatActivity {
 
 
     private void setupSearch() {
+        binding.btnClearSearchReview.setOnClickListener(v -> binding.etSearchReview.setText(""));
+        binding.tvCancelSearchReview.setOnClickListener(v -> {
+            binding.etSearchReview.setText("");
+            binding.etSearchReview.clearFocus();
+            // Ẩn bàn phím
+            View view = this.getCurrentFocus();
+            if (view != null) {
+                android.view.inputmethod.InputMethodManager imm = (android.view.inputmethod.InputMethodManager) getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
+            }
+        });
+
+        binding.etSearchReview.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) {
+                applyFilters();
+                binding.etSearchReview.clearFocus();
+                return true;
+            }
+            return false;
+        });
+
+
         binding.etSearchReview.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
 
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String query = s.toString().trim();
+                binding.btnClearSearchReview.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+                binding.tvCancelSearchReview.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
+            }
 
 
             @Override

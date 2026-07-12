@@ -131,37 +131,71 @@
 
 
             <!-- Search -->
-            <RelativeLayout
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="44dp"
                 android:layout_marginHorizontal="16dp"
                 android:layout_marginTop="16dp"
                 android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_search_input"
-                android:paddingHorizontal="12dp">
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
 
 
-                <ImageView
-                    android:id="@+id/ic_search_review"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_centerVertical="true"
-                    android:src="@drawable/ic_search"
-                    app:tint="@color/text_gray" />
-
-
-                <EditText
-                    android:id="@+id/et_search_review"
-                    android:layout_width="match_parent"
+                <RelativeLayout
+                    android:layout_width="0dp"
                     android:layout_height="match_parent"
-                    android:layout_toEndOf="@id/ic_search_review"
-                    android:layout_marginStart="8dp"
-                    android:background="@android:color/transparent"
-                    android:hint="Tìm đánh giá từ những người mua khác"
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:textSize="13sp" />
-            </RelativeLayout>
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_search_input"
+                    android:paddingHorizontal="12dp">
+
+
+                    <ImageView
+                        android:id="@+id/ic_search_review"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_centerVertical="true"
+                        android:src="@drawable/ic_search"
+                        app:tint="@color/text_gray" />
+
+
+                    <EditText
+                        android:id="@+id/et_search_review"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="8dp"
+                        android:layout_toStartOf="@+id/btn_clear_search_review"
+                        android:layout_toEndOf="@id/ic_search_review"
+                        android:background="@android:color/transparent"
+                        android:hint="Tìm đánh giá từ những người mua khác"
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:textSize="13sp" />
+
+
+                    <ImageButton
+                        android:id="@+id/btn_clear_search_review"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_close"
+                        android:visibility="gone"
+                        app:tint="@color/text_gray" />
+                </RelativeLayout>
+
+
+                <TextView
+                    android:id="@+id/tv_cancel_search_review"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:paddingVertical="8dp"
+                    android:text="Thoát"
+                    android:textColor="@color/text_main"
+                    android:textSize="14sp"
+                    android:visibility="gone" />
+            </LinearLayout>
 
 
             <!-- Filter chips -->

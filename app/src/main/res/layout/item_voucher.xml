@@ -49,7 +49,7 @@
         android:paddingStart="12dp"
         android:paddingTop="12dp"
         android:paddingBottom="12dp"
-        android:paddingEnd="16dp">
+        android:paddingEnd="12dp">
 
         <RelativeLayout
             android:layout_width="match_parent"
@@ -61,6 +61,7 @@
                 android:layout_height="wrap_content"
                 android:layout_alignParentStart="true"
                 android:layout_toStartOf="@+id/rbSelected"
+                android:layout_marginEnd="8dp"
                 android:text="Miễn phí vận chuyển"
                 android:textColor="@color/text_dark"
                 android:textSize="15sp"
@@ -74,19 +75,19 @@
                 android:layout_alignParentStart="true"
                 android:layout_marginTop="4dp"
                 android:layout_toStartOf="@+id/rbSelected"
+                android:layout_marginEnd="8dp"
                 android:text="Đơn tối thiểu 100k"
                 android:textColor="@color/text_gray"
                 android:textSize="12sp" />
 
             <RadioButton
                 android:id="@+id/rbSelected"
-                android:layout_width="24dp"
-                android:layout_height="24dp"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
                 android:clickable="false"
-                android:focusable="false"
-                android:layout_marginEnd="4dp" />
+                android:focusable="false" />
         </RelativeLayout>
 
         <RelativeLayout

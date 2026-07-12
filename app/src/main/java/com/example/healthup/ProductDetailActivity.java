@@ -13,6 +13,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -91,6 +93,7 @@ public class ProductDetailActivity extends AppCompatActivity {
                         setupProductInfo();
                         setupExpandableSections();
                         setupRecommendations();
+                        setupToolbarScroll();
                     }
                 });
             });
@@ -99,6 +102,7 @@ public class ProductDetailActivity extends AppCompatActivity {
             setupProductInfo();
             setupExpandableSections();
             setupRecommendations();
+            setupToolbarScroll();
         }
     }
 
@@ -133,6 +137,9 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvViewAllRecommend = findViewById(R.id.tv_view_all_recommend);
 
         btnBack.setOnClickListener(v -> finish());
+        if (btnShare != null) {
+            btnShare.setOnClickListener(v -> shareProduct());
+        }
         btnWishlist.setOnClickListener(v -> toggleFavorite());
         if (btnCartHeader != null) {
             btnCartHeader.setOnClickListener(v -> {
@@ -224,7 +231,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
         updateRatingUi(product.getRating(), product.getReviewCount());
         loadReviewStats();
-        tvSold.setText("Đã bán " + product.getSoldCount() + "+");
+        tvSold.setText("Đã bán " + product.getSoldCount());
 
         updateWishlistIcon();
         setupImagePager();
@@ -673,5 +680,61 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity) {
         CartHelper.addToCart(this, targetProduct, variant, quantity);
+    }
+
+    private void setupToolbarScroll() {
+        NestedScrollView scrollView = findViewById(R.id.product_detail_scroll);
+        View toolbarHeader = findViewById(R.id.layout_toolbar_header);
+        if (scrollView == null || toolbarHeader == null) return;
+
+        scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
+            float threshold = 200 * getResources().getDisplayMetrics().density;
+            float alpha = Math.min(1f, (float) scrollY / threshold);
+
+            int baseColor = ContextCompat.getColor(this, R.color.neutral_cream);
+            int colorWithAlpha = ColorUtils.setAlphaComponent(baseColor, (int) (alpha * 255));
+            toolbarHeader.setBackgroundColor(colorWithAlpha);
+
+            updateToolbarIconsStyle(alpha > 0.8f);
+        });
+    }
+
+    private void updateToolbarIconsStyle(boolean isCollapsed) {
+        int iconTint = ContextCompat.getColor(this, isCollapsed ? R.color.text_dark : R.color.white);
+        int bgRes = isCollapsed ? android.R.color.transparent : R.drawable.bg_circle_dark_translucent;
+
+        if (btnBack != null) {
+            btnBack.setBackgroundResource(bgRes);
+            btnBack.setImageTintList(android.content.res.ColorStateList.valueOf(iconTint));
+        }
+        if (btnShare != null) {
+            btnShare.setBackgroundResource(bgRes);
+            btnShare.setImageTintList(android.content.res.ColorStateList.valueOf(iconTint));
+        }
+        if (btnCartHeader != null) {
+            btnCartHeader.setBackgroundResource(bgRes);
+            int cartTint = isCollapsed ? ContextCompat.getColor(this, R.color.primary_default) : iconTint;
+            btnCartHeader.setImageTintList(android.content.res.ColorStateList.valueOf(cartTint));
+        }
+        if (btnWishlist != null) {
+            btnWishlist.setBackgroundResource(bgRes);
+            if (isCollapsed) {
+                updateWishlistIcon(); // Restore colored heart when collapsed
+            } else {
+                btnWishlist.setImageTintList(android.content.res.ColorStateList.valueOf(iconTint));
+            }
+        }
+    }
+
+    private void shareProduct() {
+        if (product == null) return;
+
+        String shareBody = "Hãy xem sản phẩm này trên HealthUp: " + product.getName() +
+                "\nGiá: " + tvPrice.getText();
+        Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
+        sharingIntent.setType("text/plain");
+        sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "HealthUp - " + product.getName());
+        sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
+        startActivity(Intent.createChooser(sharingIntent, "Chia sẻ sản phẩm"));
     }
 }

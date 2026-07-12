@@ -34,6 +34,7 @@
                 android:layout_width="80dp"
                 android:layout_height="80dp"
                 android:layout_alignParentStart="true"
+                android:layout_centerVertical="true"
                 android:clipChildren="false"
                 android:clipToPadding="false">
 
@@ -54,36 +55,45 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_toEndOf="@id/avatar_container"
+                android:layout_toStartOf="@id/btn_settings"
                 android:layout_centerVertical="true"
                 android:layout_marginStart="16dp"
+                android:layout_marginEnd="12dp"
                 android:orientation="vertical"
                 android:visibility="visible">
 
                 <Button
                     android:id="@+id/btn_dang_ky"
-                    android:layout_width="140dp"
-                    android:layout_height="36dp"
-                    android:background="@drawable/bg_badge_tier"
+                    android:layout_width="120dp"
+                    android:layout_height="34dp"
+                    android:background="@drawable/bg_button_rounded"
+                    app:backgroundTint="@color/green_button"
                     android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     android:text="Đăng ký"
                     android:textAllCaps="false"
                     android:textColor="@color/white"
                     android:textSize="14sp"
-                    android:textStyle="bold"
-                    app:backgroundTint="@color/green_button" />
+                    android:textStyle="bold" />
 
                 <Button
                     android:id="@+id/btn_dang_nhap"
-                    android:layout_width="140dp"
-                    android:layout_height="36dp"
+                    android:layout_width="120dp"
+                    android:layout_height="34dp"
                     android:layout_marginTop="8dp"
                     android:background="@drawable/bg_button_outline_green"
+                    app:backgroundTint="@null"
+                    android:minHeight="0dp"
+                    android:padding="0dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
                     android:text="Đăng nhập"
                     android:textAllCaps="false"
                     android:textColor="@color/green_button"
                     android:textSize="14sp"
-                    android:textStyle="bold"
-                    android:minHeight="0dp"/>
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Nhóm hiển thị khi ĐÃ đăng nhập -->
@@ -93,12 +103,10 @@
                 android:layout_height="wrap_content"
                 android:layout_toEndOf="@id/avatar_container"
                 android:layout_toStartOf="@id/btn_settings"
-                android:layout_alignTop="@id/avatar_container"
+                android:layout_centerVertical="true"
                 android:layout_marginStart="16dp"
                 android:layout_marginEnd="12dp"
                 android:gravity="start"
-                android:paddingTop="10dp"
-                android:minHeight="80dp"
                 android:orientation="vertical"
                 android:visibility="gone">
 

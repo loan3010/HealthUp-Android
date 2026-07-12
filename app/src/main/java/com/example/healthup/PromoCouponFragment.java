@@ -2,6 +2,9 @@ package com.example.healthup;
 
 import android.graphics.Color;
 import android.os.Bundle;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -37,7 +40,7 @@ public class PromoCouponFragment extends Fragment {
     private Button btnApply, btnConfirm;
     private RecyclerView rvVouchers, rvVouchersDiscount;
     private TextView tvTotalDiscount, tvShippingHeader, btnViewAllShipping, btnViewAllDiscount;
-    private TextView tvSelectedCountFooter, tvBestVoucherHeader;
+    private TextView tvSelectedCountFooter;
 
     private VoucherAdapter adapterShipping, adapterDiscount;
     private List<Voucher> shippingListFull = new ArrayList<>();
@@ -93,7 +96,6 @@ public class PromoCouponFragment extends Fragment {
         btnViewAllShipping = view.findViewById(R.id.btnViewAllShipping);
         btnViewAllDiscount = view.findViewById(R.id.btnViewAllDiscount);
         tvSelectedCountFooter = view.findViewById(R.id.tvSelectedCountFooter);
-        tvBestVoucherHeader = view.findViewById(R.id.tvBestVoucherHeader);
 
         btnBack.setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
         
@@ -391,7 +393,8 @@ public class PromoCouponFragment extends Fragment {
     private void updateTotalDiscount() {
         double itemSaving = 0, shipSaving = 0;
         int count = 0;
-        boolean hasShipVoucher = false;
+        Voucher selectedShipVoucher = null;
+        Voucher selectedDiscountVoucher = null;
         boolean hasIneligibleSelected = false;
 
         for (Voucher v : shippingListFull) {
@@ -399,7 +402,7 @@ public class PromoCouponFragment extends Fragment {
                 if (isVoucherEligible(v)) {
                     shipSaving += calculateSavingForTotal(v);
                     count++;
-                    hasShipVoucher = true;
+                    selectedShipVoucher = v;
                 } else {
                     hasIneligibleSelected = true;
                 }
@@ -410,6 +413,7 @@ public class PromoCouponFragment extends Fragment {
                 if (isVoucherEligible(v)) {
                     itemSaving += calculateSavingForTotal(v);
                     count++;
+                    selectedDiscountVoucher = v;
                 } else {
                     hasIneligibleSelected = true;
                 }
@@ -421,36 +425,43 @@ public class PromoCouponFragment extends Fragment {
         }
 
         if (count > 0) {
-            StringBuilder sb = new StringBuilder();
-            if (hasShipVoucher) {
-                // ✅ Theo yêu cầu: Nếu là giao tiêu chuẩn (<= 21k) thì chỉ hiện nhãn, không hiện số tiền ship
+            SpannableStringBuilder ssb = new SpannableStringBuilder();
+            
+            // Colors
+            int orangeRedColor = 0xFFFF4E00; 
+            int greenColor = 0xFF2E7D32; 
+            int goldColor = 0xFFFBC02D;
+
+            if (selectedShipVoucher != null) {
+                int start = ssb.length();
                 if (shippingFee <= 21000) { 
-                    sb.append("Đã áp dụng mã vận chuyển");
+                    ssb.append("Đã áp dụng mã vận chuyển");
                 } else {
-                    // ✅ Nếu giao nhanh (45k) thì mới hiện số tiền giảm ship thực tế
                     double finalShipDiscount = Math.min(shipSaving, shippingFee);
-                    sb.append("Giảm vận chuyển ").append(String.format(Locale.getDefault(), "%,.0fđ", finalShipDiscount).replace(",", "."));
+                    ssb.append("Giảm vận chuyển ").append(String.format(Locale.getDefault(), "%,.0fđ", finalShipDiscount).replace(",", "."));
                 }
+                
+                int colorToUse = "VIP".equalsIgnoreCase(selectedShipVoucher.getRequiredTier()) ? goldColor : orangeRedColor;
+                ssb.setSpan(new ForegroundColorSpan(colorToUse), start, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
 
-            if (itemSaving > 0) {
-                if (sb.length() > 0) sb.append(", ");
+            if (selectedDiscountVoucher != null) {
+                if (ssb.length() > 0) ssb.append(", ");
+                int start = ssb.length();
                 double finalItemDiscount = Math.min(itemSaving, orderTotal);
-                sb.append("Giảm sản phẩm ").append(String.format(Locale.getDefault(), "%,.0fđ", finalItemDiscount).replace(",", "."));
+                ssb.append("Giảm sản phẩm ").append(String.format(Locale.getDefault(), "%,.0fđ", finalItemDiscount).replace(",", "."));
+                
+                int colorToUse = "VIP".equalsIgnoreCase(selectedDiscountVoucher.getRequiredTier()) ? goldColor : greenColor;
+                ssb.setSpan(new ForegroundColorSpan(colorToUse), start, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
             
-            // ✅ ĐẢM BẢO HIỂN THỊ ĐÚNG CHUỖI
-            tvTotalDiscount.setText(sb.toString());
+            tvTotalDiscount.setText(ssb);
         } else {
             if (hasIneligibleSelected) {
                 tvTotalDiscount.setText("Đơn hàng chưa đủ điều kiện để áp mã, bạn cần mua thêm");
             } else {
                 tvTotalDiscount.setText("Tiết kiệm 0đ");
             }
-        }
-
-        if (tvBestVoucherHeader != null) {
-            tvBestVoucherHeader.setText(count > 0 ? String.format(Locale.getDefault(), "Chúng tôi đã chọn %d voucher tốt nhất giúp bạn tiết kiệm nhiều nhất.", count) : "Hãy chọn mã giảm giá phù hợp");
         }
     }
 

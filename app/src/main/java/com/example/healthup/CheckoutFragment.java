@@ -2,9 +2,15 @@ package com.example.healthup;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StrikethroughSpan;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -81,7 +87,7 @@ public class CheckoutFragment extends Fragment {
     private FirebaseFirestore db;
     private String userId;
 
-    private double shippingFee = 0;
+    private double shippingFee = 21000;
     private double shippingDiscount = 0;
 
     private TextView tvRecipientInfo, tvAddressDetail, tvVoucherInfo;
@@ -90,6 +96,8 @@ public class CheckoutFragment extends Fragment {
     private View rowAddress, rowVoucherNoSelect, layoutVoucherApplied;
     private TextView btnRemoveVoucher, btnViewAllVoucher;
     private View layoutShippingStandard, layoutShippingFast;
+    private TextView tvShippingStandardTitle, tvShippingStandardPrice, tvShippingStandardInfo;
+    private TextView tvShippingFastTitle, tvShippingFastPrice, tvShippingFastInfo;
     private RecyclerView rvCheckoutProducts;
     private Button btnPlaceOrder;
     private RadioGroup radioGroupPayment;
@@ -299,13 +307,17 @@ public class CheckoutFragment extends Fragment {
     }
 
     private double calculateSaving(Voucher v, double itemsTotal) {
+        return calculateSaving(v, itemsTotal, shippingFee);
+    }
+
+    private double calculateSaving(Voucher v, double itemsTotal, double currentShippingFee) {
         if (itemsTotal < v.getMinOrderAmount() || !isTierMatch(v)) return 0;
         double val = v.getDiscountAmount();
         String desc = (v.getDescription() != null) ? v.getDescription().toLowerCase() : "";
         if (v.getType() == Voucher.Type.SHIPPING) {
-            if (val == 100) return shippingFee;
-            if (desc.contains("giao nhanh") && shippingFee <= 25000) return 0;
-            return (val > 0 && val < 100) ? (val / 100.0) * shippingFee : val;
+            if (val == 100) return currentShippingFee;
+            if (desc.contains("giao nhanh") && currentShippingFee <= 25000) return 0;
+            return (val > 0 && val < 100) ? (val / 100.0) * currentShippingFee : val;
         } else {
             return (val > 0 && val <= 100) ? (val / 100.0) * itemsTotal : val;
         }
@@ -330,6 +342,14 @@ public class CheckoutFragment extends Fragment {
         layoutVoucherApplied = view.findViewById(R.id.layoutVoucherApplied);
         layoutShippingStandard = view.findViewById(R.id.layoutShippingStandard);
         layoutShippingFast = view.findViewById(R.id.layoutShippingFast);
+        
+        tvShippingStandardTitle = view.findViewById(R.id.tvShippingStandardTitle);
+        tvShippingStandardPrice = view.findViewById(R.id.tvShippingStandardPrice);
+        tvShippingStandardInfo = view.findViewById(R.id.tvShippingStandardInfo);
+        tvShippingFastTitle = view.findViewById(R.id.tvShippingFastTitle);
+        tvShippingFastPrice = view.findViewById(R.id.tvShippingFastPrice);
+        tvShippingFastInfo = view.findViewById(R.id.tvShippingFastInfo);
+
         rvCheckoutProducts = view.findViewById(R.id.rvCheckoutProducts);
         btnPlaceOrder = view.findViewById(R.id.btnPlaceOrder);
         radioGroupPayment = view.findViewById(R.id.radioGroupPayment);
@@ -339,6 +359,35 @@ public class CheckoutFragment extends Fragment {
         ivShopNoteArrow = view.findViewById(R.id.ivShopNoteArrow);
         etShopNote = view.findViewById(R.id.etShopNote);
         rvCheckoutProducts.setLayoutManager(new LinearLayoutManager(getContext()));
+
+        applyFooterWindowInsets(view);
+        setupDeliveryDates();
+    }
+
+    private void applyFooterWindowInsets(View view) {
+        View footer = view.findViewById(R.id.footer);
+        if (footer == null) return;
+        ViewCompat.setOnApplyWindowInsetsListener(footer, (v, windowInsets) -> {
+            Insets systemBars = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), v.getPaddingTop(), v.getPaddingRight(), systemBars.bottom);
+            return windowInsets;
+        });
+    }
+
+    private void setupDeliveryDates() {
+        if (tvShippingStandardInfo == null) return;
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("d 'Tháng' M", new Locale("vi", "VN"));
+        
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, 2);
+        String start = sdf.format(calendar.getTime());
+        
+        // Cần reset lại calendar về ngày hiện tại rồi mới cộng 5 để chính xác là 5 ngày từ ngày đặt hàng
+        calendar = java.util.Calendar.getInstance(); 
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, 5);
+        String end = sdf.format(calendar.getTime());
+        
+        tvShippingStandardInfo.setText("Đảm bảo nhận hàng từ " + start + " -\n" + end);
     }
 
     private void setupListeners() {
@@ -352,7 +401,7 @@ public class CheckoutFragment extends Fragment {
             calculateSummary();
         });
         rowShopNote.setOnClickListener(v -> toggleShopNote());
-        layoutShippingStandard.setOnClickListener(v -> { shippingFee = 0; updateShippingSelection(); });
+        layoutShippingStandard.setOnClickListener(v -> { shippingFee = 21000; updateShippingSelection(); });
         layoutShippingFast.setOnClickListener(v -> { shippingFee = 45000; updateShippingSelection(); });
         btnPlaceOrder.setOnClickListener(v -> placeOrder());
 
@@ -485,12 +534,73 @@ public class CheckoutFragment extends Fragment {
     }
 
     private void updateShippingSelection() {
-        boolean isStandard = (shippingFee <= 0);
+        boolean isStandard = (shippingFee <= 21000);
         layoutShippingStandard.setBackgroundResource(isStandard ? R.drawable.bg_shipping_selected : R.drawable.bg_shipping_unselected);
         layoutShippingFast.setBackgroundResource(isStandard ? R.drawable.bg_shipping_unselected : R.drawable.bg_shipping_selected);
+
+        int greenColor = Color.parseColor("#36873A");
+        int darkColor = getResources().getColor(R.color.text_dark);
+
+        tvShippingStandardTitle.setTextColor(isStandard ? greenColor : darkColor);
+        tvShippingStandardTitle.setTypeface(null, isStandard ? Typeface.BOLD : Typeface.NORMAL);
+
+        tvShippingFastTitle.setTextColor(!isStandard ? greenColor : darkColor);
+        tvShippingFastTitle.setTypeface(null, !isStandard ? Typeface.BOLD : Typeface.NORMAL);
+
         if (!isManualSelection) performAutoSelection();
         renderVouchers();
         calculateSummary();
+        updateShippingDisplayPrices();
+    }
+
+    private void updateShippingDisplayPrices() {
+        double itemsTotal = getItemsTotal();
+        
+        // Tính toán cho Giao tiêu chuẩn (21.000)
+        double stdFee = 21000;
+        double stdSaving = 0;
+        for (Voucher v : selectedVouchers) {
+            if (v.getType() == Voucher.Type.SHIPPING) stdSaving += calculateSaving(v, itemsTotal, stdFee);
+        }
+        stdSaving = Math.min(stdSaving, stdFee);
+        formatShippingPriceText(tvShippingStandardPrice, stdFee, stdSaving, shippingFee <= 21000);
+
+        // Tính toán cho Giao nhanh (45.000)
+        double fastFee = 45000;
+        double fastSaving = 0;
+        for (Voucher v : selectedVouchers) {
+            if (v.getType() == Voucher.Type.SHIPPING) fastSaving += calculateSaving(v, itemsTotal, fastFee);
+        }
+        fastSaving = Math.min(fastSaving, fastFee);
+        formatShippingPriceText(tvShippingFastPrice, fastFee, fastSaving, shippingFee > 25000);
+    }
+
+    private void formatShippingPriceText(TextView textView, double originalFee, double saving, boolean isSelected) {
+        int greenColor = Color.parseColor("#36873A");
+        int darkColor = getResources().getColor(R.color.text_dark);
+        int grayColor = getResources().getColor(R.color.text_gray);
+
+        if (saving <= 0) {
+            textView.setText(formatVnd(originalFee));
+            textView.setTextColor(isSelected ? greenColor : darkColor);
+            textView.setTypeface(null, isSelected ? Typeface.BOLD : Typeface.NORMAL);
+            return;
+        }
+
+        String originalStr = formatVnd(originalFee);
+        String discountedStr = (originalFee - saving <= 0) ? "Miễn Phí" : formatVnd(originalFee - saving);
+        String combined = originalStr + " " + discountedStr;
+
+        SpannableString spannable = new SpannableString(combined);
+        // Gạch ngang giá gốc
+        spannable.setSpan(new StrikethroughSpan(), 0, originalStr.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        spannable.setSpan(new ForegroundColorSpan(grayColor), 0, originalStr.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        // Màu cho giá mới
+        spannable.setSpan(new ForegroundColorSpan(greenColor), originalStr.length() + 1, combined.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        
+        textView.setText(spannable);
+        textView.setTypeface(null, isSelected ? Typeface.BOLD : Typeface.NORMAL);
     }
 
     private void openVoucherList() {
@@ -580,6 +690,7 @@ public class CheckoutFragment extends Fragment {
         tvVoucherDiscount.setText("-" + formatVnd(finalItemDiscount));
         tvGrandTotal.setText(formatVnd(grandTotal));
         tvFooterTotal.setText(formatVnd(grandTotal));
+        updateShippingDisplayPrices();
     }
 
     private void openAddressBook() {

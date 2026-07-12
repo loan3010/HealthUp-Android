@@ -114,11 +114,11 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
         // Customize based on Type
         switch (voucher.getType()) {
             case SHIPPING:
-                holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFF5F5")));
+                holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFF2F0")));
                 holder.imgType.setImageResource(R.drawable.ic_order_shipping);
-                holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FF5252")));
+                holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FF4E00")));
                 holder.tvTypeText.setText("FREESHIP");
-                holder.tvTypeText.setTextColor(Color.parseColor("#FF5252"));
+                holder.tvTypeText.setTextColor(Color.parseColor("#FF4E00"));
                 break;
             case CASHBACK:
                 holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#F0F7FF")));
@@ -128,20 +128,20 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
                 holder.tvTypeText.setTextColor(Color.parseColor("#2E7DFF"));
                 break;
             case DISCOUNT:
-                holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#F5FDF9")));
+                holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#E8F5E9")));
                 holder.imgType.setImageResource(R.drawable.ic_favorite);
-                holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#36873A")));
+                holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#2E7D32")));
                 holder.tvTypeText.setText("DISCOUNT");
-                holder.tvTypeText.setTextColor(Color.parseColor("#36873A"));
+                holder.tvTypeText.setTextColor(Color.parseColor("#2E7D32"));
                 break;
         }
         
         // Hiển thị nhãn VIP nếu là voucher dành riêng cho VIP
         if ("VIP".equalsIgnoreCase(voucher.getRequiredTier())) {
             holder.tvTypeText.setText("VIP ONLY");
-            holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFF8E1")));
-            holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#D89216")));
-            holder.tvTypeText.setTextColor(Color.parseColor("#D89216"));
+            holder.layoutIcon.setBackgroundTintList(ColorStateList.valueOf(Color.parseColor("#FFFDE7")));
+            holder.imgType.setImageTintList(ColorStateList.valueOf(Color.parseColor("#FBC02D")));
+            holder.tvTypeText.setTextColor(Color.parseColor("#FBC02D"));
         }
 
         holder.itemView.setOnClickListener(v -> {
