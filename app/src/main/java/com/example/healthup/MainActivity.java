@@ -572,6 +572,13 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public void showProfileTab() {
+        if (navView != null) {
+            navView.setSelectedItemId(R.id.nav_profile);
+            loadFragment(new ProfileFragment());
+        }
+    }
+
     @SuppressWarnings("unchecked")
     private List<CartItem> readCheckoutItems(Intent intent) {
         if (intent == null) {

@@ -756,4 +756,22 @@
     <string name="loyalty_btn_catalogue">Xem catalogue đổi điểm</string>
     <string name="loyalty_vip_achieved">Bạn đã đạt hạng VIP!</string>
     <string name="loyalty_rank_vip_label">VIP — hạng hiện tại</string>
+    <string-array name="card_types">
+        <item>Visa</item>
+        <item>Mastercard</item>
+        <item>JCB</item>
+    </string-array>
+
+    <string-array name="vietnam_banks">
+        <item>Vietcombank</item>
+        <item>MB Bank</item>
+        <item>Techcombank</item>
+        <item>BIDV</item>
+        <item>Agribank</item>
+        <item>ACB</item>
+        <item>VPBank</item>
+        <item>VIB</item>
+        <item>Sacombank</item>
+        <item>TPBank</item>
+    </string-array>
 </resources>

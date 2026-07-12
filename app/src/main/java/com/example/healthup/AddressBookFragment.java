@@ -22,7 +22,6 @@ import com.example.models.Address;
 import com.example.healthup.util.GuestLoginRequiredHelper;
 import com.example.healthup.util.GuestRecommendationsHelper;
 import com.example.healthup.util.UtilityHeaderHelper;
-import com.example.healthup.util.UtilityHeaderHelper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -63,8 +62,14 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
         db = FirebaseFirestore.getInstance();
         String currentAuthId = FirebaseAuth.getInstance().getUid();
-        
+
+        View btnBack = view.findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> navigateBack());
+        }
+
         if (currentAuthId == null) {
+            addressList.clear();
             setupGuestMode(view);
         } else {
             userId = currentAuthId;
@@ -98,6 +103,16 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
 
         GuestLoginRequiredHelper.bind(view, this);
         GuestRecommendationsHelper.bind(view, this);
+    }
+
+    private void navigateBack() {
+        if (!isAdded()) return;
+        boolean moved = getParentFragmentManager().popBackStackImmediate();
+        if (!moved) {
+            if (getActivity() instanceof MainActivity) {
+                ((MainActivity) getActivity()).showProfileTab();
+            }
+        }
     }
 
 

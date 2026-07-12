@@ -93,6 +93,7 @@ public class AddressManagementFragment extends Fragment implements AddressAdapte
 
     private void loadAddressesFromFirestore() {
         if (userId == null) {
+            addressList.clear(); // ✅ Clear old data when not logged in
             renderList();
             return;
         }

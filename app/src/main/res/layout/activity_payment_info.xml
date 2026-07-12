@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/neutral_cream">
@@ -27,7 +26,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_centerInParent="true"
-            android:text="Thông tin thanh toán"
+            android:text="Tài khoản thanh toán"
             android:textColor="@color/neutral_black"
             android:textStyle="bold" />
     </RelativeLayout>
@@ -45,50 +44,13 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
-            <!-- Empty State Section -->
-            <LinearLayout
-                android:id="@+id/layoutEmpty"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center"
-                android:orientation="vertical"
-                android:padding="32dp"
-                android:visibility="gone">
-
-                <ImageView
-                    android:layout_width="100dp"
-                    android:layout_height="100dp"
-                    android:background="@drawable/bg_rounded_white"
-                    android:padding="20dp"
-                    android:src="@drawable/ic_wallet"
-                    app:tint="@color/primary_default" />
-
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="24dp"
-                    android:text="Chưa có phương thức thanh toán"
-                    android:textColor="@color/neutral_black"
-                    android:textStyle="bold" />
-
-                <TextView
-                    style="@style/TextAppearance.HealthUp.SubContent"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
-                    android:gravity="center"
-                    android:text="Bạn chưa liên kết phương thức thanh toán nào. Vui lòng thêm để trải nghiệm dịch vụ tiện lợi hơn."
-                    android:textColor="@color/neutral_dark_grey" />
-            </LinearLayout>
-
             <!-- Linked Methods Section -->
             <LinearLayout
                 android:id="@+id/layoutLinked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:visibility="visible">
+                android:visibility="gone">
 
                 <TextView
                     style="@style/TextAppearance.HealthUp.SubContent.Bold"
@@ -98,158 +60,39 @@
                     android:layout_marginTop="20dp"
                     android:text="Phương thức đã liên kết" />
 
-                <androidx.cardview.widget.CardView
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvLinkedMethods"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="20dp"
                     android:layout_marginTop="12dp"
-                    app:cardCornerRadius="12dp"
-                    app:cardElevation="0dp">
+                    android:nestedScrollingEnabled="false" />
+            </LinearLayout>
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:orientation="vertical">
+            <!-- Empty State Section -->
+            <LinearLayout
+                android:id="@+id/layoutEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp"
+                android:visibility="visible">
 
-                        <!-- ZaloPay Linked -->
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="16dp">
+                <ImageView
+                    android:layout_width="80dp"
+                    android:layout_height="80dp"
+                    android:src="@drawable/ic_payment_wallet"
+                    app:tint="@color/text_gray_light" />
 
-                            <ImageView
-                                android:id="@+id/ivZalo"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:src="@drawable/ic_zalopay" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_centerVertical="true"
-                                android:layout_marginStart="16dp"
-                                android:layout_toEndOf="@id/ivZalo"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Ví ZaloPay" />
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.CaptionLabel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="09xx xxx 567" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:src="@drawable/ic_arrow_right"
-                                app:tint="@color/neutral_black" />
-                        </RelativeLayout>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginHorizontal="16dp"
-                            android:background="@color/neutral_light_grey" />
-
-                        <!-- MoMo Linked -->
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:id="@+id/ivMoMo"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:src="@drawable/ic_momo" />
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_centerVertical="true"
-                                android:layout_marginStart="16dp"
-                                android:layout_toEndOf="@id/ivMoMo"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Ví MoMo" />
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.CaptionLabel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="09xx xxx 567" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:src="@drawable/ic_arrow_right"
-                                app:tint="@color/neutral_black" />
-                        </RelativeLayout>
-
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginHorizontal="16dp"
-                            android:background="@color/neutral_light_grey" />
-
-                        <!-- VNPAY Linked -->
-                        <RelativeLayout
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:padding="16dp">
-
-                            <ImageView
-                                android:id="@+id/ivVnpay"
-                                android:layout_width="40dp"
-                                android:layout_height="40dp"
-                                android:src="@drawable/ic_app_logo" /> <!-- Assuming an icon or use placeholder -->
-
-                            <LinearLayout
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_centerVertical="true"
-                                android:layout_marginStart="16dp"
-                                android:layout_toEndOf="@id/ivVnpay"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Ví VNPAY" />
-
-                                <TextView
-                                    style="@style/TextAppearance.HealthUp.CaptionLabel"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Đã liên kết" />
-                            </LinearLayout>
-
-                            <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
-                                android:layout_alignParentEnd="true"
-                                android:layout_centerVertical="true"
-                                android:src="@drawable/ic_arrow_right"
-                                app:tint="@color/neutral_black" />
-                        </RelativeLayout>
-                    </LinearLayout>
-                </androidx.cardview.widget.CardView>
+                <TextView
+                    style="@style/TextAppearance.HealthUp.SubContent"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="Chưa có tài khoản liên kết"
+                    android:textColor="@color/neutral_black"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- Add New Methods Section -->
@@ -261,183 +104,69 @@
                 android:layout_marginTop="24dp"
                 android:text="Thêm phương thức mới" />
 
-            <!-- ZaloPay Add -->
+            <!-- ZaloPay -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardAddZalo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/ivZaloAdd"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_zalopay" />
-
-                    <TextView
-                        style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp"
-                        android:layout_toEndOf="@id/ivZaloAdd"
-                        android:text="Ví ZaloPay" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/badge_outline"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:text="Liên kết"
-                        android:textColor="@color/primary_default"
-                        android:textSize="12sp" />
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivZAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_zalopay" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivZAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Ví ZaloPay" />
+                    <TextView android:id="@+id/btnLinkZalo" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- MoMo Add -->
+            <!-- MoMo -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardAddMoMo"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/ivMoMoAdd"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_momo" />
-
-                    <TextView
-                        style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp"
-                        android:layout_toEndOf="@id/ivMoMoAdd"
-                        android:text="Ví MoMo" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/badge_outline"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:text="Liên kết"
-                        android:textColor="@color/primary_default"
-                        android:textSize="12sp" />
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivMAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_momo" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivMAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Ví MoMo" />
+                    <TextView android:id="@+id/btnLinkMoMo" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- Bank Add -->
+            <!-- VNPay -->
             <androidx.cardview.widget.CardView
-                android:id="@+id/cardAddBank"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/ivBankAdd"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:background="@drawable/bg_circle_green"
-                        android:backgroundTint="@color/neutral_cream"
-                        android:padding="8dp"
-                        android:src="@drawable/ic_bank"
-                        app:tint="@color/neutral_dark_grey" />
-
-                    <TextView
-                        style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp"
-                        android:layout_toEndOf="@id/ivBankAdd"
-                        android:text="Tài khoản ngân hàng" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/badge_outline"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:text="Liên kết"
-                        android:textColor="@color/primary_default"
-                        android:textSize="12sp" />
+                android:id="@+id/cardAddVnpay"
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivVAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_payment_wallet" app:tint="#005BAA" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivVAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="VNPay QR" />
+                    <TextView android:id="@+id/btnLinkVnpay" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
-            <!-- ATM/Credit Add -->
+            <!-- ATM -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardAddAtm"
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivAAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_bank" app:tint="@color/text_gray" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivAAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Thẻ ATM nội địa" />
+                    <TextView android:id="@+id/btnLinkAtm" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Linked Bank Account -->
+            <androidx.cardview.widget.CardView
+                android:id="@+id/cardAddLinkedBank"
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivLBAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_bank" app:tint="@color/green_button" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivLBAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Tài khoản ngân hàng liên kết" />
+                    <TextView android:id="@+id/btnLinkBank" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                </RelativeLayout>
+            </androidx.cardview.widget.CardView>
+
+            <!-- Credit Card -->
             <androidx.cardview.widget.CardView
                 android:id="@+id/cardAddCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="20dp"
-                android:layout_marginTop="12dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:padding="16dp">
-
-                    <ImageView
-                        android:id="@+id/ivCardAdd"
-                        android:layout_width="40dp"
-                        android:layout_height="40dp"
-                        android:src="@drawable/ic_payment_card" />
-
-                    <TextView
-                        style="@style/TextAppearance.HealthUp.SubContent.Bold"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_marginStart="16dp"
-                        android:layout_toEndOf="@id/ivCardAdd"
-                        android:text="Thẻ ATM/Tín dụng" />
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"
-                        android:background="@drawable/badge_outline"
-                        android:paddingHorizontal="12dp"
-                        android:paddingVertical="6dp"
-                        android:text="Thêm"
-                        android:textColor="@color/primary_default"
-                        android:textSize="12sp" />
+                style="@style/PaymentAddCardStyle">
+                <RelativeLayout style="@style/PaymentAddInnerStyle">
+                    <ImageView android:id="@+id/ivCAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_payment_card" />
+                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivCAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Thẻ tín dụng / Ghi nợ" />
+                    <TextView android:id="@+id/btnLinkCard" style="@style/PaymentLinkButtonStyle" android:text="Thêm" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 

@@ -542,8 +542,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         Boolean dbSelected = doc.getBoolean("selected");
                         item.setSelected(dbSelected != null ? dbSelected : false);
                     } else {
-                        // ✅ MẶC ĐỊNH CHỌN HẾT KHI LOAD
-                        item.setSelected(true);
+                        // ✅ GIỮ LẠI TRẠNG THÁI CHỌN NẾU ĐÃ CÓ TRONG BỘ NHỚ (Khi back từ Checkout)
+                        // Nếu là lần đầu vào giỏ hàng (selection trống) thì mới mặc định chọn hết
+                        if (selection.containsKey(item.getId())) {
+                            item.setSelected(selection.get(item.getId()));
+                        } else {
+                            item.setSelected(true);
+                        }
                     }
                     loadedItems.add(item);
                 }
@@ -564,15 +569,20 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         cartItems.clear();
         cartItems.addAll(loadedItems);
         
-        // ✅ Cập nhật trạng thái checkbox "Tất cả" và đồng bộ UI
+        // ✅ Cập nhật trạng thái checkbox "Tất cả" dựa trên thực tế
+        boolean allSelected = !cartItems.isEmpty();
+        for (CartItem i : cartItems) {
+            if (!i.isSelected()) { allSelected = false; break; }
+        }
+
         if (cbSelectAll != null) {
             cbSelectAll.setOnCheckedChangeListener(null);
-            cbSelectAll.setChecked(true);
+            cbSelectAll.setChecked(allSelected);
             attachSelectAllListener(cbSelectAll);
         }
         if (cbSelectAllEdit != null) {
             cbSelectAllEdit.setOnCheckedChangeListener(null);
-            cbSelectAllEdit.setChecked(true);
+            cbSelectAllEdit.setChecked(allSelected);
             attachSelectAllListener(cbSelectAllEdit);
         }
 
