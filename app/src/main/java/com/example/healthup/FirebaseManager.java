@@ -2,7 +2,8 @@ package com.example.healthup;
 
 import android.net.Uri;
 import android.util.Log;
-import com.example.models.Address;
+import com.example.healthup.admin.AdminRepository;
+import com.example.healthup.util.StockManager;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.Product;
@@ -268,28 +269,46 @@ public class FirebaseManager {
                 return Tasks.forException(new Exception("Chỉ hủy được đơn đang chờ xác nhận"));
             }
 
-            String orderOwnerId = doc.getString("userId");
-            if (orderOwnerId == null || orderOwnerId.isEmpty()) {
-                orderOwnerId = doc.getString("buyerId");
-            }
-            if (orderOwnerId == null || orderOwnerId.isEmpty()) {
-                orderOwnerId = uid;
-            }
+            String userIdField = doc.getString("userId");
+            String buyerIdField = doc.getString("buyerId");
+            final String orderOwnerId = (userIdField != null && !userIdField.isEmpty())
+                    ? userIdField
+                    : ((buyerIdField != null && !buyerIdField.isEmpty()) ? buyerIdField : uid);
 
             String displayCode = (orderCode != null && !orderCode.isEmpty())
                     ? orderCode
                     : (doc.getString("orderCode") != null ? doc.getString("orderCode") : orderId);
 
-            com.google.firebase.firestore.WriteBatch batch = db.batch();
+            Order parsedOrder = AdminRepository.parseOrderDocument(doc);
+            boolean restoreStock = parsedOrder != null
+                    && parsedOrder.isStockDeducted()
+                    && !parsedOrder.isStockRestored()
+                    && parsedOrder.getItems() != null
+                    && !parsedOrder.getItems().isEmpty();
 
-            Map<String, Object> updates = new HashMap<>();
-            updates.put("status", Order.STATUS_CANCELLED);
-            updates.put("cancelRequested", false);
-            updates.put("cancelReason", reason != null ? reason : "");
-            updates.put("cancelSource", Order.CANCEL_SOURCE_CUSTOMER);
-            updates.put("cancelledAt", Timestamp.now());
-            updates.put("updatedAt", Timestamp.now());
-            batch.update(db.collection("orders").document(orderId), updates);
+            Task<Void> stockTask = restoreStock
+                    ? StockManager.restoreStockTask(db, parsedOrder.getItems())
+                    : Tasks.forResult(null);
+
+            return stockTask.continueWithTask(stockResult -> {
+                if (!stockResult.isSuccessful()) {
+                    Exception error = stockResult.getException();
+                    return Tasks.forException(error != null ? error : new Exception("Không thể hoàn kho"));
+                }
+
+                com.google.firebase.firestore.WriteBatch batch = db.batch();
+
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("status", Order.STATUS_CANCELLED);
+                updates.put("cancelRequested", false);
+                updates.put("cancelReason", reason != null ? reason : "");
+                updates.put("cancelSource", Order.CANCEL_SOURCE_CUSTOMER);
+                updates.put("cancelledAt", Timestamp.now());
+                updates.put("updatedAt", Timestamp.now());
+                if (restoreStock) {
+                    updates.put("stockRestored", true);
+                }
+                batch.update(db.collection("orders").document(orderId), updates);
 
             if (amount > 0) {
                 batch.update(db.collection("users").document(orderOwnerId),
@@ -335,9 +354,10 @@ public class FirebaseManager {
             notification.put("reason", reason != null ? reason : "");
             notification.put("read", false);
             notification.put("createdAt", Timestamp.now());
-            batch.set(db.collection("admin_notifications").document(), notification);
+                batch.set(db.collection("admin_notifications").document(), notification);
 
-            return batch.commit();
+                return batch.commit();
+            });
         });
     }
 

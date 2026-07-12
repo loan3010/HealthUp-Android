@@ -141,7 +141,7 @@ public class ChatBotEngine {
         // 7) Fallback -> offer human handoff
         out.add(bot("Xin lỗi, mình chưa hiểu rõ câu hỏi của bạn. "
                 + "Bạn có thể chọn một chủ đề gợi ý, hoặc để mình kết nối với nhân viên để được hỗ trợ trực tiếp nhé."));
-        return new BotResponse(Intent.FALLBACK, out, false, true, true);
+        return new BotResponse(Intent.FALLBACK, out, false, true);
     }
 
     /** Bot greeting shown when the thread is opened. */

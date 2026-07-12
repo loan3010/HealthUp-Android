@@ -2,7 +2,7 @@
   "hero": {
     "title": "HealthUp – Cung cấp thực phẩm cho lối sống lành mạnh",
     "description": "Khơi nguồn năng lượng tự nhiên từ những hạt mầm và trái cây tinh khiết nhất.",
-    "image": "hero_banner.jpg"
+    "image": "images/about-the-brand/hero_banner.png"
   },
   "story": {
     "title": "Câu chuyện thương hiệu",
@@ -64,9 +64,9 @@
     ]
   },
   "gallery": [
-    "gallery_1.jpg",
-    "gallery_2.jpg",
-    "gallery_3.jpg",
-    "gallery_4.jpg"
+    "images/about-the-brand/gallery_1.png",
+    "images/about-the-brand/gallery_2.png",
+    "images/about-the-brand/gallery_3.png",
+    "images/about-the-brand/gallery_4.png"
   ]
 }

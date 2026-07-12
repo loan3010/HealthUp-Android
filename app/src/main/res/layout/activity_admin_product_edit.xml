@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -37,6 +38,21 @@
                     android:id="@+id/etProductName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/admin_product_code">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProductCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:enabled="false"
+                    android:focusable="false"
+                    android:text="@string/admin_product_code_pending" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -82,6 +98,32 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
+                android:text="@string/admin_product_stats_title"
+                android:textColor="@color/text_dark"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvProductSoldReadonly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                tools:text="Đã bán: 120" />
+
+            <TextView
+                android:id="@+id/tvProductRatingReadonly"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textColor="@color/text_secondary"
+                android:textSize="14sp"
+                tools:text="Đánh giá: 4.8 ★ (12)" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
                 android:text="@string/admin_product_category"
                 android:textColor="@color/text_dark"
                 android:textStyle="bold" />
@@ -101,19 +143,21 @@
                 android:textStyle="bold" />
 
             <androidx.cardview.widget.CardView
+                android:id="@+id/cardProductPreview"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="8dp"
+                android:visibility="gone"
                 app:cardCornerRadius="12dp"
-                app:cardElevation="0dp">
+                app:cardElevation="0dp"
+                tools:visibility="visible">
 
                 <ImageView
                     android:id="@+id/imgProductPreview"
                     android:layout_width="match_parent"
                     android:layout_height="180dp"
                     android:background="@color/neutral_light_grey"
-                    android:scaleType="centerCrop"
-                    android:src="@color/neutral_light_grey" />
+                    android:scaleType="centerCrop" />
             </androidx.cardview.widget.CardView>
 
             <com.google.android.material.button.MaterialButton
@@ -167,6 +211,62 @@
                     android:minLines="4" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/admin_product_ingredients">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProductIngredients"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:minLines="3" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/admin_product_nutrition">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProductNutrition"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:minLines="3" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/admin_product_usage">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProductUsage"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:minLines="3" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <com.google.android.material.textfield.TextInputLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:hint="@string/admin_product_origin">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etProductOrigin"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="top"
+                    android:minLines="2" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -184,8 +284,7 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etVariantFlavors"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Dâu, Nho" />
+                    android:layout_height="wrap_content" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
@@ -197,8 +296,7 @@
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etVariantSizes"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="200g, 500g" />
+                    android:layout_height="wrap_content" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.button.MaterialButton

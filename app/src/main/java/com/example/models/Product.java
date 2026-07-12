@@ -14,6 +14,7 @@ import java.util.Map;
 
 public class Product implements Serializable {
     private String id;
+    private String productCode;
     private String name;
     private String description;
     private String shortDesc;
@@ -37,6 +38,7 @@ public class Product implements Serializable {
     
     private String ingredients;
     private List<NutritionItem> nutrition;
+    private String nutritionText;
     private String usage;
     private String origin;
 
@@ -71,6 +73,9 @@ public class Product implements Serializable {
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getProductCode() { return productCode; }
+    public void setProductCode(String productCode) { this.productCode = productCode; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -304,6 +309,37 @@ public class Product implements Serializable {
     public void setIngredients(String ingredients) { this.ingredients = ingredients; }
     public List<NutritionItem> getNutrition() { return nutrition; }
     public void setNutrition(List<NutritionItem> nutrition) { this.nutrition = nutrition; }
+    public String getNutritionText() { return nutritionText; }
+    public void setNutritionText(String nutritionText) { this.nutritionText = nutritionText; }
+
+    /** Text for product detail: prefers admin nutritionText, else formats structured list. */
+    @Nullable
+    public String getDisplayNutrition() {
+        if (nutritionText != null && !nutritionText.trim().isEmpty()) {
+            return nutritionText.trim();
+        }
+        if (nutrition == null || nutrition.isEmpty()) {
+            return null;
+        }
+        StringBuilder builder = new StringBuilder();
+        for (NutritionItem item : nutrition) {
+            if (item == null || item.getName() == null || item.getName().trim().isEmpty()) {
+                continue;
+            }
+            if (builder.length() > 0) {
+                builder.append('\n');
+            }
+            builder.append("• ").append(item.getName().trim());
+            if (item.getValue() != null && !item.getValue().trim().isEmpty()) {
+                builder.append(": ").append(item.getValue().trim());
+            }
+            if (item.getPercent() > 0) {
+                builder.append(" (").append(item.getPercent()).append("%)");
+            }
+        }
+        return builder.length() > 0 ? builder.toString() : null;
+    }
+
     public String getUsage() { return usage; }
     public void setUsage(String usage) { this.usage = usage; }
     public String getOrigin() { return origin; }

@@ -13,6 +13,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.ReviewStatsHelper;
 import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.example.models.Product;
@@ -25,6 +26,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     private boolean isHorizontal;
     private OnProductClickListener listener;
     private boolean selectionMode = false;
+    private boolean wishlistDisabled = false;
 
     public interface OnProductClickListener {
         void onProductClick(Product product);
@@ -70,6 +72,11 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         notifyDataSetChanged();
     }
 
+    public void setWishlistDisabled(boolean disabled) {
+        this.wishlistDisabled = disabled;
+        notifyDataSetChanged();
+    }
+
     private static class ProductDiffCallback extends DiffUtil.Callback {
         private final List<Product> oldList;
         private final List<Product> newList;
@@ -108,7 +115,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     @Override
     public void onBindViewHolder(@NonNull ProductViewHolder holder, int position) {
         Product product = products.get(position);
-        holder.bind(product, listener, selectionMode, isHorizontal);
+        holder.bind(product, listener, selectionMode, isHorizontal, wishlistDisabled);
     }
 
     @Override
@@ -137,7 +144,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             cbSelect = itemView.findViewById(R.id.cbSelect);
         }
 
-        public void bind(Product product, OnProductClickListener listener, boolean selectionMode, boolean isHorizontal) {
+        public void bind(Product product, OnProductClickListener listener, boolean selectionMode,
+                         boolean isHorizontal, boolean wishlistDisabled) {
             tvName.setText(product.getName());
 
             // Tự động dịch tên sản phẩm nếu đang ở chế độ Tiếng Anh
@@ -180,7 +188,9 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 tvOriginalPrice.setVisibility(View.GONE);
             }
 
-            if (tvRating != null) tvRating.setText(String.valueOf(product.getRating()));
+            if (tvRating != null) {
+                tvRating.setText(ReviewStatsHelper.formatCardRating(product));
+            }
             if (tvSoldCount != null) tvSoldCount.setText("đã bán " + product.getSoldCount());
 
             if (product.isNew()) {
@@ -210,7 +220,12 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 cbSelect.setVisibility(View.GONE);
                 btnWishlist.setVisibility(View.VISIBLE);
                 btnAdd.setVisibility(View.VISIBLE);
-                updateWishlistIcon(btnWishlist, product);
+                if (wishlistDisabled) {
+                    product.setFavorite(false);
+                    updateWishlistIcon(btnWishlist, product, true);
+                } else {
+                    updateWishlistIcon(btnWishlist, product, false);
+                }
             }
 
             if (listener != null) {
@@ -222,12 +237,14 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 // thuộc vào network hay callback bất đồng bộ.
                 btnWishlist.setOnClickListener(v -> {
                     listener.onFavoriteClick(product);
-                    updateWishlistIcon(btnWishlist, product);
+                    if (!wishlistDisabled) {
+                        updateWishlistIcon(btnWishlist, product, false);
+                    }
                 });
             } else {
                 btnWishlist.setOnClickListener(v -> {
                     product.setFavorite(!product.isFavorite());
-                    updateWishlistIcon(btnWishlist, product);
+                    updateWishlistIcon(btnWishlist, product, false);
                     // FIX (bug #3): dùng string resource thay vì chuỗi tiếng Việt cứng.
                     Toast.makeText(itemView.getContext(),
                             product.isFavorite()
@@ -238,12 +255,14 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             }
         }
 
-        private void updateWishlistIcon(ImageView btnWishlist, Product product) {
-            boolean isFavorite = product.isFavorite();
+        private void updateWishlistIcon(ImageView btnWishlist, Product product, boolean disabled) {
+            boolean isFavorite = !disabled && product.isFavorite();
             btnWishlist.setImageResource(isFavorite ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
             int tintColor = ContextCompat.getColor(itemView.getContext(),
-                    isFavorite ? R.color.error : R.color.primary_default);
+                    disabled ? R.color.text_gray
+                            : (isFavorite ? R.color.error : R.color.primary_default));
             btnWishlist.setImageTintList(ColorStateList.valueOf(tintColor));
+            btnWishlist.setAlpha(disabled ? 0.55f : 1f);
         }
     }
 }

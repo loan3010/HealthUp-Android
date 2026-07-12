@@ -18,7 +18,9 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.ReviewStatsHelper;
 import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -217,6 +219,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvFeaturedProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvFeaturedProducts.setAdapter(featuredProductAdapter);
 
+        applyGuestWishlistUi();
+
         rvBlogs = view.findViewById(R.id.rvBlogs);
         blogAdapter = new BlogAdapter(blogList, this, true);
         rvBlogs.setLayoutManager(new LinearLayoutManager(getContext(), RecyclerView.HORIZONTAL, false));
@@ -312,6 +316,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
                     RecyclerView rvSearch = view.findViewById(R.id.rvRealtimeSearch);
                     ProductAdapter searchAdapter = new ProductAdapter(searchResults, HomeFragment.this);
+                    GuestWishlistUiHelper.applyTo(searchAdapter);
                     rvSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
                     rvSearch.setAdapter(searchAdapter);
                 }
@@ -606,6 +611,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
         RecyclerView rvSearch = view.findViewById(R.id.rvRealtimeSearch);
         ProductAdapter searchAdapter = new ProductAdapter(results, this);
+        GuestWishlistUiHelper.applyTo(searchAdapter);
         rvSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvSearch.setAdapter(searchAdapter);
 
@@ -792,6 +798,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     }
                     featuredProductAdapter.updateData(new ArrayList<>(featuredProductList));
                     applyWishlistToHomeLists();
+                    enrichHomeProductStats();
                 })
                 .addOnFailureListener(e -> {
                     newProductList.clear();
@@ -800,6 +807,26 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     newProductAdapter.notifyDataSetChanged();
                     featuredProductAdapter.notifyDataSetChanged();
                 });
+    }
+
+    private void applyGuestWishlistUi() {
+        GuestWishlistUiHelper.applyTo(flashSaleAdapter);
+        GuestWishlistUiHelper.applyTo(newProductAdapter);
+        GuestWishlistUiHelper.applyTo(featuredProductAdapter);
+    }
+
+    private void enrichHomeProductStats() {
+        if (!isAdded()) return;
+        List<Product> all = new ArrayList<>();
+        all.addAll(flashSaleList);
+        all.addAll(newProductList);
+        all.addAll(featuredProductList);
+        ReviewStatsHelper.enrichProducts(all, () -> {
+            if (!isAdded()) return;
+            if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
+            if (newProductAdapter != null) newProductAdapter.notifyDataSetChanged();
+            if (featuredProductAdapter != null) featuredProductAdapter.notifyDataSetChanged();
+        });
     }
 
     private void applyWishlistToHomeLists() {
@@ -884,6 +911,12 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 if (flashSaleAdapter != null) flashSaleAdapter.notifyDataSetChanged();
             }
         });
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        applyGuestWishlistUi();
     }
 
     @Override

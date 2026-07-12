@@ -19,6 +19,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.adapters.AddressAdapter;
 import com.example.models.Address;
+import com.example.healthup.util.GuestLoginRequiredHelper;
+import com.example.healthup.util.GuestRecommendationsHelper;
+import com.example.healthup.util.UtilityHeaderHelper;
+import com.example.healthup.util.UtilityHeaderHelper;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
@@ -61,7 +65,7 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
         String currentAuthId = FirebaseAuth.getInstance().getUid();
         
         if (currentAuthId == null) {
-            setupLoginRequired(view);
+            setupGuestMode(view);
         } else {
             userId = currentAuthId;
             bindViews(view);
@@ -82,25 +86,23 @@ public class AddressBookFragment extends Fragment implements AddressAdapter.List
     }
 
 
-    private void setupLoginRequired(View view) {
-        View layout = view.findViewById(R.id.layoutLoginRequired);
-        if (layout != null) {
-            layout.setVisibility(View.VISIBLE);
-            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
-                android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
-                startActivity(intent);
-            });
-            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().getOnBackPressedDispatcher().onBackPressed();
-                }
-            });
+    private void setupGuestMode(View view) {
+        UtilityHeaderHelper.bind(view, this, "Địa chỉ nhận hàng");
+        view.findViewById(R.id.footer).setVisibility(View.GONE);
+        view.findViewById(R.id.rvAddresses).setVisibility(View.GONE);
+        view.findViewById(R.id.btnAddNewAddress).setVisibility(View.GONE);
+        layoutEmpty = view.findViewById(R.id.layoutEmpty);
+        if (layoutEmpty != null) {
+            layoutEmpty.setVisibility(View.GONE);
         }
+
+        GuestLoginRequiredHelper.bind(view, this);
+        GuestRecommendationsHelper.bind(view, this);
     }
 
 
     private void bindViews(View view) {
-        view.findViewById(R.id.btnBack).setOnClickListener(v -> requireActivity().getOnBackPressedDispatcher().onBackPressed());
+        UtilityHeaderHelper.bind(view, this, "Địa chỉ nhận hàng");
         rvAddresses = view.findViewById(R.id.rvAddresses);
         layoutEmpty = view.findViewById(R.id.layoutEmpty);
         btnAddNewAddress = view.findViewById(R.id.btnAddNewAddress);

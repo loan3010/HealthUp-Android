@@ -134,6 +134,28 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         tabMediator.attach();
 
         fab.setOnClickListener(v -> openEditScreen(null));
+        fab.setOnLongClickListener(v -> {
+            new AlertDialog.Builder(requireContext())
+                    .setTitle(R.string.admin_backfill_codes)
+                    .setMessage(R.string.admin_backfill_codes_confirm)
+                    .setPositiveButton(R.string.admin_confirm, (d, w) ->
+                            repository.backfillMissingProductCodes(new AdminRepository.SimpleCallback() {
+                                @Override
+                                public void onSuccess() {
+                                    Toast.makeText(requireContext(),
+                                            R.string.admin_backfill_codes_done, Toast.LENGTH_SHORT).show();
+                                    loadProducts();
+                                }
+
+                                @Override
+                                public void onError(@NonNull String message) {
+                                    Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show();
+                                }
+                            }))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+            return true;
+        });
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {

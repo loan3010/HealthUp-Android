@@ -365,8 +365,9 @@
     <string name="seller_inbox_empty_closed">Chưa có phiên nào đã kết thúc.</string>
     <string name="seller_inbox_tab_active">Đang xử lý</string>
     <string name="seller_inbox_tab_closed">Đã kết thúc</string>
-    <string name="chat_product_add_cart">Thêm giỏ hàng</string>
+    <string name="chat_product_add_cart">Thêm</string>
     <string name="chat_product_buy_now">Mua ngay</string>
+    <string name="chat_product_browse_hint">Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm nhé.</string>
     <string name="chat_login_action">Đăng nhập</string>
     <string name="seller_inbox_search_hint">Tìm theo username hoặc số điện thoại…</string>
     <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
@@ -444,6 +445,10 @@
     <string name="wishlist_removed">Đã xóa khỏi yêu thích</string>
     <string name="wishlist_update_failed">Không thể cập nhật yêu thích</string>
     <string name="wishlist_login_required">Vui lòng đăng nhập để sử dụng chức năng yêu thích</string>
+    <string name="wishlist_guest_manage_login">Đăng nhập để quản lý sản phẩm yêu thích</string>
+    <string name="recommendations_for_you">Gợi ý cho bạn</string>
+    <string name="recommendations_load_more">Xem thêm sản phẩm gợi ý ⌵</string>
+    <string name="loyalty_guest_empty">Đăng nhập để xem hạng thành viên và ưu đãi</string>
 
     <string name="welcome_back">Xin chào</string>
     <string name="home_question">Bạn muốn ăn gì hôm nay?</string>
@@ -575,6 +580,20 @@
     <string name="admin_product_image">Ảnh sản phẩm</string>
     <string name="admin_product_short_desc">Mô tả ngắn</string>
     <string name="admin_product_description">Mô tả chi tiết</string>
+    <string name="admin_product_ingredients">Thành phần chính</string>
+    <string name="admin_product_nutrition">Giá trị dinh dưỡng</string>
+    <string name="admin_product_usage">Hướng dẫn sử dụng</string>
+    <string name="admin_product_origin">Nguồn gốc xuất xứ</string>
+    <string name="admin_product_code">Mã sản phẩm</string>
+    <string name="admin_product_code_pending">Chưa có — tự tạo khi lưu (HEALTHUP-xxxx)</string>
+    <string name="admin_backfill_codes">Gán mã SP còn thiếu</string>
+    <string name="admin_backfill_codes_confirm">Gán mã HEALTHUP-xxxx cho tất cả sản phẩm chưa có mã?</string>
+    <string name="admin_backfill_codes_done">Đã gán mã cho sản phẩm còn thiếu</string>
+    <string name="admin_product_sold_readonly">Đã bán: %1$d</string>
+    <string name="admin_product_stats_title">Thống kê sản phẩm</string>
+    <string name="admin_product_rating_readonly">Đánh giá: %1$.1f ★ (%2$d)</string>
+    <string name="admin_product_rating_empty">Đánh giá: chưa có</string>
+    <string name="detail_info_updating">Thông tin đang được cập nhật…</string>
     <string name="admin_save_product">Lưu sản phẩm</string>
     <string name="admin_edit_product">Sửa sản phẩm</string>
     <string name="admin_update_status">Cập nhật trạng thái</string>

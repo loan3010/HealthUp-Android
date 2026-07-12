@@ -30,6 +30,7 @@ import com.example.adapters.CheckoutProductAdapter;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.LocaleHelper;
 import com.example.healthup.util.PhoneVerifiedHelper;
+import com.example.healthup.util.StockManager;
 import com.example.healthup.util.TranslationManager;
 import com.example.models.Address;
 import com.example.models.CartItem;
@@ -900,22 +901,80 @@ public class CheckoutFragment extends Fragment {
         com.google.firebase.firestore.DocumentReference orderRef = db.collection("orders").document();
         order.setId(orderRef.getId());
 
+        final List<com.example.models.OrderItem> stockItems = orderItems;
+        StockManager.deductStock(db, stockItems, new StockManager.StockCallback() {
+            @Override
+            public void onSuccess() {
+                if (!isAdded()) return;
+                order.setStockDeducted(true);
+                commitPlacedOrder(db, userId, orderRef, order, cartSnapshot -> placeOrderBatch(
+                        db, userId, orderRef, order, cartSnapshot, currentLang, finalAmount));
+            }
 
+            @Override
+            public void onInsufficientStock(@NonNull String productName, int available) {
+                if (!isAdded()) return;
+                resetPlaceOrderButton(currentLang);
+                String msg = "en".equals(currentLang)
+                        ? productName + " only has " + available + " left in stock."
+                        : productName + " chỉ còn " + available + " sản phẩm trong kho.";
+                Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
+            }
+
+            @Override
+            public void onError(@NonNull String message) {
+                if (!isAdded()) return;
+                resetPlaceOrderButton(currentLang);
+                Toast.makeText(getContext(), "Lỗi đặt hàng: " + message, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private interface CartSnapshotCallback {
+        void onCartLoaded(QuerySnapshot cartSnapshot);
+    }
+
+    private void commitPlacedOrder(FirebaseFirestore db,
+                                   String userId,
+                                   DocumentReference orderRef,
+                                   com.example.models.Order order,
+                                   CartSnapshotCallback callback) {
         db.collection("users").document(userId).collection("cart")
                 .get()
                 .addOnSuccessListener(cartSnapshot -> {
-                    if (!isAdded()) {
-                        return;
-                    }
+                    if (!isAdded()) return;
+                    callback.onCartLoaded(cartSnapshot);
+                })
+                .addOnFailureListener(e -> {
+                    if (!isAdded()) return;
+                    StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
+                        @Override
+                        public void onSuccess() { }
 
+                        @Override
+                        public void onInsufficientStock(@NonNull String productName, int available) { }
 
-                    db.collection("users").document(userId).get()
-                            .addOnSuccessListener(userDoc -> {
-                                if (!isAdded()) return;
+                        @Override
+                        public void onError(@NonNull String message) { }
+                    });
+                    resetPlaceOrderButton(LocaleHelper.getLanguage(requireContext()));
+                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
 
+    private void placeOrderBatch(FirebaseFirestore db,
+                                 String userId,
+                                 DocumentReference orderRef,
+                                 com.example.models.Order order,
+                                 QuerySnapshot cartSnapshot,
+                                 String currentLang,
+                                 double finalAmount) {
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(userDoc -> {
+                    if (!isAdded()) return;
 
-                                WriteBatch batch = db.batch();
-                                batch.set(orderRef, order);
+                    WriteBatch batch = db.batch();
+                    batch.set(orderRef, order);
 
 
                                 // FIX (yêu cầu #3 - "đặt hàng thành công nhưng không có thông báo"):
@@ -967,33 +1026,46 @@ public class CheckoutFragment extends Fragment {
                                 }
 
 
-                                batch.commit().addOnSuccessListener(aVoid -> {
-                                    if (isAdded()) {
-                                        showSuccessDialog();
-                                    }
-                                }).addOnFailureListener(e -> {
-                                    if (isAdded()) {
-                                        btnPlaceOrder.setEnabled(true);
-                                        btnPlaceOrder.setText("Đặt hàng");
-                                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                    }
-                                });
-                            })
-                            .addOnFailureListener(e -> {
-                                if (isAdded()) {
-                                    btnPlaceOrder.setEnabled(true);
-                                    btnPlaceOrder.setText("Đặt hàng");
-                                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                    batch.commit().addOnSuccessListener(aVoid -> {
+                        if (isAdded()) {
+                            showSuccessDialog();
+                        }
+                    }).addOnFailureListener(e -> {
+                        if (!isAdded()) return;
+                        StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
+                            @Override
+                            public void onSuccess() { }
+
+                            @Override
+                            public void onInsufficientStock(@NonNull String productName, int available) { }
+
+                            @Override
+                            public void onError(@NonNull String message) { }
+                        });
+                        resetPlaceOrderButton(currentLang);
+                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
                 })
                 .addOnFailureListener(e -> {
-                    if (isAdded()) {
-                        btnPlaceOrder.setEnabled(true);
-                        btnPlaceOrder.setText("Đặt hàng");
-                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                    }
+                    if (!isAdded()) return;
+                    StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
+                        @Override
+                        public void onSuccess() { }
+
+                        @Override
+                        public void onInsufficientStock(@NonNull String productName, int available) { }
+
+                        @Override
+                        public void onError(@NonNull String message) { }
+                    });
+                    resetPlaceOrderButton(currentLang);
+                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
+    }
+
+    private void resetPlaceOrderButton(String currentLang) {
+        btnPlaceOrder.setEnabled(true);
+        btnPlaceOrder.setText("en".equals(currentLang) ? "Place order" : "Đặt hàng");
     }
 
 

@@ -346,8 +346,9 @@
     <string name="seller_inbox_empty_closed">No closed sessions yet.</string>
     <string name="seller_inbox_tab_active">Active</string>
     <string name="seller_inbox_tab_closed">Closed</string>
-    <string name="chat_product_add_cart">Add to cart</string>
+    <string name="chat_product_add_cart">Add</string>
     <string name="chat_product_buy_now">Buy now</string>
+    <string name="chat_product_browse_hint">You are viewing this product. Ask about ingredients or usage, or tap Buy now / Add.</string>
     <string name="chat_login_action">Log in</string>
     <string name="seller_inbox_search_hint">Search by username or phone…</string>
     <string name="seller_inbox_no_access">Only sellers or administrators can open the inbox.</string>
@@ -425,6 +426,10 @@
     <string name="wishlist_removed">Removed from wishlist</string>
     <string name="wishlist_update_failed">Could not update wishlist</string>
     <string name="wishlist_login_required">Please login to use the wishlist feature</string>
+    <string name="wishlist_guest_manage_login">Sign in to manage your wishlist</string>
+    <string name="recommendations_for_you">Recommended for you</string>
+    <string name="recommendations_load_more">Show more recommendations ⌵</string>
+    <string name="loyalty_guest_empty">Sign in to view your membership tier and rewards</string>
 
     <string name="welcome_back">Welcome</string>
     <string name="home_question">What would you like to eat today?</string>

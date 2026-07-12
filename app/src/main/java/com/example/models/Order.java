@@ -79,6 +79,9 @@ public class Order implements Serializable {
     private String returnRejectReason;
     private List<Map<String, Object>> returnItems;
 
+    private boolean stockDeducted;
+    private boolean stockRestored;
+
     public Order() {}
 
     public Order(String orderCode, List<OrderItem> items, String status, String paymentStatus,
@@ -219,6 +222,12 @@ public class Order implements Serializable {
     public void setDeliveryFailures(List<DeliveryFailure> deliveryFailures) {
         this.deliveryFailures = deliveryFailures;
     }
+
+    public boolean isStockDeducted() { return stockDeducted; }
+    public void setStockDeducted(boolean stockDeducted) { this.stockDeducted = stockDeducted; }
+
+    public boolean isStockRestored() { return stockRestored; }
+    public void setStockRestored(boolean stockRestored) { this.stockRestored = stockRestored; }
 
     public boolean isCancelRequested() { return cancelRequested; }
     public void setCancelRequested(boolean cancelRequested) { this.cancelRequested = cancelRequested; }

@@ -49,7 +49,12 @@ public class AdminProductAdapter extends RecyclerView.Adapter<AdminProductAdapte
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Product product = products.get(position);
         holder.tvName.setText(product.getName());
-        holder.tvCategory.setText(product.getCategory());
+        String code = product.getProductCode();
+        if (code != null && !code.isEmpty()) {
+            holder.tvCategory.setText(code + " · " + product.getCategory());
+        } else {
+            holder.tvCategory.setText(product.getCategory());
+        }
         holder.tvPrice.setText(priceFormat.format(product.getPrice()) + " đ");
 
         int stock = product.getStock();

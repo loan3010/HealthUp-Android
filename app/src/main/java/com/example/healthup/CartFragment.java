@@ -26,7 +26,10 @@ import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.CheckoutIntentHelper;
 import com.example.healthup.util.GuestCartManager;
+import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.PhoneVerifiedHelper;
+import com.example.healthup.util.ReviewStatsHelper;
+import com.example.healthup.util.StockManager;
 import com.example.models.CartItem;
 import com.example.models.Product;
 import com.example.models.Voucher;
@@ -58,10 +61,12 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private RecyclerView rvCartItems, rvCartRecommendations;
     private View emptyState, footer, rowVoucher, btnContinueShopping, guestSyncBanner;
+    private View scrollContentInner;
     private View totalsRow, editRow;
     private View btnSaveToWishlist, btnDeleteSelected;
     private CheckBox cbSelectAllEdit, cbSelectAll;
     private TextView tvTotalPrice, tvSavings, btnCheckout, tvCartTitle, tvEditToggle, tvViewAllRecommend;
+    private com.google.android.material.button.MaterialButton btnMoreCartRecommend;
     private ImageButton btnBack;
 
     private FirebaseFirestore db;
@@ -158,9 +163,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         tvCartTitle = view.findViewById(R.id.tvCartTitle);
         tvEditToggle = view.findViewById(R.id.tvEditToggle);
         tvViewAllRecommend = view.findViewById(R.id.tvViewAllRecommend);
+        btnMoreCartRecommend = view.findViewById(R.id.btnMoreCartRecommend);
         rowVoucher = view.findViewById(R.id.rowVoucher);
         btnContinueShopping = view.findViewById(R.id.btnContinueShopping);
         guestSyncBanner = view.findViewById(R.id.guestSyncBanner);
+        scrollContentInner = view.findViewById(R.id.scrollContentInner);
 
         rvCartItems.setLayoutManager(new LinearLayoutManager(getContext()));
         rvCartItems.setNestedScrollingEnabled(false);
@@ -196,6 +203,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
         if (tvViewAllRecommend != null) {
             tvViewAllRecommend.setOnClickListener(v -> goToCategoryTab());
+        }
+        if (btnMoreCartRecommend != null) {
+            btnMoreCartRecommend.setOnClickListener(v -> loadMoreCartRecommendations());
         }
     }
 
@@ -388,6 +398,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 });
             }
         });
+        GuestWishlistUiHelper.applyTo(recommendAdapter);
         rvCartRecommendations.setAdapter(recommendAdapter);
     }
 
@@ -429,6 +440,34 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (recommendAdapter != null) {
             recommendAdapter.updateData(recommendDisplayed);
         }
+        enrichRecommendationStats();
+        updateCartRecommendMoreButton();
+    }
+
+    private void enrichRecommendationStats() {
+        ReviewStatsHelper.enrichProducts(recommendDisplayed, () -> {
+            if (isAdded() && recommendAdapter != null) {
+                recommendAdapter.notifyDataSetChanged();
+            }
+        });
+    }
+
+    private void loadMoreCartRecommendations() {
+        if (!isAdded() || recommendPool.isEmpty()) return;
+        int batch = Math.min(4, recommendPool.size());
+        for (int i = 0; i < batch; i++) {
+            recommendDisplayed.add(recommendPool.remove(0));
+        }
+        if (recommendAdapter != null) {
+            recommendAdapter.updateData(new ArrayList<>(recommendDisplayed));
+        }
+        enrichRecommendationStats();
+        updateCartRecommendMoreButton();
+    }
+
+    private void updateCartRecommendMoreButton() {
+        if (btnMoreCartRecommend == null) return;
+        btnMoreCartRecommend.setVisibility(recommendPool.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     private void replaceRecommendation(Product addedProduct) {
@@ -451,6 +490,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (recommendAdapter != null) {
             recommendAdapter.updateData(recommendDisplayed);
         }
+        updateCartRecommendMoreButton();
     }
 
     private void refreshCartList() {
@@ -536,10 +576,53 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             attachSelectAllListener(cbSelectAllEdit);
         }
 
+        hydrateCartStock(() -> {
+            if (!isAdded()) return;
+            renderList();
+            updateFooter();
+            applyFavoriteStateToCartItems();
+        });
+    }
 
-        renderList();
-        updateFooter();
-        applyFavoriteStateToCartItems();
+    private void hydrateCartStock(@NonNull Runnable onComplete) {
+        if (cartItems.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        List<String> productIds = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            if (item.getProductId() != null && !item.getProductId().isEmpty()
+                    && !productIds.contains(item.getProductId())) {
+                productIds.add(item.getProductId());
+            }
+        }
+        if (productIds.isEmpty()) {
+            onComplete.run();
+            return;
+        }
+
+        final int[] remaining = {productIds.size()};
+        for (String productId : productIds) {
+            db.collection("products").document(productId).get()
+                    .addOnSuccessListener(doc -> {
+                        if (isAdded()) {
+                            for (CartItem item : cartItems) {
+                                if (productId.equals(item.getProductId())) {
+                                    item.setStock(StockManager.resolveAvailableStock(doc, item.getVariantId()));
+                                }
+                            }
+                        }
+                        if (--remaining[0] == 0 && isAdded()) {
+                            onComplete.run();
+                        }
+                    })
+                    .addOnFailureListener(e -> {
+                        if (--remaining[0] == 0 && isAdded()) {
+                            onComplete.run();
+                        }
+                    });
+        }
     }
 
     private void applyFavoriteStateToCartItems() {
@@ -574,9 +657,34 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     }
 
     private void updateGuestBanner() {
-        if (guestSyncBanner != null) {
-            guestSyncBanner.setVisibility(userId == null && !cartItems.isEmpty() ? View.VISIBLE : View.GONE);
+        if (guestSyncBanner == null) return;
+        boolean showBanner = userId == null && !cartItems.isEmpty();
+        guestSyncBanner.setVisibility(showBanner ? View.VISIBLE : View.GONE);
+        if (showBanner) {
+            guestSyncBanner.bringToFront();
+            guestSyncBanner.post(this::applyGuestBannerScrollPadding);
+        } else if (scrollContentInner != null) {
+            scrollContentInner.setPadding(
+                    scrollContentInner.getPaddingLeft(),
+                    0,
+                    scrollContentInner.getPaddingRight(),
+                    scrollContentInner.getPaddingBottom());
         }
+    }
+
+    private void applyGuestBannerScrollPadding() {
+        if (!isAdded() || guestSyncBanner == null || scrollContentInner == null) return;
+        if (guestSyncBanner.getVisibility() != View.VISIBLE) return;
+        int bannerSpace = guestSyncBanner.getHeight() + dpToPx(8);
+        scrollContentInner.setPadding(
+                scrollContentInner.getPaddingLeft(),
+                bannerSpace,
+                scrollContentInner.getPaddingRight(),
+                scrollContentInner.getPaddingBottom());
+    }
+
+    private int dpToPx(int dp) {
+        return Math.round(dp * getResources().getDisplayMetrics().density);
     }
 
     @Override
@@ -593,6 +701,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             return;
         }
         userId = newUserId;
+        GuestWishlistUiHelper.applyTo(recommendAdapter);
         loadCartFromFirestore();
     }
 

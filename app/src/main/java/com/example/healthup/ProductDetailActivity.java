@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.text.TextUtils;
 import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -23,9 +24,11 @@ import com.example.healthup.R;
 import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
-import com.example.models.Product;
+import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.ReviewStatsHelper;
 import com.example.healthup.util.TranslationManager;
+import com.example.models.Product;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -37,7 +40,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private Product product;
     private ViewPager2 viewPagerImages;
-    private TextView tvImageIndex, tvName, tvPrice, tvOriginalPrice, tvDiscount, tvRating, tvReviewCount, tvSold, tvSavings, tvStock;
+    private TextView tvImageIndex, tvName, tvShortDesc, tvDescription, tvPrice, tvOriginalPrice, tvDiscount, tvRating, tvReviewCount, tvSold, tvSavings, tvStock;
     private TextView tvViewAllReviews, tvViewAllRecommend, tvCartBadgeHeader;
     private ImageButton btnBack, btnShare, btnWishlist, btnCartHeader;
     private MaterialButton btnAddCart, btnBuyNow;
@@ -104,6 +107,8 @@ public class ProductDetailActivity extends AppCompatActivity {
         viewPagerImages = findViewById(R.id.view_pager_images);
         tvImageIndex = findViewById(R.id.tv_image_index);
         tvName = findViewById(R.id.tv_detail_name);
+        tvShortDesc = findViewById(R.id.tv_detail_short_desc);
+        tvDescription = findViewById(R.id.tv_detail_description);
         tvPrice = findViewById(R.id.tv_detail_price);
         tvOriginalPrice = findViewById(R.id.tv_detail_original_price);
         tvDiscount = findViewById(R.id.tv_discount_tag);
@@ -186,6 +191,26 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private void setupProductInfo() {
         tvName.setText(product.getName());
+
+        if (tvShortDesc != null) {
+            String shortDesc = product.getShortDesc();
+            if (!TextUtils.isEmpty(shortDesc)) {
+                tvShortDesc.setText(shortDesc.trim());
+                tvShortDesc.setVisibility(View.VISIBLE);
+            } else {
+                tvShortDesc.setVisibility(View.GONE);
+            }
+        }
+
+        if (tvDescription != null) {
+            String description = product.getDescription();
+            if (!TextUtils.isEmpty(description)) {
+                tvDescription.setText(description.trim());
+                tvDescription.setVisibility(View.VISIBLE);
+            } else {
+                tvDescription.setVisibility(View.GONE);
+            }
+        }
         
         String currentLang = LocaleHelper.getLanguage(this);
         if ("en".equals(currentLang)) {
@@ -197,12 +222,30 @@ public class ProductDetailActivity extends AppCompatActivity {
         updatePriceDisplay();
         setupCartBadgeListener();
 
-        tvRating.setText(String.valueOf(product.getRating()));
-        tvReviewCount.setText(product.getReviewCount() + " đánh giá");
+        updateRatingUi(product.getRating(), product.getReviewCount());
+        loadReviewStats();
         tvSold.setText("Đã bán " + product.getSoldCount() + "+");
 
         updateWishlistIcon();
         setupImagePager();
+    }
+
+    private void updateRatingUi(float avgRating, int reviewCount) {
+        if (tvRating != null) {
+            tvRating.setText(ReviewStatsHelper.formatAvgRating(avgRating));
+        }
+        if (tvReviewCount != null) {
+            tvReviewCount.setText(ReviewStatsHelper.formatReviewCountLabel(reviewCount));
+        }
+    }
+
+    private void loadReviewStats() {
+        if (product == null || product.getId() == null) return;
+        ReviewStatsHelper.loadForProduct(product.getId(), stats -> {
+            if (isFinishing()) return;
+            ReviewStatsHelper.applyToProduct(product, stats);
+            updateRatingUi(stats.avgRating, stats.count);
+        });
     }
 
     private void setupImagePager() {
@@ -369,23 +412,11 @@ public class ProductDetailActivity extends AppCompatActivity {
             setupSection(findViewById(R.id.section_origin), "Nguồn gốc xuất xứ", product.getOrigin());
         }
 
-        StringBuilder nutritionText = new StringBuilder();
-        if (product.getNutrition() != null) {
-            for (Product.NutritionItem item : product.getNutrition()) {
-                nutritionText.append("• ").append(item.getName())
-                        .append(": ").append(item.getValue());
-                if (item.getPercent() > 0) {
-                    nutritionText.append(" (").append(item.getPercent()).append("%)");
-                }
-                nutritionText.append("\n");
-            }
-        }
-        
-        String nContent = nutritionText.length() > 0 ? nutritionText.toString().trim() : null;
-        if ("en".equals(currentLang) && nContent != null) {
-            TranslationManager.translate(nContent, "en", t -> setupSection(findViewById(R.id.section_nutrition), null, t));
+        String nutritionContent = product.getDisplayNutrition();
+        if ("en".equals(currentLang) && !TextUtils.isEmpty(nutritionContent)) {
+            TranslationManager.translate(nutritionContent, "en", t -> setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng", t));
         } else {
-            setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng", nContent);
+            setupSection(findViewById(R.id.section_nutrition), "Giá trị dinh dưỡng", nutritionContent);
         }
     }
 
@@ -398,10 +429,12 @@ public class ProductDetailActivity extends AppCompatActivity {
         ImageView ivArrow = sectionView.findViewById(R.id.iv_expand_arrow);
 
         if (title != null && tvTitle != null) tvTitle.setText(title);
-        if (content != null && tvContent != null) tvContent.setText(content);
-        else if (tvContent != null && tvContent.getText().length() == 0) {
-            String currentLang = LocaleHelper.getLanguage(this);
-            tvContent.setText(currentLang.equals("en") ? "Information is being updated..." : "Thông tin đang được cập nhật...");
+        if (tvContent != null) {
+            if (!TextUtils.isEmpty(content)) {
+                tvContent.setText(content.trim());
+            } else {
+                tvContent.setText(R.string.detail_info_updating);
+            }
         }
 
         if (btnExpand != null) {
@@ -441,6 +474,7 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         });
 
+        GuestWishlistUiHelper.applyTo(recommendationAdapter);
         rvRecommendations.setLayoutManager(new GridLayoutManager(this, 2));
         rvRecommendations.setAdapter(recommendationAdapter);
 
@@ -472,12 +506,23 @@ public class ProductDetailActivity extends AppCompatActivity {
         if (uid == null) {
             for (Product p : recommendations) p.setFavorite(false);
             recommendationAdapter.updateData(recommendations);
+            GuestWishlistUiHelper.applyTo(recommendationAdapter);
+            ReviewStatsHelper.enrichProducts(recommendations, () -> {
+                if (!isFinishing() && recommendationAdapter != null) {
+                    recommendationAdapter.notifyDataSetChanged();
+                }
+            });
             return;
         }
         WishlistManager.loadFavoriteIds(uid, (Set<String> ids) -> {
             if (isFinishing()) return;
             WishlistManager.applyFavoriteState(recommendations, ids);
             recommendationAdapter.updateData(recommendations);
+            ReviewStatsHelper.enrichProducts(recommendations, () -> {
+                if (!isFinishing() && recommendationAdapter != null) {
+                    recommendationAdapter.notifyDataSetChanged();
+                }
+            });
         });
     }
 
@@ -490,15 +535,25 @@ public class ProductDetailActivity extends AppCompatActivity {
         FirestoreManager.getInstance().getProductsCollection()
                 .document(product.getId())
                 .collection("reviews")
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
-                .limit(5)
                 .get()
                 .addOnSuccessListener(queryDocumentSnapshots -> {
-                    reviews.clear();
+                    ReviewStatsHelper.Stats stats = ReviewStatsHelper.computeFromSnapshot(queryDocumentSnapshots);
+                    ReviewStatsHelper.applyToProduct(product, stats);
+                    updateRatingUi(stats.avgRating, stats.count);
+
+                    List<com.example.models.Review> all = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         com.example.models.Review r = doc.toObject(com.example.models.Review.class);
-                        if (r != null) reviews.add(r);
+                        if (r != null) all.add(r);
                     }
+                    all.sort((r1, r2) -> {
+                        long t1 = r1.getCreatedAt() != null ? r1.getCreatedAt().getTime() : 0;
+                        long t2 = r2.getCreatedAt() != null ? r2.getCreatedAt().getTime() : 0;
+                        return Long.compare(t2, t1);
+                    });
+
+                    reviews.clear();
+                    reviews.addAll(all.subList(0, Math.min(5, all.size())));
                     reviewAdapter.notifyDataSetChanged();
                     if (reviews.isEmpty()) {
                         View noReviews = findViewById(R.id.tv_no_reviews);

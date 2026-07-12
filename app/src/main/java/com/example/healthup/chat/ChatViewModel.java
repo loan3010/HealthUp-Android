@@ -179,11 +179,13 @@ public class ChatViewModel extends ViewModel {
                 .addOnSuccessListener(doc -> {
                     Product product = Product.fromDocument(doc);
                     if (product != null) {
+                        long sortHint = nextLocalSort();
+                        ChatMessage hint = ChatMessage.text(
+                                ChatMessage.SENDER_BOT,
+                                ChatMessage.SENDER_BOT,
+                                "Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm nhé.");
+                        addLocal(hint, sortHint);
                         addLocal(buildProductCard(product, pendingProductVariant), nextLocalSort());
-                        String sellerMsg = "Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm giỏ hàng nhé.";
-                        ChatMessage hint = ChatMessage.text(ChatMessage.SENDER_SELLER, "healthup_shop", sellerMsg);
-                        hint.setSenderName("HealthUp");
-                        addLocal(hint, nextLocalSort());
                     } else if (pendingProductName != null) {
                         String botMsg = "Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
                                 + pendingProductName + ".";
@@ -204,9 +206,8 @@ public class ChatViewModel extends ViewModel {
 
     private ChatMessage buildProductCard(@NonNull Product product, @Nullable String variant) {
         ChatMessage card = new ChatMessage();
-        card.setSenderType(ChatMessage.SENDER_SELLER);
-        card.setSenderId("healthup_shop");
-        card.setSenderName("HealthUp");
+        card.setSenderType(ChatMessage.SENDER_BOT);
+        card.setSenderId(ChatMessage.SENDER_BOT);
         card.setType(ChatMessage.TYPE_PRODUCT_CARD);
         card.setProductId(product.getId());
         card.setProductName(product.getName());
@@ -399,18 +400,7 @@ public class ChatViewModel extends ViewModel {
             toast.setValue(new Event<>("Bạn đang chat với nhân viên. Vui lòng gửi tin nhắn trực tiếp."));
             return;
         }
-        if (uid == null && requiresLoginForQuestion(question)) {
-            addLoginPrompt("login_orders");
-            return;
-        }
         sendUserText(question);
-    }
-
-    private boolean requiresLoginForQuestion(@NonNull String question) {
-        String normalized = TextNormalizer.normalize(question);
-        return TextNormalizer.containsAny(normalized,
-                "kiem tra don", "tinh trang don", "don hang", "huy don", "huy dat hang",
-                "order status", "my order", "theo doi don");
     }
 
     /** Cycles the suggestion card to the next question set without removing it. */
@@ -492,19 +482,18 @@ public class ChatViewModel extends ViewModel {
 
     private void runBot(@NonNull String text) {
         ChatBotEngine.BotResponse response = botEngine.process(text);
-        if (uid == null && (response.needsOrderLookup || response.offerHumanHandoff
-                || response.requiresLogin)) {
-            addLoginPrompt(response.needsOrderLookup ? "login_orders" : "login_general");
-            recompute();
-            return;
-        }
         for (ChatMessage m : response.messages) {
             addLocal(m, nextLocalSort());
         }
         recompute();
 
         if (response.needsOrderLookup) {
-            lookupOrders();
+            if (uid == null) {
+                addLoginPrompt("login_orders");
+                recompute();
+            } else {
+                lookupOrders();
+            }
         }
     }
 

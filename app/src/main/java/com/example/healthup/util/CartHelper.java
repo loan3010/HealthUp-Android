@@ -5,6 +5,7 @@ import android.content.Context;
 import android.widget.Toast;
 
 
+import com.example.healthup.MainActivity;
 import com.example.healthup.R;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.CartItem;
@@ -44,6 +45,7 @@ public final class CartHelper {
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user == null) {
             GuestCartManager.getInstance(context).addItem(product, variant, quantity);
+            refreshGuestCartBadge(context);
             if (callback != null) {
                 callback.onSuccess();
             } else {
@@ -139,5 +141,23 @@ public final class CartHelper {
         }
 
         return name != null && !name.isEmpty();
+    }
+
+    private static void refreshGuestCartBadge(Context context) {
+        MainActivity activity = findMainActivity(context);
+        if (activity != null) {
+            activity.runOnUiThread(activity::refreshGuestCartBadge);
+        }
+    }
+
+    private static MainActivity findMainActivity(Context context) {
+        Context current = context;
+        while (current instanceof android.content.ContextWrapper) {
+            if (current instanceof MainActivity) {
+                return (MainActivity) current;
+            }
+            current = ((android.content.ContextWrapper) current).getBaseContext();
+        }
+        return current instanceof MainActivity ? (MainActivity) current : null;
     }
 }

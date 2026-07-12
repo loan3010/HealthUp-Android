@@ -53,7 +53,11 @@ public class AdminProductEditActivity extends AppCompatActivity {
     private boolean isDraft;
 
     private TextInputEditText etName, etPrice, etOriginalPrice, etStock, etImage, etShortDesc, etDescription;
+    private TextInputEditText etProductCode;
+    private TextInputEditText etIngredients, etNutrition, etUsage, etOrigin;
     private TextInputEditText etVariantFlavors, etVariantSizes;
+    private TextView tvProductSoldReadonly, tvProductRatingReadonly;
+    private View cardProductPreview;
     private ImageView imgPreview;
     private Spinner spinnerCategory;
     private SwitchMaterial switchHidden;
@@ -78,14 +82,22 @@ public class AdminProductEditActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
 
         etName = findViewById(R.id.etProductName);
+        etProductCode = findViewById(R.id.etProductCode);
         etPrice = findViewById(R.id.etProductPrice);
         etOriginalPrice = findViewById(R.id.etProductOriginalPrice);
         etStock = findViewById(R.id.etProductStock);
         etImage = findViewById(R.id.etProductImage);
         etShortDesc = findViewById(R.id.etProductShortDesc);
         etDescription = findViewById(R.id.etProductDescription);
+        etIngredients = findViewById(R.id.etProductIngredients);
+        etNutrition = findViewById(R.id.etProductNutrition);
+        etUsage = findViewById(R.id.etProductUsage);
+        etOrigin = findViewById(R.id.etProductOrigin);
         etVariantFlavors = findViewById(R.id.etVariantFlavors);
         etVariantSizes = findViewById(R.id.etVariantSizes);
+        tvProductSoldReadonly = findViewById(R.id.tvProductSoldReadonly);
+        tvProductRatingReadonly = findViewById(R.id.tvProductRatingReadonly);
+        cardProductPreview = findViewById(R.id.cardProductPreview);
         imgPreview = findViewById(R.id.imgProductPreview);
         spinnerCategory = findViewById(R.id.spinnerProductCategory);
         switchHidden = findViewById(R.id.switchProductHidden);
@@ -107,7 +119,9 @@ public class AdminProductEditActivity extends AppCompatActivity {
         if (isEdit) {
             loadProduct();
         } else {
+            updateReadonlyStats(0, 0f, 0);
             updateVariantSectionVisibility();
+            updatePreview();
         }
     }
 
@@ -125,11 +139,21 @@ public class AdminProductEditActivity extends AppCompatActivity {
         switchHidden.setChecked(isHidden);
         switchHidden.setOnCheckedChangeListener((buttonView, isChecked) -> isHidden = isChecked);
         etName.setText(product.getName());
+        if (!TextUtils.isEmpty(product.getProductCode())) {
+            etProductCode.setText(product.getProductCode());
+        } else {
+            etProductCode.setText(R.string.admin_product_code_pending);
+        }
         etPrice.setText(String.valueOf((long) product.getPrice()));
         etOriginalPrice.setText(String.valueOf((long) product.getOriginalPrice()));
         etStock.setText(String.valueOf(product.getStock()));
         etShortDesc.setText(product.getShortDesc());
         etDescription.setText(product.getDescription());
+        etIngredients.setText(product.getIngredients());
+        etUsage.setText(product.getUsage());
+        etOrigin.setText(product.getOrigin());
+        etNutrition.setText(AdminProductContentHelper.formatNutritionForEdit(product, doc));
+        updateReadonlyStats(product.getSoldCount(), product.getRating(), product.getReviewCount());
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             productImageUrl = product.getImages().get(0);
             etImage.setText(shortImageLabel(productImageUrl));
@@ -143,6 +167,19 @@ public class AdminProductEditActivity extends AppCompatActivity {
             variantRows.addAll(product.getVariants());
             inferOptionInputsFromVariants();
             renderVariantRows();
+        }
+    }
+
+    private void updateReadonlyStats(int sold, float rating, int reviewCount) {
+        if (tvProductSoldReadonly != null) {
+            tvProductSoldReadonly.setText(getString(R.string.admin_product_sold_readonly, sold));
+        }
+        if (tvProductRatingReadonly != null) {
+            if (reviewCount > 0 || rating > 0) {
+                tvProductRatingReadonly.setText(getString(R.string.admin_product_rating_readonly, rating, reviewCount));
+            } else {
+                tvProductRatingReadonly.setText(R.string.admin_product_rating_empty);
+            }
         }
     }
 
@@ -344,8 +381,13 @@ public class AdminProductEditActivity extends AppCompatActivity {
     }
 
     private void updatePreview() {
+        if (cardProductPreview != null) {
+            cardProductPreview.setVisibility(TextUtils.isEmpty(productImageUrl) ? View.GONE : View.VISIBLE);
+        }
         if (TextUtils.isEmpty(productImageUrl)) {
-            imgPreview.setImageResource(R.color.neutral_light_grey);
+            if (imgPreview != null) {
+                imgPreview.setImageDrawable(null);
+            }
             return;
         }
         ImageLoadHelper.loadInto(imgPreview, productImageUrl);
@@ -399,6 +441,10 @@ public class AdminProductEditActivity extends AppCompatActivity {
         product.setCat((String) spinnerCategory.getSelectedItem());
         product.setShortDesc(textOf(etShortDesc));
         product.setDescription(textOf(etDescription));
+        product.setIngredients(textOf(etIngredients));
+        product.setUsage(textOf(etUsage));
+        product.setOrigin(textOf(etOrigin));
+        product.setNutritionText(textOf(etNutrition));
 
         String imageName = productImageUrl;
         List<String> images = new ArrayList<>();
@@ -407,6 +453,20 @@ public class AdminProductEditActivity extends AppCompatActivity {
         }
         product.setImages(images);
 
+        AdminProductCodeHelper.ensureProductCode(
+                FirestoreManager.getInstance().getFirestore(),
+                product.getProductCode()
+        ).addOnSuccessListener(code -> {
+            product.setProductCode(code);
+            if (etProductCode != null) {
+                etProductCode.setText(code);
+            }
+            persistProduct(product, asDraft);
+        }).addOnFailureListener(e ->
+                Toast.makeText(this, e.getMessage(), Toast.LENGTH_SHORT).show());
+    }
+
+    private void persistProduct(Product product, boolean asDraft) {
         repository.saveProduct(product, !isEdit, new AdminRepository.SimpleCallback() {
             @Override
             public void onSuccess() {

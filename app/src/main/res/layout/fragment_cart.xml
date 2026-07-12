@@ -68,55 +68,20 @@
     </LinearLayout>
 
 
-    <LinearLayout
-        android:id="@+id/guestSyncBanner"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="12dp"
-        android:layout_marginTop="8dp"
-        android:background="@drawable/bg_status_info"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:visibility="gone"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/header">
-
-
-        <ImageView
-            android:layout_width="18dp"
-            android:layout_height="18dp"
-            android:contentDescription="@null"
-            android:src="@drawable/ic_info" />
-
-
-        <TextView
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:text="@string/guest_cart_sync_banner"
-            android:textColor="@color/green_button"
-            android:textSize="13sp" />
-    </LinearLayout>
-
-
-    <!-- ===== NỘI DUNG CUỘN: danh sách SP hoặc trạng thái trống + Có thể bạn quan tâm =====
-         FIX (bug #6): "Có thể bạn quan tâm" nằm TRONG cùng khối cuộn này nên LUÔN hiển thị
-         bất kể giỏ hàng có hay không có sản phẩm — tham khảo đúng hành vi của Shopee. -->
     <androidx.core.widget.NestedScrollView
         android:id="@+id/scrollContent"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:clipChildren="true"
         android:clipToPadding="false"
-        app:layout_constraintTop_toBottomOf="@id/guestSyncBanner"
+        app:layout_constraintTop_toBottomOf="@id/header"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toTopOf="@id/footer">
 
 
         <LinearLayout
+            android:id="@+id/scrollContentInner"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
@@ -176,13 +141,13 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
-                android:orientation="vertical"
-                android:paddingHorizontal="16dp">
+                android:orientation="vertical">
 
 
                 <RelativeLayout
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
+                    android:layout_height="wrap_content"
+                    android:paddingHorizontal="16dp">
 
 
                     <TextView
@@ -213,14 +178,64 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="12dp"
                     android:clipToPadding="false"
+                    android:paddingHorizontal="10dp"
                     tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"
                     tools:listitem="@layout/item_product"
                     tools:spanCount="2" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnMoreCartRecommend"
+                    style="@style/Widget.MaterialComponents.Button.TextButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:text="@string/recommendations_load_more"
+                    android:textAllCaps="false"
+                    android:textColor="@color/text_hint"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+
+    <LinearLayout
+        android:id="@+id/guestSyncBanner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="12dp"
+        android:layout_marginTop="8dp"
+        android:background="@drawable/bg_status_info"
+        android:elevation="8dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:padding="12dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header">
+
+
+        <ImageView
+            android:layout_width="18dp"
+            android:layout_height="18dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_info" />
+
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
+            android:layout_weight="1"
+            android:text="@string/guest_cart_sync_banner"
+            android:textColor="@color/green_button"
+            android:textSize="13sp" />
+    </LinearLayout>
 
 
     <!-- ===== FOOTER: chỉ hiển thị khi giỏ hàng CÓ sản phẩm (FIX yêu cầu #3) — ẩn hoàn toàn khi

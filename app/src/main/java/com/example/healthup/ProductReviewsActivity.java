@@ -10,6 +10,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.healthup.databinding.ActivityProductReviewsBinding;
 import com.example.healthup.firebase.FirestoreManager;
+import com.example.healthup.util.ReviewStatsHelper;
 import com.example.models.Review;
 import com.google.firebase.firestore.DocumentSnapshot;
 import java.util.ArrayList;
@@ -130,13 +131,8 @@ public class ProductReviewsActivity extends AppCompatActivity {
                         return Long.compare(t2, t1); // Mới nhất lên đầu
                     });
 
-
-                    if (getIntent().getFloatExtra("avgRating", 0f) <= 0 && !allReviews.isEmpty()) {
-                        float sum = 0;
-                        for (Review r : allReviews) sum += r.getRating();
-                        updateSummary(sum / allReviews.size(), allReviews.size());
-                    }
-
+                    ReviewStatsHelper.Stats stats = ReviewStatsHelper.computeFromSnapshot(queryDocumentSnapshots);
+                    updateSummary(stats.avgRating, stats.count);
 
                     applyFilters();
                 })

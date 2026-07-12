@@ -370,6 +370,7 @@ public class MainActivity extends AppCompatActivity {
                 fragment instanceof OrderHistoryFragment || // ✅ Thêm lại để ẩn Nav Bar
                 fragment instanceof PolicyFragment ||
                 fragment instanceof MemberTierFragment ||
+                fragment instanceof WishlistFragment ||
                 fragment instanceof FAQFragment);
     }
 

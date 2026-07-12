@@ -569,9 +569,6 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
         View chipSeller = view.findViewById(R.id.chipSeller);
 
         chipSeller.setOnClickListener(v -> viewModel.requestHumanHandoff());
-        if (FirebaseAuth.getInstance().getCurrentUser() == null) {
-            chipSeller.setVisibility(View.GONE);
-        }
 
     }
 
@@ -744,19 +741,15 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
     @Override
 
     public void onProductAddToCart(@NonNull ChatMessage message) {
-        loadProductForCard(message, false, (product, variant) ->
-                CartHelper.addToCart(requireContext(), product, variant, 1));
+        loadProductForCard(message, false);
     }
 
     @Override
     public void onProductBuyNow(@NonNull ChatMessage message) {
-        loadProductForCard(message, true, (product, variant) ->
-                performBuyNow(product, variant, 1));
+        loadProductForCard(message, true);
     }
 
-    private void loadProductForCard(@NonNull ChatMessage message,
-                                    boolean isBuyNow,
-                                    @NonNull ProductAction action) {
+    private void loadProductForCard(@NonNull ChatMessage message, boolean isBuyNow) {
 
         String productId = message.getProductId();
 
@@ -783,24 +776,15 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
                     }
                     product.setId(doc.getId());
 
-                    Product.ProductVariant preset =
-                            product.getDefaultVariant(message.getProductVariant());
-
-                    if (product.requiresVariantSelection() && preset == null) {
-                        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(
-                                product, isBuyNow, (variant, quantity) -> {
-                                    if (isBuyNow) {
-                                        performBuyNow(product, variant, quantity);
-                                    } else {
-                                        CartHelper.addToCart(requireContext(), product, variant, quantity);
-                                    }
-                                });
-                        sheet.show(getParentFragmentManager(), "VariantSelection");
-                    } else {
-
-                        action.run(product, preset);
-
-                    }
+                    VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(
+                            product, isBuyNow, (variant, quantity) -> {
+                                if (isBuyNow) {
+                                    performBuyNow(product, variant, quantity);
+                                } else {
+                                    CartHelper.addToCart(requireContext(), product, variant, quantity);
+                                }
+                            });
+                    sheet.show(getParentFragmentManager(), "VariantSelection");
 
                 })
 
@@ -957,13 +941,6 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
     }
 
-
-
-    private interface ProductAction {
-
-        void run(@NonNull Product product, @Nullable Product.ProductVariant variant);
-
-    }
 
 }
 

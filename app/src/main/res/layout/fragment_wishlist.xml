@@ -4,13 +4,13 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/neutral_cream">
+    android:background="@color/bg_cream">
 
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@color/neutral_cream"
+        android:background="@color/bg_cream"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
@@ -144,6 +144,7 @@
             android:orientation="vertical"
             android:paddingBottom="100dp">
 
+            <include layout="@layout/layout_login_required" />
 
             <!-- Empty State -->
             <LinearLayout
@@ -228,6 +229,7 @@
 
             <!-- Recommendations Section -->
             <LinearLayout
+                android:id="@+id/layout_wishlist_recommendations_legacy"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="32dp"
@@ -273,6 +275,7 @@
                     tools:layoutManager="androidx.recyclerview.widget.GridLayoutManager"/>
             </LinearLayout>
 
+            <include layout="@layout/include_recommendations_section" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
@@ -291,7 +294,7 @@
         android:layout_gravity="bottom"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:background="@color/neutral_cream"
+        android:background="@color/bg_cream"
         android:elevation="4dp"
         android:paddingHorizontal="16dp"
         android:paddingBottom="8dp"
@@ -345,10 +348,5 @@
             android:clickable="true"
             android:focusable="true" />
     </LinearLayout>
-
-    <include
-        layout="@layout/layout_login_required"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

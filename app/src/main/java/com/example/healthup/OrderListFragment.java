@@ -203,9 +203,8 @@ public class OrderListFragment extends Fragment {
             allRecommendProducts = new ArrayList<>();
             for (DocumentSnapshot doc : queryDocumentSnapshots) {
                 try {
-                    Product p = doc.toObject(Product.class);
+                    Product p = Product.fromDocument(doc);
                     if (p != null) {
-                        p.setId(doc.getId());
                         allRecommendProducts.add(p);
                     }
                 } catch (Exception e) {
@@ -234,11 +233,7 @@ public class OrderListFragment extends Fragment {
                         Toast.makeText(getContext(), "Vui lòng đăng nhập để thêm vào giỏ hàng", Toast.LENGTH_SHORT).show();
                         return;
                     }
-                    if (p.isHasVariants()) {
-                        showVariantSheet(p);
-                    } else {
-                        performAddToCart(p, null, 1);
-                    }
+                    showVariantSheet(p);
                 }
 
                 @Override

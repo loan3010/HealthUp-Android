@@ -29,7 +29,7 @@ public final class FaqProvider {
                 "Thời gian giao hàng mất bao lâu?",
                 "HealthUp giao hàng trong 2–4 ngày làm việc với nội thành và 3–7 ngày với các tỉnh khác. "
                         + "Bạn có thể theo dõi trạng thái đơn ngay trong mục \"Kiểm tra đơn hàng\".",
-                "giao hang", "van chuyen", "ship", "bao lau", "may ngay", "thoi gian giao"));
+                "giao hang", "van chuyen", "ship", "bao lau", "may ngay", "thoi gian giao", "thoi gian"));
         list.add(new FAQ(
                 "shipping_fee",
                 "Phí vận chuyển tính như thế nào?",
@@ -40,7 +40,7 @@ public final class FaqProvider {
                 "Chính sách đổi trả ra sao?",
                 "Bạn được đổi/trả trong vòng 7 ngày kể từ khi nhận hàng nếu sản phẩm còn nguyên tem, chưa mở niêm phong. "
                         + "Xem chi tiết trong mục Chính sách đổi trả của ứng dụng.",
-                "doi tra", "hoan tra", "tra hang", "chinh sach doi", "bao hanh"));
+                "doi tra", "hoan tra", "tra hang", "chinh sach doi", "chinh sach", "bao hanh"));
         list.add(new FAQ(
                 "payment_methods",
                 "HealthUp hỗ trợ thanh toán nào?",

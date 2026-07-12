@@ -31,6 +31,8 @@ import com.google.firebase.firestore.Query;
 import com.example.healthup.R;
 import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
+import com.example.healthup.util.GuestWishlistUiHelper;
+import com.example.healthup.util.ReviewStatsHelper;
 import com.example.models.Product;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -193,6 +195,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
     private void setupRecyclerViews() {
         productAdapter = new ProductAdapter(productList, this);
+        GuestWishlistUiHelper.applyTo(productAdapter);
         rvProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvProducts.setAdapter(productAdapter);
         rvProducts.setNestedScrollingEnabled(false);
@@ -332,6 +335,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             productList.addAll(result);
             productAdapter.updateData(new ArrayList<>(productList));
             applyWishlistState();
+            enrichProductStats();
             if (progressBar != null) progressBar.setVisibility(View.GONE);
             updateEmptyState();
             // FIX (yêu cầu): hiển thị số lượng sản phẩm phù hợp với bộ lọc/sắp xếp hiện tại
@@ -364,6 +368,14 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
 
 
+
+    private void enrichProductStats() {
+        ReviewStatsHelper.enrichProducts(productList, () -> {
+            if (isAdded() && productAdapter != null) {
+                productAdapter.notifyDataSetChanged();
+            }
+        });
+    }
 
     // FIX (yêu cầu #4): xem giải thích chi tiết trong HomeFragment.applyWishlistToHomeLists().
     // Nguyên nhân giống hệt: applyFavoriteState() mutate product object đang được adapter giữ
@@ -500,6 +512,12 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
 
 
 
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        GuestWishlistUiHelper.applyTo(productAdapter);
+    }
 
     @Override
     public void onFavoriteClick(Product product) {

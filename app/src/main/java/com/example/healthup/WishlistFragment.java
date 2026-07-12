@@ -3,6 +3,7 @@ package com.example.healthup;
 
 
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -19,7 +20,9 @@ import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.google.firebase.firestore.DocumentSnapshot;
-import com.example.healthup.R;
+import com.example.healthup.util.GuestLoginRequiredHelper;
+import com.example.healthup.util.GuestRecommendationsHelper;
+import com.example.healthup.util.UtilityHeaderHelper;
 import com.example.healthup.ProductAdapter;
 import com.example.healthup.firebase.FirestoreManager;
 import com.example.models.Product;
@@ -70,7 +73,7 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         View view = inflater.inflate(R.layout.fragment_wishlist, container, false);
         
         if (com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() == null) {
-            setupLoginRequired(view);
+            setupGuestMode(view);
         } else {
             initViews(view);
             setupRecyclerViews();
@@ -79,23 +82,35 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         return view;
     }
 
-    private void setupLoginRequired(View view) {
-        View layout = view.findViewById(R.id.layoutLoginRequired);
-        if (layout != null) {
-            layout.setVisibility(View.VISIBLE);
-            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
-                android.content.Intent intent = new android.content.Intent(getActivity(), LoginActivity.class);
-                startActivity(intent);
-            });
-            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().getOnBackPressedDispatcher().onBackPressed();
-                }
-            });
+    private void setupGuestMode(View view) {
+        UtilityHeaderHelper.bind(view, this, "Yêu thích");
+        layoutEmpty = view.findViewById(R.id.layout_wishlist_empty);
+        layoutHeaderActions = view.findViewById(R.id.layout_header_actions);
+        if (layoutHeaderActions != null) {
+            layoutHeaderActions.setVisibility(View.GONE);
         }
+        if (layoutEmpty != null) {
+            layoutEmpty.setVisibility(View.GONE);
+        }
+
+        View list = view.findViewById(R.id.rv_wishlist);
+        if (list != null) {
+            list.setVisibility(View.GONE);
+        }
+
+        View legacyRecommendations = view.findViewById(R.id.layout_wishlist_recommendations_legacy);
+        if (legacyRecommendations != null) {
+            legacyRecommendations.setVisibility(View.GONE);
+        }
+
+        View cardDeleteBarView = view.findViewById(R.id.card_delete_bar);
+        if (cardDeleteBarView != null) {
+            cardDeleteBarView.setVisibility(View.GONE);
+        }
+
+        GuestLoginRequiredHelper.bind(view, this);
+        GuestRecommendationsHelper.bind(view, this);
     }
-
-
 
 
     @Override
@@ -110,6 +125,7 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
 
 
     private void initViews(View view) {
+        UtilityHeaderHelper.bind(view, this, "Yêu thích");
         rvWishlist = view.findViewById(R.id.rv_wishlist);
         rvRecommendations = view.findViewById(R.id.rv_wishlist_recommendations);
         layoutEmpty = view.findViewById(R.id.layout_wishlist_empty);
@@ -188,13 +204,6 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
         // FIX: gắn listener cho checkbox "Tất cả" — khi tick/bỏ tick, chọn hoặc bỏ chọn toàn
         // bộ sản phẩm đang hiển thị (theo bộ lọc tìm kiếm hiện tại).
         attachSelectAllListener();
-
-
-
-
-        view.findViewById(R.id.btn_back).setOnClickListener(v -> {
-            if (getActivity() != null) getActivity().onBackPressed();
-        });
     }
 
 

@@ -1,14 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_cream">
+    android:background="@color/bg_cream"
+    android:orientation="vertical">
+
+    <include
+        android:id="@+id/utilityHeader"
+        layout="@layout/include_utility_header" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:clipToPadding="false"
         android:paddingBottom="32dp">
 
@@ -16,32 +22,16 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingBottom="16dp">
 
-            <!-- Toolbar replacement -->
-            <RelativeLayout
+            <include layout="@layout/layout_login_required" />
+
+            <LinearLayout
+                android:id="@+id/layoutMemberContent"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="16dp">
-
-                <ImageView
-                    android:id="@+id/btnBack"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:contentDescription="@string/about_back_desc"
-                    android:padding="8dp"
-                    android:src="@drawable/ic_arrow_back"
-                    app:tint="@color/text_main" />
-
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_centerInParent="true"
-                    android:text="@string/loyalty_title"
-                    android:textColor="@color/text_main"
-                    android:textSize="20sp"
-                    android:textStyle="bold" />
-            </RelativeLayout>
+                android:orientation="vertical"
+                android:paddingHorizontal="16dp">
 
             <!-- Main Loyalty Card (Spent Amount Only) -->
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -453,12 +443,40 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            </LinearLayout>
+
+            <LinearLayout
+                android:id="@+id/layoutGuestEmpty"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <ImageView
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:background="@drawable/bg_circle_light"
+                    android:padding="20dp"
+                    android:src="@drawable/ic_loyalty"
+                    app:tint="@color/text_gray" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="20dp"
+                    android:gravity="center"
+                    android:paddingHorizontal="24dp"
+                    android:text="@string/loyalty_guest_empty"
+                    android:textColor="@color/text_main"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <include layout="@layout/include_recommendations_section" />
+
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <include
-        layout="@layout/layout_login_required"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</LinearLayout>

@@ -7,7 +7,8 @@
   "main": "index.js",
   "scripts": {
     "cleanup-orphans": "node scripts/cleanup-orphans.js",
-    "list-orphans": "node scripts/list-orphans.js"
+    "list-orphans": "node scripts/list-orphans.js",
+    "backfill-product-codes": "node scripts/backfill-product-codes.js"
   },
   "dependencies": {
     "firebase-admin": "^12.0.0",

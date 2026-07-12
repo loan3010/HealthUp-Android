@@ -18,6 +18,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.example.adapters.LoyaltyVoucherAdapter;
+import com.example.healthup.util.GuestLoginRequiredHelper;
+import com.example.healthup.util.GuestRecommendationsHelper;
+import com.example.healthup.util.UtilityHeaderHelper;
 import com.example.models.Voucher;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
@@ -62,14 +65,9 @@ public class MemberTierFragment extends Fragment {
         db = FirebaseFirestore.getInstance();
 
         if (mAuth.getCurrentUser() == null) {
-            setupLoginRequired(view);
+            setupGuestMode(view);
         } else {
-            // Setup views
-            view.findViewById(R.id.btnBack).setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().getOnBackPressedDispatcher().onBackPressed();
-                }
-            });
+            UtilityHeaderHelper.bind(view, this, R.string.loyalty_title);
 
             tvSpentAmount = view.findViewById(R.id.tvSpentAmount);
             tvNextRankInfo = view.findViewById(R.id.tvNextRankInfo);
@@ -95,19 +93,19 @@ public class MemberTierFragment extends Fragment {
         return view;
     }
 
-    private void setupLoginRequired(View view) {
-        View layout = view.findViewById(R.id.layoutLoginRequired);
-        if (layout != null) {
-            layout.setVisibility(View.VISIBLE);
-            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
-                startActivity(new Intent(getActivity(), LoginActivity.class));
-            });
-            layout.findViewById(R.id.btnLater).setOnClickListener(v -> {
-                if (getActivity() != null) {
-                    getActivity().getOnBackPressedDispatcher().onBackPressed();
-                }
-            });
+    private void setupGuestMode(View view) {
+        UtilityHeaderHelper.bind(view, this, R.string.loyalty_title);
+        View memberContent = view.findViewById(R.id.layoutMemberContent);
+        View guestEmpty = view.findViewById(R.id.layoutGuestEmpty);
+        if (memberContent != null) {
+            memberContent.setVisibility(View.GONE);
         }
+        if (guestEmpty != null) {
+            guestEmpty.setVisibility(View.GONE);
+        }
+
+        GuestLoginRequiredHelper.bind(view, this);
+        GuestRecommendationsHelper.bind(view, this);
     }
 
     private void setupVoucherSections(View view) {

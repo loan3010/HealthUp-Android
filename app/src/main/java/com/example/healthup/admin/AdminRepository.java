@@ -11,11 +11,13 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import android.text.TextUtils;
 import android.util.Log;
+import com.example.healthup.util.StockManager;
 
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FieldValue;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.google.firebase.firestore.SetOptions;
 import com.google.firebase.firestore.WriteBatch;
 
 import java.util.ArrayList;
@@ -209,6 +211,9 @@ public class AdminRepository {
     public void saveProduct(@NonNull Product product, boolean isNew, @NonNull SimpleCallback callback) {
         Map<String, Object> data = new HashMap<>();
         data.put("name", product.getName());
+        if (!TextUtils.isEmpty(product.getProductCode())) {
+            data.put("productCode", product.getProductCode());
+        }
         data.put("price", product.getPrice());
         data.put("originalPrice", product.getOriginalPrice() > 0 ? product.getOriginalPrice() : product.getPrice());
         data.put("oldPrice", product.getOriginalPrice() > 0 ? product.getOriginalPrice() : product.getPrice());
@@ -217,7 +222,15 @@ public class AdminRepository {
         data.put("cat", product.getCategory());
         data.put("shortDesc", product.getShortDesc());
         data.put("description", product.getDescription());
-        data.put("images", product.getImages() != null ? product.getImages() : new ArrayList<String>());
+        data.put("ingredients", product.getIngredients() != null ? product.getIngredients() : "");
+        data.put("usage", product.getUsage() != null ? product.getUsage() : "");
+        data.put("origin", product.getOrigin() != null ? product.getOrigin() : "");
+        data.put("nutritionText", product.getNutritionText() != null ? product.getNutritionText() : "");
+        if (product.getImages() != null && !product.getImages().isEmpty()) {
+            data.put("images", product.getImages());
+        } else if (isNew) {
+            data.put("images", new ArrayList<String>());
+        }
         data.put("hidden", product.isHidden());
         data.put("draft", product.isDraft());
         data.put("hasVariants", product.isHasVariants());
@@ -241,8 +254,9 @@ public class AdminRepository {
                 variantMaps.add(variantData);
             }
         }
-        data.put("variants", variantMaps);
         if (!variantMaps.isEmpty()) {
+            data.put("variants", variantMaps);
+            data.put("hasVariants", true);
             int totalStock = 0;
             for (Map<String, Object> variantData : variantMaps) {
                 Object stockVal = variantData.get("stock");
@@ -252,6 +266,9 @@ public class AdminRepository {
             }
             data.put("stock", totalStock);
             data.put("stockCount", totalStock);
+        } else if (isNew) {
+            data.put("variants", variantMaps);
+            data.put("hasVariants", product.isHasVariants());
         }
 
         data.put("updatedAt", Timestamp.now());
@@ -268,7 +285,7 @@ public class AdminRepository {
                     .addOnSuccessListener(ref -> callback.onSuccess())
                     .addOnFailureListener(e -> callback.onError(errorMessage(e)));
         } else {
-            db.collection("products").document(product.getId()).set(data)
+            db.collection("products").document(product.getId()).set(data, SetOptions.merge())
                     .addOnSuccessListener(unused -> callback.onSuccess())
                     .addOnFailureListener(e -> callback.onError(errorMessage(e)));
         }
@@ -277,6 +294,46 @@ public class AdminRepository {
     public void deleteProduct(@NonNull String productId, @NonNull SimpleCallback callback) {
         db.collection("products").document(productId).delete()
                 .addOnSuccessListener(unused -> callback.onSuccess())
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    /** Gán mã HEALTHUP-xxxx cho mọi sản phẩm chưa có productCode. */
+    public void backfillMissingProductCodes(@NonNull SimpleCallback callback) {
+        db.collection("products").get()
+                .addOnSuccessListener(snapshot -> {
+                    List<DocumentSnapshot> missing = new ArrayList<>();
+                    for (DocumentSnapshot doc : snapshot.getDocuments()) {
+                        String code = doc.getString("productCode");
+                        if (code == null || code.trim().isEmpty()) {
+                            missing.add(doc);
+                        }
+                    }
+                    if (missing.isEmpty()) {
+                        callback.onSuccess();
+                        return;
+                    }
+                    backfillProductCodeAt(missing, 0, callback);
+                })
+                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    private void backfillProductCodeAt(@NonNull List<DocumentSnapshot> docs,
+                                       int index,
+                                       @NonNull SimpleCallback callback) {
+        if (index >= docs.size()) {
+            callback.onSuccess();
+            return;
+        }
+        DocumentSnapshot doc = docs.get(index);
+        AdminProductCodeHelper.assignNextCode(db)
+                .addOnSuccessListener(code -> {
+                    Map<String, Object> update = new HashMap<>();
+                    update.put("productCode", code);
+                    db.collection("products").document(doc.getId())
+                            .set(update, SetOptions.merge())
+                            .addOnSuccessListener(unused -> backfillProductCodeAt(docs, index + 1, callback))
+                            .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+                })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
     }
 
@@ -321,7 +378,7 @@ public class AdminRepository {
     }
 
     @Nullable
-    static Order parseOrderDocument(@NonNull DocumentSnapshot doc) {
+    public static Order parseOrderDocument(@NonNull DocumentSnapshot doc) {
         try {
             Order order = doc.toObject(Order.class);
             if (order == null) {
@@ -448,6 +505,14 @@ public class AdminRepository {
                 @SuppressWarnings("unchecked")
                 List<Map<String, Object>> returnItems = (List<Map<String, Object>>) returnItemsRaw;
                 order.setReturnItems(returnItems);
+            }
+            Boolean stockDeducted = doc.getBoolean("stockDeducted");
+            if (stockDeducted != null) {
+                order.setStockDeducted(stockDeducted);
+            }
+            Boolean stockRestored = doc.getBoolean("stockRestored");
+            if (stockRestored != null) {
+                order.setStockRestored(stockRestored);
             }
             return order;
         } catch (Exception e) {
@@ -653,9 +718,36 @@ public class AdminRepository {
         notifyBuyerAndAdmin(batch, order, cancel ? "ORDER_CANCELLED" : "ORDER_DELIVERY_FAILED",
                 buyerTitle, buyerBody, adminBody);
 
-        batch.commit()
-                .addOnSuccessListener(unused -> callback.onSuccess())
-                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+        final boolean restoreStock = cancel && shouldRestoreStock(order, Order.STATUS_CANCELLED);
+        Runnable commitBatch = () -> {
+            if (restoreStock) {
+                batch.update(db.collection("orders").document(order.getId()), "stockRestored", true);
+            }
+            batch.commit()
+                    .addOnSuccessListener(unused -> callback.onSuccess())
+                    .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+        };
+
+        if (restoreStock) {
+            StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
+                @Override
+                public void onSuccess() {
+                    commitBatch.run();
+                }
+
+                @Override
+                public void onInsufficientStock(@NonNull String productName, int available) {
+                    callback.onError("Không thể hoàn kho cho " + productName);
+                }
+
+                @Override
+                public void onError(@NonNull String message) {
+                    callback.onError(message);
+                }
+            });
+        } else {
+            commitBatch.run();
+        }
     }
 
     /** After a failure: clear needsRedelivery and log "Giao lại lần N". */
@@ -929,11 +1021,47 @@ public class AdminRepository {
                     notifyBuyerAndAdmin(batch, order, notifType, buyerTitle, buyerBody,
                             buyerTitle + " — #" + displayCode(order));
 
-                    batch.commit()
-                            .addOnSuccessListener(unused -> callback.onSuccess())
-                            .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+                    final boolean restoreStock = shouldRestoreStock(order, toStatus);
+                    Runnable commitBatch = () -> {
+                        if (restoreStock) {
+                            batch.update(db.collection("orders").document(orderId), "stockRestored", true);
+                        }
+                        batch.commit()
+                                .addOnSuccessListener(unused -> callback.onSuccess())
+                                .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+                    };
+
+                    if (restoreStock) {
+                        StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
+                            @Override
+                            public void onSuccess() {
+                                commitBatch.run();
+                            }
+
+                            @Override
+                            public void onInsufficientStock(@NonNull String productName, int available) {
+                                callback.onError("Không thể hoàn kho cho " + productName);
+                            }
+
+                            @Override
+                            public void onError(@NonNull String message) {
+                                callback.onError(message);
+                            }
+                        });
+                    } else {
+                        commitBatch.run();
+                    }
                 })
                 .addOnFailureListener(e -> callback.onError(errorMessage(e)));
+    }
+
+    private boolean shouldRestoreStock(@NonNull Order order, @NonNull String toStatus) {
+        return Order.STATUS_CANCELLED.equalsIgnoreCase(toStatus)
+                && !Order.STATUS_DELIVERED.equalsIgnoreCase(order.getStatus())
+                && order.isStockDeducted()
+                && !order.isStockRestored()
+                && order.getItems() != null
+                && !order.getItems().isEmpty();
     }
 
     private void appendHistory(@NonNull WriteBatch batch,

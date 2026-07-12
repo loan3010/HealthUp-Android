@@ -39,7 +39,7 @@
         android:layout_height="wrap_content"
         android:paddingHorizontal="16dp"
         android:paddingBottom="16dp"
-        android:text="Yến mạch nguyên cám, Việt quất sấy lạnh, Hạt chia hữu cơ..."
+        android:text=""
         android:textColor="@color/text_gray"
         android:textSize="14sp"
         android:visibility="gone" />
