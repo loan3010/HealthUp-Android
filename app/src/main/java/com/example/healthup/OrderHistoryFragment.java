@@ -67,14 +67,11 @@ public class OrderHistoryFragment extends Fragment {
             }
         }
 
-        binding.btnSearch.setOnClickListener(v ->
+        UtilityHeaderHelper.showAction(binding.getRoot(), R.id.btn_header_search, v ->
                 startActivity(new Intent(requireContext(), OrderSearchActivity.class)));
 
-        binding.btnChatBot.setOnClickListener(v ->
-                requireActivity().getSupportFragmentManager().beginTransaction()
-                        .replace(R.id.fragment_container, new ChatBotFragment())
-                        .addToBackStack(null)
-                        .commit());
+        UtilityHeaderHelper.showAction(binding.getRoot(), R.id.btn_header_chat, v ->
+                startActivity(ChatActivity.buyerIntent(requireContext())));
     }
 
     @Override

@@ -45,31 +45,69 @@
             </RelativeLayout>
 
             <LinearLayout
+                android:id="@+id/searchBarLayout"
                 android:layout_width="match_parent"
-                android:layout_height="48dp"
+                android:layout_height="wrap_content"
+                android:minHeight="48dp"
                 android:layout_marginTop="16dp"
                 android:background="@drawable/bg_search_bar"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="12dp">
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="4dp">
 
                 <ImageView
+                    android:id="@+id/ivSearchIcon"
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_search"
                     app:tint="@color/neutral_grey" />
 
-                <EditText
-                    android:id="@+id/et_search"
+                <FrameLayout
                     android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_marginHorizontal="8dp"
+                    android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:background="@null"
-                    android:hint="Tìm granola, snack lành mạnh..."
-                    android:imeOptions="actionSearch"
-                    android:inputType="text"
-                    android:textSize="14sp" />
+                    android:layout_marginHorizontal="8dp">
+
+                    <EditText
+                        android:id="@+id/et_search"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:minHeight="40dp"
+                        android:background="@null"
+                        android:hint="Tìm granola, snack lành mạnh..."
+                        android:imeOptions="actionSearch"
+                        android:inputType="text"
+                        android:textSize="14sp" />
+
+                    <!-- Image Search Preview Container -->
+                    <androidx.cardview.widget.CardView
+                        android:id="@+id/containerImageSearch"
+                        android:layout_width="100dp"
+                        android:layout_height="100dp"
+                        android:layout_marginVertical="8dp"
+                        android:visibility="gone"
+                        app:cardCornerRadius="8dp"
+                        app:cardElevation="2dp">
+                        <ImageView
+                            android:id="@+id/ivSearchPreview"
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:scaleType="centerCrop" />
+                    </androidx.cardview.widget.CardView>
+                </FrameLayout>
+
+                <ImageView
+                    android:id="@+id/ivClearSearch"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="8dp"
+                    android:src="@drawable/ic_close"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:tint="@color/neutral_grey" />
 
                 <ImageView
                     android:id="@+id/btn_voice_search"
@@ -77,6 +115,9 @@
                     android:layout_height="20dp"
                     android:layout_marginEnd="12dp"
                     android:src="@drawable/ic_mic"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:tint="@color/neutral_grey" />
 
                 <ImageView
@@ -84,6 +125,9 @@
                     android:layout_width="20dp"
                     android:layout_height="20dp"
                     android:src="@drawable/ic_camera"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:clickable="true"
+                    android:focusable="true"
                     app:tint="@color/neutral_grey" />
             </LinearLayout>
 

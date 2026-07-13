@@ -39,6 +39,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.ToastUtils;
 import androidx.core.content.ContextCompat;
 
 import java.io.Serializable;
@@ -55,8 +56,7 @@ public class MainActivity extends AppCompatActivity {
                     new ActivityResultContracts.RequestPermission(),
                     granted -> {
                         if (granted) {
-                            Toast.makeText(this, R.string.notify_permission_granted, Toast.LENGTH_SHORT)
-                                    .show();
+                            ToastUtils.show(this, R.string.notify_permission_granted);
                         }
                     }
             );

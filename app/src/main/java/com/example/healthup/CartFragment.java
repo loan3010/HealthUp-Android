@@ -30,6 +30,7 @@ import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.PhoneVerifiedHelper;
 import com.example.healthup.util.ReviewStatsHelper;
 import com.example.healthup.util.StockManager;
+import com.example.healthup.util.ToastUtils;
 import com.example.models.CartItem;
 import com.example.models.Product;
 import com.example.models.Voucher;
@@ -290,7 +291,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         if (selectedTotal == 0) {
-            Toast.makeText(getContext(), "Vui lòng chọn sản phẩm để xem voucher áp dụng", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Vui lòng chọn sản phẩm để xem voucher áp dụng");
             return;
         }
 
@@ -373,7 +374,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                             @Override
                             public void onSuccess() {
                                 if (!isAdded()) return;
-                                Toast.makeText(getContext(), R.string.added_to_cart, Toast.LENGTH_SHORT).show();
+                                ToastUtils.show(getContext(), R.string.added_to_cart);
                                 replaceRecommendation(product);
                                 refreshCartList();
                             }
@@ -381,7 +382,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                             @Override
                             public void onFailure(Exception e) {
                                 if (isAdded()) {
-                                    Toast.makeText(getContext(), R.string.register_error_generic, Toast.LENGTH_SHORT).show();
+                                    ToastUtils.show(getContext(), R.string.register_error_generic);
                                 }
                             }
                         }));
@@ -516,7 +517,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 })
                 .addOnFailureListener(e -> {
                     if (isAdded()) {
-                        Toast.makeText(getContext(), "Lỗi tải giỏ hàng", Toast.LENGTH_SHORT).show();
+                        ToastUtils.show(getContext(), "Lỗi tải giỏ hàng");
                     }
                 });
     }
@@ -1069,7 +1070,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             if (item.isSelected()) toRemove.add(item);
         }
         if (toRemove.isEmpty()) {
-            Toast.makeText(getContext(), "Chưa chọn sản phẩm nào để xóa", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Chưa chọn sản phẩm nào để xóa");
             return;
         }
 
@@ -1093,7 +1094,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     cartItems.removeAll(toRemove);
                     renderList();
                     updateFooter();
-                    Toast.makeText(getContext(), "Đã xóa sản phẩm thành công", Toast.LENGTH_SHORT).show();
+                    ToastUtils.show(getContext(), "Đã xóa sản phẩm thành công");
                 })
                 .setNegativeButton("Hủy", null)
                 .show();
@@ -1105,11 +1106,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             if (item.isSelected()) toSave.add(item);
         }
         if (toSave.isEmpty()) {
-            Toast.makeText(getContext(), getString(R.string.cart_select_items_required), Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), getString(R.string.cart_select_items_required));
             return;
         }
         if (userId == null) {
-            Toast.makeText(getContext(), getString(R.string.wishlist_login_required), Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), getString(R.string.wishlist_login_required));
             return;
         }
 
@@ -1137,10 +1138,10 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                 item.setFavorite(true);
             }
             if (adapter != null) adapter.notifyDataSetChanged();
-            Toast.makeText(getContext(), getString(R.string.cart_saved_to_wishlist), Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), getString(R.string.cart_saved_to_wishlist));
         }).addOnFailureListener(e -> {
             if (isAdded()) {
-                Toast.makeText(getContext(), getString(R.string.wishlist_update_failed), Toast.LENGTH_SHORT).show();
+                ToastUtils.show(getContext(), getString(R.string.wishlist_update_failed));
             }
         });
     }
@@ -1152,7 +1153,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         }
 
         if (selectedItems.isEmpty()) {
-            Toast.makeText(getContext(), "Vui lòng chọn ít nhất 1 sản phẩm", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Vui lòng chọn ít nhất 1 sản phẩm");
             return;
         }
 

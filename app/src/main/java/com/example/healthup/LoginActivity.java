@@ -37,6 +37,7 @@ import com.example.healthup.util.GuestCartManager;
 import com.example.healthup.util.PhoneNormalizer;
 import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UserProfileResolver;
+import com.example.healthup.util.ToastUtils;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.textfield.TextInputEditText;
@@ -772,15 +773,14 @@ public class LoginActivity extends AppCompatActivity {
                 new AccountSessionRecorder.Listener() {
                     @Override
                     public void onRecorded() {
-                        Toast.makeText(LoginActivity.this, R.string.login_success, Toast.LENGTH_SHORT).show();
+                        ToastUtils.show(LoginActivity.this, R.string.login_success);
                         openMainScreen();
                     }
 
                     @Override
                     public void onRejectedAccountLimit() {
                         firebaseAuth.signOut();
-                        Toast.makeText(LoginActivity.this,
-                                R.string.account_management_full_blocked, Toast.LENGTH_LONG).show();
+                        ToastUtils.show(LoginActivity.this, R.string.account_management_full_blocked);
                     }
                 });
     }

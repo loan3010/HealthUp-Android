@@ -154,7 +154,7 @@
     <string name="notify_permission_icon_desc">Biểu tượng thông báo</string>
     <string name="notify_permission_granted">Đã bật thông báo</string>
 
-    <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">328151190093-ooblb5f7ip4g1p1jpq9js3glgbrmfho6.apps.googleusercontent.com</string>
     <string name="facebook_app_id" translatable="false">YOUR_FACEBOOK_APP_ID</string>
     <string name="facebook_client_token" translatable="false">YOUR_FACEBOOK_CLIENT_TOKEN</string>
     <string name="fb_login_protocol_scheme" translatable="false">fbYOUR_FACEBOOK_APP_ID</string>
