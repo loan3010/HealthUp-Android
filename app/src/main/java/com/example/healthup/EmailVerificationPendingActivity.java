@@ -35,6 +35,10 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
 
     public static final String EXTRA_EMAIL = "extra_verify_email";
     public static final String EXTRA_MAIL_ALREADY_SENT = "extra_mail_already_sent";
+    /** When true, finish back to caller (e.g. Account settings) instead of opening Main. */
+    public static final String EXTRA_RETURN_TO_ACCOUNT = "extra_return_to_account";
+
+    private boolean returnToAccount;
 
     private String email;
     private FirebaseAuth firebaseAuth;
@@ -67,6 +71,7 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
         if (TextUtils.isEmpty(email)) {
             email = user.getEmail();
         }
+        returnToAccount = getIntent().getBooleanExtra(EXTRA_RETURN_TO_ACCOUNT, false);
 
         subtitle = findViewById(R.id.subtitleText);
         subtitle.setText(getString(R.string.email_verify_subtitle_mock, email == null ? "" : email));
@@ -179,6 +184,10 @@ public class EmailVerificationPendingActivity extends AppCompatActivity {
         FirebaseUser user = firebaseAuth.getCurrentUser();
         if (user == null) {
             goToLogin();
+            return;
+        }
+        if (returnToAccount) {
+            finish();
             return;
         }
         GuestCartManager.getInstance(this).mergeToFirestore(user.getUid(), () -> runOnUiThread(() -> {

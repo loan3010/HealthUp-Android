@@ -126,8 +126,6 @@ public class AdminResetPasswordActivity extends AppCompatActivity {
                 showPasswordError(getString(R.string.reset_password_session_invalid));
             } else if ("user_not_found".equals(error)) {
                 showPasswordError(getString(R.string.admin_forgot_email_not_registered));
-            } else if ("auth_sync_failed".equals(error)) {
-                showPasswordError(getString(R.string.admin_reset_auth_sync_failed));
             } else {
                 showPasswordError(getString(R.string.reset_password_error_generic));
             }

@@ -67,6 +67,24 @@ public final class AppPasswordHelper {
         return "Ha1!" + digest.substring(0, 28);
     }
 
+    /**
+     * Synthetic Auth email per admin Firestore profile — avoids collision with legacy
+     * real-email Auth accounts after password reset.
+     */
+    @NonNull
+    public static String syntheticAuthEmailForAdmin(@NonNull String profileDocId) {
+        return "admin-" + profileDocId.toLowerCase(Locale.ROOT) + UserProfileBuilder.SYNTHETIC_EMAIL_DOMAIN;
+    }
+
+    /** True when login should verify {@link #FIELD_PASSWORD_HASH} before opening an Auth session. */
+    public static boolean canUseAppPasswordLogin(@Nullable DocumentSnapshot doc) {
+        if (doc == null || !doc.exists()) {
+            return false;
+        }
+        return isAppPasswordMode(doc)
+                || !TextUtils.isEmpty(doc.getString(FIELD_PASSWORD_HASH));
+    }
+
     public static boolean isAppPasswordMode(@Nullable DocumentSnapshot doc) {
         if (doc == null || !doc.exists()) {
             return false;

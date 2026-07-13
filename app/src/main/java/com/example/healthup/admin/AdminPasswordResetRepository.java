@@ -1,5 +1,7 @@
 package com.example.healthup.admin;
 
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
 
 import com.example.healthup.FirebaseAuthErrorMapper;
@@ -137,17 +139,10 @@ public class AdminPasswordResetRepository {
                                         AppPasswordHelper.passwordFieldsForNewPassword(newPassword);
                                 firestore.collection("users").document(adminUid)
                                         .update(updates)
-                                        .addOnSuccessListener(unused ->
-                                                AdminAuthSyncHelper.syncAfterPasswordReset(adminUid)
-                                                        .addOnSuccessListener(v ->
-                                                                callback.onResult(
-                                                                        ResetPasswordResult.SUCCESS, ""))
-                                                        .addOnFailureListener(e ->
-                                                                callback.onResult(
-                                                                        ResetPasswordResult.AUTH_SYNC_FAILED,
-                                                                        e.getMessage() != null
-                                                                                ? e.getMessage()
-                                                                                : "")))
+                                        .addOnSuccessListener(unused -> {
+                                            AdminAuthSyncHelper.syncAfterPasswordReset(adminUid);
+                                            callback.onResult(ResetPasswordResult.SUCCESS, "");
+                                        })
                                         .addOnFailureListener(e ->
                                                 callback.onResult(
                                                         ResetPasswordResult.ERROR,

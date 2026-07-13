@@ -20,6 +20,11 @@ const APP_PASSWORD_PEPPER = 'HealthUp-Spark-AppPassword-v1';
 
 admin.initializeApp();
 
+/** Must match AppPasswordHelper.syntheticAuthEmailForAdmin in Android. */
+function syntheticAuthEmailForAdmin(profileDocId) {
+  return `admin-${String(profileDocId || '').trim().toLowerCase()}@healthup.app`;
+}
+
 /** Must match AppPasswordHelper.authSecretForAdminEmail in Android. */
 function authSecretForAdminEmail(email) {
   const normalized = String(email || '').trim().toLowerCase();
@@ -137,27 +142,31 @@ exports.syncAdminAuthAfterReset = functions.https.onCall(async (data) => {
     throw new functions.https.HttpsError('permission-denied', 'Not an admin account');
   }
 
-  const email = (resetDoc.data().email || profile.email || profile.displayEmail || '')
-      .toString()
-      .trim()
-      .toLowerCase();
-  if (!email) {
-    throw new functions.https.HttpsError('failed-precondition', 'Admin email missing');
-  }
-
-  const derivedPassword = authSecretForAdminEmail(email);
+  const syntheticEmail = syntheticAuthEmailForAdmin(adminUid);
+  const derivedPassword = authSecretForAdminEmail(syntheticEmail);
   try {
-    await admin.auth().updateUser(adminUid, {password: derivedPassword});
+    const userRecord = await admin.auth().getUserByEmail(syntheticEmail);
+    await admin.auth().updateUser(userRecord.uid, {password: derivedPassword});
   } catch (err) {
     try {
-      const userRecord = await admin.auth().getUserByEmail(email);
-      await admin.auth().updateUser(userRecord.uid, {password: derivedPassword});
+      await admin.auth().createUser({
+        email: syntheticEmail,
+        password: derivedPassword,
+        uid: adminUid,
+      });
     } catch (err2) {
-      console.error('syncAdminAuthAfterReset failed', err, err2);
-      throw new functions.https.HttpsError(
-          'internal',
-          'Could not sync Firebase Auth password'
-      );
+      try {
+        await admin.auth().createUser({
+          email: syntheticEmail,
+          password: derivedPassword,
+        });
+      } catch (err3) {
+        console.error('syncAdminAuthAfterReset failed', err, err2, err3);
+        throw new functions.https.HttpsError(
+            'internal',
+            'Could not sync Firebase Auth password'
+        );
+      }
     }
   }
 

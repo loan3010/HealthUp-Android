@@ -155,6 +155,7 @@
     <string name="social_auth_google_cancelled">Google login cancelled.</string>
     <string name="social_auth_google_not_configured">Google Sign-In is not configured.</string>
     <string name="social_auth_google_no_id_token">Google did not return idToken.</string>
+    <string name="social_auth_google_developer_error">Google Sign-In is not configured for this device. Add your debug SHA-1 in Firebase Console, download google-services.json again, then rebuild.</string>
     <string name="social_auth_facebook_failed">Facebook login failed. Please try again.</string>
     <string name="social_auth_profile_check_failed">Cannot check profile. Please try again.</string>
     <string name="social_link_email_match_continue">This email already has an account. Verify the phone OTP, then enter the password to link Google.</string>
@@ -207,6 +208,8 @@
     <string name="change_email_link_google_message">This is a Gmail address. Verifying email does not auto-link Google Sign-In. You can link Google later in Account settings.</string>
     <string name="change_email_link_google_later">Got it</string>
     <string name="account_email_empty">No email added</string>
+    <string name="account_email_unverified">Email not verified — you cannot sign in with email yet.</string>
+    <string name="account_verify_email_button">Verify email now</string>
     <string name="account_save_session_expired">Session expired. Please sign in again.</string>
 
     <string name="social_complete_profile_title">Complete Profile</string>
@@ -400,6 +403,11 @@
     <string name="buy_now">Buy Now</string>
     <string name="out_of_stock">Out of Stock</string>
     <string name="stock_prefix">Stock: %1$d</string>
+    <string name="product_share_sheet_title">Share product</string>
+    <string name="product_share_via_apps">Share via Zalo, Messenger, Facebook…</string>
+    <string name="product_share_copy_link">Copy link</string>
+    <string name="product_share_chooser_title">Share product</string>
+    <string name="product_share_link_copied">Product link copied</string>
     <string name="variant_prefix">Variant: %1$s</string>
     <string name="default_variant">Default</string>
     <string name="max_stock_reached">Maximum stock quantity reached</string>

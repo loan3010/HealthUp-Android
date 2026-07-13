@@ -25,7 +25,9 @@ import androidx.fragment.app.Fragment;
 
 
 import com.example.models.Address;
+import com.example.healthup.util.PhoneNormalizer;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.WriteBatch;
 
@@ -102,6 +104,7 @@ public class AddressFormFragment extends Fragment {
             btnSubmit.setText("Thêm địa chỉ mới");
             btnDelete.setVisibility(View.GONE);
             selectType(Address.TYPE_HOME);
+            prefillFromUserProfileForFirstAddress();
         }
 
 
@@ -249,6 +252,45 @@ public class AddressFormFragment extends Fragment {
         btnTypeOffice.setTextColor(ContextCompat.getColor(requireContext(), !isHome ? R.color.white : R.color.text_dark));
     }
 
+
+    /** Địa chỉ đầu tiên: tự điền tên + SĐT từ hồ sơ đăng ký. */
+    private void prefillFromUserProfileForFirstAddress() {
+        String currentUserId = FirebaseAuth.getInstance().getUid();
+        if (currentUserId == null) return;
+
+        db.collection("users").document(currentUserId).collection("addresses")
+                .limit(1)
+                .get()
+                .addOnSuccessListener(addrSnap -> {
+                    if (!isAdded() || editingAddress != null || !addrSnap.isEmpty()) return;
+
+                    db.collection("users").document(currentUserId)
+                            .get()
+                            .addOnSuccessListener(userDoc -> {
+                                if (!isAdded() || editingAddress != null) return;
+
+                                String fullName = userDoc.getString("fullName");
+                                String phone = userDoc.getString("phone");
+
+                                FirebaseUser authUser = FirebaseAuth.getInstance().getCurrentUser();
+                                if ((fullName == null || fullName.trim().isEmpty()) && authUser != null) {
+                                    fullName = authUser.getDisplayName();
+                                }
+                                if ((phone == null || phone.trim().isEmpty()) && authUser != null) {
+                                    phone = authUser.getPhoneNumber();
+                                }
+
+                                if (fullName != null && !fullName.trim().isEmpty()) {
+                                    etFullName.setText(fullName.trim());
+                                }
+                                if (phone != null && !phone.trim().isEmpty()) {
+                                    etPhone.setText(PhoneNormalizer.normalize(phone.trim()));
+                                }
+                                switchDefault.setChecked(true);
+                                updateSubmitButtonState();
+                            });
+                });
+    }
 
     private void prefillFromAddress(Address address) {
         etFullName.setText(address.getRecipientName());

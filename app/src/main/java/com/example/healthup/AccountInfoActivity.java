@@ -18,6 +18,7 @@ import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
@@ -129,6 +130,8 @@ public class AccountInfoActivity extends AppCompatActivity {
         };
         binding.containerEmail.setOnClickListener(changeEmailListener);
         binding.ivEditEmail.setOnClickListener(changeEmailListener);
+
+        binding.btnVerifyEmail.setOnClickListener(v -> openEmailVerification());
 
         // Chỉnh sửa Số điện thoại
         View.OnClickListener changePhoneListener = v -> {
@@ -242,6 +245,7 @@ public class AccountInfoActivity extends AppCompatActivity {
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(doc -> {
                     if (!doc.exists()) {
+                        updateEmailVerificationUi(null, null, false);
                         return;
                     }
                     String display = doc.getString("displayEmail");
@@ -252,9 +256,41 @@ public class AccountInfoActivity extends AppCompatActivity {
                     if (show != null) {
                         binding.etEmail.setText(show);
                     } else {
-                        // Prefer Firestore displayEmail; Auth email stays synthetic in app-password mode.
                         binding.etEmail.setText(getString(R.string.account_email_empty));
                     }
+                    Boolean verified = doc.getBoolean("emailVerified");
+                    updateEmailVerificationUi(show, display, verified != null && verified);
+                });
+    }
+
+    private void updateEmailVerificationUi(@Nullable String shownEmail,
+                                           @Nullable String displayEmail,
+                                           boolean emailVerified) {
+        String pendingEmail = UserProfileBuilder.isRealEmail(displayEmail)
+                ? displayEmail
+                : (UserProfileBuilder.isRealEmail(shownEmail) ? shownEmail : null);
+        boolean needsVerify = pendingEmail != null && !emailVerified;
+        binding.layoutEmailVerify.setVisibility(needsVerify ? View.VISIBLE : View.GONE);
+    }
+
+    private void openEmailVerification() {
+        if (userId == null) return;
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists()) return;
+                    String display = doc.getString("displayEmail");
+                    String email = doc.getString("email");
+                    String pending = UserProfileBuilder.isRealEmail(display)
+                            ? display
+                            : (UserProfileBuilder.isRealEmail(email) ? email : null);
+                    if (pending == null) {
+                        startActivity(new Intent(this, ChangeEmailActivity.class));
+                        return;
+                    }
+                    Intent intent = new Intent(this, EmailVerificationPendingActivity.class);
+                    intent.putExtra(EmailVerificationPendingActivity.EXTRA_EMAIL, pending);
+                    intent.putExtra(EmailVerificationPendingActivity.EXTRA_RETURN_TO_ACCOUNT, true);
+                    startActivity(intent);
                 });
     }
 

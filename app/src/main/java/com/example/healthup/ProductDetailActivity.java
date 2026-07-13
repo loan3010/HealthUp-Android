@@ -28,6 +28,7 @@ import com.example.healthup.firebase.FirestoreManager;
 import com.example.healthup.util.CartHelper;
 import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.ProductShareHelper;
 import com.example.healthup.util.ReviewStatsHelper;
 import com.example.healthup.util.TranslationManager;
 import com.example.models.Product;
@@ -729,13 +730,6 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private void shareProduct() {
         if (product == null) return;
-
-        String shareBody = "Hãy xem sản phẩm này trên HealthUp: " + product.getName() +
-                "\nGiá: " + tvPrice.getText();
-        Intent sharingIntent = new Intent(android.content.Intent.ACTION_SEND);
-        sharingIntent.setType("text/plain");
-        sharingIntent.putExtra(android.content.Intent.EXTRA_SUBJECT, "HealthUp - " + product.getName());
-        sharingIntent.putExtra(android.content.Intent.EXTRA_TEXT, shareBody);
-        startActivity(Intent.createChooser(sharingIntent, "Chia sẻ sản phẩm"));
+        ProductShareHelper.showShareSheet(this, product);
     }
 }

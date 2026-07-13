@@ -318,6 +318,39 @@
                         app:tint="@color/neutral_grey" />
                 </RelativeLayout>
 
+                <LinearLayout
+                    android:id="@+id/layoutEmailVerify"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/bg_input_error"
+                    android:orientation="vertical"
+                    android:padding="12dp"
+                    android:visibility="gone">
+
+                    <TextView
+                        android:id="@+id/tvEmailVerifyStatus"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:drawableStart="@drawable/ic_warning"
+                        android:drawablePadding="8dp"
+                        android:gravity="center_vertical"
+                        android:text="@string/account_email_unverified"
+                        android:textColor="@color/red_price"
+                        android:textSize="13sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnVerifyEmail"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="match_parent"
+                        android:layout_height="44dp"
+                        android:layout_marginTop="8dp"
+                        android:text="@string/account_verify_email_button"
+                        android:textAllCaps="false"
+                        android:textColor="@color/brand_primary"
+                        app:strokeColor="@color/brand_primary" />
+                </LinearLayout>
+
                 <!-- Số điện thoại -->
                 <TextView
                     style="@style/TextAppearance.HealthUp.SubContent.Bold"

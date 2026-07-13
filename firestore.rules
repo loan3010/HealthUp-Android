@@ -14,18 +14,27 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function resolveRoleFromData(data) {
+      return 'role' in data && data.role is string
+        ? data.role
+        : ('userRole' in data && data.userRole is string ? data.userRole : null);
+    }
+
+    function resolveRoleForUserDoc(userId) {
+      let userPath = /databases/$(database)/documents/users/$(userId);
+      return exists(userPath)
+        ? resolveRoleFromData(get(userPath).data)
+        : null;
     }
 
     function currentRole() {
-      // users/{uid}.role (or legacy userRole) is one of "buyer" | "seller" | "admin" | "staff".
+      // users/{uid}.role — or linked profile via user_sessions (admin Auth UID mismatch).
       return isSignedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        ? ('role' in userData() && userData().role is string
-            ? userData().role
-            : ('userRole' in userData() && userData().userRole is string
-                ? userData().userRole
+        ? (resolveRoleForUserDoc(request.auth.uid)
+            != null
+            ? resolveRoleForUserDoc(request.auth.uid)
+            : (linkedProfileDocId() != null
+                ? resolveRoleForUserDoc(linkedProfileDocId())
                 : null))
         : null;
     }

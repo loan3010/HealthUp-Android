@@ -154,7 +154,7 @@
     <string name="notify_permission_icon_desc">Biểu tượng thông báo</string>
     <string name="notify_permission_granted">Đã bật thông báo</string>
 
-    <string name="default_web_client_id" translatable="false">YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="default_web_client_id" translatable="false">328151190093-ooblb5f7ip4g1p1jpq9js3glgbrmfho6.apps.googleusercontent.com</string>
     <string name="facebook_app_id" translatable="false">YOUR_FACEBOOK_APP_ID</string>
     <string name="facebook_client_token" translatable="false">YOUR_FACEBOOK_CLIENT_TOKEN</string>
     <string name="fb_login_protocol_scheme" translatable="false">fbYOUR_FACEBOOK_APP_ID</string>
@@ -164,6 +164,7 @@
     <string name="social_auth_google_cancelled">Đã hủy đăng nhập Google.</string>
     <string name="social_auth_google_not_configured">Google Sign-In chưa được cấu hình. Thêm SHA-1 vào Firebase Console, bật Google provider, tải lại google-services.json và build lại app.</string>
     <string name="social_auth_google_no_id_token">Google không trả về idToken. Kiểm tra Web client ID và SHA-1 trong Firebase Console.</string>
+    <string name="social_auth_google_developer_error">Google Sign-In chưa khớp cấu hình Firebase. Mỗi máy dev cần thêm SHA-1 debug vào Firebase Console, tải lại google-services.json rồi build lại app.</string>
     <string name="social_auth_facebook_failed">Đăng nhập Facebook thất bại. Vui lòng thử lại.</string>
     <string name="social_auth_profile_check_failed">Không thể kiểm tra hồ sơ. Vui lòng thử lại.</string>
     <string name="social_link_email_match_continue">Email này đã có tài khoản. Xác thực OTP số điện thoại rồi nhập mật khẩu để liên kết Google.</string>
@@ -228,6 +229,8 @@
     <string name="change_email_link_google_message">Đây là Gmail. Xác thực email chưa tự liên kết đăng nhập Google. Bạn có thể liên kết Google sau trong Cài đặt tài khoản.</string>
     <string name="change_email_link_google_later">Đã hiểu</string>
     <string name="account_email_empty">Chưa thêm email</string>
+    <string name="account_email_unverified">Email chưa xác thực — bạn chưa thể đăng nhập bằng email.</string>
+    <string name="account_verify_email_button">Xác thực email ngay</string>
     <string name="account_save_session_expired">Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.</string>
 
     <string name="social_complete_profile_title">Hoàn tất hồ sơ</string>
@@ -423,6 +426,11 @@
     <string name="buy_now">Mua ngay</string>
     <string name="out_of_stock">Hết hàng</string>
     <string name="stock_prefix">Kho: %1$d</string>
+    <string name="product_share_sheet_title">Chia sẻ sản phẩm</string>
+    <string name="product_share_via_apps">Chia sẻ qua Zalo, Messenger, Facebook…</string>
+    <string name="product_share_copy_link">Sao chép liên kết</string>
+    <string name="product_share_chooser_title">Chia sẻ sản phẩm</string>
+    <string name="product_share_link_copied">Đã sao chép liên kết sản phẩm</string>
     <string name="variant_prefix">Phân loại: %1$s</string>
     <string name="default_variant">Mặc định</string>
     <string name="max_stock_reached">Số lượng đạt tối đa trong kho</string>
@@ -521,8 +529,8 @@
     <string name="admin_login_wrong_credentials">Email hoặc mật khẩu không đúng</string>
     <string name="admin_login_check_failed">Không thể kiểm tra tài khoản admin. Thử lại sau.</string>
     <string name="admin_login_verify_failed">Không thể xác thực quyền admin. Thử lại sau.</string>
-    <string name="admin_login_auth_sync_required">Không thể đăng nhập sau khi đổi mật khẩu. Vui lòng thử lại quy trình Quên mật khẩu hoặc liên hệ quản trị hệ thống.</string>
-    <string name="admin_reset_auth_sync_failed">Không thể hoàn tất đổi mật khẩu (chưa đồng bộ server). Kiểm tra kết nối mạng hoặc liên hệ quản trị hệ thống.</string>
+    <string name="admin_reset_password_success">Đặt lại mật khẩu thành công. Vui lòng đăng nhập bằng mật khẩu mới.</string>
+    <string name="admin_login_auth_sync_required">Không mở được phiên đăng nhập admin. Thử lại sau hoặc cài lại app.</string>
     <string name="admin_forgot_password">Quên mật khẩu?</string>
     <string name="admin_forgot_password_title">Quên mật khẩu Admin</string>
     <string name="admin_forgot_password_subtitle">Nhập email quản trị đã đăng ký để nhận mã OTP</string>
@@ -530,7 +538,6 @@
     <string name="admin_forgot_email_not_registered">Email không tồn tại hoặc không có quyền admin</string>
     <string name="admin_forgot_email_invalid">Email không hợp lệ</string>
     <string name="admin_forgot_otp_subtitle">Mã xác minh đã gửi đến %1$s</string>
-    <string name="admin_reset_password_success">Đặt lại mật khẩu admin thành công</string>
     <string name="admin_panel_title">Bảng điều khiển</string>
     <string name="admin_nav_dashboard">Tổng quan</string>
     <string name="admin_nav_products">Sản phẩm</string>

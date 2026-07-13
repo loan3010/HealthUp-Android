@@ -92,8 +92,10 @@ public class SocialAuthHelper {
                     if (result.getResultCode() != Activity.RESULT_OK) {
                         setLoading(false);
                         clearSwitchTarget();
-                        clearSwitchTarget();
-                        clearSwitchTarget();
+                        // Google often returns RESULT_CANCELED for config errors (SHA-1 mismatch).
+                        if (result.getData() != null && tryReportGoogleIntentError(result.getData())) {
+                            return;
+                        }
                         if (result.getResultCode() == Activity.RESULT_CANCELED) {
                             notifyError(activity.getString(R.string.social_auth_google_cancelled));
                         } else {
@@ -106,7 +108,6 @@ public class SocialAuthHelper {
                     }
                     if (result.getData() == null) {
                         setLoading(false);
-                        clearSwitchTarget();
                         clearSwitchTarget();
                         notifyError(withDebugDetail(
                                 activity.getString(R.string.social_auth_google_failed),
@@ -219,6 +220,19 @@ public class SocialAuthHelper {
                 ));
             }
         });
+    }
+
+    /** @return true if an ApiException was reported to the user */
+    private boolean tryReportGoogleIntentError(@NonNull Intent data) {
+        Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
+        try {
+            task.getResult(ApiException.class);
+            return false;
+        } catch (ApiException e) {
+            logDebug("Google Sign-In ApiException from non-OK result", e);
+            notifyError(formatGoogleApiError(e));
+            return true;
+        }
     }
 
     private void handleGoogleSignInResult(@NonNull Intent data) {
@@ -514,6 +528,13 @@ public class SocialAuthHelper {
 
     @NonNull
     private String formatGoogleApiError(@NonNull ApiException e) {
+        if (e.getStatusCode() == CommonStatusCodes.DEVELOPER_ERROR) {
+            return activity.getString(R.string.social_auth_google_developer_error);
+        }
+        if (e.getStatusCode() == 12501) {
+            return activity.getString(R.string.social_auth_google_cancelled);
+        }
+
         String base = activity.getString(R.string.social_auth_google_failed);
         if (!BuildConfig.DEBUG) {
             return base;
