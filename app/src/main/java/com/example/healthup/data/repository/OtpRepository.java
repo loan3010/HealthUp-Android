@@ -13,9 +13,12 @@ import java.util.Map;
 public class OtpRepository {
 
     public static final String COLLECTION_PASSWORD_RESET = "password_reset";
+    public static final String COLLECTION_ADMIN_PASSWORD_RESET = "admin_password_reset";
     public static final String COLLECTION_REGISTRATION = "registration_otp";
     public static final String COLLECTION_EMAIL_VERIFICATION = "email_verification";
     public static final long OTP_EXPIRY_MS = 5 * 60 * 1000L;
+    /** Admin forgot-password OTP validity (60s — matches UI countdown). */
+    public static final long ADMIN_OTP_EXPIRY_MS = 60 * 1000L;
     public static final long RESET_SESSION_MS = 15 * 60 * 1000L;
 
     private final FirebaseFirestore firestore;
@@ -36,6 +39,24 @@ public class OtpRepository {
 
     public Task<Void> savePasswordResetOtp(@NonNull String phone, @NonNull String otp) {
         return saveOtp(COLLECTION_PASSWORD_RESET, phone, otp);
+    }
+
+    public Task<Void> saveAdminPasswordResetOtp(
+            @NonNull String adminUid,
+            @NonNull String email,
+            @NonNull String otp
+    ) {
+        long now = System.currentTimeMillis();
+        Map<String, Object> data = new HashMap<>();
+        data.put("uid", adminUid);
+        data.put("email", email);
+        data.put("otp", otp);
+        data.put("createdAt", now);
+        data.put("expiredAt", now + ADMIN_OTP_EXPIRY_MS);
+        data.put("verified", false);
+        return firestore.collection(COLLECTION_ADMIN_PASSWORD_RESET)
+                .document(adminUid)
+                .set(data);
     }
 
     public Task<Void> saveRegistrationOtp(@NonNull String phone, @NonNull String otp) {
@@ -89,6 +110,12 @@ public class OtpRepository {
         return getOtpDoc(COLLECTION_PASSWORD_RESET, phone);
     }
 
+    public Task<DocumentSnapshot> getAdminPasswordResetDoc(@NonNull String adminUid) {
+        return firestore.collection(COLLECTION_ADMIN_PASSWORD_RESET)
+                .document(adminUid)
+                .get();
+    }
+
     public Task<DocumentSnapshot> getRegistrationDoc(@NonNull String phone) {
         return getOtpDoc(COLLECTION_REGISTRATION, phone);
     }
@@ -108,8 +135,21 @@ public class OtpRepository {
                 .update(updates);
     }
 
+    public Task<Void> markAdminVerified(@NonNull String adminUid) {
+        Map<String, Object> updates = new HashMap<>();
+        updates.put("verified", true);
+        updates.put("verifiedAt", System.currentTimeMillis());
+        return firestore.collection(COLLECTION_ADMIN_PASSWORD_RESET)
+                .document(adminUid)
+                .update(updates);
+    }
+
     public Task<Void> deletePasswordResetDoc(@NonNull String phone) {
         return deleteOtpDoc(COLLECTION_PASSWORD_RESET, phone);
+    }
+
+    public Task<Void> deleteAdminPasswordResetDoc(@NonNull String adminUid) {
+        return deleteOtpDoc(COLLECTION_ADMIN_PASSWORD_RESET, adminUid);
     }
 
     public Task<Void> deleteRegistrationDoc(@NonNull String phone) {

@@ -51,15 +51,43 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
     );
 
     private static final List<String> SORT_KEYS = Arrays.asList(
+            "updated_desc", "updated_asc",
             "name_asc", "name_desc", "price_asc", "price_desc", "stock_asc", "stock_desc"
     );
 
     private final AdminRepository repository = new AdminRepository();
     private final List<Product> allProducts = new ArrayList<>();
 
+    private static final List<String> PRODUCT_CATEGORIES = Arrays.asList(
+            "Hạt dinh dưỡng", "Granola", "Trái cây sấy", "Đồ ăn vặt", "Trà thảo mộc", "Combo"
+    );
+
+    private static final class PriceRangeFilter {
+        final int labelRes;
+        @Nullable final Double min;
+        @Nullable final Double max;
+
+        PriceRangeFilter(int labelRes, @Nullable Double min, @Nullable Double max) {
+            this.labelRes = labelRes;
+            this.min = min;
+            this.max = max;
+        }
+    }
+
+    private static final List<PriceRangeFilter> PRICE_RANGE_FILTERS = Arrays.asList(
+            new PriceRangeFilter(R.string.admin_filter_price_all, null, null),
+            new PriceRangeFilter(R.string.admin_filter_price_under_50k, null, 50_000d),
+            new PriceRangeFilter(R.string.admin_filter_price_50k_100k, 50_000d, 100_000d),
+            new PriceRangeFilter(R.string.admin_filter_price_100k_200k, 100_000d, 200_000d),
+            new PriceRangeFilter(R.string.admin_filter_price_200k_500k, 200_000d, 500_000d),
+            new PriceRangeFilter(R.string.admin_filter_price_over_500k, 500_000d, null)
+    );
+
     private TextView tvResultSummary;
     private TextInputEditText etSearch;
     private Spinner spinnerSort;
+    private Spinner spinnerCategoryFilter;
+    private Spinner spinnerPriceFilter;
     private ViewPager2 viewPager;
     private TabLayout tabFilters;
     private TabLayoutMediator tabMediator;
@@ -100,11 +128,48 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         tvResultSummary = view.findViewById(R.id.tvProductResultSummary);
         etSearch = view.findViewById(R.id.etSearchProducts);
         spinnerSort = view.findViewById(R.id.spinnerProductSort);
+        spinnerCategoryFilter = view.findViewById(R.id.spinnerProductCategoryFilter);
+        spinnerPriceFilter = view.findViewById(R.id.spinnerProductPriceFilter);
         viewPager = view.findViewById(R.id.vpAdminProducts);
         FloatingActionButton fab = view.findViewById(R.id.fabAddProduct);
         tabFilters = view.findViewById(R.id.tabProductFilters);
 
+        List<String> categoryLabels = new ArrayList<>();
+        categoryLabels.add(getString(R.string.admin_filter_category_all));
+        categoryLabels.addAll(PRODUCT_CATEGORIES);
+        spinnerCategoryFilter.setAdapter(new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_dropdown_item, categoryLabels));
+        spinnerCategoryFilter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view1, int position, long id) {
+                refreshPagesAndSummary();
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+
+        List<String> priceLabels = new ArrayList<>();
+        for (PriceRangeFilter filter : PRICE_RANGE_FILTERS) {
+            priceLabels.add(getString(filter.labelRes));
+        }
+        spinnerPriceFilter.setAdapter(new ArrayAdapter<>(requireContext(),
+                android.R.layout.simple_spinner_dropdown_item, priceLabels));
+        spinnerPriceFilter.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
+            @Override
+            public void onItemSelected(android.widget.AdapterView<?> parent, View view1, int position, long id) {
+                refreshPagesAndSummary();
+            }
+
+            @Override
+            public void onNothingSelected(android.widget.AdapterView<?> parent) {
+            }
+        });
+
         List<String> sortLabels = Arrays.asList(
+                getString(R.string.admin_sort_updated_desc),
+                getString(R.string.admin_sort_updated_asc),
                 getString(R.string.admin_sort_name_asc),
                 getString(R.string.admin_sort_name_desc),
                 getString(R.string.admin_sort_price_asc),
@@ -225,11 +290,8 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         List<Product> result = new ArrayList<>();
         for (Product product : allProducts) {
             if (!matchesProductFilter(product, effectiveFilter)) continue;
-            if (!q.isEmpty()) {
-                String name = product.getName() != null ? product.getName().toLowerCase(Locale.ROOT) : "";
-                String category = product.getCategory() != null ? product.getCategory().toLowerCase(Locale.ROOT) : "";
-                if (!name.contains(q) && !category.contains(q)) continue;
-            }
+            if (!q.isEmpty() && !matchesProductSearch(product, q)) continue;
+            if (!matchesAdvancedFilters(product)) continue;
             result.add(product);
         }
         sortProducts(result);
@@ -256,8 +318,9 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         List<Product> current = buildPageProducts(FILTERS.get(Math.max(0,
                 Math.min(viewPager != null ? viewPager.getCurrentItem() : 0, FILTERS.size() - 1))));
         if (tvResultSummary != null) {
+            String summaryLabel = buildSummaryLabel(filterLabelFor(productFilter));
             tvResultSummary.setText(getString(R.string.admin_products_result_summary,
-                    current.size(), filterLabelFor(productFilter)));
+                    current.size(), summaryLabel));
         }
         if (tabFilters == null) return;
         Map<String, Integer> counts = buildFilterCounts(query);
@@ -280,11 +343,8 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
             int count = 0;
             for (Product product : allProducts) {
                 if (!matchesProductFilter(product, filter)) continue;
-                if (!query.isEmpty()) {
-                    String name = product.getName() != null ? product.getName().toLowerCase(Locale.ROOT) : "";
-                    String category = product.getCategory() != null ? product.getCategory().toLowerCase(Locale.ROOT) : "";
-                    if (!name.contains(query) && !category.contains(query)) continue;
-                }
+                if (!query.isEmpty() && !matchesProductSearch(product, query)) continue;
+                if (!matchesAdvancedFilters(product)) continue;
                 count++;
             }
             counts.put(filter, count);
@@ -311,6 +371,12 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         String sortKey = SORT_KEYS.get(sortIndex);
         Comparator<Product> comparator;
         switch (sortKey) {
+            case "updated_asc":
+                comparator = Comparator.comparingLong(Product::getSortTimeMillis);
+                break;
+            case "updated_desc":
+                comparator = (a, b) -> Long.compare(b.getSortTimeMillis(), a.getSortTimeMillis());
+                break;
             case "name_desc":
                 comparator = (a, b) -> safeName(b).compareToIgnoreCase(safeName(a));
                 break;
@@ -336,6 +402,81 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
 
     private String safeName(Product product) {
         return product.getName() != null ? product.getName() : "";
+    }
+
+    private boolean matchesProductSearch(@NonNull Product product, @NonNull String query) {
+        String name = product.getName() != null ? product.getName().toLowerCase(Locale.ROOT) : "";
+        String category = product.getCategory() != null ? product.getCategory().toLowerCase(Locale.ROOT) : "";
+        String code = product.getProductCode() != null ? product.getProductCode().toLowerCase(Locale.ROOT) : "";
+        if (name.contains(query) || category.contains(query) || code.contains(query)) {
+            return true;
+        }
+        if (query.matches("\\d+")) {
+            String digitsOnly = code.replaceAll("\\D", "");
+            if (digitsOnly.contains(query)) {
+                return true;
+            }
+        }
+        if (product.getVariants() != null) {
+            for (Product.ProductVariant variant : product.getVariants()) {
+                if (variant == null) continue;
+                String sku = variant.getSku();
+                if (sku != null && sku.toLowerCase(Locale.ROOT).contains(query)) {
+                    return true;
+                }
+                String variantName = variant.getName();
+                if (variantName != null && variantName.toLowerCase(Locale.ROOT).contains(query)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesAdvancedFilters(@NonNull Product product) {
+        if (spinnerCategoryFilter != null && spinnerCategoryFilter.getSelectedItemPosition() > 0) {
+            String selected = PRODUCT_CATEGORIES.get(spinnerCategoryFilter.getSelectedItemPosition() - 1);
+            String category = product.getCategory() != null ? product.getCategory() : "";
+            if (!selected.equalsIgnoreCase(category)) {
+                return false;
+            }
+        }
+        Double minPrice = null;
+        Double maxPrice = null;
+        if (spinnerPriceFilter != null && spinnerPriceFilter.getSelectedItemPosition() > 0) {
+            PriceRangeFilter range = PRICE_RANGE_FILTERS.get(spinnerPriceFilter.getSelectedItemPosition());
+            minPrice = range.min;
+            maxPrice = range.max;
+        }
+        double price = product.getPrice();
+        if (minPrice != null && price < minPrice) {
+            return false;
+        }
+        if (maxPrice != null && price > maxPrice) {
+            return false;
+        }
+        return true;
+    }
+
+    @Nullable
+    private PriceRangeFilter selectedPriceRange() {
+        if (spinnerPriceFilter == null || spinnerPriceFilter.getSelectedItemPosition() <= 0) {
+            return null;
+        }
+        return PRICE_RANGE_FILTERS.get(spinnerPriceFilter.getSelectedItemPosition());
+    }
+
+    @NonNull
+    private String buildSummaryLabel(@NonNull String statusLabel) {
+        StringBuilder label = new StringBuilder(statusLabel);
+        if (spinnerCategoryFilter != null && spinnerCategoryFilter.getSelectedItemPosition() > 0) {
+            label.append(" · ").append(PRODUCT_CATEGORIES.get(spinnerCategoryFilter.getSelectedItemPosition() - 1));
+        }
+        PriceRangeFilter priceRange = selectedPriceRange();
+        if (priceRange != null) {
+            label.append(" · ").append(getString(priceRange.labelRes));
+        }
+        return label.toString();
     }
 
     private void openEditScreen(@Nullable Product product) {

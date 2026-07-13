@@ -7,6 +7,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.Spinner;
@@ -52,17 +53,19 @@ public class AdminProductEditActivity extends AppCompatActivity {
     private boolean isHidden;
     private boolean isDraft;
 
-    private TextInputEditText etName, etPrice, etOriginalPrice, etStock, etImage, etShortDesc, etDescription;
+    private TextInputEditText etName, etPrice, etOriginalPrice, etStock, etImage, etDescription;
     private TextInputEditText etProductCode;
     private TextInputEditText etIngredients, etNutrition, etUsage, etOrigin;
     private TextInputEditText etVariantFlavors, etVariantSizes;
     private TextView tvProductSoldReadonly, tvProductRatingReadonly;
     private View cardProductPreview;
     private ImageView imgPreview;
+    private ImageButton btnRemoveProductImage;
     private Spinner spinnerCategory;
     private SwitchMaterial switchHidden;
     private LinearLayout layoutVariantRows;
     private TextView tvVariantEmpty;
+    private View tilProductStock;
     private MaterialButton btnPickProductImage;
 
     private String productImageUrl = "";
@@ -86,8 +89,8 @@ public class AdminProductEditActivity extends AppCompatActivity {
         etPrice = findViewById(R.id.etProductPrice);
         etOriginalPrice = findViewById(R.id.etProductOriginalPrice);
         etStock = findViewById(R.id.etProductStock);
+        tilProductStock = findViewById(R.id.tilProductStock);
         etImage = findViewById(R.id.etProductImage);
-        etShortDesc = findViewById(R.id.etProductShortDesc);
         etDescription = findViewById(R.id.etProductDescription);
         etIngredients = findViewById(R.id.etProductIngredients);
         etNutrition = findViewById(R.id.etProductNutrition);
@@ -99,6 +102,7 @@ public class AdminProductEditActivity extends AppCompatActivity {
         tvProductRatingReadonly = findViewById(R.id.tvProductRatingReadonly);
         cardProductPreview = findViewById(R.id.cardProductPreview);
         imgPreview = findViewById(R.id.imgProductPreview);
+        btnRemoveProductImage = findViewById(R.id.btnRemoveProductImage);
         spinnerCategory = findViewById(R.id.spinnerProductCategory);
         switchHidden = findViewById(R.id.switchProductHidden);
         layoutVariantRows = findViewById(R.id.layoutVariantRows);
@@ -114,6 +118,9 @@ public class AdminProductEditActivity extends AppCompatActivity {
         btnSave.setOnClickListener(v -> saveProduct(false));
         btnSaveDraft.setOnClickListener(v -> saveProduct(true));
         btnPickProductImage.setOnClickListener(v -> pickProductImage());
+        if (btnRemoveProductImage != null) {
+            btnRemoveProductImage.setOnClickListener(v -> clearProductImage());
+        }
         btnGenerateVariants.setOnClickListener(v -> generateVariantCombos());
 
         if (isEdit) {
@@ -147,7 +154,6 @@ public class AdminProductEditActivity extends AppCompatActivity {
         etPrice.setText(String.valueOf((long) product.getPrice()));
         etOriginalPrice.setText(String.valueOf((long) product.getOriginalPrice()));
         etStock.setText(String.valueOf(product.getStock()));
-        etShortDesc.setText(product.getShortDesc());
         etDescription.setText(product.getDescription());
         etIngredients.setText(product.getIngredients());
         etUsage.setText(product.getUsage());
@@ -242,6 +248,8 @@ public class AdminProductEditActivity extends AppCompatActivity {
             TextInputEditText etVariantImage = row.findViewById(R.id.etVariantImage);
             ImageView imgVariantPreview = row.findViewById(R.id.imgVariantPreview);
             MaterialButton btnVariantPickImage = row.findViewById(R.id.btnVariantPickImage);
+            ImageButton btnRemoveVariantCombo = row.findViewById(R.id.btnRemoveVariantCombo);
+            ImageButton btnRemoveVariantImage = row.findViewById(R.id.btnRemoveVariantImage);
 
             tvName.setText(variant.getName());
             etVariantPrice.setText(String.valueOf((long) variant.getPrice()));
@@ -252,10 +260,15 @@ public class AdminProductEditActivity extends AppCompatActivity {
             if (!TextUtils.isEmpty(variant.getImageUrl())) {
                 etVariantImage.setText(variant.getImageUrl());
                 ImageLoadHelper.loadInto(imgVariantPreview, variant.getImageUrl());
+                btnRemoveVariantImage.setVisibility(View.VISIBLE);
+            } else {
+                btnRemoveVariantImage.setVisibility(View.GONE);
             }
 
             final int rowIndex = i;
-            btnVariantPickImage.setOnClickListener(v -> pickVariantImage(rowIndex, etVariantImage, imgVariantPreview));
+            btnVariantPickImage.setOnClickListener(v -> pickVariantImage(rowIndex, etVariantImage, imgVariantPreview, btnRemoveVariantImage));
+            btnRemoveVariantCombo.setOnClickListener(v -> confirmRemoveVariantCombo(rowIndex));
+            btnRemoveVariantImage.setOnClickListener(v -> clearVariantImage(rowIndex, etVariantImage, imgVariantPreview, btnRemoveVariantImage));
 
             layoutVariantRows.addView(row);
         }
@@ -264,6 +277,9 @@ public class AdminProductEditActivity extends AppCompatActivity {
 
     private void updateVariantSectionVisibility() {
         tvVariantEmpty.setVisibility(variantRows.isEmpty() ? View.VISIBLE : View.GONE);
+        if (tilProductStock != null) {
+            tilProductStock.setVisibility(variantRows.isEmpty() ? View.VISIBLE : View.GONE);
+        }
     }
 
     private void collectVariantsFromUi() {
@@ -283,6 +299,40 @@ public class AdminProductEditActivity extends AppCompatActivity {
         }
     }
 
+    private void confirmRemoveVariantCombo(int rowIndex) {
+        if (rowIndex < 0 || rowIndex >= variantRows.size()) return;
+        String name = variantRows.get(rowIndex).getName();
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_remove_variant_combo)
+                .setMessage(name != null ? name : "")
+                .setPositiveButton(R.string.admin_confirm, (d, w) -> {
+                    variantRows.remove(rowIndex);
+                    renderVariantRows();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
+    }
+
+    private void clearProductImage() {
+        productImageUrl = "";
+        if (etImage != null) {
+            etImage.setText("");
+        }
+        updatePreview();
+    }
+
+    private void clearVariantImage(int rowIndex,
+                                   TextInputEditText etVariantImage,
+                                   ImageView imgVariantPreview,
+                                   ImageButton btnRemoveVariantImage) {
+        if (rowIndex < variantRows.size()) {
+            variantRows.get(rowIndex).setImageUrl(null);
+        }
+        etVariantImage.setText("");
+        imgVariantPreview.setImageDrawable(null);
+        btnRemoveVariantImage.setVisibility(View.GONE);
+    }
+
     private void pickProductImage() {
         if (imageProcessing) return;
         showImageSourceMenu((imageUrl, previewView, triggerButton) -> {
@@ -294,7 +344,8 @@ public class AdminProductEditActivity extends AppCompatActivity {
 
     private void pickVariantImage(int rowIndex,
                                     TextInputEditText etVariantImage,
-                                    ImageView imgVariantPreview) {
+                                    ImageView imgVariantPreview,
+                                    ImageButton btnRemoveVariantImage) {
         if (imageProcessing) return;
         showImageSourceMenu((imageUrl, previewView, triggerButton) -> {
             if (rowIndex < variantRows.size()) {
@@ -302,6 +353,7 @@ public class AdminProductEditActivity extends AppCompatActivity {
             }
             etVariantImage.setText(shortImageLabel(imageUrl));
             ImageLoadHelper.loadInto(imgVariantPreview, imageUrl);
+            btnRemoveVariantImage.setVisibility(View.VISIBLE);
         }, imgVariantPreview, null);
     }
 
@@ -381,10 +433,14 @@ public class AdminProductEditActivity extends AppCompatActivity {
     }
 
     private void updatePreview() {
+        boolean hasImage = !TextUtils.isEmpty(productImageUrl);
         if (cardProductPreview != null) {
-            cardProductPreview.setVisibility(TextUtils.isEmpty(productImageUrl) ? View.GONE : View.VISIBLE);
+            cardProductPreview.setVisibility(hasImage ? View.VISIBLE : View.GONE);
         }
-        if (TextUtils.isEmpty(productImageUrl)) {
+        if (btnRemoveProductImage != null) {
+            btnRemoveProductImage.setVisibility(hasImage ? View.VISIBLE : View.GONE);
+        }
+        if (!hasImage) {
             if (imgPreview != null) {
                 imgPreview.setImageDrawable(null);
             }
@@ -433,13 +489,19 @@ public class AdminProductEditActivity extends AppCompatActivity {
                 totalStock += Math.max(0, variant.getStock());
             }
             product.setStock(totalStock);
+            List<String> flavorOpts = AdminVariantComboHelper.parseOptionList(textOf(etVariantFlavors));
+            List<String> sizeOpts = AdminVariantComboHelper.parseOptionList(textOf(etVariantSizes));
+            product.setFlavors(AdminVariantComboHelper.toOptionFirestoreList(flavorOpts));
+            product.setWeights(AdminVariantComboHelper.toOptionFirestoreList(sizeOpts));
         } else {
             String stockText = textOf(etStock);
             product.setStock(TextUtils.isEmpty(stockText) ? 0 : Integer.parseInt(stockText));
+            product.setFlavors(new ArrayList<>());
+            product.setWeights(new ArrayList<>());
         }
 
         product.setCat((String) spinnerCategory.getSelectedItem());
-        product.setShortDesc(textOf(etShortDesc));
+        product.setShortDesc("");
         product.setDescription(textOf(etDescription));
         product.setIngredients(textOf(etIngredients));
         product.setUsage(textOf(etUsage));

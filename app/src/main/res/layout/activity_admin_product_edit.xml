@@ -82,6 +82,7 @@
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilProductStock"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
@@ -142,23 +143,41 @@
                 android:textColor="@color/text_dark"
                 android:textStyle="bold" />
 
-            <androidx.cardview.widget.CardView
-                android:id="@+id/cardProductPreview"
+            <FrameLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:visibility="gone"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                tools:visibility="visible">
+                android:layout_marginTop="8dp">
 
-                <ImageView
-                    android:id="@+id/imgProductPreview"
+                <androidx.cardview.widget.CardView
+                    android:id="@+id/cardProductPreview"
                     android:layout_width="match_parent"
-                    android:layout_height="180dp"
-                    android:background="@color/neutral_light_grey"
-                    android:scaleType="centerCrop" />
-            </androidx.cardview.widget.CardView>
+                    android:layout_height="wrap_content"
+                    android:visibility="gone"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    tools:visibility="visible">
+
+                    <ImageView
+                        android:id="@+id/imgProductPreview"
+                        android:layout_width="match_parent"
+                        android:layout_height="180dp"
+                        android:background="@color/neutral_light_grey"
+                        android:scaleType="centerCrop" />
+                </androidx.cardview.widget.CardView>
+
+                <ImageButton
+                    android:id="@+id/btnRemoveProductImage"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="top|end"
+                    android:layout_margin="8dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/admin_remove_image"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_remove_circle_red"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+            </FrameLayout>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPickProductImage"
@@ -182,19 +201,6 @@
                     android:layout_height="wrap_content"
                     android:enabled="false"
                     android:focusable="false" />
-            </com.google.android.material.textfield.TextInputLayout>
-
-            <com.google.android.material.textfield.TextInputLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="12dp"
-                android:hint="@string/admin_product_short_desc">
-
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etProductShortDesc"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:maxLines="2" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <com.google.android.material.textfield.TextInputLayout

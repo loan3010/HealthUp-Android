@@ -5,8 +5,10 @@ import androidx.annotation.NonNull;
 import com.example.models.Product;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public final class AdminVariantComboHelper {
 
@@ -78,6 +80,18 @@ public final class AdminVariantComboHelper {
             merged.add(variant);
         }
         return merged;
+    }
+
+    @NonNull
+    public static List<Map<String, Object>> toOptionFirestoreList(@NonNull List<String> labels) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (int i = 0; i < labels.size(); i++) {
+            Map<String, Object> option = new HashMap<>();
+            option.put("id", "opt_" + i);
+            option.put("name", labels.get(i));
+            result.add(option);
+        }
+        return result;
     }
 
     @NonNull

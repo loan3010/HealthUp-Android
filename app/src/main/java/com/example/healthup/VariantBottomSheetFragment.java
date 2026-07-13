@@ -130,12 +130,16 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         btnClose.setOnClickListener(v -> dismiss());
 
         btnConfirm.setOnClickListener(v -> {
-            if (product.hasResolvableVariants() && selectedVariant == null) {
+            ProductVariant toConfirm = product.resolveComboVariant(selectedVariantsMap);
+            if (toConfirm == null) {
+                toConfirm = selectedVariant;
+            }
+            if (product.hasResolvableVariants() && toConfirm == null) {
                 Toast.makeText(getContext(), "Vui lòng chọn phân loại", Toast.LENGTH_SHORT).show();
                 return;
             }
             if (listener != null) {
-                listener.onConfirm(selectedVariant, quantity);
+                listener.onConfirm(toConfirm, quantity);
             }
             dismiss();
         });
@@ -154,31 +158,36 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         }
 
         selectedVariantsMap.put(groupName, variant);
-        
-        // Cập nhật selectedVariant để hiển thị giá/kho chính xác
-        // Ưu tiên variant có giá khác biệt (thường là khối lượng)
-        ProductVariant bestVariant = null;
 
-        if (selectedVariantsMap.containsKey("Khối lượng")) {
-            ProductVariant v = selectedVariantsMap.get("Khối lượng");
-            if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
-                bestVariant = v;
-            }
-        }
+        ProductVariant resolved = product.resolveComboVariant(selectedVariantsMap);
+        if (resolved != null) {
+            selectedVariant = resolved;
+        } else {
+            // Cập nhật selectedVariant để hiển thị giá/kho chính xác
+            // Ưu tiên variant có giá khác biệt (thường là khối lượng)
+            ProductVariant bestVariant = null;
 
-        if (bestVariant == null) {
-            for (ProductVariant v : selectedVariantsMap.values()) {
-                if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
+            if (selectedVariantsMap.containsKey("Khối lượng")) {
+                ProductVariant v = selectedVariantsMap.get("Khối lượng");
+                if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
                     bestVariant = v;
-                    break;
                 }
             }
-        }
 
-        if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
-            bestVariant = selectedVariantsMap.values().iterator().next();
+            if (bestVariant == null) {
+                for (ProductVariant v : selectedVariantsMap.values()) {
+                    if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
+                        bestVariant = v;
+                        break;
+                    }
+                }
+            }
+
+            if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
+                bestVariant = selectedVariantsMap.values().iterator().next();
+            }
+            selectedVariant = bestVariant;
         }
-        selectedVariant = bestVariant;
 
         refreshPreviewImage();
         updateDisplay();
