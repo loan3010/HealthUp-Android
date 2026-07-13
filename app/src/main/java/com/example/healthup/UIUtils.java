@@ -7,13 +7,22 @@ import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.Rect;
 import android.view.MotionEvent;
+import android.app.Activity;
+import android.app.Dialog;
+import android.content.Context;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.Rect;
+import android.os.Handler;
+import android.os.Looper;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AutoCompleteTextView;
-import android.widget.Button;
 import android.widget.EditText;
+import android.widget.TextView;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
@@ -67,26 +76,38 @@ public class UIUtils {
         }
     }
 
-    public static void showSuccessDialog(Activity activity, Runnable onConfirm) {
+    public static void showSuccessDialog(Activity activity, String message, Runnable onConfirm) {
         Dialog dialog = new Dialog(activity);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_success);
         
+        if (message != null) {
+            TextView tvMessage = dialog.findViewById(R.id.tvMessage);
+            if (tvMessage != null) tvMessage.setText(message);
+        }
+
         Window window = dialog.getWindow();
         if (window != null) {
             window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
             window.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             window.setDimAmount(0.6f);
+            window.getAttributes().windowAnimations = android.R.style.Animation_Dialog;
         }
 
-        Button btnConfirm = dialog.findViewById(R.id.btnConfirm);
-        btnConfirm.setOnClickListener(v -> {
-            dialog.dismiss();
-            if (onConfirm != null) {
-                onConfirm.run();
-            }
-        });
-
         dialog.show();
+
+        // Tự động đóng sau 1.5 giây
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (dialog.isShowing() && !activity.isFinishing()) {
+                dialog.dismiss();
+                if (onConfirm != null) {
+                    onConfirm.run();
+                }
+            }
+        }, 1500);
+    }
+
+    public static void showSuccessDialog(Activity activity, Runnable onConfirm) {
+        showSuccessDialog(activity, null, onConfirm);
     }
 }

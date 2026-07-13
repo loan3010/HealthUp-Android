@@ -32,7 +32,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Gửi yêu cầu thành công"
+            android:text="Lưu hồ sơ thành công"
             android:textColor="@color/text_main"
             android:textSize="18sp"
             android:textStyle="bold" />
@@ -49,6 +49,7 @@
             android:textColor="@color/white"
             android:textSize="16sp"
             android:textStyle="bold"
+            android:visibility="gone"
             app:cornerRadius="12dp" />
 
     </LinearLayout>

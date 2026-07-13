@@ -704,7 +704,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             else if (name.contains("Granola")) icon = "dry.png";
             else if (name.contains("Trái cây")) icon = "fruit.png";
             else if (name.contains("vặt")) icon = "cooking.png";
-            else if (name.contains("Trà")) icon = "leaf.png";
+            else if (name.contains("Trà")) icon = "coffee.png";
             else if (name.contains("Combo")) icon = "multiple.png";
 
             categoryList.add(new Category(String.valueOf(i + 1), name, icon));
@@ -718,11 +718,15 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         String name = doc.getString("name");
                         String iconUrl = doc.getString("iconUrl");
-                        if (name != null && iconUrl != null) {
-                            for (Category cat : categoryList) {
-                                if (cat.getName().equalsIgnoreCase(name)) {
-                                    cat.setIconUrl(iconUrl);
-                                    hasChanges = true;
+                        if (name != null && iconUrl != null && !iconUrl.isEmpty()) {
+                            // Chỉ ghi đè nếu iconUrl không phải là fruit.png hoặc là link http thực tế
+                            // Điều này ngăn chặn việc tất cả bị reset về fruit.png từ DB cũ
+                            if (iconUrl.startsWith("http") || !iconUrl.equals("fruit.png")) {
+                                for (Category cat : categoryList) {
+                                    if (cat.getName().equalsIgnoreCase(name)) {
+                                        cat.setIconUrl(iconUrl);
+                                        hasChanges = true;
+                                    }
                                 }
                             }
                         }

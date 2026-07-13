@@ -22,12 +22,12 @@ public class Category {
 
     public static java.util.List<Category> getDummyCategories() {
         java.util.List<Category> list = new java.util.ArrayList<>();
-        list.add(new Category("1", "Hạt dinh dưỡng", "fruit.png"));
-        list.add(new Category("2", "Granola", "fruit.png"));
+        list.add(new Category("1", "Hạt dinh dưỡng", "grain.png"));
+        list.add(new Category("2", "Granola", "dry.png"));
         list.add(new Category("3", "Trái cây sấy", "fruit.png"));
-        list.add(new Category("4", "Đồ ăn vặt", "fruit.png"));
-        list.add(new Category("5", "Trà thảo mộc", "fruit.png"));
-        list.add(new Category("6", "Combo", "fruit.png"));
+        list.add(new Category("4", "Đồ ăn vặt", "cooking.png"));
+        list.add(new Category("5", "Trà thảo mộc", "leaf.png"));
+        list.add(new Category("6", "Combo", "multiple.png"));
         return list;
     }
 }

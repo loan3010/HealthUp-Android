@@ -322,14 +322,6 @@ public class WriteReviewActivity extends AppCompatActivity {
     }
 
     private void showSuccessPopup() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        DialogSuccessBinding successBinding = DialogSuccessBinding.inflate(getLayoutInflater());
-        builder.setView(successBinding.getRoot());
-        successBinding.tvMessage.setText("Gửi đánh giá thành công");
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        successBinding.btnConfirm.setOnClickListener(v -> { dialog.dismiss(); finish(); });
-        dialog.setCancelable(false);
-        dialog.show();
+        UIUtils.showSuccessDialog(this, "Gửi đánh giá thành công", this::finish);
     }
 }
