@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -57,6 +58,13 @@ public final class AppPasswordHelper {
         String digest = sha256Hex(PEPPER + "\nauth\n" + normalizedPhone);
         // Prefix keeps a letter/digit/symbol mix Auth accepts as "strong enough".
         return "Hu1!" + digest.substring(0, 28);
+    }
+
+    /** Stable Firebase Auth password for admin email accounts (session only). */
+    @NonNull
+    public static String authSecretForAdminEmail(@NonNull String normalizedEmail) {
+        String digest = sha256Hex(PEPPER + "\nadmin-auth\n" + normalizedEmail.toLowerCase(Locale.ROOT));
+        return "Ha1!" + digest.substring(0, 28);
     }
 
     public static boolean isAppPasswordMode(@Nullable DocumentSnapshot doc) {

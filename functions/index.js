@@ -10,12 +10,24 @@
  */
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
+const crypto = require('crypto');
 const {
   previewOrphans,
   cleanupOrphans,
 } = require('./lib/orphanCleanup');
 
+const APP_PASSWORD_PEPPER = 'HealthUp-Spark-AppPassword-v1';
+
 admin.initializeApp();
+
+/** Must match AppPasswordHelper.authSecretForAdminEmail in Android. */
+function authSecretForAdminEmail(email) {
+  const normalized = String(email || '').trim().toLowerCase();
+  const digest = crypto.createHash('sha256')
+      .update(`${APP_PASSWORD_PEPPER}\nadmin-auth\n${normalized}`)
+      .digest('hex');
+  return `Ha1!${digest.substring(0, 28)}`;
+}
 
 async function assertAdminCallable(context) {
   if (!context.auth) {
@@ -94,6 +106,62 @@ exports.resetPassword = functions.https.onCall(async (data) => {
   }
 
   await admin.firestore().collection('password_reset').doc(phone).delete();
+  return {success: true};
+});
+
+/**
+ * After admin forgot-password OTP verified: set Firebase Auth password to the app
+ * derived secret so login works immediately (same model as buyer phone auth secret).
+ */
+exports.syncAdminAuthAfterReset = functions.https.onCall(async (data) => {
+  const adminUid = data && data.adminUid;
+  if (!adminUid || typeof adminUid !== 'string') {
+    throw new functions.https.HttpsError('invalid-argument', 'Missing adminUid');
+  }
+
+  const resetDoc = await admin.firestore()
+      .collection('admin_password_reset')
+      .doc(adminUid)
+      .get();
+  if (!resetDoc.exists || !resetDoc.data().verified) {
+    throw new functions.https.HttpsError('failed-precondition', 'OTP not verified');
+  }
+
+  const userDoc = await admin.firestore().collection('users').doc(adminUid).get();
+  if (!userDoc.exists) {
+    throw new functions.https.HttpsError('not-found', 'Admin profile not found');
+  }
+  const profile = userDoc.data() || {};
+  const role = (profile.role || profile.userRole || '').toString().toLowerCase();
+  if (role !== 'admin') {
+    throw new functions.https.HttpsError('permission-denied', 'Not an admin account');
+  }
+
+  const email = (resetDoc.data().email || profile.email || profile.displayEmail || '')
+      .toString()
+      .trim()
+      .toLowerCase();
+  if (!email) {
+    throw new functions.https.HttpsError('failed-precondition', 'Admin email missing');
+  }
+
+  const derivedPassword = authSecretForAdminEmail(email);
+  try {
+    await admin.auth().updateUser(adminUid, {password: derivedPassword});
+  } catch (err) {
+    try {
+      const userRecord = await admin.auth().getUserByEmail(email);
+      await admin.auth().updateUser(userRecord.uid, {password: derivedPassword});
+    } catch (err2) {
+      console.error('syncAdminAuthAfterReset failed', err, err2);
+      throw new functions.https.HttpsError(
+          'internal',
+          'Could not sync Firebase Auth password'
+      );
+    }
+  }
+
+  await admin.firestore().collection('admin_password_reset').doc(adminUid).delete();
   return {success: true};
 });
 

@@ -42,6 +42,7 @@ public class ForgotPasswordOtpActivity extends AppCompatActivity {
     private FrameLayout loadingOverlay;
 
     private CountDownTimer resendTimer;
+    private boolean resendCooldownActive;
     private boolean suppressOtpChangeClear;
     private boolean isVerifying;
     private boolean allowFinish;
@@ -226,15 +227,26 @@ public class ForgotPasswordOtpActivity extends AppCompatActivity {
                 return;
             case WRONG_OTP:
                 showOtpError(getString(R.string.otp_forgot_wrong));
+                resetOtpInputForRetry();
                 return;
             case EXPIRED:
                 showOtpError(getString(R.string.otp_forgot_expired));
+                resetOtpInputForRetry();
+                enableResendNow();
                 return;
             case ERROR:
             default:
                 showOtpError(getString(R.string.forgot_password_error_generic));
+                resetOtpInputForRetry();
                 break;
         }
+    }
+
+    private void resetOtpInputForRetry() {
+        otpBoxesHelper.clear();
+        otpBoxesHelper.setEnabled(true);
+        otpBoxesHelper.requestFocusFirst();
+        updateVerifyButton(false);
     }
 
     private void observeViewModel() {
@@ -315,9 +327,8 @@ public class ForgotPasswordOtpActivity extends AppCompatActivity {
         if (resendTimer != null) {
             resendTimer.cancel();
         }
-
-        resendOtpTextView.setEnabled(false);
-        resendOtpTextView.setTextColor(ContextCompat.getColor(this, R.color.placeholder));
+        resendCooldownActive = true;
+        refreshResendState();
 
         resendTimer = new CountDownTimer(RESEND_COUNTDOWN_SECONDS * 1000, 1000) {
             @Override
@@ -328,12 +339,30 @@ public class ForgotPasswordOtpActivity extends AppCompatActivity {
 
             @Override
             public void onFinish() {
-                resendOtpTextView.setEnabled(true);
-                resendOtpTextView.setText(getString(R.string.otp_resend));
-                resendOtpTextView.setTextColor(
-                        ContextCompat.getColor(ForgotPasswordOtpActivity.this, R.color.brand_primary));
+                resendCooldownActive = false;
+                refreshResendState();
             }
         }.start();
+    }
+
+    private void enableResendNow() {
+        if (resendTimer != null) {
+            resendTimer.cancel();
+        }
+        resendCooldownActive = false;
+        refreshResendState();
+    }
+
+    private void refreshResendState() {
+        boolean canResend = !resendCooldownActive && !isLoading() && !isVerifying;
+        resendOtpTextView.setEnabled(canResend);
+        if (canResend) {
+            resendOtpTextView.setText(getString(R.string.otp_resend));
+            resendOtpTextView.setTextColor(
+                    ContextCompat.getColor(ForgotPasswordOtpActivity.this, R.color.brand_primary));
+        } else if (resendCooldownActive) {
+            resendOtpTextView.setTextColor(ContextCompat.getColor(this, R.color.placeholder));
+        }
     }
 
     private void updateVerifyButton(boolean enabled) {
@@ -355,9 +384,7 @@ public class ForgotPasswordOtpActivity extends AppCompatActivity {
             otpBoxesHelper.setEnabled(!loading);
         }
         updateVerifyButton(otpBoxesHelper != null && otpBoxesHelper.getOtp().length() == 6);
-        if (loading) {
-            resendOtpTextView.setEnabled(false);
-        }
+        refreshResendState();
     }
 
     private boolean isLoading() {

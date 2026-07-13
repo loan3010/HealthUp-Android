@@ -1,6 +1,7 @@
 package com.example.healthup.admin;
 
 import android.content.Intent;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -38,6 +39,8 @@ public class AdminActivity extends AppCompatActivity implements AdminNavigator {
     private BottomNavigationView bottomNav;
     private TextView tvNotifBadge;
     private ListenerRegistration notifBadgeListener;
+    private View rootLayout;
+    private boolean isKeyboardShowing;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -107,6 +110,25 @@ public class AdminActivity extends AppCompatActivity implements AdminNavigator {
         } else {
             syncTitleWithSelectedTab();
         }
+
+        setupKeyboardVisibilityListener();
+    }
+
+    private void setupKeyboardVisibilityListener() {
+        rootLayout = findViewById(android.R.id.content);
+        rootLayout.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+            Rect r = new Rect();
+            rootLayout.getWindowVisibleDisplayFrame(r);
+            int screenHeight = rootLayout.getRootView().getHeight();
+            int keypadHeight = screenHeight - r.bottom;
+            boolean keyboardNowShowing = keypadHeight > screenHeight * 0.15;
+            if (keyboardNowShowing != isKeyboardShowing) {
+                isKeyboardShowing = keyboardNowShowing;
+                if (bottomNav != null) {
+                    bottomNav.setVisibility(isKeyboardShowing ? View.GONE : View.VISIBLE);
+                }
+            }
+        });
     }
 
     private void setupDrawer() {

@@ -42,7 +42,7 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private Product product;
     private ViewPager2 viewPagerImages;
-    private TextView tvImageIndex, tvName, tvShortDesc, tvDescription, tvPrice, tvOriginalPrice, tvDiscount, tvRating, tvReviewCount, tvSold, tvSavings, tvStock;
+    private TextView tvImageIndex, tvName, tvShortDesc, tvPrice, tvOriginalPrice, tvDiscount, tvRating, tvReviewCount, tvSold, tvSavings, tvStock;
     private TextView tvViewAllReviews, tvViewAllRecommend, tvCartBadgeHeader;
     private ImageButton btnBack, btnShare, btnWishlist, btnCartHeader;
     private MaterialButton btnAddCart, btnBuyNow;
@@ -112,7 +112,6 @@ public class ProductDetailActivity extends AppCompatActivity {
         tvImageIndex = findViewById(R.id.tv_image_index);
         tvName = findViewById(R.id.tv_detail_name);
         tvShortDesc = findViewById(R.id.tv_detail_short_desc);
-        tvDescription = findViewById(R.id.tv_detail_description);
         tvPrice = findViewById(R.id.tv_detail_price);
         tvOriginalPrice = findViewById(R.id.tv_detail_original_price);
         tvDiscount = findViewById(R.id.tv_discount_tag);
@@ -209,16 +208,6 @@ public class ProductDetailActivity extends AppCompatActivity {
             }
         }
 
-        if (tvDescription != null) {
-            String description = product.getDescription();
-            if (!TextUtils.isEmpty(description)) {
-                tvDescription.setText(description.trim());
-                tvDescription.setVisibility(View.VISIBLE);
-            } else {
-                tvDescription.setVisibility(View.GONE);
-            }
-        }
-        
         String currentLang = LocaleHelper.getLanguage(this);
         if ("en".equals(currentLang)) {
             TranslationManager.translate(product.getName(), "en", translated -> {
@@ -400,6 +389,18 @@ public class ProductDetailActivity extends AppCompatActivity {
 
     private void setupExpandableSections() {
         String currentLang = LocaleHelper.getLanguage(this);
+        String description = product.getDescription();
+        View sectionDescription = findViewById(R.id.section_description);
+        if (TextUtils.isEmpty(description)) {
+            if (sectionDescription != null) {
+                sectionDescription.setVisibility(View.GONE);
+            }
+        } else if ("en".equals(currentLang)) {
+            TranslationManager.translate("Mô tả sản phẩm", "en", t -> setupSection(sectionDescription, t, null));
+            TranslationManager.translate(description, "en", t -> setupSection(sectionDescription, null, t));
+        } else {
+            setupSection(sectionDescription, "Mô tả sản phẩm", description);
+        }
         
         // Dịch nội dung chi tiết
         if ("en".equals(currentLang)) {

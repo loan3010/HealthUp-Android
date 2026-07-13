@@ -228,7 +228,7 @@ public class AdminRepository {
         data.put("nutritionText", product.getNutritionText() != null ? product.getNutritionText() : "");
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             data.put("images", product.getImages());
-        } else if (isNew) {
+        } else {
             data.put("images", new ArrayList<String>());
         }
         data.put("hidden", product.isHidden());
@@ -266,9 +266,22 @@ public class AdminRepository {
             }
             data.put("stock", totalStock);
             data.put("stockCount", totalStock);
+            if (product.getFlavors() != null) {
+                data.put("flavors", product.getFlavors());
+            }
+            if (product.getWeights() != null) {
+                data.put("weights", product.getWeights());
+            }
         } else if (isNew) {
             data.put("variants", variantMaps);
             data.put("hasVariants", product.isHasVariants());
+            data.put("flavors", new ArrayList<>());
+            data.put("weights", new ArrayList<>());
+        } else {
+            data.put("variants", new ArrayList<>());
+            data.put("hasVariants", false);
+            data.put("flavors", new ArrayList<>());
+            data.put("weights", new ArrayList<>());
         }
 
         data.put("updatedAt", Timestamp.now());

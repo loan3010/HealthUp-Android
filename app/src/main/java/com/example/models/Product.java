@@ -49,6 +49,7 @@ public class Product implements Serializable {
     private int stock;
     private Object reviews;
     private Timestamp createdAt;
+    private Timestamp updatedAt;
 
     private String starsDisplay;
     private int sold;
@@ -346,6 +347,15 @@ public class Product implements Serializable {
     public void setOrigin(String origin) { this.origin = origin; }
     public Timestamp getCreatedAt() { return createdAt; }
     public void setCreatedAt(Timestamp createdAt) { this.createdAt = createdAt; }
+
+    public Timestamp getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(Timestamp updatedAt) { this.updatedAt = updatedAt; }
+
+    public long getSortTimeMillis() {
+        if (updatedAt != null) return updatedAt.toDate().getTime();
+        if (createdAt != null) return createdAt.toDate().getTime();
+        return 0L;
+    }
     public boolean isHasVariants() { return hasVariants || hasResolvableVariants(); }
     public void setHasVariants(boolean hasVariants) { this.hasVariants = hasVariants; }
     public List<ProductVariant> getVariants() { return variants; }
@@ -380,13 +390,57 @@ public class Product implements Serializable {
         
         List<ProductVariant> p = normalizeVariants(parseVariantsField(packagingTypes, this));
         if (!p.isEmpty()) groups.put("Loại đóng gói", p);
-        
+
+        if (groups.isEmpty() && variants != null && !variants.isEmpty()) {
+            inferGroupsFromComboVariants(groups);
+        }
+
         // Only add generic "Phân loại" if we don't have ANY specific groups
         if (groups.isEmpty() && variants != null && !variants.isEmpty()) {
             groups.put("Phân loại", normalizeVariants(variants));
         }
         
         return groups;
+    }
+
+    private void inferGroupsFromComboVariants(@NonNull Map<String, List<ProductVariant>> groups) {
+        List<String> dimA = new ArrayList<>();
+        List<String> dimB = new ArrayList<>();
+        for (ProductVariant variant : variants) {
+            if (variant == null || variant.getName() == null) continue;
+            String name = variant.getName();
+            if (!name.contains(" · ")) continue;
+            String[] parts = name.split(" · ");
+            if (parts.length != 2) continue;
+            String first = parts[0].trim();
+            String second = parts[1].trim();
+            if (!first.isEmpty() && !dimA.contains(first)) dimA.add(first);
+            if (!second.isEmpty() && !dimB.contains(second)) dimB.add(second);
+        }
+        if (!dimA.isEmpty()) {
+            List<ProductVariant> flavorOptions = new ArrayList<>();
+            for (int i = 0; i < dimA.size(); i++) {
+                ProductVariant option = new ProductVariant();
+                option.setId("flavor_" + i);
+                option.setName(dimA.get(i));
+                option.setPrice(getPrice());
+                option.setOriginalPrice(getOriginalPrice());
+                flavorOptions.add(option);
+            }
+            groups.put("Hương vị", flavorOptions);
+        }
+        if (!dimB.isEmpty()) {
+            List<ProductVariant> weightOptions = new ArrayList<>();
+            for (int i = 0; i < dimB.size(); i++) {
+                ProductVariant option = new ProductVariant();
+                option.setId("weight_" + i);
+                option.setName(dimB.get(i));
+                option.setPrice(getPrice());
+                option.setOriginalPrice(getOriginalPrice());
+                weightOptions.add(option);
+            }
+            groups.put("Khối lượng", weightOptions);
+        }
     }
 
     private boolean isSameVariantList(List<ProductVariant> list1, List<ProductVariant> list2) {
@@ -459,6 +513,70 @@ public class Product implements Serializable {
         return best;
     }
 
+    /**
+     * Resolves the full SKU variant from per-group selections (e.g. Hương vị + Khối lượng → "Dâu · 250g").
+     */
+    @Nullable
+    public ProductVariant resolveComboVariant(@NonNull Map<String, ProductVariant> selectedByGroup) {
+        if (selectedByGroup == null || selectedByGroup.isEmpty()) {
+            return null;
+        }
+        if (selectedByGroup.size() == 1) {
+            ProductVariant only = selectedByGroup.values().iterator().next();
+            if (only == null) return null;
+            ProductVariant resolved = findVariantByName(only.getName());
+            return resolved != null ? resolved : only;
+        }
+
+        List<String> parts = new ArrayList<>();
+        ProductVariant flavor = selectedByGroup.get("Hương vị");
+        ProductVariant weight = selectedByGroup.get("Khối lượng");
+        ProductVariant packaging = selectedByGroup.get("Loại đóng gói");
+        if (flavor != null && flavor.getName() != null && !flavor.getName().isEmpty()) {
+            parts.add(flavor.getName().trim());
+        }
+        if (weight != null && weight.getName() != null && !weight.getName().isEmpty()) {
+            parts.add(weight.getName().trim());
+        }
+        if (packaging != null && packaging.getName() != null && !packaging.getName().isEmpty()) {
+            parts.add(packaging.getName().trim());
+        }
+        if (parts.isEmpty()) {
+            for (ProductVariant variant : selectedByGroup.values()) {
+                if (variant != null && variant.getName() != null && !variant.getName().isEmpty()) {
+                    parts.add(variant.getName().trim());
+                }
+            }
+        }
+        if (parts.isEmpty()) {
+            return null;
+        }
+        if (parts.size() == 1) {
+            ProductVariant resolved = findVariantByName(parts.get(0));
+            return resolved != null ? resolved : selectedByGroup.values().iterator().next();
+        }
+
+        String combo = String.join(" · ", parts);
+        ProductVariant comboVariant = findVariantByName(combo);
+        if (comboVariant != null) {
+            return comboVariant;
+        }
+        for (ProductVariant variant : getResolvableVariants()) {
+            if (variant.getName() == null) continue;
+            boolean allMatch = true;
+            for (String part : parts) {
+                if (!variant.getName().contains(part)) {
+                    allMatch = false;
+                    break;
+                }
+            }
+            if (allMatch) {
+                return variant;
+            }
+        }
+        return findVariantByName(parts.get(0));
+    }
+
     /** Finds a variant by display name (e.g. "100g", "200g"). */
     public ProductVariant findVariantByName(String name) {
         if (name == null || name.isEmpty()) return null;
@@ -524,6 +642,10 @@ public class Product implements Serializable {
         Boolean draftVal = doc.getBoolean("draft");
         if (draftVal != null) {
             p.setDraft(draftVal);
+        }
+        p.setUpdatedAt(doc.getTimestamp("updatedAt"));
+        if (p.getCreatedAt() == null) {
+            p.setCreatedAt(doc.getTimestamp("createdAt"));
         }
         return p;
     }

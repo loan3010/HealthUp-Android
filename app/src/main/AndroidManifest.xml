@@ -168,7 +168,12 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity android:name="com.example.healthup.admin.AdminLoginActivity" />
-        <activity android:name="com.example.healthup.admin.AdminActivity" />
+        <activity android:name="com.example.healthup.admin.AdminForgotPasswordActivity" />
+        <activity android:name="com.example.healthup.admin.AdminForgotPasswordOtpActivity" />
+        <activity android:name="com.example.healthup.admin.AdminResetPasswordActivity" />
+        <activity
+            android:name="com.example.healthup.admin.AdminActivity"
+            android:windowSoftInputMode="adjustPan" />
         <activity android:name="com.example.healthup.admin.AdminNotificationsActivity" />
         <activity android:name="com.example.healthup.admin.AdminProductEditActivity" />
         <activity android:name="com.example.healthup.admin.AdminOrderDetailActivity" />
