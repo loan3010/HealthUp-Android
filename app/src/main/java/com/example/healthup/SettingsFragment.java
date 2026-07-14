@@ -18,6 +18,10 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import com.example.healthup.databinding.FragmentSettingsBinding;
 import com.example.healthup.databinding.ItemSettingRowBinding;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.example.healthup.util.LocaleHelper;
 
 
 public class SettingsFragment extends Fragment {
@@ -147,11 +151,47 @@ public class SettingsFragment extends Fragment {
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnConfirm.setOnClickListener(v -> {
             dialog.dismiss();
-            Toast.makeText(getActivity(), "Yêu cầu xóa tài khoản đã được gửi", Toast.LENGTH_SHORT).show();
+            deleteAccount();
         });
 
 
         dialog.show();
+    }
+
+    private void deleteAccount() {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) return;
+
+        String uid = user.getUid();
+        FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+        // 1. Xóa dữ liệu người dùng trong Firestore
+        db.collection("users").document(uid).delete()
+                .addOnSuccessListener(aVoid -> {
+                    // 2. Xóa tài khoản trong Firebase Auth
+                    user.delete().addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            Toast.makeText(getActivity(), "Tài khoản của bạn đã được xóa vĩnh viễn", Toast.LENGTH_LONG).show();
+                            redirectToLogin();
+                        } else {
+                            // Thường thất bại nếu đã lâu không login (cần re-authenticate)
+                            // Trong trường hợp này, ta ít nhất cũng logout người dùng
+                            Toast.makeText(getActivity(), "Vui lòng đăng nhập lại trước khi xóa tài khoản", Toast.LENGTH_LONG).show();
+                            FirebaseAuth.getInstance().signOut();
+                            redirectToLogin();
+                        }
+                    });
+                })
+                .addOnFailureListener(e -> {
+                    Toast.makeText(getActivity(), "Lỗi khi xóa dữ liệu: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
+    }
+
+    private void redirectToLogin() {
+        Intent intent = new Intent(getActivity(), LoginActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        if (getActivity() != null) getActivity().finish();
     }
 
 
