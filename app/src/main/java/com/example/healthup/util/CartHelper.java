@@ -31,11 +31,16 @@ public final class CartHelper {
 
 
     public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity) {
-        addToCart(context, product, variant, quantity, null);
+        addToCart(context, product, variant, quantity, (java.util.Map<String, String>) null, null);
     }
 
 
-    public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity, CartCallback callback) {
+    public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity, java.util.Map<String, String> selections) {
+        addToCart(context, product, variant, quantity, selections, null);
+    }
+
+
+    public static void addToCart(Context context, Product product, Product.ProductVariant variant, int quantity, java.util.Map<String, String> selections, CartCallback callback) {
         if (context == null || product == null || quantity <= 0) {
             if (callback != null) callback.onFailure(new Exception("Invalid input"));
             return;
@@ -91,6 +96,17 @@ public final class CartHelper {
                             newItem.setPrice(product.getPrice());
                             newItem.setOriginalPrice(product.getOriginalPrice());
                         }
+
+                        // Áp dụng các lựa chọn lẻ (Khối lượng, Hương vị, Đóng gói)
+                        if (selections != null) {
+                            newItem.setWeight(selections.get("Khối lượng"));
+                            newItem.setFlavor(selections.get("Hương vị"));
+                            newItem.setPackageType(selections.get("Quy cách"));
+                            if (newItem.getPackageType() == null) {
+                                newItem.setPackageType(selections.get("Loại đóng gói"));
+                            }
+                        }
+
                         newItem.setUpdatedAt(Timestamp.now());
                         cartRef.add(newItem)
                                 .addOnSuccessListener(v -> {

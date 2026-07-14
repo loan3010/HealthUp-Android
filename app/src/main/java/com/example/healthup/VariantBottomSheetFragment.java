@@ -28,7 +28,7 @@ import java.util.Map;
 public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
     public interface OnVariantSelectedListener {
-        void onConfirm(ProductVariant variant, int quantity);
+        void onConfirm(ProductVariant variant, int quantity, Map<String, String> selections);
     }
 
     private Product product;
@@ -139,7 +139,11 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
                 return;
             }
             if (listener != null) {
-                listener.onConfirm(toConfirm, quantity);
+                Map<String, String> selections = new java.util.HashMap<>();
+                for (Map.Entry<String, ProductVariant> entry : selectedVariantsMap.entrySet()) {
+                    selections.put(entry.getKey(), entry.getValue().getName());
+                }
+                listener.onConfirm(toConfirm, quantity, selections);
             }
             dismiss();
         });

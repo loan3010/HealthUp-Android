@@ -897,8 +897,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
     }
 
     private void showVariantSheet(Product product) {
-        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
-                com.example.healthup.util.CartHelper.addToCart(requireContext(), product, variant, quantity));
+        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity, selections) ->
+                com.example.healthup.util.CartHelper.addToCart(requireContext(), product, variant, quantity, selections));
         sheet.show(getChildFragmentManager(), "VariantSelection");
     }
 

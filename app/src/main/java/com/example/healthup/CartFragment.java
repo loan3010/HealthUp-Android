@@ -368,8 +368,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             @Override
             public void onAddToCart(Product product) {
                 if (!isAdded()) return;
-                VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
-                        CartHelper.addToCart(requireContext(), product, variant, quantity, new CartHelper.CartCallback() {
+                VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity, selections) ->
+                        CartHelper.addToCart(requireContext(), product, variant, quantity, selections, new CartHelper.CartCallback() {
                             @Override
                             public void onSuccess() {
                                 if (!isAdded()) return;

@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
+import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StrikethroughSpan;
 import android.view.LayoutInflater;
@@ -92,7 +94,7 @@ public class CheckoutFragment extends Fragment {
 
     private TextView tvRecipientInfo, tvAddressDetail, tvVoucherInfo;
     private TextView tvTotalItemPrice, tvShippingFee, tvShippingDiscount, tvVoucherDiscount, tvGrandTotal, tvFooterTotal;
-    private TextView tvAppliedVoucherTitle, tvAppliedVoucherDesc;
+    private TextView tvAppliedVoucherTitle, tvAppliedVoucherDesc, tvAgreeTerms;
     private View rowAddress, rowVoucherNoSelect, layoutVoucherApplied;
     private TextView btnRemoveVoucher, btnViewAllVoucher;
     private View layoutShippingStandard, layoutShippingFast;
@@ -354,6 +356,7 @@ public class CheckoutFragment extends Fragment {
         btnPlaceOrder = view.findViewById(R.id.btnPlaceOrder);
         radioGroupPayment = view.findViewById(R.id.radioGroupPayment);
         cbAgreeTerms = view.findViewById(R.id.cbAgreeTerms);
+        tvAgreeTerms = view.findViewById(R.id.tvAgreeTerms);
         rowShopNote = view.findViewById(R.id.rowShopNote);
         tvShopNotePreview = view.findViewById(R.id.tvShopNotePreview);
         ivShopNoteArrow = view.findViewById(R.id.ivShopNoteArrow);
@@ -391,6 +394,7 @@ public class CheckoutFragment extends Fragment {
     }
 
     private void setupListeners() {
+        setupTermsLink();
         rowAddress.setOnClickListener(v -> openAddressBook());
         rowVoucherNoSelect.setOnClickListener(v -> openVoucherList());
         btnViewAllVoucher.setOnClickListener(v -> openVoucherList());
@@ -406,6 +410,40 @@ public class CheckoutFragment extends Fragment {
         btnPlaceOrder.setOnClickListener(v -> placeOrder());
 
         setupPaymentListener();
+    }
+
+    private void setupTermsLink() {
+        if (tvAgreeTerms == null) return;
+        String fullText = "Đồng ý với Điều khoản";
+        String linkPart = "Điều khoản";
+        
+        SpannableString ss = new SpannableString(fullText);
+        int start = fullText.indexOf(linkPart);
+        int end = start + linkPart.length();
+        
+        if (start >= 0) {
+            ClickableSpan clickableSpan = new ClickableSpan() {
+                @Override
+                public void onClick(@NonNull View widget) {
+                    requireActivity().getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragment_container, new PolicyFragment())
+                            .addToBackStack(null)
+                            .commit();
+                }
+                
+                @Override
+                public void updateDrawState(@NonNull android.text.TextPaint ds) {
+                    super.updateDrawState(ds);
+                    ds.setColor(Color.parseColor("#36873A")); // green_button color
+                    ds.setUnderlineText(false);
+                }
+            };
+            ss.setSpan(clickableSpan, start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        
+        tvAgreeTerms.setText(ss);
+        tvAgreeTerms.setMovementMethod(LinkMovementMethod.getInstance());
+        tvAgreeTerms.setHighlightColor(Color.TRANSPARENT);
     }
 
     private void setupPaymentListener() {

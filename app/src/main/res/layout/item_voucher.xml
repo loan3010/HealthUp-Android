@@ -119,13 +119,16 @@
             </LinearLayout>
 
             <TextView
+                android:id="@+id/tvDetail"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
                 android:text="CHI TIẾT"
                 android:textColor="#36873A"
                 android:textSize="11sp"
-                android:textStyle="bold" />
+                android:textStyle="bold"
+                android:clickable="true"
+                android:focusable="true" />
         </RelativeLayout>
 
         <!-- Tiết lộ lý do không dùng được voucher -->

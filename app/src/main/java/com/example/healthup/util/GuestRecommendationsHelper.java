@@ -64,8 +64,8 @@ public final class GuestRecommendationsHelper {
                 if (!host.isAdded() || product == null) return;
                 VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(
                         product,
-                        (variant, quantity) -> CartHelper.addToCart(
-                                host.requireContext(), product, variant, quantity,
+                        (variant, quantity, selections) -> CartHelper.addToCart(
+                                host.requireContext(), product, variant, quantity, selections,
                                 new CartHelper.CartCallback() {
                                     @Override
                                     public void onSuccess() {

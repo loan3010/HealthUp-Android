@@ -150,7 +150,7 @@ public class OrderListFragment extends Fragment {
     }
 
     private void showVariantSheet(Product product) {
-        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity) ->
+        VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(product, (variant, quantity, selections) ->
                 performAddToCart(product, variant, quantity));
         sheet.show(getChildFragmentManager(), "VariantSelection");
     }

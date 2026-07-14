@@ -472,8 +472,8 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             }
             @Override
             public void onAddToCart(Product p) {
-                VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(p, (variant, quantity) ->
-                        addToCartForProduct(p, variant, quantity));
+                VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(p, (variant, quantity, selections) ->
+                        addToCartForProduct(p, variant, quantity, selections));
                 bottomSheet.show(getSupportFragmentManager(), "VariantSelectionRecommend");
             }
             @Override
@@ -605,18 +605,18 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
     }
 
     private void showVariantSelection(boolean isBuyNow) {
-        VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(product, isBuyNow, (variant, quantity) -> {
+        VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(product, isBuyNow, (variant, quantity, selections) -> {
             selectedVariant = variant;
             if (isBuyNow) {
-                performBuyNow(quantity);
+                performBuyNow(quantity, selections);
             } else {
-                addToCart(quantity);
+                addToCart(quantity, selections);
             }
         });
         bottomSheet.show(getSupportFragmentManager(), "VariantSelection");
     }
 
-    private void performBuyNow(int quantity) {
+    private void performBuyNow(int quantity, java.util.Map<String, String> selections) {
         com.example.models.CartItem buyNowItem = new com.example.models.CartItem(
                 product.getId(), product, quantity, null);
         if (selectedVariant != null) {
@@ -625,6 +625,15 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             buyNowItem.setPrice(selectedVariant.getPrice());
         } else {
             buyNowItem.setPrice(product.getPrice());
+        }
+
+        if (selections != null) {
+            buyNowItem.setWeight(selections.get("Khối lượng"));
+            buyNowItem.setFlavor(selections.get("Hương vị"));
+            buyNowItem.setPackageType(selections.get("Quy cách"));
+            if (buyNowItem.getPackageType() == null) {
+                buyNowItem.setPackageType(selections.get("Loại đóng gói"));
+            }
         }
 
         ArrayList<com.example.models.CartItem> checkoutItems = new ArrayList<>();
@@ -675,12 +684,12 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
                 });
     }
 
-    private void addToCart(int quantity) {
-        addToCartForProduct(product, selectedVariant, quantity);
+    private void addToCart(int quantity, java.util.Map<String, String> selections) {
+        addToCartForProduct(product, selectedVariant, quantity, selections);
     }
 
-    private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity) {
-        CartHelper.addToCart(this, targetProduct, variant, quantity);
+    private void addToCartForProduct(Product targetProduct, Product.ProductVariant variant, int quantity, java.util.Map<String, String> selections) {
+        CartHelper.addToCart(this, targetProduct, variant, quantity, selections);
     }
 
     private void setupToolbarScroll() {

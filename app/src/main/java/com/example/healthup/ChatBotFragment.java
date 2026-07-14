@@ -820,11 +820,11 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
                     product.setId(doc.getId());
 
                     VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(
-                            product, isBuyNow, (variant, quantity) -> {
+                            product, isBuyNow, (variant, quantity, selections) -> {
                                 if (isBuyNow) {
                                     performBuyNow(product, variant, quantity);
                                 } else {
-                                    CartHelper.addToCart(requireContext(), product, variant, quantity);
+                                    CartHelper.addToCart(requireContext(), product, variant, quantity, selections);
                                 }
                             });
                     sheet.show(getParentFragmentManager(), "VariantSelection");

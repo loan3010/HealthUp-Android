@@ -159,6 +159,42 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
             // Không tự tích chọn nữa, báo cho Fragment xử lý xác nhận
             if (listener != null) listener.onVoucherClick(voucher);
         });
+
+        holder.tvDetail.setOnClickListener(v -> showVoucherDetail(voucher));
+    }
+
+    private void showVoucherDetail(Voucher voucher) {
+        View dialogView = LayoutInflater.from(context).inflate(R.layout.dialog_voucher_detail, null);
+        
+        TextView tvTitle = dialogView.findViewById(R.id.tvTitle);
+        TextView tvCode = dialogView.findViewById(R.id.tvCode);
+        TextView tvType = dialogView.findViewById(R.id.tvType);
+        TextView tvMinOrder = dialogView.findViewById(R.id.tvMinOrder);
+        TextView tvExpiry = dialogView.findViewById(R.id.tvExpiry);
+        View btnClose = dialogView.findViewById(R.id.btnClose);
+
+        tvTitle.setText(voucher.getTitle());
+        tvCode.setText(voucher.getCode());
+        tvExpiry.setText(voucher.getExpiryDate());
+        
+        // Điều kiện áp dụng: Lấy đúng từ mô tả của Voucher
+        tvMinOrder.setText(voucher.getDescription());
+        
+        String typeStr = "Giảm giá sản phẩm";
+        if (voucher.getType() == Voucher.Type.SHIPPING) typeStr = "Miễn phí vận chuyển";
+        else if (voucher.getType() == Voucher.Type.CASHBACK) typeStr = "Hoàn tiền tích lũy";
+        tvType.setText(typeStr);
+
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(context)
+                .setView(dialogView)
+                .create();
+
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        btnClose.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     @Override
@@ -169,7 +205,7 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
     public static class ViewHolder extends RecyclerView.ViewHolder {
         View layoutIcon;
         ImageView imgType;
-        TextView tvTypeText, tvTitle, tvDescription, tvExpiry, tvIneligibleHint;
+        TextView tvTypeText, tvTitle, tvDescription, tvExpiry, tvIneligibleHint, tvDetail;
         RadioButton rbSelected;
 
         public ViewHolder(@NonNull View itemView) {
@@ -181,6 +217,7 @@ public class VoucherAdapter extends RecyclerView.Adapter<VoucherAdapter.ViewHold
             tvDescription = itemView.findViewById(R.id.tvDescription);
             tvExpiry = itemView.findViewById(R.id.tvExpiry);
             tvIneligibleHint = itemView.findViewById(R.id.tvIneligibleHint);
+            tvDetail = itemView.findViewById(R.id.tvDetail);
             rbSelected = itemView.findViewById(R.id.rbSelected);
         }
     }

@@ -98,8 +98,9 @@
 
             <EditText
                 android:id="@+id/etPhone"
-                android:layout_width="match_parent"
+                android:layout_width="0dp"
                 android:layout_height="match_parent"
+                android:layout_weight="1"
                 android:background="@android:color/transparent"
                 android:hint="0xxx xxx xxx"
                 android:textColorHint="@color/text_gray_light"
@@ -109,6 +110,16 @@
                 android:digits="0123456789"
                 android:maxLength="10"
                 android:layout_marginStart="8dp" />
+
+            <TextView
+                android:id="@+id/tvChangePhone"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Thay đổi"
+                android:textColor="@color/green_primary"
+                android:textSize="13sp"
+                android:padding="8dp"
+                android:visibility="gone" />
         </LinearLayout>
 
         <TextView
@@ -164,22 +175,11 @@
             app:backgroundTint="@null" />
 
         <TextView
-            android:id="@+id/tvChangePhone"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:layout_marginTop="16dp"
-            android:text="Bạn không phải chủ sở hữu số này? Đổi số khác"
-            android:textSize="13sp"
-            android:textColor="@color/text_gray"
-            android:visibility="gone" />
-
-        <TextView
             android:id="@+id/tvBackToShopping"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_gravity="center"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:padding="4dp"
             android:text="@string/phone_verification_back_to_cart"
             android:textSize="13sp"
