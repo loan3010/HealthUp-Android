@@ -6,7 +6,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.data.repository.OtpRepository;
@@ -23,7 +22,7 @@ import java.util.Map;
  * Add / change email via mock Firestore OTP (no Firebase Auth mail, no Cloud).
  * Auth email stays synthetic; only {@code displayEmail} + {@code emailVerified} update.
  */
-public class ChangeEmailActivity extends AppCompatActivity {
+public class ChangeEmailActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_COMPLETE_PENDING = "extra_complete_pending";
 

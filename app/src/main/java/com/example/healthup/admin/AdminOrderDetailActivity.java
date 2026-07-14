@@ -16,7 +16,7 @@ import android.widget.Toast;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 
 import com.example.healthup.R;
 import com.example.healthup.util.ImageLoadHelper;
@@ -36,7 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class AdminOrderDetailActivity extends AppCompatActivity {
+public class AdminOrderDetailActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_ORDER_ID = "order_id";
 

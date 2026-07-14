@@ -3,7 +3,7 @@ package com.example.healthup
 import android.os.Bundle
 import android.widget.LinearLayout
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
+import com.example.healthup.BaseAppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
@@ -21,7 +21,7 @@ import com.example.healthup.databinding.ActivityAboutBinding
  * local asset assets/about_healthup.json through an MVVM pipeline
  * (AboutRepository -> AboutViewModel -> this Activity). No network / Firebase.
  */
-class AboutActivity : AppCompatActivity() {
+class AboutActivity : BaseAppCompatActivity() {
 
     private lateinit var binding: ActivityAboutBinding
     private lateinit var viewModel: AboutViewModel

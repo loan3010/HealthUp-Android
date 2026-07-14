@@ -3,12 +3,11 @@ package com.example.healthup;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import com.example.healthup.databinding.ActivityChangePhoneBinding;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class ChangePhoneActivity extends AppCompatActivity {
+public class ChangePhoneActivity extends BaseAppCompatActivity {
     private ActivityChangePhoneBinding binding;
     private FirebaseFirestore db;
     private String userId;

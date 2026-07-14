@@ -395,6 +395,41 @@ public class ChatViewModel extends ViewModel {
         }
     }
 
+    /** Buyer/staff sends an image (data URI or http URL) in the support thread. */
+    public void sendUserImage(@Nullable String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return;
+        }
+        if (uid == null) {
+            uid = chatRepository.currentUid();
+        }
+        if (uid == null) {
+            toast.setValue(new Event<>("Vui lòng đăng nhập để gửi ảnh."));
+            return;
+        }
+        if (sellerMode) {
+            sendSellerImage(imageUrl.trim());
+            return;
+        }
+        if (conversationId == null) {
+            toast.setValue(new Event<>("Đang kết nối hội thoại, vui lòng thử lại."));
+            return;
+        }
+        // Image is for staff — switch to human mode so admin inbox picks it up.
+        if (!isHumanMode()) {
+            chatRepository.setMode(conversationId, Conversation.MODE_HUMAN, success -> { /* best effort */ });
+            ChatMessage system = ChatMessage.system("Khách đã gửi ảnh — đang chờ nhân viên phản hồi.");
+            system.setSenderId(uid);
+            chatRepository.sendMessage(conversationId, system, null);
+        }
+        ChatMessage msg = ChatMessage.image(ChatMessage.SENDER_USER, uid, imageUrl.trim());
+        addLocal(msg, nextLocalSort());
+        chatRepository.sendMessage(conversationId, msg, null);
+        chatRepository.markStaffUnread(conversationId);
+        clearLocalBotContent();
+        recompute();
+    }
+
     public void onSuggestedQuestionTapped(@NonNull String question) {
         if (isHumanMode()) {
             toast.setValue(new Event<>("Bạn đang chat với nhân viên. Vui lòng gửi tin nhắn trực tiếp."));
@@ -568,6 +603,18 @@ public class ChatViewModel extends ViewModel {
         });
     }
 
+    private void sendSellerImage(@NonNull String imageUrl) {
+        if (conversationId == null || uid == null) {
+            return;
+        }
+        chatRepository.assignSeller(conversationId, uid, success -> { /* best effort */ });
+        chatRepository.fetchUserName(uid, name -> {
+            ChatMessage msg = ChatMessage.image(ChatMessage.SENDER_SELLER, uid, imageUrl);
+            msg.setSenderName(name != null && !name.trim().isEmpty() ? name.trim() : "Nhân viên");
+            chatRepository.sendMessage(conversationId, msg, null);
+        });
+    }
+
     /** Staff/admin ends the human session; bot can reply again for the buyer. */
     public void closeHumanSession() {
         if (!sellerMode || conversationId == null) {
@@ -682,21 +729,28 @@ public class ChatViewModel extends ViewModel {
         messages.setValue(merged);
     }
 
-    /** Skips Firestore echo when we already showed the same user text locally. */
+    /** Skips Firestore echo when we already showed the same user text/image locally. */
     private boolean isDuplicateOfLocalUserMessage(@NonNull ChatMessage remote) {
         if (!ChatMessage.SENDER_USER.equals(remote.getSenderType())) {
             return false;
         }
         String remoteText = remote.getText();
-        if (remoteText == null) {
-            return false;
-        }
+        String remoteImage = remote.getImageUrl();
         for (ChatMessage local : localMessages) {
             if (!ChatMessage.SENDER_USER.equals(local.getSenderType())) {
                 continue;
             }
-            if (remoteText.equals(local.getText())
-                    && Math.abs(local.getSortTime() - remote.getSortTime()) < 60_000L) {
+            if (Math.abs(local.getSortTime() - remote.getSortTime()) >= 60_000L) {
+                continue;
+            }
+            if (ChatMessage.TYPE_IMAGE.equals(remote.getType())
+                    || ChatMessage.TYPE_IMAGE.equals(local.getType())) {
+                if (remoteImage != null && remoteImage.equals(local.getImageUrl())) {
+                    return true;
+                }
+                continue;
+            }
+            if (remoteText != null && remoteText.equals(local.getText())) {
                 return true;
             }
         }

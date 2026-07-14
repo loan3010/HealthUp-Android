@@ -12,7 +12,7 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 
 import com.example.healthup.R;
 import com.example.healthup.account.AccountSessionRecorder;
@@ -34,7 +34,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
  * After OTP proves ownership of an existing phone account, ask for that account's
  * password then link the pending Google credential (brief option B).
  */
-public class LinkGooglePasswordActivity extends AppCompatActivity {
+public class LinkGooglePasswordActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_PHONE = "extra_link_phone";
     public static final String EXTRA_AUTH_EMAIL = "extra_link_auth_email";

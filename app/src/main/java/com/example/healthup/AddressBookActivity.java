@@ -3,10 +3,9 @@ package com.example.healthup;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import androidx.appcompat.app.AppCompatActivity;
 import com.example.models.Address;
 
-public class AddressBookActivity extends AppCompatActivity {
+public class AddressBookActivity extends BaseAppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

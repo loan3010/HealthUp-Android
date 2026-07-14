@@ -1,6 +1,8 @@
 package com.example.healthup.admin;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -8,6 +10,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ImageButton;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,6 +38,9 @@ import java.util.Map;
 public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.Listener {
 
     private static final int OVERDUE_HOURS = 24;
+    private static final String PREFS_NAME = "admin_orders_alert";
+    private static final String PREF_DISMISSED_OVERDUE_COUNT = "dismissed_overdue_count";
+
     private static final List<String> SORT_KEYS = Arrays.asList(
             AdminOrderListHelper.SORT_NEWEST,
             AdminOrderListHelper.SORT_OLDEST
@@ -58,6 +64,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
     private TextView tvResultSummary;
     private TextView tvOrderAlert;
     private MaterialCardView cardOrderAlert;
+    private ImageButton btnDismissOrderAlert;
     private TextInputEditText etSearch;
     private Spinner spinnerSort;
     private ViewPager2 viewPager;
@@ -67,6 +74,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
 
     private String currentFilter = AdminOrderSearchHelper.FILTER_ALL;
     private String currentSort = AdminOrderListHelper.SORT_NEWEST;
+    private int lastShownOverdueCount;
 
     private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
         @Override
@@ -88,10 +96,15 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         tvResultSummary = view.findViewById(R.id.tvOrderResultSummary);
         tvOrderAlert = view.findViewById(R.id.tvOrderAlert);
         cardOrderAlert = view.findViewById(R.id.cardOrderAlert);
+        btnDismissOrderAlert = view.findViewById(R.id.btnDismissOrderAlert);
         etSearch = view.findViewById(R.id.etSearchOrders);
         spinnerSort = view.findViewById(R.id.spinnerOrderSort);
         viewPager = view.findViewById(R.id.vpAdminOrders);
         tabFilters = view.findViewById(R.id.tabOrderFilters);
+
+        if (btnDismissOrderAlert != null) {
+            btnDismissOrderAlert.setOnClickListener(v -> dismissOrderAlert());
+        }
 
         List<String> sortLabels = Arrays.asList(
                 getString(R.string.admin_sort_order_newest),
@@ -251,8 +264,9 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         long threshold = AdminOrderListHelper.hoursToMillis(OVERDUE_HOURS);
         int overdueAll = AdminOrderListHelper.countOverdue(allOrders, threshold);
         int overdueInFilter = AdminOrderListHelper.countOverdueForFilter(allOrders, currentFilter, threshold);
+        lastShownOverdueCount = overdueAll;
 
-        if (overdueAll > 0) {
+        if (overdueAll > 0 && !isAlertDismissedForCount(overdueAll)) {
             cardOrderAlert.setVisibility(View.VISIBLE);
             if (overdueInFilter > 0 && !AdminOrderSearchHelper.FILTER_ALL.equals(currentFilter)) {
                 tvOrderAlert.setText(getString(R.string.admin_orders_overdue_filter, overdueInFilter, OVERDUE_HOURS, filterLabel));
@@ -262,6 +276,34 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         } else {
             cardOrderAlert.setVisibility(View.GONE);
         }
+    }
+
+    private void dismissOrderAlert() {
+        if (cardOrderAlert != null) {
+            cardOrderAlert.setVisibility(View.GONE);
+        }
+        SharedPreferences prefs = alertPrefs();
+        if (prefs != null) {
+            prefs.edit().putInt(PREF_DISMISSED_OVERDUE_COUNT, lastShownOverdueCount).apply();
+        }
+    }
+
+    private boolean isAlertDismissedForCount(int overdueCount) {
+        SharedPreferences prefs = alertPrefs();
+        if (prefs == null) {
+            return false;
+        }
+        // Stay hidden until overdue count increases again (new delayed orders).
+        return overdueCount > 0 && overdueCount <= prefs.getInt(PREF_DISMISSED_OVERDUE_COUNT, 0);
+    }
+
+    @Nullable
+    private SharedPreferences alertPrefs() {
+        Context context = getContext();
+        if (context == null) {
+            return null;
+        }
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
     private String filterLabelFor(String filter) {

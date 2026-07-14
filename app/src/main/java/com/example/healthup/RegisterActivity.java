@@ -16,7 +16,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.auth.AuthOrphanCleaner;
@@ -35,7 +34,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import java.util.HashMap;
 import java.util.Map;
 
-public class RegisterActivity extends AppCompatActivity {
+public class RegisterActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_PHONE = "extra_phone";
     public static final String EXTRA_PREFILL_EMAIL = "extra_prefill_email";

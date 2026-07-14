@@ -8,7 +8,6 @@ import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.databinding.ActivityChangeUsernameBinding;
 import com.example.healthup.util.UserUsernameLookup;
@@ -19,7 +18,7 @@ import com.google.firebase.firestore.SetOptions;
 
 import java.util.Collections;
 
-public class ChangeUsernameActivity extends AppCompatActivity {
+public class ChangeUsernameActivity extends BaseAppCompatActivity {
     private ActivityChangeUsernameBinding binding;
     private FirebaseFirestore db;
     private String userId;

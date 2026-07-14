@@ -20,6 +20,7 @@ public class ChatMessage {
 
     // type values
     public static final String TYPE_TEXT = "text";
+    public static final String TYPE_IMAGE = "image";
     public static final String TYPE_ORDER_CARD = "order_card";
     public static final String TYPE_SYSTEM = "system";
     public static final String TYPE_SUGGESTION = "suggestion";
@@ -34,6 +35,8 @@ public class ChatMessage {
     private String senderName;
     private String text;
     private String type = TYPE_TEXT;
+    /** Image payload for {@link #TYPE_IMAGE} (http URL or data URI). */
+    private String imageUrl;
     private Date createdAt;
     private boolean read;
 
@@ -75,6 +78,16 @@ public class ChatMessage {
         m.senderType = SENDER_SYSTEM;
         m.text = text;
         m.type = TYPE_SYSTEM;
+        return m;
+    }
+
+    public static ChatMessage image(String senderType, String senderId, String imageUrl) {
+        ChatMessage m = new ChatMessage();
+        m.senderType = senderType;
+        m.senderId = senderId;
+        m.imageUrl = imageUrl;
+        m.type = TYPE_IMAGE;
+        m.text = "[Hình ảnh]";
         return m;
     }
 
@@ -124,6 +137,14 @@ public class ChatMessage {
 
     public void setType(String type) {
         this.type = type;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 
     public Date getCreatedAt() {

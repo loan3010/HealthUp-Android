@@ -1,11 +1,10 @@
 package com.example.healthup;
 
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 import com.example.healthup.databinding.ActivityNotificationSettingsBinding;
 import com.example.healthup.databinding.ItemSettingSwitchRowBinding;
 
-public class NotificationSettingsActivity extends AppCompatActivity {
+public class NotificationSettingsActivity extends BaseAppCompatActivity {
     private ActivityNotificationSettingsBinding binding;
 
     @Override

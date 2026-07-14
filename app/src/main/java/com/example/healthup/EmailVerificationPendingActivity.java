@@ -13,7 +13,6 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.data.repository.OtpRepository;
 import com.example.healthup.util.CheckoutIntentHelper;
@@ -31,7 +30,7 @@ import java.util.Map;
  * After registration when user provided a real email.
  * Mock email OTP in Firestore (no Firebase Auth mail / no Cloud).
  */
-public class EmailVerificationPendingActivity extends AppCompatActivity {
+public class EmailVerificationPendingActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_EMAIL = "extra_verify_email";
     public static final String EXTRA_MAIL_ALREADY_SENT = "extra_mail_already_sent";

@@ -15,7 +15,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -40,7 +39,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-public class WriteReviewActivity extends AppCompatActivity {
+public class WriteReviewActivity extends BaseAppCompatActivity {
     private ActivityWriteReviewBinding binding;
     private Order order;
     private Map<Integer, List<Uri>> mediaMap = new HashMap<>();

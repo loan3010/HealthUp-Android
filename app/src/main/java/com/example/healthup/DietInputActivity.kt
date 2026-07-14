@@ -3,11 +3,10 @@ package com.example.healthup
 import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
-import android.view.MotionEvent
 import android.text.TextWatcher
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import com.example.healthup.BaseAppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.example.healthup.databinding.ActivityDietInputBinding
 import com.example.healthup.diet.ActivityLevel
@@ -17,7 +16,7 @@ import com.example.healthup.diet.Gender
 import com.example.healthup.diet.UserDietInput
 import kotlin.math.roundToInt
 
-class DietInputActivity : AppCompatActivity() {
+class DietInputActivity : BaseAppCompatActivity() {
 
     private lateinit var binding: ActivityDietInputBinding
     private lateinit var viewModel: DietViewModel
@@ -66,10 +65,6 @@ class DietInputActivity : AppCompatActivity() {
         }
     }
 
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        UIUtils.maybeHideKeyboardOnTouchOutside(this, event)
-        return super.dispatchTouchEvent(event)
-    }
 
     private fun prefillFromHistory() {
         val history = DietPreferences.load(this) ?: return

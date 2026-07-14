@@ -14,7 +14,7 @@ import android.widget.Toast;
 import androidx.annotation.DrawableRes;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -32,7 +32,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class AdminCustomerDetailActivity extends AppCompatActivity
+public class AdminCustomerDetailActivity extends BaseAppCompatActivity
         implements AdminCustomerOrderAdapter.Listener {
 
     public static final String EXTRA_CUSTOMER_UID = "customer_uid";

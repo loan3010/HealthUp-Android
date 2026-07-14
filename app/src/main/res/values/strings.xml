@@ -340,6 +340,7 @@
     <string name="chat_input_hint">Xin chào, HealthUp có thể giúp…</string>
     <string name="chat_send">Gửi</string>
     <string name="chat_attach">Đính kèm</string>
+    <string name="chat_voice_mock">Ghi âm</string>
     <string name="chat_menu">Tùy chọn</string>
     <string name="chat_back">Quay lại</string>
     <string name="chat_avatar_desc">Ảnh đại diện</string>
@@ -351,6 +352,11 @@
     <string name="chat_q_faq">Câu hỏi thường gặp</string>
     <string name="chat_quick_seller">Chat với người bán</string>
     <string name="chat_attach_unavailable">Tính năng đính kèm sẽ sớm ra mắt</string>
+    <string name="chat_voice_coming_soon">Tính năng gửi tin nhắn bằng giọng nói sẽ sớm ra mắt</string>
+    <string name="chat_image_desc">Ảnh trong chat</string>
+    <string name="chat_image_sending">Đang gửi ảnh…</string>
+    <string name="chat_image_send_failed">Không gửi được ảnh. Vui lòng thử lại.</string>
+    <string name="chat_image_login_required">Vui lòng đăng nhập để gửi ảnh cho nhân viên</string>
     <string name="chat_order_card_items">%1$d sản phẩm</string>
     <string name="chat_order_card_view_detail">Xem chi tiết</string>
     <string name="chat_order_status_pending">Chờ xác nhận</string>
@@ -697,8 +703,9 @@
     <string name="admin_sort_order_newest">Mới nhất</string>
     <string name="admin_sort_order_oldest">Cũ nhất</string>
     <string name="admin_orders_result_summary">Hiển thị %1$d / %2$d đơn · %3$s</string>
-    <string name="admin_orders_overdue_all">⚠ %1$d đơn chưa xử lý quá %2$d giờ — cần ưu tiên xử lý</string>
-    <string name="admin_orders_overdue_filter">⚠ %1$d đơn %3$s quá %2$d giờ chưa xử lý</string>
+    <string name="admin_orders_overdue_all">Có %1$d đơn chưa xử lý quá %2$d giờ</string>
+    <string name="admin_orders_overdue_filter">Có %1$d đơn %3$s quá %2$d giờ chưa xử lý</string>
+    <string name="admin_orders_alert_dismiss">Đóng thông báo</string>
     <string name="admin_order_overdue_badge">Quá 24h chưa xử lý</string>
     <string name="admin_filter_active">Đang hoạt động</string>
     <string name="admin_filter_draft">Bản nháp</string>

@@ -317,6 +317,7 @@
     <string name="chat_input_hint">Hello, how can HealthUp help you today?</string>
     <string name="chat_send">Send</string>
     <string name="chat_attach">Attach</string>
+    <string name="chat_voice_mock">Voice</string>
     <string name="chat_menu">Menu</string>
     <string name="chat_back">Back</string>
     <string name="chat_avatar_desc">Avatar</string>
@@ -328,6 +329,11 @@
     <string name="chat_q_faq">FAQ</string>
     <string name="chat_quick_seller">Chat with Seller</string>
     <string name="chat_attach_unavailable">Attachment feature coming soon</string>
+    <string name="chat_voice_coming_soon">Voice messages coming soon</string>
+    <string name="chat_image_desc">Chat image</string>
+    <string name="chat_image_sending">Sending image…</string>
+    <string name="chat_image_send_failed">Could not send image. Please try again.</string>
+    <string name="chat_image_login_required">Please sign in to send images to support</string>
     <string name="chat_order_card_items">%1$d items</string>
     <string name="chat_order_card_view_detail">View Detail</string>
     <string name="chat_order_status_pending">Pending</string>

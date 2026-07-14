@@ -1,9 +1,8 @@
 package com.example.healthup;
 
 import android.os.Bundle;
-import androidx.appcompat.app.AppCompatActivity;
 
-public class AddressFormActivity extends AppCompatActivity {
+public class AddressFormActivity extends BaseAppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);

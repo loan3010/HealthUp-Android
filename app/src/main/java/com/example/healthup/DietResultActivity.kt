@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
+import com.example.healthup.BaseAppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import com.example.healthup.databinding.ActivityDietResultBinding
 import com.example.healthup.diet.DietCalculationResult
@@ -15,7 +15,7 @@ import com.example.healthup.diet.UserDietInput
 import com.google.android.material.chip.Chip
 import kotlin.math.roundToInt
 
-class DietResultActivity : AppCompatActivity() {
+class DietResultActivity : BaseAppCompatActivity() {
 
     private lateinit var binding: ActivityDietResultBinding
     private lateinit var viewModel: DietViewModel

@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -15,7 +14,7 @@ import androidx.core.view.WindowInsetsControllerCompat;
  * Hosts the single chat screen ({@link ChatBotFragment}). Opened by a buyer
  * (no extras) or by a seller from the inbox (seller mode + conversation id).
  */
-public class ChatActivity extends AppCompatActivity {
+public class ChatActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_SELLER_MODE = "extra_seller_mode";
     public static final String EXTRA_CONVERSATION_ID = "extra_conversation_id";

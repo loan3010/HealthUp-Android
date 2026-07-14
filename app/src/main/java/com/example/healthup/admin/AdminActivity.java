@@ -11,7 +11,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -27,7 +27,7 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
-public class AdminActivity extends AppCompatActivity implements AdminNavigator {
+public class AdminActivity extends BaseAppCompatActivity implements AdminNavigator {
 
     private final AdminDashboardFragment dashboardFragment = new AdminDashboardFragment();
     private final AdminProductsFragment productsFragment = new AdminProductsFragment();

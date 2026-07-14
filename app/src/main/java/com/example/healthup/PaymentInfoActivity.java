@@ -12,7 +12,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.adapters.PaymentAccountAdapter;
@@ -27,7 +26,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class PaymentInfoActivity extends AppCompatActivity {
+public class PaymentInfoActivity extends BaseAppCompatActivity {
     public static final String EXTRA_SELECT_MODE = "select_mode";
     public static final String EXTRA_TARGET_TYPE = "target_type";
     

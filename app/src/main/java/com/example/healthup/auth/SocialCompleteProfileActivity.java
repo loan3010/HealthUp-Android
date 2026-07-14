@@ -16,7 +16,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.OTPActivity;
@@ -30,7 +30,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class SocialCompleteProfileActivity extends AppCompatActivity {
+public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_FULL_NAME = "extra_social_full_name";
     public static final String EXTRA_AUTH_EMAIL = "extra_social_auth_email";

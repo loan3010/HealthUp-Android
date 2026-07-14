@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.text.TextUtils;
 import android.view.View;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityViewReviewsBinding;
@@ -21,7 +20,7 @@ import java.util.List;
 import java.util.Locale;
 
 
-public class ViewReviewsActivity extends AppCompatActivity {
+public class ViewReviewsActivity extends BaseAppCompatActivity {
     private ActivityViewReviewsBinding binding;
     private Order order;
     private SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault());

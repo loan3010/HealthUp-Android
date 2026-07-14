@@ -10,7 +10,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -18,7 +18,7 @@ import com.example.healthup.R;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 
-public class AdminResetPasswordActivity extends AppCompatActivity {
+public class AdminResetPasswordActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_ADMIN_UID = "extra_admin_uid";
 

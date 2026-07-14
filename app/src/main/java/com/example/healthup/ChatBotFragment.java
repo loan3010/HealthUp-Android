@@ -3,7 +3,7 @@ package com.example.healthup;
 
 
 import android.content.Intent;
-
+import android.net.Uri;
 import android.os.Bundle;
 
 import android.text.InputType;
@@ -18,8 +18,6 @@ import android.view.ViewGroup;
 
 import android.view.inputmethod.EditorInfo;
 
-import android.view.inputmethod.InputMethodManager;
-
 import android.widget.EditText;
 
 import android.widget.ImageView;
@@ -30,10 +28,11 @@ import android.widget.Toast;
 
 
 
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.PickVisualMediaRequest;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
-
 import androidx.annotation.Nullable;
-
 import androidx.appcompat.app.AlertDialog;
 
 import androidx.core.graphics.Insets;
@@ -127,7 +126,14 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
     private View sendButton;
 
+    private boolean sendingImage;
 
+    private final ActivityResultLauncher<PickVisualMediaRequest> pickChatImageLauncher =
+            registerForActivityResult(new ActivityResultContracts.PickVisualMedia(), uri -> {
+                if (uri != null) {
+                    uploadAndSendImage(uri);
+                }
+            });
 
     public static ChatBotFragment newBuyerInstance() {
 
@@ -540,10 +546,55 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         });
 
-        attach.setOnClickListener(v ->
+        ImageView mic = view.findViewById(R.id.chatMic);
+        attach.setOnClickListener(v -> openImagePicker());
+        if (mic != null) {
+            mic.setOnClickListener(v ->
+                    Toast.makeText(requireContext(), R.string.chat_voice_coming_soon, Toast.LENGTH_SHORT).show());
+        }
+    }
 
-                Toast.makeText(requireContext(), R.string.chat_attach_unavailable, Toast.LENGTH_SHORT).show());
+    private void openImagePicker() {
+        if (viewModel.isGuest() && !viewModel.isSellerMode()) {
+            Toast.makeText(requireContext(), R.string.chat_image_login_required, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (sendingImage) {
+            Toast.makeText(requireContext(), R.string.chat_image_sending, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        pickChatImageLauncher.launch(new PickVisualMediaRequest.Builder()
+                .setMediaType(ActivityResultContracts.PickVisualMedia.ImageOnly.INSTANCE)
+                .build());
+    }
 
+    private void uploadAndSendImage(@NonNull Uri uri) {
+        if (!isAdded() || sendingImage) {
+            return;
+        }
+        sendingImage = true;
+        Toast.makeText(requireContext(), R.string.chat_image_sending, Toast.LENGTH_SHORT).show();
+        FirebaseManager.getInstance().uploadImage(uri)
+                .addOnSuccessListener(uploaded -> {
+                    sendingImage = false;
+                    if (!isAdded()) {
+                        return;
+                    }
+                    if (uploaded == null) {
+                        Toast.makeText(requireContext(), R.string.chat_image_send_failed, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    viewModel.sendUserImage(uploaded.toString());
+                    if (recyclerView != null && adapter != null && adapter.getItemCount() > 0) {
+                        recyclerView.post(() -> recyclerView.scrollToPosition(adapter.getItemCount() - 1));
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    sendingImage = false;
+                    if (isAdded()) {
+                        Toast.makeText(requireContext(), R.string.chat_image_send_failed, Toast.LENGTH_SHORT).show();
+                    }
+                });
     }
 
 
@@ -588,15 +639,7 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         input.setText("");
 
-        InputMethodManager imm = (InputMethodManager) requireContext()
-
-                .getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
-
-        if (imm != null) {
-
-            imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
-
-        }
+        input.requestFocus();
 
     }
 

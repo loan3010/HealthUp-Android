@@ -12,7 +12,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -22,7 +22,7 @@ import com.example.healthup.data.repository.OtpRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
 import com.google.android.material.button.MaterialButton;
 
-public class AdminForgotPasswordOtpActivity extends AppCompatActivity {
+public class AdminForgotPasswordOtpActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_EMAIL = "extra_admin_email";
     public static final String EXTRA_ADMIN_UID = "extra_admin_uid";

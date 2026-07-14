@@ -3,10 +3,9 @@ package com.example.healthup;
 import android.os.Bundle;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 
     /** Hosts the seller/admin inbox ({@link ChatStaffFragment}). */
-public class SellerChatListActivity extends AppCompatActivity {
+public class SellerChatListActivity extends BaseAppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

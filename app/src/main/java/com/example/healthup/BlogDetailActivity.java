@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.ImageView;
 import android.widget.TextView;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -22,7 +21,7 @@ import java.util.List;
 import java.util.Locale;
 
 
-public class BlogDetailActivity extends AppCompatActivity {
+public class BlogDetailActivity extends BaseAppCompatActivity {
 
 
     private ImageView ivImage;

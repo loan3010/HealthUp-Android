@@ -10,6 +10,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.healthup.util.FullscreenImagePager;
 import com.example.healthup.util.ImageLoadHelper;
 import com.example.healthup.R;
 import com.example.healthup.chat.ChatBubbleHelper;
@@ -19,6 +20,7 @@ import com.example.models.ChatMessage;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -37,6 +39,8 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int TYPE_SUGGESTION = 5;
     private static final int TYPE_PRODUCT_CARD = 6;
     private static final int TYPE_LOGIN_ACTION = 7;
+    private static final int TYPE_IMAGE_USER = 8;
+    private static final int TYPE_IMAGE_INCOMING = 9;
 
     public interface Listener {
         void onOrderCardClick(@NonNull ChatMessage message);
@@ -107,6 +111,16 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 || ChatMessage.SENDER_SYSTEM.equals(m.getSenderType())) {
             return TYPE_SYSTEM;
         }
+        if (ChatMessage.TYPE_IMAGE.equals(m.getType())) {
+            if (staffView) {
+                return ChatMessage.SENDER_SELLER.equals(m.getSenderType())
+                        ? TYPE_IMAGE_USER
+                        : TYPE_IMAGE_INCOMING;
+            }
+            return ChatMessage.SENDER_USER.equals(m.getSenderType())
+                    ? TYPE_IMAGE_USER
+                    : TYPE_IMAGE_INCOMING;
+        }
         if (staffView) {
             if (ChatMessage.SENDER_SELLER.equals(m.getSenderType())) {
                 return TYPE_USER;
@@ -137,6 +151,10 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 return new ProductCardVH(inflater.inflate(R.layout.item_chat_product_card, parent, false));
             case TYPE_LOGIN_ACTION:
                 return new LoginActionVH(inflater.inflate(R.layout.item_chat_login_action, parent, false));
+            case TYPE_IMAGE_USER:
+                return new ImageUserVH(inflater.inflate(R.layout.item_chat_message_image_user, parent, false));
+            case TYPE_IMAGE_INCOMING:
+                return new ImageIncomingVH(inflater.inflate(R.layout.item_chat_message_image_incoming, parent, false));
             case TYPE_BOT:
             default:
                 return new BotVH(inflater.inflate(R.layout.item_chat_message, parent, false));
@@ -161,6 +179,10 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             ((ProductCardVH) holder).bind(m, listener);
         } else if (holder instanceof LoginActionVH) {
             ((LoginActionVH) holder).bind(m, listener);
+        } else if (holder instanceof ImageUserVH) {
+            ((ImageUserVH) holder).bind(m, items, position);
+        } else if (holder instanceof ImageIncomingVH) {
+            ((ImageIncomingVH) holder).bind(m, items, position, staffView);
         }
     }
 
@@ -170,6 +192,92 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     }
 
     // ---- ViewHolders -----------------------------------------------------
+
+    static class ImageUserVH extends RecyclerView.ViewHolder {
+        final ImageView image;
+        final TextView time;
+
+        ImageUserVH(@NonNull View v) {
+            super(v);
+            image = v.findViewById(R.id.chatImage);
+            time = v.findViewById(R.id.chatImageTime);
+        }
+
+        void bind(@NonNull ChatMessage message,
+                  @NonNull List<ChatMessage> items,
+                  int position) {
+            ImageLoadHelper.loadInto(image, message.getImageUrl());
+            image.setOnClickListener(v -> openFullscreen(v.getContext(), message.getImageUrl()));
+            if (ChatBubbleHelper.shouldShowTimestamp(items, position)) {
+                time.setVisibility(View.VISIBLE);
+                time.setText(formatMessageTime(message));
+            } else {
+                time.setVisibility(View.GONE);
+            }
+        }
+    }
+
+    static class ImageIncomingVH extends RecyclerView.ViewHolder {
+        final View avatarContainer;
+        final ImageView avatar;
+        final TextView name;
+        final ImageView image;
+        final TextView time;
+
+        ImageIncomingVH(@NonNull View v) {
+            super(v);
+            avatarContainer = v.findViewById(R.id.chatBotAvatarContainer);
+            avatar = v.findViewById(R.id.chatBotAvatar);
+            name = v.findViewById(R.id.chatSenderName);
+            image = v.findViewById(R.id.chatImage);
+            time = v.findViewById(R.id.chatImageTime);
+        }
+
+        void bind(@NonNull ChatMessage message,
+                  @NonNull List<ChatMessage> items,
+                  int position,
+                  boolean staffView) {
+            ImageLoadHelper.loadInto(image, message.getImageUrl());
+            if (avatarContainer != null) {
+                avatarContainer.setVisibility(View.VISIBLE);
+            }
+            if (avatar != null) {
+                if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
+                    avatar.setImageResource(R.drawable.ic_chat_person);
+                } else {
+                    avatar.setImageResource(R.drawable.ic_chat_bot);
+                }
+            }
+            if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
+                name.setVisibility(View.VISIBLE);
+                String staffLabel = itemView.getContext().getString(R.string.chat_sender_staff);
+                if (message.getSenderName() != null && !message.getSenderName().trim().isEmpty()) {
+                    name.setText(staffLabel + " · " + message.getSenderName().trim());
+                } else {
+                    name.setText(staffLabel);
+                }
+            } else if (staffView && ChatMessage.SENDER_USER.equals(message.getSenderType())) {
+                name.setVisibility(View.VISIBLE);
+                name.setText(R.string.chat_sender_customer);
+            } else {
+                name.setVisibility(View.GONE);
+            }
+            if (ChatBubbleHelper.shouldShowTimestamp(items, position)) {
+                time.setVisibility(View.VISIBLE);
+                time.setText(formatMessageTime(message));
+            } else {
+                time.setVisibility(View.GONE);
+            }
+            image.setOnClickListener(v -> openFullscreen(v.getContext(), message.getImageUrl()));
+        }
+    }
+
+    private static void openFullscreen(@NonNull android.content.Context context, @Nullable String imageUrl) {
+        if (imageUrl == null || imageUrl.trim().isEmpty()) {
+            return;
+        }
+        FullscreenImagePager.show(context, Collections.singletonList(imageUrl.trim()), 0);
+    }
 
     static class UserVH extends RecyclerView.ViewHolder {
         final TextView text;

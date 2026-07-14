@@ -8,7 +8,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 
 import com.example.healthup.ChangeEmailActivity;
 import com.example.healthup.LoginActivity;
@@ -22,7 +22,7 @@ import com.google.firebase.auth.FirebaseUser;
  * Receives Firebase email-action deep links (verifyAndChangeEmail / verifyEmail)
  * and applies the oobCode in-process so the Auth session can stay alive.
  */
-public class EmailActionHandlerActivity extends AppCompatActivity {
+public class EmailActionHandlerActivity extends BaseAppCompatActivity {
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {

@@ -4,11 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
-import android.view.MotionEvent
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+import com.example.healthup.BaseAppCompatActivity
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -20,7 +19,7 @@ import com.example.healthup.diet.SavedDishSummary
 import com.google.firebase.auth.FirebaseAuth
 import java.util.concurrent.TimeUnit
 
-class DietLandingActivity : AppCompatActivity() {
+class DietLandingActivity : BaseAppCompatActivity() {
 
     private lateinit var binding: ActivityDietLandingBinding
     private val savedDishRepository = SavedDishRepository()
@@ -54,10 +53,6 @@ class DietLandingActivity : AppCompatActivity() {
         renderHistory()
     }
 
-    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
-        UIUtils.maybeHideKeyboardOnTouchOutside(this, event)
-        return super.dispatchTouchEvent(event)
-    }
 
     override fun onResume() {
         super.onResume()

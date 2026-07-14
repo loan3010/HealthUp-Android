@@ -9,7 +9,7 @@ import android.view.View;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.example.healthup.R;
@@ -17,7 +17,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.textfield.TextInputLayout;
 
-public class AdminForgotPasswordActivity extends AppCompatActivity {
+public class AdminForgotPasswordActivity extends BaseAppCompatActivity {
 
     private AdminForgotPasswordViewModel viewModel;
     private TextInputLayout tilEmail;

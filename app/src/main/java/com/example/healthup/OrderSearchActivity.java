@@ -5,7 +5,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.healthup.databinding.ActivityOrderSearchBinding;
 import com.example.models.Order;
@@ -14,7 +13,7 @@ import com.google.firebase.firestore.DocumentSnapshot;
 import java.util.ArrayList;
 import java.util.List;
 
-public class OrderSearchActivity extends AppCompatActivity {
+public class OrderSearchActivity extends BaseAppCompatActivity {
     private ActivityOrderSearchBinding binding;
     private List<Order> allOrders = new ArrayList<>();
     private List<Order> searchResults = new ArrayList<>();

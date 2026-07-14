@@ -364,6 +364,9 @@ public class ChatRepository {
         data.put("type", message.getType());
         data.put("read", false);
         data.put("createdAt", FieldValue.serverTimestamp());
+        if (message.getImageUrl() != null) {
+            data.put("imageUrl", message.getImageUrl());
+        }
         if (message.getOrderId() != null) {
             data.put("orderId", message.getOrderId());
             data.put("orderCode", message.getOrderCode());
@@ -372,9 +375,12 @@ public class ChatRepository {
             data.put("orderItemCount", message.getOrderItemCount());
         }
 
+        String preview = ChatMessage.TYPE_IMAGE.equals(message.getType())
+                ? "[Hình ảnh]"
+                : message.getText();
         convRef.collection("messages").add(data)
                 .addOnSuccessListener(ref -> {
-                    updateLastMessage(convRef, message.getText());
+                    updateLastMessage(convRef, preview);
                     if (callback != null) {
                         callback.onComplete(true);
                     }
@@ -488,6 +494,7 @@ public class ChatRepository {
         m.setText(doc.getString("text"));
         String type = doc.getString("type");
         m.setType(type != null ? type : ChatMessage.TYPE_TEXT);
+        m.setImageUrl(doc.getString("imageUrl"));
         m.setOrderId(doc.getString("orderId"));
         m.setOrderCode(doc.getString("orderCode"));
         m.setOrderStatus(doc.getString("orderStatus"));

@@ -6,7 +6,6 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.view.View;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.example.healthup.databinding.ActivityProductReviewsBinding;
 import com.example.healthup.firebase.FirestoreManager;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.Locale;
 
 
-public class ProductReviewsActivity extends AppCompatActivity {
+public class ProductReviewsActivity extends BaseAppCompatActivity {
     private ActivityProductReviewsBinding binding;
     private String productId;
     private ProductReviewEntryAdapter reviewAdapter;

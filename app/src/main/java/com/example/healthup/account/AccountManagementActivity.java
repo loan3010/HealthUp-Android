@@ -11,7 +11,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -26,7 +26,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.List;
 
-public class AccountManagementActivity extends AppCompatActivity implements SavedAccountAdapter.Listener {
+public class AccountManagementActivity extends BaseAppCompatActivity implements SavedAccountAdapter.Listener {
 
     public static final String EXTRA_ADD_ACCOUNT = "extra_add_account";
 

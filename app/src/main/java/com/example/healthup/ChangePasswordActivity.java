@@ -11,7 +11,6 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.databinding.ActivityChangePasswordBinding;
@@ -20,7 +19,7 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-public class ChangePasswordActivity extends AppCompatActivity {
+public class ChangePasswordActivity extends BaseAppCompatActivity {
     private ActivityChangePasswordBinding binding;
     private FirebaseAuth firebaseAuth;
     private FirebaseFirestore firestore;

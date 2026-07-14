@@ -7,12 +7,11 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import com.example.healthup.databinding.ActivityAccessSettingsBinding;
 import com.example.healthup.databinding.ItemSettingSwitchRowBinding;
 
-public class AccessSettingsActivity extends AppCompatActivity {
+public class AccessSettingsActivity extends BaseAppCompatActivity {
     private ActivityAccessSettingsBinding binding;
 
     @Override

@@ -13,7 +13,6 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 
 import com.example.healthup.account.AccountSessionRecorder;
@@ -37,7 +36,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.Map;
 
-public class OTPActivity extends AppCompatActivity {
+public class OTPActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_FULL_NAME = "extra_full_name";
     public static final String EXTRA_PHONE = "extra_phone";

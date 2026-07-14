@@ -5,7 +5,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
-import androidx.appcompat.app.AppCompatActivity
+import com.example.healthup.BaseAppCompatActivity
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.healthup.databinding.ActivityDietMenuBinding
@@ -21,7 +21,7 @@ import com.example.healthup.diet.ProductResolver
 import com.example.healthup.diet.SavedDishRepository
 import com.google.firebase.auth.FirebaseAuth
 
-class DietMenuActivity : AppCompatActivity() {
+class DietMenuActivity : BaseAppCompatActivity() {
 
     private lateinit var binding: ActivityDietMenuBinding
     private lateinit var viewModel: DietViewModel

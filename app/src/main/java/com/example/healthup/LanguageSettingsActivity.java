@@ -4,11 +4,10 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import com.example.healthup.databinding.ActivityLanguageSettingsBinding;
 import com.example.healthup.util.LocaleHelper;
 
-public class LanguageSettingsActivity extends AppCompatActivity {
+public class LanguageSettingsActivity extends BaseAppCompatActivity {
     private ActivityLanguageSettingsBinding binding;
     private String selectedLanguage = "vi";
 

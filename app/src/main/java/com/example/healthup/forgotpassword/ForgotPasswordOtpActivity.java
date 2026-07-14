@@ -12,7 +12,7 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
+import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -24,7 +24,7 @@ import com.example.healthup.data.repository.PasswordResetRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
 import com.google.android.material.button.MaterialButton;
 
-public class ForgotPasswordOtpActivity extends AppCompatActivity {
+public class ForgotPasswordOtpActivity extends BaseAppCompatActivity {
 
     public static final String EXTRA_PHONE = "extra_phone";
 

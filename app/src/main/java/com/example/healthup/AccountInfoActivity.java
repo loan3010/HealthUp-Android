@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.provider.MediaStore;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
@@ -19,7 +18,6 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.PickVisualMediaRequest;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import com.bumptech.glide.Glide;
@@ -39,7 +37,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class AccountInfoActivity extends AppCompatActivity {
+public class AccountInfoActivity extends BaseAppCompatActivity {
     private ActivityAccountInfoBinding binding;
     private FirebaseFirestore db;
     private FirebaseAuth mAuth;
@@ -195,12 +193,6 @@ public class AccountInfoActivity extends AppCompatActivity {
                         binding.scrollContent.smoothScrollTo(0, v.getBottom()));
             }
         });
-    }
-
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent event) {
-        UIUtils.maybeHideKeyboardOnTouchOutside(this, event);
-        return super.dispatchTouchEvent(event);
     }
 
     private void showDatePicker() {

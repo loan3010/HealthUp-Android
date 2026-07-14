@@ -2,14 +2,13 @@ package com.example.healthup;
 
 import android.os.Bundle;
 import android.view.View;
-import androidx.appcompat.app.AppCompatActivity;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityReturnRefundBinding;
 import com.example.models.OrderItem;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 
-public class ReturnRefundActivity extends AppCompatActivity {
+public class ReturnRefundActivity extends BaseAppCompatActivity {
     private ActivityReturnRefundBinding binding;
     private DecimalFormat df = new DecimalFormat("#,###đ");
 

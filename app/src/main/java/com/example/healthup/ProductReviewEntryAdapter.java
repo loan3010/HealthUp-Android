@@ -4,13 +4,17 @@ import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ItemReviewBinding;
+import com.example.healthup.util.FullscreenImagePager;
 import com.example.models.Review;
-import com.google.firebase.Timestamp;
+
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
@@ -92,34 +96,60 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
 
             if (media == null || media.isEmpty()) {
                 binding.layoutReviewImages.setVisibility(View.GONE);
+                binding.ivReviewImage1.setOnClickListener(null);
+                binding.ivReviewImage2.setOnClickListener(null);
+                binding.ivReviewImage3.setOnClickListener(null);
+                return;
+            }
+
+            List<String> urls = new ArrayList<>();
+            for (String item : media) {
+                if (item != null && !item.trim().isEmpty()) {
+                    urls.add(item.trim());
+                }
+            }
+            if (urls.isEmpty()) {
+                binding.layoutReviewImages.setVisibility(View.GONE);
                 return;
             }
 
             binding.layoutReviewImages.setVisibility(View.VISIBLE);
 
             binding.ivReviewImage1.setVisibility(View.VISIBLE);
-            loadImage(media.get(0), binding.ivReviewImage1);
+            loadImage(urls.get(0), binding.ivReviewImage1);
+            binding.ivReviewImage1.setOnClickListener(v ->
+                    FullscreenImagePager.show(v.getContext(), urls, 0));
 
-            if (media.size() >= 2) {
+            if (urls.size() >= 2) {
                 binding.ivReviewImage2.setVisibility(View.VISIBLE);
-                loadImage(media.get(1), binding.ivReviewImage2);
+                loadImage(urls.get(1), binding.ivReviewImage2);
+                binding.ivReviewImage2.setOnClickListener(v ->
+                        FullscreenImagePager.show(v.getContext(), urls, 1));
             } else {
                 binding.ivReviewImage2.setVisibility(View.GONE);
+                binding.ivReviewImage2.setOnClickListener(null);
             }
 
-            if (media.size() >= 3) {
+            if (urls.size() >= 3) {
                 binding.ivReviewImage3.setVisibility(View.VISIBLE);
-                loadImage(media.get(2), binding.ivReviewImage3);
+                loadImage(urls.get(2), binding.ivReviewImage3);
+                binding.ivReviewImage3.setOnClickListener(v ->
+                        FullscreenImagePager.show(v.getContext(), urls, 2));
 
-                if (media.size() > 3) {
+                if (urls.size() > 3) {
                     binding.tvMoreImages.setVisibility(View.VISIBLE);
-                    binding.tvMoreImages.setText("+" + (media.size() - 3));
+                    binding.tvMoreImages.setText("+" + (urls.size() - 3));
+                    binding.tvMoreImages.setOnClickListener(v ->
+                            FullscreenImagePager.show(v.getContext(), urls, 2));
                 } else {
                     binding.tvMoreImages.setVisibility(View.GONE);
+                    binding.tvMoreImages.setOnClickListener(null);
                 }
             } else {
                 binding.ivReviewImage3.setVisibility(View.GONE);
+                binding.ivReviewImage3.setOnClickListener(null);
                 binding.tvMoreImages.setVisibility(View.GONE);
+                binding.tvMoreImages.setOnClickListener(null);
             }
         }
 

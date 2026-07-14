@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityReturnRefundHistoryDetailBinding;
@@ -26,7 +25,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class ReturnRefundHistoryDetailActivity extends AppCompatActivity {
+public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
     private ActivityReturnRefundHistoryDetailBinding binding;
     private DecimalFormat df = new DecimalFormat("#,###đ");
     private SimpleDateFormat sdf = new SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault());
