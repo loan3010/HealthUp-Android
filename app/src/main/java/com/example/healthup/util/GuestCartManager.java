@@ -175,7 +175,8 @@ public final class GuestCartManager {
             for (CartItem guestItem : guestItems) {
                 mergeSingleItem(cartRef, snapshot, guestItem);
             }
-            clear();
+            // Không xóa giỏ hàng guest ở đây nữa để duy trì theo thiết bị
+            // clear();
             if (onComplete != null) {
                 onComplete.run();
             }

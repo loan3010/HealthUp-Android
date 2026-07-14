@@ -72,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
     private Intent deferredIntent;
     private ListenerRegistration cartListener;
     private ListenerRegistration notifBadgeListener;
+    private FirebaseAuth.AuthStateListener authStateListener;
     private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
@@ -149,9 +150,6 @@ public class MainActivity extends AppCompatActivity {
             maybeShowWelcomePromo();
         }
 
-        setupCartBadgeListener();
-        setupNotificationBadgeListener();
-
         // ✅ FIX: Lắng nghe thay đổi BackStack để hiện lại thanh Nav Bar khi quay về các tab chính
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateNavigationVisibility);
     }
@@ -194,16 +192,7 @@ public class MainActivity extends AppCompatActivity {
                     .collection("cart")
                     .addSnapshotListener((value, error) -> {
                         if (value != null) {
-                            int count = 0;
-                            for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
-                                // Đồng bộ logic đếm với CartFragment: chấp nhận cả field "name"
-                                // ở top-level hoặc lồng trong map "product", để badge khớp với
-                                // tiêu đề "Giỏ hàng (n)".
-                                if (CartHelper.isValidCartDocument(doc)) {
-                                    count++;
-                                }
-                            }
-                            updateCartBadge(count);
+                            updateCartBadge(CartHelper.getCartCount(value));
                         }
                     });
         } else {
@@ -211,7 +200,7 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updateCartBadge(int count) {
+    public void updateCartBadge(int count) {
         if (navView == null) return;
         BadgeDrawable badge = navView.getOrCreateBadge(R.id.nav_cart);
         if (count > 0) {
@@ -219,6 +208,7 @@ public class MainActivity extends AppCompatActivity {
             badge.setNumber(count);
         } else {
             badge.setVisible(false);
+            badge.clearNumber();
         }
     }
 
@@ -265,23 +255,12 @@ public class MainActivity extends AppCompatActivity {
 
     public void refreshGuestCartBadge() {
         if (FirebaseAuth.getInstance().getCurrentUser() != null) return;
-
-        List<CartItem> items = GuestCartManager.getInstance(this).getItems();
-        int count = 0;
-        for (CartItem item : items) {
-            if (item.getProductId() != null && !item.getProductId().isEmpty()) {
-                count++;
-            }
-        }
-        updateCartBadge(count);
+        updateCartBadge(CartHelper.getGuestCartCount(this));
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        // Refresh listener in case user logged in/out
-        setupCartBadgeListener();
-        setupNotificationBadgeListener();
         accountDisabledWatcher.attach(this);
 
         IntentFilter filter = new IntentFilter(GuestCartManager.ACTION_GUEST_CART_CHANGED);
@@ -291,6 +270,26 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = deferredIntent;
             deferredIntent = null;
             handleIntent(intent);
+        }
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        if (authStateListener == null) {
+            authStateListener = firebaseAuth -> {
+                setupCartBadgeListener();
+                setupNotificationBadgeListener();
+            };
+        }
+        FirebaseAuth.getInstance().addAuthStateListener(authStateListener);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if (authStateListener != null) {
+            FirebaseAuth.getInstance().removeAuthStateListener(authStateListener);
         }
     }
 

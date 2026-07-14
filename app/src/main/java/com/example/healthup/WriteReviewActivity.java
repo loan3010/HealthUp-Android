@@ -290,6 +290,7 @@ public class WriteReviewActivity extends AppCompatActivity {
 
                         if (realIndex != -1 && orderItem != null) {
                             Review review = new Review(rating, comment, uploadedUrlsMap.get(realIndex), Timestamp.now());
+                            review.setUserId(uid);
                             review.setUserName(userName);
                             review.setUserAvatar(userAvatar);
                             review.setVariantLabel(orderItem.getVariantLabel());

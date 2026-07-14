@@ -19,7 +19,7 @@
             android:layout_height="36dp"
             android:scaleType="centerCrop"
             android:src="@drawable/ic_profile"
-            app:shapeAppearanceOverlay="@style/ShapeAppearance.MaterialComponents.SmallComponent"
+            app:shapeAppearanceOverlay="@style/ShapeAppearance.HealthUp.Circle"
             app:strokeColor="#E0E0E0"
             app:strokeWidth="1dp" />
 
@@ -82,6 +82,17 @@
         android:text="Granola rất giòn, việt quất chua ngọt hài hòa. Đóng gói chắc chắn, giao hàng nhanh."
         android:textColor="@color/text_dark"
         android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/tv_toggle_expand"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Xem thêm"
+        android:textColor="@color/green_button"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:paddingVertical="4dp"
+        android:visibility="gone" />
 
     <!-- FIX: khối ảnh review dạng lưới (giống Shopee), thay cho 1 ImageView đơn lẻ cũ.
          Hiển thị tối đa 3 ảnh, ảnh thứ 3 sẽ có overlay "+N" nếu còn nhiều ảnh hơn. -->

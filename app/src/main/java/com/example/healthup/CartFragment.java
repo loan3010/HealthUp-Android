@@ -208,6 +208,12 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         if (btnMoreCartRecommend != null) {
             btnMoreCartRecommend.setOnClickListener(v -> loadMoreCartRecommendations());
         }
+        if (guestSyncBanner != null) {
+            guestSyncBanner.setOnClickListener(v -> {
+                Intent loginIntent = new Intent(requireContext(), LoginActivity.class);
+                startActivity(loginIntent);
+            });
+        }
     }
 
     private void showHomeTab() {
@@ -1049,6 +1055,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
 
         if (tvCartTitle != null) {
             tvCartTitle.setText(String.format(Locale.getDefault(), "Giỏ hàng (%d)", cartItems.size()));
+        }
+
+        // Cập nhật badge ở Navbar ngay lập tức
+        if (requireActivity() instanceof MainActivity) {
+            ((MainActivity) requireActivity()).updateCartBadge(cartItems.size());
         }
     }
 

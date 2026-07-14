@@ -143,6 +143,35 @@ public final class CartHelper {
         return name != null && !name.isEmpty();
     }
 
+    /**
+     * Tính số lượng thẻ sản phẩm (SKU) từ snapshot Firestore.
+     */
+    public static int getCartCount(com.google.firebase.firestore.QuerySnapshot snapshot) {
+        int total = 0;
+        if (snapshot != null) {
+            for (com.google.firebase.firestore.DocumentSnapshot doc : snapshot.getDocuments()) {
+                if (isValidCartDocument(doc)) {
+                    total++; // Đếm theo thẻ sản phẩm
+                }
+            }
+        }
+        return total;
+    }
+
+    /**
+     * Tính số lượng thẻ sản phẩm (SKU) cho khách (Guest).
+     */
+    public static int getGuestCartCount(Context context) {
+        int total = 0;
+        java.util.List<CartItem> items = GuestCartManager.getInstance(context).getItems();
+        for (CartItem item : items) {
+            if (item.getProductId() != null && !item.getProductId().isEmpty()) {
+                total++; // Đếm theo thẻ sản phẩm
+            }
+        }
+        return total;
+    }
+
     private static void refreshGuestCartBadge(Context context) {
         MainActivity activity = findMainActivity(context);
         if (activity != null) {

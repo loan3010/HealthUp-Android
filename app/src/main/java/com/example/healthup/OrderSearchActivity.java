@@ -26,11 +26,20 @@ public class OrderSearchActivity extends AppCompatActivity {
         binding = ActivityOrderSearchBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        applySystemBarInsets();
         setupRecyclerView();
         loadAllOrders();
         setupListeners();
         
         binding.etSearch.requestFocus();
+    }
+
+    private void applySystemBarInsets() {
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(binding.layoutHeader, (v, windowInsets) -> {
+            androidx.core.graphics.Insets systemBars = windowInsets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars());
+            v.setPadding(v.getPaddingLeft(), systemBars.top, v.getPaddingRight(), v.getPaddingBottom());
+            return windowInsets;
+        });
     }
 
     private void setupRecyclerView() {

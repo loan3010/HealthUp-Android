@@ -114,6 +114,24 @@ public class SettingsFragment extends Fragment {
                 getActivity().finish();
             }
         });
+
+        // Liên hệ - Đồng bộ với OrderDetail
+        binding.itemPhone.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_DIAL);
+            intent.setData(android.net.Uri.parse("tel:0769845728"));
+            startActivity(intent);
+        });
+
+        binding.itemEmail.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_SENDTO);
+            intent.setData(android.net.Uri.parse("mailto:healthup@gmail.com"));
+            intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ khách hàng - HealthUp");
+            try {
+                startActivity(intent);
+            } catch (android.content.ActivityNotFoundException e) {
+                Toast.makeText(getActivity(), "Không tìm thấy ứng dụng email", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
 
