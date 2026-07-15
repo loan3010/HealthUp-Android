@@ -173,24 +173,35 @@ public class SettingsFragment extends Fragment {
                 String uid = user.getUid();
                 dialog.dismiss();
                 
-                // 1. Xóa dữ liệu hồ sơ Firestore
-                com.google.firebase.firestore.FirebaseFirestore.getInstance()
-                        .collection("users").document(uid).delete();
-                
-                // 2. Xóa tài khoản đã lưu trên máy (Account card & Password)
-                if (getContext() != null) {
-                    com.example.healthup.account.SavedAccountStore.remove(getContext(), uid);
-                }
+                // Hiển thị loading nếu cần
+                Toast.makeText(getActivity(), "Đang xử lý xóa tài khoản...", Toast.LENGTH_SHORT).show();
 
-                // 3. Xóa tài khoản Auth vĩnh viễn
+                // CHIẾN LƯỢC: Thử xóa Auth TRƯỚC. 
+                // Nếu Auth thành công -> Xóa tiếp Firestore. 
+                // (Firestore rules của HealthUp cho phép xóa nếu có UID, hoặc Admin)
+                // Nếu Auth thất bại (do Recent Login) -> Dừng lại luôn, yêu cầu đăng nhập.
+                
                 user.delete().addOnCompleteListener(task -> {
                     if (task.isSuccessful()) {
+                        // AUTH ĐÃ XÓA THÀNH CÔNG -> Tiến hành xóa nốt dữ liệu
+                        
+                        // 1. Xóa dữ liệu hồ sơ Firestore (dùng UID cũ vẫn được vì task vừa xong)
+                        com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                                .collection("users").document(uid).delete();
+                        
+                        // 2. Xóa tài khoản đã lưu trên máy
+                        if (getContext() != null) {
+                            com.example.healthup.account.SavedAccountStore.remove(getContext(), uid);
+                        }
+
                         Toast.makeText(getActivity(), "Tài khoản của bạn đã được xóa vĩnh viễn.", Toast.LENGTH_LONG).show();
+                        
                         Intent intent = new Intent(getActivity(), MainActivity.class);
                         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
                         startActivity(intent);
                         if (getActivity() != null) getActivity().finish();
                     } else {
+                        // AUTH XÓA THẤT BẠI
                         Exception e = task.getException();
                         if (e instanceof com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
                             Toast.makeText(getActivity(), "Vì lý do bảo mật, bạn cần đăng nhập lại trước khi thực hiện xóa tài khoản.", Toast.LENGTH_LONG).show();
@@ -199,7 +210,7 @@ public class SettingsFragment extends Fragment {
                             startActivity(intent);
                             if (getActivity() != null) getActivity().finish();
                         } else {
-                            Toast.makeText(getActivity(), "Lỗi xóa tài khoản: " + (e != null ? e.getMessage() : "Không xác định"), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(getActivity(), "Lỗi: " + (e != null ? e.getMessage() : "Không xác định"), Toast.LENGTH_SHORT).show();
                         }
                     }
                 });

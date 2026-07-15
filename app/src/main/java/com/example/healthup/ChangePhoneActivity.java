@@ -15,8 +15,6 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.Map;
-
 public class ChangePhoneActivity extends AppCompatActivity {
     private ActivityChangePhoneBinding binding;
     private FirebaseFirestore db;
@@ -42,16 +40,14 @@ public class ChangePhoneActivity extends AppCompatActivity {
         }
 
         binding.btnBack.setOnClickListener(v -> finish());
-
         binding.tvGetOtp.setOnClickListener(v -> checkUniqueThenSend());
-
         binding.btnSave.setOnClickListener(v -> confirmOtp());
     }
 
     private void checkUniqueThenSend() {
         String phone = binding.etNewPhone.getText().toString().trim();
-        if (TextUtils.isEmpty(phone) || phone.length() < 10) {
-            binding.tvErrorPhone.setText(R.string.login_phone_length_error);
+        if (!PhoneNormalizer.isValidLocalPhone(phone)) {
+            binding.tvErrorPhone.setText(R.string.login_phone_invalid_error);
             binding.tvErrorPhone.setVisibility(View.VISIBLE);
             return;
         }
@@ -60,6 +56,7 @@ public class ChangePhoneActivity extends AppCompatActivity {
         binding.tvErrorPhone.setVisibility(View.GONE);
         setLoading(true);
 
+        // 1. Kiểm tra SĐT đã tồn tại chưa
         db.collection("users")
                 .whereEqualTo("phone", normalizedPhone)
                 .limit(1)
@@ -71,22 +68,24 @@ public class ChangePhoneActivity extends AppCompatActivity {
                         binding.tvErrorPhone.setVisibility(View.VISIBLE);
                         return;
                     }
+                    // 2. Gửi OTP thật qua registration_otp collection
                     sendMockOtp(normalizedPhone);
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    Toast.makeText(this, "Lỗi kiểm tra số điện thoại", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Lỗi kiểm tra số điện thoại: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
     private void sendMockOtp(String phone) {
         String otp = otpRepository.generateOtp();
+        // Dùng COLLECTION_PHONE_VERIFICATION (giờ là registration_otp)
         otpRepository.savePhoneVerificationOtp(userId, phone, otp)
                 .addOnSuccessListener(unused -> {
                     pendingPhone = phone;
                     setLoading(false);
                     showOtpUi(otp);
-                    Toast.makeText(this, "Mã OTP đã được gửi", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.otp_sent, Toast.LENGTH_SHORT).show();
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
@@ -107,8 +106,9 @@ public class ChangePhoneActivity extends AppCompatActivity {
             Toast.makeText(this, "Vui lòng nhận mã OTP trước", Toast.LENGTH_SHORT).show();
             return;
         }
-        if (TextUtils.isEmpty(code)) {
+        if (code.length() < 6) {
             binding.tvErrorOtp.setVisibility(View.VISIBLE);
+            binding.tvErrorOtp.setText(R.string.otp_invalid_length);
             return;
         }
 
@@ -119,10 +119,12 @@ public class ChangePhoneActivity extends AppCompatActivity {
                             || !otpRepository.matchesOtp(doc, code)) {
                         setLoading(false);
                         binding.tvErrorOtp.setVisibility(View.VISIBLE);
+                        binding.tvErrorOtp.setText(R.string.otp_invalid_code);
                         return;
                     }
                     
                     binding.tvErrorOtp.setVisibility(View.GONE);
+                    // Cập nhật SĐT vào hồ sơ người dùng
                     db.collection("users").document(userId)
                             .update("phone", pendingPhone)
                             .addOnSuccessListener(unused -> {

@@ -16,7 +16,7 @@ public class OtpRepository {
     public static final String COLLECTION_ADMIN_PASSWORD_RESET = "admin_password_reset";
     public static final String COLLECTION_REGISTRATION = "registration_otp";
     public static final String COLLECTION_EMAIL_VERIFICATION = "email_verification";
-    public static final String COLLECTION_PHONE_VERIFICATION = "email_verification"; // Reuse email collection due to Firestore rules
+    public static final String COLLECTION_PHONE_VERIFICATION = "registration_otp"; // Use registration collection for phone verification
     public static final long OTP_EXPIRY_MS = 5 * 60 * 1000L;
     /** Admin forgot-password OTP validity (60s — matches UI countdown). */
     public static final long ADMIN_OTP_EXPIRY_MS = 60 * 1000L;
@@ -86,10 +86,10 @@ public class OtpRepository {
             @NonNull String phone,
             @NonNull String otp
     ) {
-        // Tham khảo email: Dùng chung cấu trúc với Email để đảm bảo quyền ghi Firestore
+        // Sử dụng registration_otp cho SĐT để đảm bảo quyền ghi
         long now = System.currentTimeMillis();
         Map<String, Object> data = new HashMap<>();
-        data.put("email", phone); // Lưu vào field 'email' để khớp với rules (nếu có)
+        data.put("phone", phone);
         data.put("otp", otp);
         data.put("createdAt", now);
         data.put("expiredAt", now + OTP_EXPIRY_MS);
