@@ -51,6 +51,7 @@ public final class UserProfileBuilder {
         userData.put("googleLinked", false);
         userData.put("spentAmount", 0d);
         userData.put("emailVerified", false);
+        userData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         if (isRealEmail(displayEmail)) {
             userData.put("displayEmail", normalizeStoredEmail(displayEmail));
@@ -80,6 +81,7 @@ public final class UserProfileBuilder {
         userData.put("role", "buyer");
         userData.put("authProvider", authProvider);
         userData.put("spentAmount", 0d);
+        userData.put("createdAt", com.google.firebase.firestore.FieldValue.serverTimestamp());
 
         boolean isGoogle = AUTH_PROVIDER_GOOGLE.equals(authProvider);
         userData.put("googleLinked", isGoogle);

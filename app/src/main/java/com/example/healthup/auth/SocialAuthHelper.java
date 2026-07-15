@@ -66,6 +66,8 @@ public class SocialAuthHelper {
     private String expectedSwitchUid;
     @Nullable
     private String preferredGoogleEmail;
+    /** True after INVALID_ACCOUNT with setAccountName — retry picker without hint once. */
+    private boolean switchRetryWithoutAccountHint;
 
     public SocialAuthHelper(@NonNull AppCompatActivity activity, @NonNull Listener listener) {
         this.activity = activity;
@@ -91,11 +93,18 @@ public class SocialAuthHelper {
                 result -> {
                     if (result.getResultCode() != Activity.RESULT_OK) {
                         setLoading(false);
-                        clearSwitchTarget();
-                        // Google often returns RESULT_CANCELED for config errors (SHA-1 mismatch).
-                        if (result.getData() != null && tryReportGoogleIntentError(result.getData())) {
-                            return;
+                        if (result.getData() != null) {
+                            ApiException apiError = peekGoogleApiException(result.getData());
+                            if (apiError != null && maybeRetrySwitchWithoutAccountHint(apiError)) {
+                                return;
+                            }
+                            if (apiError != null) {
+                                clearSwitchTarget();
+                                notifyError(formatGoogleApiError(apiError));
+                                return;
+                            }
                         }
+                        clearSwitchTarget();
                         if (result.getResultCode() == Activity.RESULT_CANCELED) {
                             notifyError(activity.getString(R.string.social_auth_google_cancelled));
                         } else {
@@ -130,12 +139,16 @@ public class SocialAuthHelper {
 
         clearSwitchTarget();
         setLoading(true);
-        googleSignInClient.signOut().addOnCompleteListener(task ->
+        // Must leave the previous Firebase session first. Otherwise "Add account" + Google
+        // can keep the old Auth UID (same saved card, wrong email on profile).
+        prepareFreshGoogleSignIn(() ->
                 googleSignInLauncher.launch(googleSignInClient.getSignInIntent()));
     }
 
     /**
      * Quick account switch: try silent Google sign-in for the saved email before showing UI.
+     * If the hinted account is not on this device ({@code INVALID_ACCOUNT}), fall back to the
+     * normal Google account picker (same path as "Continue with Google").
      */
     public void signInWithGoogleForSwitch(
             @Nullable String preferredEmail,
@@ -148,19 +161,45 @@ public class SocialAuthHelper {
 
         expectedSwitchUid = expectedUid;
         preferredGoogleEmail = preferredEmail;
-        GoogleSignInClient switchClient = buildGoogleSignInClient(preferredEmail);
+        switchRetryWithoutAccountHint = false;
         setLoading(true);
-        switchClient.silentSignIn().addOnCompleteListener(task -> {
-            if (task.isSuccessful()) {
-                GoogleSignInAccount account = task.getResult();
-                if (account != null && !TextUtils.isEmpty(account.getIdToken())) {
-                    PendingGoogleLink.set(account.getIdToken(), account.getEmail());
-                    signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
-                    return;
-                }
+
+        String hint = UserProfileBuilder.isRealEmail(preferredEmail) ? preferredEmail.trim() : null;
+        prepareFreshGoogleSignIn(() -> {
+            if (hint == null) {
+                launchGooglePickerWithoutAccountHint();
+                return;
             }
-            googleSignInLauncher.launch(switchClient.getSignInIntent());
+
+            GoogleSignInClient hintedClient = buildGoogleSignInClient(hint);
+            hintedClient.silentSignIn().addOnCompleteListener(task -> {
+                if (task.isSuccessful()) {
+                    GoogleSignInAccount account = task.getResult();
+                    if (account != null && !TextUtils.isEmpty(account.getIdToken())) {
+                        PendingGoogleLink.set(account.getIdToken(), account.getEmail());
+                        signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
+                        return;
+                    }
+                }
+                // Do NOT re-open intent with setAccountName — that yields INVALID_ACCOUNT (5)
+                // when the email is not a Google account currently on the device.
+                logDebug("Silent Google switch failed for hint; opening account picker");
+                launchGooglePickerWithoutAccountHint();
+            });
         });
+    }
+
+    /**
+     * Sign out Firebase + Google clients so the next Google intent cannot reuse the
+     * previously signed-in Auth user when adding/switching accounts.
+     */
+    private void prepareFreshGoogleSignIn(@NonNull Runnable afterSignedOut) {
+        firebaseAuth.signOut();
+        if (googleSignInClient == null) {
+            afterSignedOut.run();
+            return;
+        }
+        googleSignInClient.signOut().addOnCompleteListener(ignored -> afterSignedOut.run());
     }
 
     @NonNull
@@ -174,9 +213,22 @@ public class SocialAuthHelper {
         return GoogleSignIn.getClient(activity, builder.build());
     }
 
+    private void launchGooglePickerWithoutAccountHint() {
+        if (googleSignInClient == null) {
+            setLoading(false);
+            clearSwitchTarget();
+            notifyError(activity.getString(R.string.social_auth_google_not_configured));
+            return;
+        }
+        setLoading(true);
+        googleSignInClient.signOut().addOnCompleteListener(ignored ->
+                googleSignInLauncher.launch(googleSignInClient.getSignInIntent()));
+    }
+
     private void clearSwitchTarget() {
         expectedSwitchUid = null;
         preferredGoogleEmail = null;
+        switchRetryWithoutAccountHint = false;
     }
 
     public void signInWithFacebook() {
@@ -224,14 +276,23 @@ public class SocialAuthHelper {
 
     /** @return true if an ApiException was reported to the user */
     private boolean tryReportGoogleIntentError(@NonNull Intent data) {
+        ApiException e = peekGoogleApiException(data);
+        if (e == null) {
+            return false;
+        }
+        logDebug("Google Sign-In ApiException from non-OK result", e);
+        notifyError(formatGoogleApiError(e));
+        return true;
+    }
+
+    @Nullable
+    private ApiException peekGoogleApiException(@NonNull Intent data) {
         Task<GoogleSignInAccount> task = GoogleSignIn.getSignedInAccountFromIntent(data);
         try {
             task.getResult(ApiException.class);
-            return false;
+            return null;
         } catch (ApiException e) {
-            logDebug("Google Sign-In ApiException from non-OK result", e);
-            notifyError(formatGoogleApiError(e));
-            return true;
+            return e;
         }
     }
 
@@ -251,10 +312,28 @@ public class SocialAuthHelper {
             signInWithCredential(GoogleAuthProvider.getCredential(account.getIdToken(), null));
         } catch (ApiException e) {
             setLoading(false);
-            clearSwitchTarget();
             logDebug("Google Sign-In ApiException", e);
+            if (maybeRetrySwitchWithoutAccountHint(e)) {
+                return;
+            }
+            clearSwitchTarget();
             notifyError(formatGoogleApiError(e));
         }
+    }
+
+    /** @return true if a retry was started */
+    private boolean maybeRetrySwitchWithoutAccountHint(@NonNull ApiException e) {
+        if (expectedSwitchUid == null || switchRetryWithoutAccountHint) {
+            return false;
+        }
+        if (e.getStatusCode() != CommonStatusCodes.INVALID_ACCOUNT
+                && e.getStatusCode() != CommonStatusCodes.SIGN_IN_REQUIRED) {
+            return false;
+        }
+        switchRetryWithoutAccountHint = true;
+        logDebug("Retrying Google switch without account hint after status=" + e.getStatusCode());
+        launchGooglePickerWithoutAccountHint();
+        return true;
     }
 
     private void signInWithCredential(@NonNull AuthCredential credential) {
@@ -283,8 +362,30 @@ public class SocialAuthHelper {
                         notifyError(activity.getString(R.string.social_auth_failed));
                         return;
                     }
+                    if (!googleCredentialEmailMatchesUser(user)) {
+                        setLoading(false);
+                        clearSwitchTarget();
+                        firebaseAuth.signOut();
+                        notifyError(withDebugDetail(
+                                activity.getString(R.string.social_auth_failed),
+                                "Google account email does not match Auth session"
+                        ));
+                        return;
+                    }
                     routeAfterSocialAuth(user);
                 });
+    }
+
+    /**
+     * Guard against stale Auth session: Google credential email must match current Firebase user.
+     */
+    private boolean googleCredentialEmailMatchesUser(@NonNull FirebaseUser user) {
+        String pendingEmail = PendingGoogleLink.getEmail();
+        String authEmail = user.getEmail();
+        if (!UserProfileBuilder.isRealEmail(pendingEmail) || !UserProfileBuilder.isRealEmail(authEmail)) {
+            return true;
+        }
+        return pendingEmail.trim().equalsIgnoreCase(authEmail.trim());
     }
 
     private boolean isAccountExistsWithDifferentCredential(@Nullable Exception exception) {
@@ -351,8 +452,23 @@ public class SocialAuthHelper {
 
         final boolean switchingAccount = expectedSwitchUid != null;
         clearSwitchTarget();
+        final String googleEmail = PendingGoogleLink.getEmail();
         PendingGoogleLink.clear();
-        AccountSessionRecorder.fetchAndRecord(activity, user.getUid(), null,
+        syncGoogleDisplayEmailThenRecord(user, googleEmail, switchingAccount);
+    }
+
+    private void syncGoogleDisplayEmailThenRecord(
+            @NonNull FirebaseUser user,
+            @Nullable String googleEmail,
+            boolean switchingAccount
+    ) {
+        String emailToKeep = UserProfileBuilder.isRealEmail(googleEmail)
+                ? googleEmail.trim().toLowerCase(java.util.Locale.ROOT)
+                : (UserProfileBuilder.isRealEmail(user.getEmail())
+                ? user.getEmail().trim().toLowerCase(java.util.Locale.ROOT)
+                : null);
+
+        Runnable record = () -> AccountSessionRecorder.fetchAndRecord(activity, user.getUid(), null,
                 new AccountSessionRecorder.Listener() {
                     @Override
                     public void onRecorded() {
@@ -381,6 +497,22 @@ public class SocialAuthHelper {
                                 Toast.LENGTH_LONG).show();
                     }
                 });
+
+        if (emailToKeep == null) {
+            record.run();
+            return;
+        }
+
+        java.util.Map<String, Object> patch = new java.util.HashMap<>();
+        patch.put("displayEmail", emailToKeep);
+        patch.put("emailVerified", true);
+        if (UserProfileBuilder.AUTH_PROVIDER_GOOGLE.equals(resolveAuthProvider(user))) {
+            patch.put("googleLinked", true);
+        }
+        firebaseFirestore.collection("users")
+                .document(user.getUid())
+                .set(patch, com.google.firebase.firestore.SetOptions.merge())
+                .addOnCompleteListener(ignored -> record.run());
     }
 
     private void maybeLinkExistingAccountByEmail(

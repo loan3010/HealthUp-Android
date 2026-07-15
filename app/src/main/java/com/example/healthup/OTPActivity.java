@@ -19,6 +19,7 @@ import com.example.healthup.account.AccountSessionRecorder;
 import com.example.healthup.auth.AppPasswordHelper;
 import com.example.healthup.auth.AuthOrphanCleaner;
 import com.example.healthup.auth.IncompleteSocialSessionCleaner;
+import com.example.healthup.auth.PendingGoogleLink;
 import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.data.repository.RegistrationRepository;
 import com.example.healthup.ui.otp.OtpBoxesHelper;
@@ -386,8 +387,17 @@ public class OTPActivity extends BaseAppCompatActivity {
             return;
         }
 
-        String authEmail = RegisterValidator.buildAuthEmail(localPhone, email);
-        if (TextUtils.isEmpty(email) && !TextUtils.isEmpty(user.getEmail())) {
+        // Always prefer the Google Auth email over whatever was passed via intent extras.
+        String displayEmail = email;
+        if (UserProfileBuilder.isRealEmail(user.getEmail())) {
+            displayEmail = user.getEmail();
+        } else if (UserProfileBuilder.isRealEmail(PendingGoogleLink.getEmail())) {
+            displayEmail = PendingGoogleLink.getEmail();
+        }
+        email = displayEmail;
+
+        String authEmail = RegisterValidator.buildAuthEmail(localPhone, displayEmail);
+        if (TextUtils.isEmpty(displayEmail) && !TextUtils.isEmpty(user.getEmail())) {
             authEmail = user.getEmail();
         }
 

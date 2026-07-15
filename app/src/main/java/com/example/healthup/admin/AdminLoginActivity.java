@@ -36,6 +36,8 @@ import com.example.healthup.auth.AppPasswordHelper;
 
 import com.example.healthup.util.AdminEmailLookup;
 
+import com.example.healthup.util.AppEntryRouter;
+
 import com.example.healthup.util.StaffRoleHelper;
 
 import com.google.android.material.button.MaterialButton;
@@ -614,9 +616,7 @@ public class AdminLoginActivity extends BaseAppCompatActivity {
 
                     if (StaffRoleHelper.isAdmin(StaffRoleHelper.resolveRole(doc))) {
 
-                        startActivity(new Intent(this, AdminActivity.class));
-
-                        finish();
+                        AppEntryRouter.navigateAdminHomeAndFinish(this);
 
                     } else {
 

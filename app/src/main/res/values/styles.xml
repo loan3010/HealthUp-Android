@@ -33,6 +33,14 @@
         <item name="cornerSize">16dp</item>
     </style>
 
+    <style name="ThemeOverlay.HealthUp.SearchField" parent="">
+        <!-- Keep search pill grey; do not show brand-green focus chrome. -->
+        <item name="colorControlActivated">@color/neutral_light_grey</item>
+        <item name="colorControlHighlight">@color/neutral_light_grey</item>
+        <item name="colorPrimary">@color/neutral_light_grey</item>
+        <item name="android:colorControlActivated">@color/neutral_light_grey</item>
+    </style>
+
     <style name="MaterialAlertDialog.Rounded" parent="Theme.MaterialComponents.Light.Dialog.Alert">
         <item name="shapeAppearanceOverlay">@style/ShapeAppearance.HealthUp.RoundedDialog</item>
     </style>

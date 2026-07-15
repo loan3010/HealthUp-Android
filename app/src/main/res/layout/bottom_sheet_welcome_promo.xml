@@ -3,8 +3,8 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
     android:background="@drawable/bg_dialog_card"
+    android:orientation="vertical"
     android:paddingBottom="24dp">
 
     <FrameLayout
@@ -14,17 +14,11 @@
         <ImageView
             android:id="@+id/welcomePromoBanner"
             android:layout_width="match_parent"
-            android:layout_height="160dp"
+            android:layout_height="168dp"
+            android:adjustViewBounds="true"
+            android:contentDescription="@string/welcome_promo_banner_desc"
             android:scaleType="centerCrop"
-            android:src="@drawable/bg_flash_sale"
-            android:contentDescription="@string/welcome_promo_banner_desc" />
-
-        <ImageView
-            android:layout_width="72dp"
-            android:layout_height="72dp"
-            android:layout_gravity="center"
-            android:src="@drawable/ic_app_logo"
-            android:contentDescription="@string/welcome_promo_logo_desc" />
+            android:src="@drawable/illust_welcome_promo" />
 
         <ImageButton
             android:id="@+id/welcomePromoClose"
@@ -34,8 +28,9 @@
             android:layout_margin="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:contentDescription="@string/welcome_promo_close_desc"
+            android:padding="8dp"
             android:src="@drawable/ic_close"
-            app:tint="@color/white" />
+            app:tint="@color/text_secondary" />
     </FrameLayout>
 
     <TextView

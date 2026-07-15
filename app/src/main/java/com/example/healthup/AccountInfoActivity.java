@@ -253,11 +253,29 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
                     }
                     String display = doc.getString("displayEmail");
                     String email = doc.getString("email");
-                    String show = UserProfileBuilder.isRealEmail(display)
+                    String authEmail = null;
+                    com.google.firebase.auth.FirebaseUser authUser =
+                            com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+                    if (authUser != null
+                            && userId != null
+                            && userId.equals(authUser.getUid())
+                            && UserProfileBuilder.isRealEmail(authUser.getEmail())) {
+                        authEmail = authUser.getEmail();
+                    }
+                    String show = UserProfileBuilder.isRealEmail(authEmail)
+                            ? authEmail
+                            : (UserProfileBuilder.isRealEmail(display)
                             ? display
-                            : (UserProfileBuilder.isRealEmail(email) ? email : null);
+                            : (UserProfileBuilder.isRealEmail(email) ? email : null));
                     if (show != null) {
                         binding.etEmail.setText(show);
+                        // Heal stale Firestore displayEmail if Auth Google email differs.
+                        if (UserProfileBuilder.isRealEmail(authEmail)
+                                && (display == null
+                                || !authEmail.equalsIgnoreCase(display.trim()))) {
+                            db.collection("users").document(userId)
+                                    .update("displayEmail", authEmail.trim().toLowerCase());
+                        }
                     } else {
                         binding.etEmail.setText(getString(R.string.account_email_empty));
                     }

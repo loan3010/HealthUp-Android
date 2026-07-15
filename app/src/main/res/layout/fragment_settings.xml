@@ -325,20 +325,6 @@
         </LinearLayout>
 
 
-        <Button
-            android:id="@+id/btnLogout"
-            style="@style/Widget.HealthUp.Button.LargeFilled"
-            android:layout_width="match_parent"
-            android:layout_height="54dp"
-            android:layout_marginHorizontal="64dp"
-            android:layout_marginTop="24dp"
-            android:text="Chuyển tài khoản / Đăng xuất"
-            android:textAllCaps="false"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-
         <TextView
             style="@style/TextAppearance.HealthUp.CaptionLabel"
             android:layout_width="wrap_content"

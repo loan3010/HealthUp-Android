@@ -105,6 +105,10 @@ public class LoginActivity extends BaseAppCompatActivity {
         setupLegalLinks();
         updateLoginButtonState();
         updateSavedAccountsLink();
+        UIUtils.applyAuthScreenInsets(
+                this,
+                findViewById(R.id.loginContent),
+                findViewById(R.id.btnHome));
     }
 
     @Override

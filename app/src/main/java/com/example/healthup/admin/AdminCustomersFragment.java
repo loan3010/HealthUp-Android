@@ -43,7 +43,7 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
     );
 
     private static final List<String> SORT_KEYS = Arrays.asList(
-            "name_asc", "name_desc", "spent_desc", "spent_asc"
+            "newest", "oldest", "name_asc", "name_desc", "spent_desc", "spent_asc"
     );
 
     private final AdminRepository repository = new AdminRepository();
@@ -79,6 +79,8 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         tabFilters = view.findViewById(R.id.tabCustomerFilters);
 
         List<String> sortLabels = Arrays.asList(
+                getString(R.string.admin_sort_customer_newest),
+                getString(R.string.admin_sort_customer_oldest),
                 getString(R.string.admin_sort_name_asc),
                 getString(R.string.admin_sort_name_desc),
                 getString(R.string.admin_sort_spent_desc),
@@ -223,6 +225,9 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
         String sortKey = SORT_KEYS.get(sortIndex);
         Comparator<AdminRepository.AdminCustomer> comparator;
         switch (sortKey) {
+            case "oldest":
+                comparator = (a, b) -> Long.compare(createdAtMillis(a), createdAtMillis(b));
+                break;
             case "name_desc":
                 comparator = (a, b) -> safeName(b).compareToIgnoreCase(safeName(a));
                 break;
@@ -233,11 +238,18 @@ public class AdminCustomersFragment extends Fragment implements AdminCustomerAda
                 comparator = Comparator.comparingLong(a -> a.spentAmount);
                 break;
             case "name_asc":
-            default:
                 comparator = (a, b) -> safeName(a).compareToIgnoreCase(safeName(b));
+                break;
+            case "newest":
+            default:
+                comparator = (a, b) -> Long.compare(createdAtMillis(b), createdAtMillis(a));
                 break;
         }
         customers.sort(comparator);
+    }
+
+    private static long createdAtMillis(AdminRepository.AdminCustomer customer) {
+        return customer.createdAt != null ? customer.createdAt.getTime() : 0L;
     }
 
     private String safeName(AdminRepository.AdminCustomer customer) {

@@ -529,6 +529,10 @@
     <string name="admin_email_hint">Email quản trị</string>
     <string name="admin_login_button">Đăng nhập Admin</string>
     <string name="admin_back_to_user_login">Quay lại đăng nhập người dùng</string>
+    <string name="admin_exit_title">Thoát khu vực quản trị?</string>
+    <string name="admin_exit_message">Bạn sẽ quay về ứng dụng người mua. Đăng nhập admin chỉ khi bạn chọn lại từ màn hình đăng nhập.</string>
+    <string name="admin_exit_confirm">Về trang chủ</string>
+    <string name="press_back_again_to_exit">Nhấn lần nữa để thoát</string>
     <string name="admin_login_link">Đăng nhập quản trị</string>
     <string name="admin_login_required_email">Vui lòng nhập email quản trị</string>
     <string name="admin_login_required_password">Vui lòng nhập mật khẩu</string>
@@ -764,6 +768,8 @@
     <string name="admin_customer_lock_reason_label">Lý do khóa tài khoản</string>
     <string name="admin_sort_spent_desc">Chi tiêu cao-thấp</string>
     <string name="admin_sort_spent_asc">Chi tiêu thấp-cao</string>
+    <string name="admin_sort_customer_newest">Khách mới nhất</string>
+    <string name="admin_sort_customer_oldest">Khách cũ nhất</string>
     <string name="account_disabled_title">Tài khoản bị khóa</string>
     <string name="account_disabled_message">Tài khoản của bạn đã bị quản trị viên khóa.</string>
     <string name="account_disabled_reason_fallback">Vui lòng liên hệ HealthUp để được hỗ trợ.</string>

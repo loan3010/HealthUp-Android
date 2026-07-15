@@ -6,6 +6,7 @@ import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
@@ -282,10 +283,22 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     private void setupSearch(View view) {
         EditText etSearch = view.findViewById(R.id.etSearch);
+        UIUtils.bindFocusBorder(view.findViewById(R.id.searchBarLayout), etSearch);
         View containerImageSearch = view.findViewById(R.id.containerImageSearch);
         View ivClearSearch = view.findViewById(R.id.ivClearSearch);
         View mainContent = view.findViewById(R.id.mainContent);
         View rvRealtimeSearch = view.findViewById(R.id.rvRealtimeSearch);
+
+        if (mainContent != null) {
+            mainContent.setOnTouchListener((v, event) -> {
+                if (event.getAction() == MotionEvent.ACTION_DOWN
+                        && getActivity() != null
+                        && (etSearch.hasFocus() || etSearch.isFocused())) {
+                    UIUtils.hideKeyboard(getActivity());
+                }
+                return false;
+            });
+        }
 
         etSearch.addTextChangedListener(new TextWatcher() {
             @Override
@@ -320,6 +333,14 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     GuestWishlistUiHelper.applyTo(searchAdapter);
                     rvSearch.setLayoutManager(new GridLayoutManager(getContext(), 2));
                     rvSearch.setAdapter(searchAdapter);
+                    rvSearch.setOnTouchListener((v, event) -> {
+                        if (event.getAction() == MotionEvent.ACTION_DOWN
+                                && getActivity() != null
+                                && etSearch.hasFocus()) {
+                            UIUtils.hideKeyboard(getActivity());
+                        }
+                        return false;
+                    });
                 }
             }
 

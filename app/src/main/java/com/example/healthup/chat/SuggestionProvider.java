@@ -39,9 +39,9 @@ public final class SuggestionProvider {
                     new Item("HealthUp hỗ trợ thanh toán nào?", R.drawable.ic_chat_payment)
             ),
             Arrays.asList(
+                    new Item("Đơn tôi tới đâu rồi?", R.drawable.ic_chat_order),
+                    new Item("Phí ship bao nhiêu?", R.drawable.ic_chat_payment),
                     new Item("Gợi ý whey protein tăng cơ", R.drawable.ic_chat_nutrition),
-                    new Item("Đơn hàng của tôi đang ở đâu?", R.drawable.ic_chat_order),
-                    new Item("Hạng thành viên có lợi ích gì?", R.drawable.ic_chat_membership),
                     new Item("Tôi muốn hủy đơn đặt hàng", R.drawable.ic_chat_cancel)
             )
     );

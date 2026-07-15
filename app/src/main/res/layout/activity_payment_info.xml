@@ -32,6 +32,7 @@
     </RelativeLayout>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollContent"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:fillViewport="true"
@@ -43,6 +44,8 @@
             android:layout_height="wrap_content"
             android:orientation="vertical"
             android:paddingBottom="24dp">
+
+            <include layout="@layout/layout_login_required" />
 
             <!-- Linked Methods Section -->
             <LinearLayout
@@ -97,6 +100,7 @@
 
             <!-- Add New Methods Section -->
             <TextView
+                android:id="@+id/tvAddSectionTitle"
                 style="@style/TextAppearance.HealthUp.SubContent.Bold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

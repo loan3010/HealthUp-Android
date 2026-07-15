@@ -71,13 +71,15 @@
 
                     <EditText
                         android:id="@+id/et_search"
+                        style="@style/TextAppearance.HealthUp.EditText"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:minHeight="40dp"
-                        android:background="@null"
+                        android:background="@android:color/transparent"
                         android:hint="Tìm granola, snack lành mạnh..."
                         android:imeOptions="actionSearch"
                         android:inputType="text"
+                        android:textColorHint="@color/neutral_grey"
                         android:textSize="14sp" />
 
                     <!-- Image Search Preview Container -->

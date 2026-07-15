@@ -16,6 +16,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 
 import com.example.adapters.PaymentAccountAdapter;
 import com.example.healthup.databinding.ActivityPaymentInfoBinding;
+import com.example.healthup.util.GuestLoginRequiredHelper;
 import com.example.models.PaymentAccount;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -47,14 +48,49 @@ public class PaymentInfoActivity extends BaseAppCompatActivity {
         isSelectMode = getIntent().getBooleanExtra(EXTRA_SELECT_MODE, false);
         targetType = getIntent().getStringExtra(EXTRA_TARGET_TYPE);
 
-        db = FirebaseFirestore.getInstance();
-        userId = FirebaseAuth.getInstance().getUid();
+        binding.btnBack.setOnClickListener(v -> GuestLoginRequiredHelper.navigateBackSafely(this));
+        // System Back: don't exit to launcher when this Activity is alone on the stack.
+        getOnBackPressedDispatcher().addCallback(this, new androidx.activity.OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                GuestLoginRequiredHelper.navigateBackSafely(PaymentInfoActivity.this);
+            }
+        });
 
-        binding.btnBack.setOnClickListener(v -> finish());
-        
+        userId = FirebaseAuth.getInstance().getUid();
+        if (userId == null) {
+            setupGuestMode();
+            return;
+        }
+
+        db = FirebaseFirestore.getInstance();
         setupRecyclerView();
         setupListeners();
         loadLinkedMethods();
+    }
+
+    private void setupGuestMode() {
+        // Hide payment content — same pattern as AddressBook / MemberTier.
+        if (binding.layoutEmpty != null) {
+            binding.layoutEmpty.setVisibility(View.GONE);
+        }
+        if (binding.layoutLinked != null) {
+            binding.layoutLinked.setVisibility(View.GONE);
+        }
+        View[] addCards = {
+                binding.cardAddZalo, binding.cardAddMoMo, binding.cardAddVnpay,
+                binding.cardAddAtm, binding.cardAddLinkedBank, binding.cardAddCard
+        };
+        for (View card : addCards) {
+            if (card != null) {
+                card.setVisibility(View.GONE);
+            }
+        }
+        TextView sectionTitle = binding.getRoot().findViewById(R.id.tvAddSectionTitle);
+        if (sectionTitle != null) {
+            sectionTitle.setVisibility(View.GONE);
+        }
+        GuestLoginRequiredHelper.bind(binding.getRoot(), this);
     }
 
     private void setupRecyclerView() {

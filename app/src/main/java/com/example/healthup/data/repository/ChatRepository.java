@@ -256,6 +256,7 @@ public class ChatRepository {
             data.put("humanSessionStartedAt", FieldValue.serverTimestamp());
             data.put("sessionBucket", Conversation.SESSION_ACTIVE);
             data.put("lastSessionClosedAt", FieldValue.delete());
+            data.put("staffUnread", true);
         }
         firestore.collection("conversations").document(conversationId)
                 .set(data, SetOptions.merge())

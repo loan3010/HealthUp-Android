@@ -19,6 +19,9 @@ import com.google.firebase.firestore.Source;
  */
 public final class AppEntryRouter {
 
+    /** When set, {@link com.example.healthup.MainActivity} will not auto-redirect admins to admin home. */
+    public static final String EXTRA_SKIP_ADMIN_REDIRECT = "extra_skip_admin_redirect";
+
     public interface RouteCallback {
         void onReady(@NonNull Intent intent);
     }
@@ -56,6 +59,19 @@ public final class AppEntryRouter {
             activity.startActivity(intent);
             activity.finish();
         });
+    }
+
+    /** Open admin dashboard and clear login screens from the task stack. */
+    public static void navigateAdminHomeAndFinish(@NonNull Activity activity) {
+        activity.startActivity(adminHomeIntent(activity));
+        activity.finish();
+    }
+
+    @NonNull
+    public static Intent buyerHomeIntentSkippingAdminRedirect(@NonNull Context context) {
+        Intent intent = buyerHomeIntent(context);
+        intent.putExtra(EXTRA_SKIP_ADMIN_REDIRECT, true);
+        return intent;
     }
 
     @NonNull

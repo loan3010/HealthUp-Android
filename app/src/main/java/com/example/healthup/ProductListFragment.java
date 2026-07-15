@@ -486,6 +486,7 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
     private void initViews(View view) {
         rvProducts = view.findViewById(R.id.rv_products);
         etSearch = view.findViewById(R.id.et_search);
+        UIUtils.bindFocusBorder(view.findViewById(R.id.searchBarLayout), etSearch);
         fabFilter = view.findViewById(R.id.fab_filter);
         chipGroupCategories = view.findViewById(R.id.chip_group_categories);
         layoutEmpty = view.findViewById(R.id.layout_empty);
@@ -557,6 +558,15 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
         rvProducts.setLayoutManager(new GridLayoutManager(getContext(), 2));
         rvProducts.setAdapter(productAdapter);
         rvProducts.setNestedScrollingEnabled(false);
+        rvProducts.setOnTouchListener((v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN
+                    && getActivity() != null
+                    && etSearch != null
+                    && etSearch.hasFocus()) {
+                UIUtils.hideKeyboard(getActivity());
+            }
+            return false;
+        });
     }
 
 

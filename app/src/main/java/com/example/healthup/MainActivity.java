@@ -8,6 +8,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
@@ -72,6 +73,7 @@ public class MainActivity extends BaseAppCompatActivity {
     private ListenerRegistration cartListener;
     private ListenerRegistration notifBadgeListener;
     private FirebaseAuth.AuthStateListener authStateListener;
+    private long lastBackPressAt;
     private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
@@ -144,20 +146,48 @@ public class MainActivity extends BaseAppCompatActivity {
         FirebaseManager.getInstance().seedProductsIfEmpty();
 
         if (savedInstanceState == null) {
-            routeAdminAwayIfNeeded();
+            routeAdminAwayIfNeeded(getIntent());
             handleIntent(getIntent());
             maybeShowWelcomePromo();
         }
+
+        setupBackNavigation();
 
         // ✅ FIX: Lắng nghe thay đổi BackStack để hiện lại thanh Nav Bar khi quay về các tab chính
         getSupportFragmentManager().addOnBackStackChangedListener(this::updateNavigationVisibility);
     }
 
-    private void routeAdminAwayIfNeeded() {
-        AppEntryRouter.resolveHomeIntent(this, intent -> {
-            if (AdminActivity.class.getName().equals(intent.getComponent().getClassName())) {
-                startActivity(intent);
+    private void routeAdminAwayIfNeeded(@Nullable Intent intent) {
+        if (intent != null && intent.getBooleanExtra(AppEntryRouter.EXTRA_SKIP_ADMIN_REDIRECT, false)) {
+            return;
+        }
+        AppEntryRouter.resolveHomeIntent(this, resolved -> {
+            if (AdminActivity.class.getName().equals(resolved.getComponent().getClassName())) {
+                startActivity(resolved);
                 finish();
+            }
+        });
+    }
+
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (getSupportFragmentManager().getBackStackEntryCount() > 0) {
+                    getSupportFragmentManager().popBackStack();
+                    return;
+                }
+                if (navView != null && navView.getSelectedItemId() != R.id.nav_home) {
+                    showHomeTab();
+                    return;
+                }
+                long now = System.currentTimeMillis();
+                if (now - lastBackPressAt < 2000L) {
+                    finish();
+                    return;
+                }
+                lastBackPressAt = now;
+                ToastUtils.show(MainActivity.this, R.string.press_back_again_to_exit);
             }
         });
     }

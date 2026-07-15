@@ -68,9 +68,13 @@
         </activity>
 
 
-        <activity android:name="com.example.healthup.LoginActivity" />
+        <activity
+            android:name="com.example.healthup.LoginActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.account.AccountManagementActivity" />
-        <activity android:name="com.example.healthup.RegisterActivity" />
+        <activity
+            android:name="com.example.healthup.RegisterActivity"
+            android:windowSoftInputMode="adjustResize" />
         <activity android:name="com.example.healthup.auth.SocialCompleteProfileActivity" />
         <activity android:name="com.example.healthup.auth.LinkGooglePasswordActivity" />
         <activity android:name="com.example.healthup.OTPActivity" />

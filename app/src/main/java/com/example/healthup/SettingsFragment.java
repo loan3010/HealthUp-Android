@@ -46,6 +46,15 @@ public class SettingsFragment extends Fragment {
         binding.btnBack.setOnClickListener(v -> getParentFragmentManager().popBackStack());
     }
 
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (binding != null) {
+            boolean loggedIn = FirebaseAuth.getInstance().getCurrentUser() != null;
+            applyAuthOnlyRows(loggedIn);
+        }
+    }
+
 
     private void setupUI() {
         // Tài khoản
@@ -91,33 +100,15 @@ public class SettingsFragment extends Fragment {
             startActivity(new Intent(getActivity(), AccessSettingsActivity.class));
         });
 
-
-        binding.itemDeleteAccount.getRoot().setOnClickListener(v -> showDeleteAccountDialog());
-
-
         setupRow(binding.itemNotification.getRoot(), "Thông báo", "");
         String currentLang = com.example.healthup.util.LocaleHelper.getLanguage(requireContext());
         String langDisplay = currentLang.equals("vi") ? "Tiếng Việt" : "English";
         setupRow(binding.itemLanguage.getRoot(), "Ngôn ngữ", langDisplay);
         setupRow(binding.itemAccess.getRoot(), "Quyền truy cập", "");
 
-        ItemSettingRowBinding deleteBinding = ItemSettingRowBinding.bind(binding.itemDeleteAccount.getRoot());
-        deleteBinding.tvTitle.setText("Xóa tài khoản");
-        deleteBinding.tvTitle.setTextColor(getResources().getColor(R.color.action_error));
-
-        // FIX: Đăng xuất hoạt động
-        binding.btnLogout.setOnClickListener(v -> {
-            com.google.firebase.auth.FirebaseAuth.getInstance().signOut();
-            Toast.makeText(getActivity(), "Đã đăng xuất", Toast.LENGTH_SHORT).show();
-            
-            // Quay về màn hình Home hoặc Profile (đã logout)
-            Intent intent = new Intent(getActivity(), MainActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
-            startActivity(intent);
-            if (getActivity() != null) {
-                getActivity().finish();
-            }
-        });
+        boolean loggedIn = FirebaseAuth.getInstance().getCurrentUser() != null;
+        // Guest must not see delete-account.
+        applyAuthOnlyRows(loggedIn);
 
         // Liên hệ - Đồng bộ với OrderDetail
         binding.itemPhone.setOnClickListener(v -> {
@@ -136,6 +127,28 @@ public class SettingsFragment extends Fragment {
                 Toast.makeText(getActivity(), "Không tìm thấy ứng dụng email", Toast.LENGTH_SHORT).show();
             }
         });
+    }
+
+    private void applyAuthOnlyRows(boolean loggedIn) {
+        View deleteRoot = binding.itemDeleteAccount.getRoot();
+        deleteRoot.setVisibility(loggedIn ? View.VISIBLE : View.GONE);
+        ViewGroup parent = deleteRoot.getParent() instanceof ViewGroup
+                ? (ViewGroup) deleteRoot.getParent()
+                : null;
+        if (parent != null) {
+            int index = parent.indexOfChild(deleteRoot);
+            // Divider immediately above "Xóa tài khoản"
+            if (index > 0) {
+                parent.getChildAt(index - 1).setVisibility(loggedIn ? View.VISIBLE : View.GONE);
+            }
+        }
+
+        if (loggedIn) {
+            binding.itemDeleteAccount.getRoot().setOnClickListener(v -> showDeleteAccountDialog());
+            ItemSettingRowBinding deleteBinding = ItemSettingRowBinding.bind(deleteRoot);
+            deleteBinding.tvTitle.setText("Xóa tài khoản");
+            deleteBinding.tvTitle.setTextColor(getResources().getColor(R.color.action_error));
+        }
     }
 
 

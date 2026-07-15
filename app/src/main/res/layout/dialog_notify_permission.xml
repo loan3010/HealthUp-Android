@@ -30,24 +30,20 @@
             android:paddingEnd="24dp"
             android:paddingBottom="20dp">
 
-            <FrameLayout
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:background="@drawable/bg_notification_icon_circle">
-
-                <ImageView
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:layout_gravity="center"
-                    android:contentDescription="@string/notify_permission_icon_desc"
-                    android:src="@drawable/ic_notification_bell" />
-            </FrameLayout>
+            <ImageView
+                android:id="@+id/notifyPermissionIllustration"
+                android:layout_width="140dp"
+                android:layout_height="140dp"
+                android:adjustViewBounds="true"
+                android:contentDescription="@string/notify_permission_icon_desc"
+                android:scaleType="fitCenter"
+                android:src="@drawable/illust_notify_permission" />
 
             <TextView
                 android:id="@+id/notifyPermissionTitle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="20dp"
+                android:layout_marginTop="16dp"
                 android:gravity="center"
                 android:text="@string/notify_permission_title"
                 android:textColor="@color/text_primary"

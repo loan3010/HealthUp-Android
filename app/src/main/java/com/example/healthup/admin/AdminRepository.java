@@ -101,6 +101,9 @@ public class AdminRepository {
         public boolean disabled;
         public String disabledReason;
         public long spentAmount;
+        /** Account creation time (Firestore createdAt, else document createTime). */
+        @Nullable
+        public Date createdAt;
     }
 
     public static class OrderHistoryEntry {
@@ -1358,6 +1361,8 @@ public class AdminRepository {
         customer.disabledReason = doc.getString("disabledReason");
         Long spent = doc.getLong("spentAmount");
         customer.spentAmount = spent != null ? spent : 0;
+        Timestamp createdTs = doc.getTimestamp("createdAt");
+        customer.createdAt = createdTs != null ? createdTs.toDate() : null;
         return customer;
     }
 

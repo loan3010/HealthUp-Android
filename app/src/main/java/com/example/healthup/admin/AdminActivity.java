@@ -9,8 +9,10 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
@@ -20,6 +22,7 @@ import com.example.healthup.AccountInfoActivity;
 import com.example.healthup.LoginActivity;
 import com.example.healthup.R;
 import com.example.healthup.SellerChatListActivity;
+import com.example.healthup.util.AppEntryRouter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
@@ -112,6 +115,32 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
         }
 
         setupKeyboardVisibilityListener();
+        setupBackNavigation();
+    }
+
+    private void setupBackNavigation() {
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                    drawerLayout.closeDrawer(GravityCompat.START);
+                    return;
+                }
+                confirmExitToBuyerApp();
+            }
+        });
+    }
+
+    private void confirmExitToBuyerApp() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_exit_title)
+                .setMessage(R.string.admin_exit_message)
+                .setPositiveButton(R.string.admin_exit_confirm, (dialog, which) -> {
+                    startActivity(AppEntryRouter.buyerHomeIntentSkippingAdminRedirect(AdminActivity.this));
+                    finish();
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void setupKeyboardVisibilityListener() {
@@ -242,24 +271,15 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
     }
 
     @Override
-    public void onBackPressed() {
-        if (drawerLayout != null && drawerLayout.isDrawerOpen(GravityCompat.START)) {
-            drawerLayout.closeDrawer(GravityCompat.START);
-            return;
-        }
-        super.onBackPressed();
+    public void openOrders(@Nullable String statusFilter) {
+        bottomNav.setSelectedItemId(R.id.nav_admin_orders);
+        ordersFragment.applyStatusFilter(statusFilter);
     }
 
     private void logout() {
         FirebaseAuth.getInstance().signOut();
         startActivity(new Intent(this, LoginActivity.class));
         finish();
-    }
-
-    @Override
-    public void openOrders(@Nullable String statusFilter) {
-        bottomNav.setSelectedItemId(R.id.nav_admin_orders);
-        ordersFragment.applyStatusFilter(statusFilter);
     }
 
     @Override

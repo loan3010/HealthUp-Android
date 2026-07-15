@@ -32,6 +32,8 @@ public class PhoneVerificationFragment extends Fragment {
     private boolean isChecking = false;
     private boolean phoneExists = false;
     private boolean returnToPrevious = false;
+    /** Blocks TextWatcher reset while we format the phone after lookup. */
+    private boolean suppressPhoneWatcher = false;
     private String normalizedPhone = "";
 
     @Override
@@ -87,11 +89,13 @@ public class PhoneVerificationFragment extends Fragment {
         etPhone.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
             @Override public void onTextChanged(CharSequence s, int start, int before, int count) {
-                if (isChecking) {
-                    resetUI();
+                if (suppressPhoneWatcher) {
                     return;
                 }
-                resetUI();
+                // User edited the number after a lookup — go back to "Tiếp tục".
+                if (isChecking) {
+                    resetUI();
+                }
             }
             @Override public void afterTextChanged(Editable s) {}
         });
@@ -187,9 +191,12 @@ public class PhoneVerificationFragment extends Fragment {
                     return;
                 }
                 btnContinue.setEnabled(true);
+                showVerificationResult(phone, exists);
+                // Set AFTER showVerificationResult — setText used to fire TextWatcher → resetUI
+                // which cleared these flags while leaving the "Đăng nhập ngay" button visible.
                 isChecking = true;
                 phoneExists = exists;
-                showVerificationResult(phone, exists);
+                normalizedPhone = phone;
             }
 
             @Override
@@ -209,9 +216,18 @@ public class PhoneVerificationFragment extends Fragment {
         tvDescription.setVisibility(View.GONE);
         tvPrefix.setVisibility(View.VISIBLE);
         tvPrefix.setText("+84");
-        etPhone.setText(phone.startsWith("0") ? phone.substring(1) : phone);
+
+        suppressPhoneWatcher = true;
+        try {
+            String local = phone.startsWith("0") ? phone.substring(1) : phone;
+            if (!local.contentEquals(etPhone.getText())) {
+                etPhone.setText(local);
+            }
+        } finally {
+            suppressPhoneWatcher = false;
+        }
         etPhone.setEnabled(true);
-        etPhone.requestFocus();
+        etPhone.clearFocus();
 
         layoutStatus.setVisibility(View.VISIBLE);
         layoutBottomHint.setVisibility(View.GONE);

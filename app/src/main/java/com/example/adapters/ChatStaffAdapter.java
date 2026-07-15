@@ -69,11 +69,12 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
         }
         holder.name.setText(displayName);
 
-        String subtitle = c.getBuyerPhone();
-        if (TextUtils.isEmpty(subtitle)) {
-            subtitle = c.getLastMessage();
+        // Messenger-style: preview is always the last message (not phone).
+        String preview = c.getLastMessage();
+        if (TextUtils.isEmpty(preview)) {
+            preview = !TextUtils.isEmpty(c.getBuyerPhone()) ? c.getBuyerPhone() : "";
         }
-        holder.lastMessage.setText(subtitle != null ? subtitle : "");
+        holder.lastMessage.setText(preview);
 
         Date updated = c.getUpdatedAt() != null ? c.getUpdatedAt() : c.getLastMessageAt();
         holder.time.setText(updated != null ? timeFormat.format(updated) : "");
@@ -90,6 +91,9 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
                 holder.itemView.getContext(), R.color.text_secondary);
         holder.name.setTextColor(primaryColor);
         holder.lastMessage.setTextColor(unread ? primaryColor : secondaryColor);
+        if (holder.time != null) {
+            holder.time.setTypeface(null, unread ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL);
+        }
 
         holder.itemView.setOnClickListener(v -> {
             if (listener != null) {

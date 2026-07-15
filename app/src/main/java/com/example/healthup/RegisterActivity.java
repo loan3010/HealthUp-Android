@@ -94,6 +94,10 @@ public class RegisterActivity extends BaseAppCompatActivity {
         setupInputBehavior();
         setupActions();
         updateRegisterButtonState();
+        UIUtils.applyAuthScreenInsets(
+                this,
+                findViewById(R.id.registerContent),
+                findViewById(R.id.btnHome));
     }
 
     private void applyPrefillFromExtras() {
