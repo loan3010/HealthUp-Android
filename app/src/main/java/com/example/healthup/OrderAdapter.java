@@ -25,6 +25,7 @@ import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnReason;
 import com.bumptech.glide.Glide;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import androidx.appcompat.app.AlertDialog;
 import android.content.Intent;
@@ -125,6 +126,13 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                 });
         });
 
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 
@@ -200,10 +208,23 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
             if (items.size() > maxInitial) {
                 binding.tvShowMoreContainer.setVisibility(View.VISIBLE);
                 binding.tvShowMore.setText("Xem thêm " + (items.size() - maxInitial) + " sản phẩm");
+                binding.ivShowMoreArrow.setRotation(0);
+
                 binding.tvShowMoreContainer.setOnClickListener(v -> {
-                    binding.tvShowMoreContainer.setVisibility(View.GONE);
-                    for (int i = maxInitial; i < items.size(); i++) {
-                        addProductView(items.get(i));
+                    if (binding.lnItemsContainer.getChildCount() <= maxInitial) {
+                        // Expand
+                        for (int i = maxInitial; i < items.size(); i++) {
+                            addProductView(items.get(i));
+                        }
+                        binding.tvShowMore.setText("Thu gọn");
+                        binding.ivShowMoreArrow.setRotation(180);
+                    } else {
+                        // Collapse
+                        if (binding.lnItemsContainer.getChildCount() > maxInitial) {
+                            binding.lnItemsContainer.removeViews(maxInitial, binding.lnItemsContainer.getChildCount() - maxInitial);
+                        }
+                        binding.tvShowMore.setText("Xem thêm " + (items.size() - maxInitial) + " sản phẩm");
+                        binding.ivShowMoreArrow.setRotation(0);
                     }
                 });
             } else {
@@ -378,7 +399,7 @@ public class OrderAdapter extends RecyclerView.Adapter<OrderAdapter.OrderViewHol
                         if (isAlreadyReviewed) {
                             setupButton(binding.btnActionLeft, "Trả/Hoàn", "outline");
                         } else {
-                            setupButton(binding.btnActionLeft, "Trả hàng/Hoàn tiền", "outline");
+                            setupButton(binding.btnActionLeft, "Trả/Hoàn", "outline");
                         }
 
                         binding.btnActionLeft.setOnClickListener(v -> {

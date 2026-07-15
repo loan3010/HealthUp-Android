@@ -559,6 +559,7 @@ public class AdminOrderDetailActivity extends BaseAppCompatActivity {
         if (low.contains("zalopay")) return "Ví ZaloPay";
         if (low.contains("vnpay")) return "Ví VNPAY";
         if (low.contains("cod") || low.contains("nhận hàng")) return "COD";
+        if (low.contains("atm")) return "Thẻ ATM nội địa";
         return method;
     }
 

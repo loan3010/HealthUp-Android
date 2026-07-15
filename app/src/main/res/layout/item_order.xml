@@ -23,7 +23,7 @@
             android:paddingHorizontal="@dimen/spacing_xl"
             android:paddingTop="@dimen/spacing_l"
             android:paddingBottom="@dimen/spacing_s"
-            android:text="Hoàn thành"
+            android:text="@string/order_status_completed"
             android:textColor="@color/primary"
             android:textSize="13sp"
             android:textStyle="bold" />
@@ -118,7 +118,7 @@
                 android:insetLeft="0dp"
                 android:insetRight="0dp"
                 android:textColor="@color/text_main"
-                android:text="Trả hàng/Hoàn tiền" />
+                android:text="@string/order_action_return" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnActionMiddle"
@@ -140,7 +140,7 @@
                 android:insetLeft="0dp"
                 android:insetRight="0dp"
                 android:textColor="@color/text_main"
-                android:text="Đánh giá" />
+                android:text="@string/order_action_review" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnActionRight"
@@ -162,7 +162,7 @@
                 app:strokeWidth="1dp"
                 android:backgroundTint="@android:color/transparent"
                 android:textColor="@color/text_main"
-                android:text="Mua lại" />
+                android:text="@string/order_action_buy_again" />
         </LinearLayout>
     </LinearLayout>
 </androidx.cardview.widget.CardView>

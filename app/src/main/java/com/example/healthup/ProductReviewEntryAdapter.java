@@ -1,5 +1,6 @@
 package com.example.healthup;
 
+import android.text.Layout;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -12,16 +13,21 @@ import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ItemReviewBinding;
 import com.example.healthup.util.FullscreenImagePager;
 import com.example.models.Review;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductReviewEntryAdapter.ReviewViewHolder> {
 
     private final List<Review> reviews;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yyyy", new Locale("vi", "VN"));
+    private static final Map<String, String> avatarCache = new HashMap<>();
+    private static final Map<String, String> nameCache = new HashMap<>();
 
     public ProductReviewEntryAdapter(List<Review> reviews) {
         this.reviews = reviews;
@@ -54,15 +60,50 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
         }
 
         void bind(Review review) {
-            binding.tvUserName.setText(
-                    !TextUtils.isEmpty(review.getUserName()) ? review.getUserName() : "Khách hàng ẩn danh");
+            String uid = review.getUserId();
+            
+            // Mặc định từ dữ liệu denormalized trong review
+            String displayName = !TextUtils.isEmpty(review.getUserName()) ? review.getUserName() : "Khách hàng ẩn danh";
+            String avatarUrl = review.getUserAvatar();
 
+            // Nếu có userId, kiểm tra cache hoặc fetch mới để luôn cập nhật avatar/tên mới nhất
+            if (!TextUtils.isEmpty(uid)) {
+                if (avatarCache.containsKey(uid)) {
+                    avatarUrl = avatarCache.get(uid);
+                    displayName = nameCache.getOrDefault(uid, displayName);
+                } else {
+                    // Fetch live data từ Firestore
+                    FirebaseFirestore.getInstance().collection("users").document(uid).get()
+                            .addOnSuccessListener(doc -> {
+                                if (doc.exists()) {
+                                    String liveAvatar = doc.getString("avatarUrl");
+                                    String liveUsername = doc.getString("username");
+                                    String liveName = doc.getString("fullName");
+                                    
+                                    String finalName = "Khách hàng ẩn danh";
+                                    if (!TextUtils.isEmpty(liveUsername)) {
+                                        finalName = "@" + liveUsername;
+                                    } else if (!TextUtils.isEmpty(liveName)) {
+                                        finalName = liveName;
+                                    }
+                                    
+                                    if (!TextUtils.isEmpty(liveAvatar)) avatarCache.put(uid, liveAvatar);
+                                    nameCache.put(uid, finalName);
+                                    
+                                    // Re-bind nếu dữ liệu thay đổi
+                                    notifyItemChanged(getBindingAdapterPosition());
+                                }
+                            });
+                }
+            }
+
+            binding.tvUserName.setText(displayName);
             binding.ratingBarSmall.setRating(review.getRating());
             binding.tvReviewDate.setText(formatDate(review));
 
-            if (!TextUtils.isEmpty(review.getUserAvatar())) {
+            if (!TextUtils.isEmpty(avatarUrl)) {
                 Glide.with(binding.ivUserAvatar.getContext())
-                        .load(review.getUserAvatar())
+                        .load(avatarUrl)
                         .placeholder(R.drawable.ic_profile)
                         .error(R.drawable.ic_profile)
                         .centerCrop()
@@ -87,19 +128,26 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
             binding.tvToggleExpand.setVisibility(View.GONE);
 
             binding.tvComment.post(() -> {
-                if (binding.tvComment.getLineCount() > 3) {
-                    binding.tvToggleExpand.setVisibility(View.VISIBLE);
-                    binding.tvToggleExpand.setOnClickListener(v -> {
-                        if (binding.tvComment.getMaxLines() == 3) {
-                            binding.tvComment.setMaxLines(Integer.MAX_VALUE);
-                            binding.tvComment.setEllipsize(null);
-                            binding.tvToggleExpand.setText("Thu gọn");
-                        } else {
-                            binding.tvComment.setMaxLines(3);
-                            binding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
-                            binding.tvToggleExpand.setText("Xem thêm");
-                        }
-                    });
+                Layout layout = binding.tvComment.getLayout();
+                if (layout != null) {
+                    int lineCount = layout.getLineCount();
+                    // Nếu số dòng > 3 hoặc có dấu ba chấm ở dòng cuối
+                    if (lineCount >= 3 && (lineCount > 3 || layout.getEllipsisCount(lineCount - 1) > 0)) {
+                        binding.tvToggleExpand.setVisibility(View.VISIBLE);
+                        binding.tvToggleExpand.setOnClickListener(v -> {
+                            if (binding.tvComment.getMaxLines() == 3) {
+                                binding.tvComment.setMaxLines(Integer.MAX_VALUE);
+                                binding.tvComment.setEllipsize(null);
+                                binding.tvToggleExpand.setText("Thu gọn");
+                            } else {
+                                binding.tvComment.setMaxLines(3);
+                                binding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
+                                binding.tvToggleExpand.setText("Xem thêm");
+                            }
+                        });
+                    } else {
+                        binding.tvToggleExpand.setVisibility(View.GONE);
+                    }
                 }
             });
 

@@ -45,6 +45,15 @@
     <string name="account_management_remove_title">Gỡ tài khoản</string>
     <string name="account_management_remove_message">Gỡ \"%1$s\" khỏi danh sách trên máy? (Không xóa tài khoản trên server)</string>
     <string name="account_management_removed">Đã gỡ khỏi danh sách</string>
+    <string name="cancel">Hủy</string>
+    <string name="confirm">Xác nhận</string>
+    <string name="delete">Xóa</string>
+    <string name="save">Lưu</string>
+    <string name="close">Đóng</string>
+    <string name="error">Lỗi</string>
+    <string name="success">Thành công</string>
+    <string name="cart_remove_title">Xóa sản phẩm</string>
+    <string name="cart_remove_msg">Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?</string>
     <string name="account_management_cancel">Hủy</string>
     <string name="account_management_wrong_password">Mật khẩu đã đổi. Vui lòng đăng nhập lại.</string>
     <string name="account_management_switch_failed">Không thể chuyển tài khoản. Vui lòng thử đăng nhập lại.</string>
@@ -450,6 +459,17 @@
     <string name="max_stock_reached">Số lượng đạt tối đa trong kho</string>
     <string name="please_select_variant">Vui lòng chọn phân loại</string>
     <string name="added_to_cart">Đã thêm vào giỏ hàng</string>
+    <string name="order_status_completed">Hoàn thành</string>
+    <string name="order_show_more_count">Xem thêm %1$d sản phẩm</string>
+    <string name="order_total_format">Tổng số tiền (%1$d sản phẩm): %2$s</string>
+    <string name="order_delivery_success_format">Đơn hàng đã giao thành công vào %1$s</string>
+    <string name="order_action_return">Trả/Hoàn</string>
+    <string name="order_action_review">Đánh giá</string>
+    <string name="order_action_buy_again">Mua lại</string>
+    <string name="order_success_title">Thanh toán thành công!</string>
+    <string name="order_success_msg">Cảm ơn bạn đã mua sắm tại HealthUp</string>
+    <string name="track_order">Theo dõi đơn hàng</string>
+    <string name="continue_shopping">Tiếp tục mua sắm</string>
     <string name="login_required_cart">Vui lòng đăng nhập để thêm vào giỏ hàng</string>
     <string name="view_all">Xem tất cả</string>
     <string name="customer_reviews">Đánh giá khách hàng</string>
@@ -529,6 +549,17 @@
     <string name="phone_verification_back_to_cart">Quay lại giỏ hàng</string>
     <string name="phone_verification_back_to_chat">Quay lại chat</string>
     <string name="phone_verification_continue_shopping">Tiếp tục mua sắm</string>
+    <string name="account_settings_title">Thiết lập tài khoản</string>
+    <string name="account_section_label">Tài khoản</string>
+    <string name="reviews_title">Đánh giá</string>
+    <string name="product_review_title">Đánh giá sản phẩm</string>
+    <string name="submit_review">Gửi đánh giá</string>
+    <string name="all">Tất cả</string>
+    <string name="has_image">Có hình ảnh</string>
+    <string name="star_format">%1$d sao</string>
+    <string name="delete_account_confirm_msg">Bạn có chắc chắn muốn xóa tài khoản không?</string>
+    <string name="delete_account_warning">Lưu ý: Bạn sẽ không thể khôi phục tài khoản sau khi xóa.</string>
+    <string name="delete_account_confirm_btn">Xác nhận xóa</string>
     <string name="checkout_need_phone_verified">Cần xác thực số điện thoại trước khi mua hàng.</string>
 
     <!-- Admin -->

@@ -512,7 +512,14 @@ public class MainActivity extends BaseAppCompatActivity {
             } else if ("pending_tab".equals(target)) {
                 args.putInt("initial_tab", 1);
             } else if ("faq".equals(target)) {
-                loadFragment(new FAQFragment());
+                boolean returnToPrev = intent.getBooleanExtra("return_to_previous", false);
+                FAQFragment faqFragment = new FAQFragment();
+                if (returnToPrev) {
+                    Bundle faqArgs = new Bundle();
+                    faqArgs.putBoolean("return_to_previous", true);
+                    faqFragment.setArguments(faqArgs);
+                }
+                loadFragment(faqFragment);
                 return;
             } else if ("policy".equals(target)) {
                 loadFragment(new PolicyFragment());

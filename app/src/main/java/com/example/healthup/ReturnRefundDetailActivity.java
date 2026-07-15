@@ -30,7 +30,11 @@ import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnHandling;
 import com.example.models.ReturnReason;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.example.models.PaymentAccount;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
 import java.io.File;
 import java.io.IOException;
 import java.text.DecimalFormat;
@@ -135,6 +139,11 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
         binding.cvSelectProduct.setOnClickListener(v -> showProductSelectBottomSheet());
         binding.rlReason.setOnClickListener(v -> showReasonBottomSheet());
         binding.rlHandlingMethod.setOnClickListener(v -> showHandlingBottomSheet());
+
+        // ✅ Tự động chọn sản phẩm nếu đơn hàng chỉ có 1 sản phẩm
+        if (allOrderItems != null && allOrderItems.size() == 1) {
+            selectedItemsMap.put(allOrderItems.get(0), 1);
+        }
 
         setupUIByRequestType();
         setupDescriptionValidation();
@@ -381,34 +390,36 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
     }
 
     private void setupRefundMethodUI() {
-        if (paymentMethod == null) return;
-        String refundMethod = paymentMethod;
+        if (paymentMethod == null || paymentMethod.isEmpty()) {
+            binding.tvRefundMethod.setText("Chưa xác định phương thức");
+            return;
+        }
+        renderRefundMethodUI(paymentMethod);
+    }
+
+    private void renderRefundMethodUI(String method) {
+        String refundMethodLabel = method;
         int iconRes = R.drawable.ic_payment_wallet;
-        
-        String pm = paymentMethod.toLowerCase();
-        // Cập nhật mapping code -> text đầy đủ
+        String pm = method.toLowerCase();
+
         if (pm.contains("cod") || pm.contains("nhận hàng")) {
-            refundMethod = "Tài khoản Ngân hàng liên kết";
+            refundMethodLabel = "Tài khoản Ngân hàng liên kết";
             iconRes = R.drawable.ic_payment_card;
         } else if (pm.contains("momo")) {
-            refundMethod = "Ví MoMo";
-            iconRes = R.drawable.ic_payment_wallet;
+            refundMethodLabel = "Ví MoMo";
         } else if (pm.contains("zalopay")) {
-            refundMethod = "Ví ZaloPay";
-            iconRes = R.drawable.ic_payment_wallet;
+            refundMethodLabel = "Ví ZaloPay";
         } else if (pm.contains("vnpay")) {
-            refundMethod = "Ví VNPAY";
-            iconRes = R.drawable.ic_payment_wallet;
-        } else if (pm.contains("card") || pm.contains("thẻ") || pm.contains("tài khoản")) {
-            refundMethod = "Thẻ Tín dụng / Ghi nợ";
+            refundMethodLabel = "Ví VNPAY";
+        } else if (pm.contains("card") || pm.contains("thẻ tín dụng") || pm.contains("ghi nợ")) {
+            refundMethodLabel = "Thẻ Tín dụng / Ghi nợ";
+            iconRes = R.drawable.ic_payment_card;
+        } else if (pm.contains("atm") || pm.contains("nội địa")) {
+            refundMethodLabel = "Thẻ ATM nội địa";
             iconRes = R.drawable.ic_payment_card;
         }
 
-        String displayInfo = refundMethod;
-        if (refundMethod.contains("Ví")) displayInfo += " – 09xx xxx 567";
-        else if (refundMethod.contains("Ngân hàng") || refundMethod.contains("Thẻ")) displayInfo += " – **** 1234";
-
-        binding.tvRefundMethod.setText(displayInfo);
+        binding.tvRefundMethod.setText(refundMethodLabel);
         binding.imgRefundMethod.setImageResource(iconRes);
         binding.rlRefundMethod.setOnClickListener(null);
     }
@@ -430,6 +441,14 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
             updateSelectedProductsUI();
             dialog.dismiss();
         });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 
@@ -453,6 +472,14 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
             if (selected != null) binding.tvSelectedReason.setText(selected.getTitle());
             dialog.dismiss();
         });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 
@@ -473,6 +500,14 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
             if (selected != null) updateHandlingUI(selected.getTitle());
             dialog.dismiss();
         });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 

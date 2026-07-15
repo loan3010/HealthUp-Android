@@ -44,7 +44,7 @@
             android:layout_height="56dp"
             android:layout_marginTop="24dp"
             android:backgroundTint="@color/primary"
-            android:text="Xác nhận"
+            android:text="@string/confirm"
             android:textAllCaps="false"
             android:textColor="@color/white"
             android:textSize="16sp"

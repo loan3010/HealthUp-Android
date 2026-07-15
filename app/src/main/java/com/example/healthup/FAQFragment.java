@@ -43,11 +43,15 @@ public class FAQFragment extends Fragment {
     private EditText etSearch;
     private ImageButton btnClearSearch;
     private String selectedCategoryKey = "";
+    private boolean returnToPreviousActivity = false;
 
 
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        if (getArguments() != null) {
+            returnToPreviousActivity = getArguments().getBoolean("return_to_previous", false);
+        }
         View view = inflater.inflate(R.layout.fragment_faqs, container, false);
         initViews(view);
         setupCategories();
@@ -70,7 +74,11 @@ public class FAQFragment extends Fragment {
 
 
         view.findViewById(R.id.btn_back).setOnClickListener(v -> {
-            if (getActivity() != null) getActivity().onBackPressed();
+            if (returnToPreviousActivity && getActivity() != null) {
+                getActivity().finish();
+            } else if (getActivity() != null) {
+                getActivity().onBackPressed();
+            }
         });
 
 
