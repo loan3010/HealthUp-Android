@@ -44,9 +44,11 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
+            <include layout="@layout/layout_login_required" />
+
             <!-- Linked Methods Section -->
             <LinearLayout
-                android:id="@+id/layoutLinked"
+                android:id="@+id/sectionLinked"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -97,6 +99,7 @@
 
             <!-- Add New Methods Section -->
             <TextView
+                android:id="@+id/tvAddMethodTitle"
                 style="@style/TextAppearance.HealthUp.SubContent.Bold"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -169,6 +172,8 @@
                     <TextView android:id="@+id/btnLinkCard" style="@style/PaymentLinkButtonStyle" android:text="Thêm" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
+
+            <include layout="@layout/include_recommendations_section" />
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>

@@ -6,6 +6,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -35,12 +36,32 @@ public final class GuestRecommendationsHelper {
     }
 
     public static void bind(@NonNull View root, @NonNull Fragment host) {
+        bindInternal(root, host.requireContext(), host.getChildFragmentManager(), host::isAdded, () -> openCategoryTab(host));
+    }
+
+    public static void bind(@NonNull View root, @NonNull AppCompatActivity host) {
+        bindInternal(root, host, host.getSupportFragmentManager(), () -> !host.isFinishing(), () -> openCategoryTab(host));
+    }
+
+    private interface StateChecker {
+        boolean isValid();
+    }
+
+    private interface NavigationHandler {
+        void navigate();
+    }
+
+    private static void bindInternal(@NonNull View root, 
+                                   @NonNull android.content.Context context,
+                                   @NonNull androidx.fragment.app.FragmentManager fragmentManager,
+                                   @NonNull StateChecker stateChecker,
+                                   @NonNull NavigationHandler navHandler) {
         View section = root.findViewById(R.id.lnRecommend);
         RecyclerView rvRecommend = root.findViewById(R.id.rvRecommend);
         View tvViewAll = root.findViewById(R.id.tvViewAllRecommend);
         MaterialButton btnMore = root.findViewById(R.id.btnMoreRecommend);
 
-        if (section == null || rvRecommend == null || !host.isAdded()) {
+        if (section == null || rvRecommend == null) {
             return;
         }
 
@@ -53,24 +74,24 @@ public final class GuestRecommendationsHelper {
         ProductAdapter.OnProductClickListener listener = new ProductAdapter.OnProductClickListener() {
             @Override
             public void onProductClick(Product product) {
-                if (!host.isAdded() || product == null || product.getId() == null) return;
-                Intent intent = new Intent(host.requireContext(), ProductDetailActivity.class);
+                if (!stateChecker.isValid() || product == null || product.getId() == null) return;
+                Intent intent = new Intent(context, ProductDetailActivity.class);
                 intent.putExtra("productId", product.getId());
-                host.startActivity(intent);
+                context.startActivity(intent);
             }
 
             @Override
             public void onAddToCart(Product product) {
-                if (!host.isAdded() || product == null) return;
+                if (!stateChecker.isValid() || product == null) return;
                 VariantBottomSheetFragment sheet = VariantBottomSheetFragment.newInstance(
                         product,
                         (variant, quantity) -> CartHelper.addToCart(
-                                host.requireContext(), product, variant, quantity,
+                                context, product, variant, quantity,
                                 new CartHelper.CartCallback() {
                                     @Override
                                     public void onSuccess() {
-                                        if (host.isAdded()) {
-                                            Toast.makeText(host.requireContext(),
+                                        if (stateChecker.isValid()) {
+                                            Toast.makeText(context,
                                                     R.string.added_to_cart, Toast.LENGTH_SHORT).show();
                                         }
                                     }
@@ -79,14 +100,14 @@ public final class GuestRecommendationsHelper {
                                     public void onFailure(Exception e) {
                                     }
                                 }));
-                sheet.show(host.getChildFragmentManager(), "GuestRecommendVariant");
+                sheet.show(fragmentManager, "GuestRecommendVariant");
             }
 
             @Override
             public void onFavoriteClick(Product product) {
-                if (!host.isAdded()) return;
+                if (!stateChecker.isValid()) return;
                 Toast.makeText(
-                        host.requireContext(),
+                        context,
                         R.string.wishlist_login_required,
                         Toast.LENGTH_SHORT).show();
             }
@@ -95,12 +116,12 @@ public final class GuestRecommendationsHelper {
         ProductAdapter adapter = new ProductAdapter(displayed, listener);
         adapter.setWishlistDisabled(true);
         adapterHolder[0] = adapter;
-        rvRecommend.setLayoutManager(new GridLayoutManager(host.getContext(), 2));
+        rvRecommend.setLayoutManager(new GridLayoutManager(context, 2));
         rvRecommend.setAdapter(adapter);
         rvRecommend.setNestedScrollingEnabled(false);
 
         if (tvViewAll != null) {
-            tvViewAll.setOnClickListener(v -> openCategoryTab(host));
+            tvViewAll.setOnClickListener(v -> navHandler.navigate());
         }
 
         if (btnMore != null) {
@@ -117,7 +138,7 @@ public final class GuestRecommendationsHelper {
         }
 
         FirebaseManager.getInstance().getProducts().addOnSuccessListener(queryDocumentSnapshots -> {
-            if (!host.isAdded()) return;
+            if (!stateChecker.isValid()) return;
 
             allProducts.clear();
             for (DocumentSnapshot doc : queryDocumentSnapshots) {
@@ -148,9 +169,17 @@ public final class GuestRecommendationsHelper {
     }
 
     private static void openCategoryTab(@NonNull Fragment host) {
-        if (!(host.getActivity() instanceof MainActivity)) return;
-        MainActivity activity = (MainActivity) host.getActivity();
-        BottomNavigationView navView = activity.findViewById(R.id.bottom_navigation);
+        openCategoryTabInternal(host.getActivity());
+    }
+
+    private static void openCategoryTab(@NonNull AppCompatActivity host) {
+        openCategoryTabInternal(host);
+    }
+
+    private static void openCategoryTabInternal(@Nullable android.app.Activity activity) {
+        if (!(activity instanceof MainActivity)) return;
+        MainActivity mainActivity = (MainActivity) activity;
+        BottomNavigationView navView = mainActivity.findViewById(R.id.bottom_navigation);
         if (navView != null) {
             navView.setSelectedItemId(R.id.nav_category);
         }
@@ -160,7 +189,7 @@ public final class GuestRecommendationsHelper {
         args.putString("category", "Tất cả");
         fragment.setArguments(args);
 
-        activity.getSupportFragmentManager().beginTransaction()
+        mainActivity.getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragment_container, fragment)
                 .addToBackStack(null)
                 .commit();

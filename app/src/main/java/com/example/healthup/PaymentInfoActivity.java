@@ -1,11 +1,11 @@
 package com.example.healthup;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
@@ -51,11 +51,34 @@ public class PaymentInfoActivity extends AppCompatActivity {
         db = FirebaseFirestore.getInstance();
         userId = FirebaseAuth.getInstance().getUid();
 
+        // Xử lý chế độ khách
+        if (userId == null && !isSelectMode) {
+            setupGuestMode();
+            return;
+        }
+
         binding.btnBack.setOnClickListener(v -> finish());
         
         setupRecyclerView();
         setupListeners();
         loadLinkedMethods();
+    }
+
+    private void setupGuestMode() {
+        binding.layoutEmpty.setVisibility(View.GONE);
+        binding.sectionLinked.setVisibility(View.GONE);
+        binding.tvAddMethodTitle.setVisibility(View.GONE);
+        binding.cardAddZalo.setVisibility(View.GONE);
+        binding.cardAddMoMo.setVisibility(View.GONE);
+        binding.cardAddVnpay.setVisibility(View.GONE);
+        binding.cardAddAtm.setVisibility(View.GONE);
+        binding.cardAddLinkedBank.setVisibility(View.GONE);
+        binding.cardAddCard.setVisibility(View.GONE);
+        
+        binding.btnBack.setOnClickListener(v -> finish());
+        
+        com.example.healthup.util.GuestLoginRequiredHelper.bind(binding.getRoot(), this);
+        com.example.healthup.util.GuestRecommendationsHelper.bind(binding.getRoot(), this);
     }
 
     private void setupRecyclerView() {
@@ -69,14 +92,16 @@ public class PaymentInfoActivity extends AppCompatActivity {
 
             @Override
             public void onDeleteClick(PaymentAccount item) {
-                if (userId == null) return;
+                if (userId == null) {
+                    removeFromLocalCache(item.getType());
+                    loadLinkedMethods();
+                    return;
+                }
                 new AlertDialog.Builder(PaymentInfoActivity.this)
                         .setTitle("Hủy liên kết")
                         .setMessage("Bạn có chắc muốn hủy liên kết phương thức này?")
                         .setPositiveButton("Hủy liên kết", (d, w) -> {
-                            // Xóa local
                             removeFromLocalCache(item.getType());
-                            // Xóa server
                             if (item.getId() != null) {
                                 db.collection("users").document(userId).collection("paymentMethods")
                                         .document(item.getId()).delete().addOnSuccessListener(v -> loadLinkedMethods());
@@ -113,35 +138,37 @@ public class PaymentInfoActivity extends AppCompatActivity {
 
     private void loadLinkedMethods() {
         linkedMethods.clear();
-        // 1. Load từ Local Cache trước (đảm bảo luôn nhớ)
+        // 1. Load từ Local Cache trước để hiển thị ngay lập tức
         linkedMethods.addAll(loadFromLocalCache());
+        updateUI(); 
         
         if (userId != null) {
             db.collection("users").document(userId).collection("paymentMethods")
                 .get().addOnSuccessListener(snapshot -> {
-                    // Tránh trùng lặp với local
                     Set<String> types = new HashSet<>();
                     for(PaymentAccount p : linkedMethods) types.add(p.getType());
 
+                    boolean added = false;
                     for (QueryDocumentSnapshot doc : snapshot) {
                         PaymentAccount acc = doc.toObject(PaymentAccount.class);
                         acc.setId(doc.getId());
                         if (!types.contains(acc.getType())) {
                             linkedMethods.add(acc);
                             types.add(acc.getType());
+                            added = true;
                         }
                     }
-                    updateUI();
+                    if (added) updateUI();
                 }).addOnFailureListener(e -> updateUI());
-        } else {
-            updateUI();
         }
     }
 
     private void updateUI() {
+        if (binding == null || adapter == null) return;
+
         boolean hasLinked = !linkedMethods.isEmpty();
         binding.layoutEmpty.setVisibility(hasLinked ? View.GONE : View.VISIBLE);
-        binding.layoutLinked.setVisibility(hasLinked ? View.VISIBLE : View.GONE);
+        binding.sectionLinked.setVisibility(hasLinked ? View.VISIBLE : View.GONE);
         adapter.notifyDataSetChanged();
 
         binding.cardAddZalo.setVisibility(isLinked(PaymentAccount.TYPE_ZALOPAY) ? View.GONE : View.VISIBLE);
@@ -151,9 +178,9 @@ public class PaymentInfoActivity extends AppCompatActivity {
         binding.cardAddLinkedBank.setVisibility(isLinked(PaymentAccount.TYPE_LINKED_BANK) ? View.GONE : View.VISIBLE);
         binding.cardAddCard.setVisibility(isLinked(PaymentAccount.TYPE_CARD) ? View.GONE : View.VISIBLE);
 
+        // Logic chọn phương thức khi từ màn Checkout sang
         if (isSelectMode && targetType != null) {
             for (PaymentAccount acc : linkedMethods) {
-                // Logic linh hoạt cho Thẻ
                 if (targetType.equals(acc.getType()) || 
                    (targetType.equals(PaymentAccount.TYPE_CARD) && PaymentAccount.TYPE_ATM.equals(acc.getType()))) {
                     returnResultAndFinish(acc);
@@ -180,29 +207,41 @@ public class PaymentInfoActivity extends AppCompatActivity {
         AlertDialog dialog = new AlertDialog.Builder(this).setView(v).create();
         if (dialog.getWindow() != null) dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
         
-        ((TextView)v.findViewById(R.id.tvDialogTitle)).setText(title);
+        TextView tvTitle = v.findViewById(R.id.tvDialogTitle);
+        tvTitle.setText(title);
         v.findViewById(R.id.btnClose).setOnClickListener(view -> dialog.dismiss());
 
+        Spinner spinner = v.findViewById(R.id.spinnerBank);
         if (type.equals(PaymentAccount.TYPE_ATM)) {
             ((TextView)v.findViewById(R.id.tvLabelNumber)).setText("Số thẻ:");
             ((TextView)v.findViewById(R.id.tvLabelName)).setText("Tên chủ thẻ:");
             ((TextView)v.findViewById(R.id.tvLabelDate)).setText("Ngày phát hành:");
+        } else if (type.equals(PaymentAccount.TYPE_CARD)) {
+            ((TextView)v.findViewById(R.id.tvLabelBank)).setText("Loại thẻ:");
+            ((TextView)v.findViewById(R.id.tvLabelNumber)).setText("Số thẻ:");
+            ((TextView)v.findViewById(R.id.tvLabelName)).setText("Chủ thẻ:");
+            ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this, R.array.card_types, android.R.layout.simple_spinner_item);
+            adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+            spinner.setAdapter(adapter);
         } else if (type.equals(PaymentAccount.TYPE_LINKED_BANK)) {
             v.findViewById(R.id.rowCCCD).setVisibility(View.VISIBLE);
             v.findViewById(R.id.rowPhone).setVisibility(View.VISIBLE);
         }
 
         v.findViewById(R.id.btnSave).setOnClickListener(view -> {
-            String bank = ((Spinner)v.findViewById(R.id.spinnerBank)).getSelectedItem().toString();
+            String provider = spinner.getSelectedItem().toString();
             String num = ((EditText)v.findViewById(R.id.etNumber)).getText().toString().trim();
-            if (num.isEmpty()) { Toast.makeText(this, "Vui lòng nhập đủ thông tin", Toast.LENGTH_SHORT).show(); return; }
-            saveAccount(new PaymentAccount(type, bank, "**** " + (num.length() > 4 ? num.substring(num.length() - 4) : num)), dialog);
+            if (num.length() < 6) { Toast.makeText(this, "Số tài khoản/thẻ không hợp lệ", Toast.LENGTH_SHORT).show(); return; }
+            
+            String displayId = "**** " + num.substring(num.length() - 4);
+            PaymentAccount newAcc = new PaymentAccount(type, provider, displayId);
+            saveAccount(newAcc, dialog);
         });
         dialog.show();
     }
 
     private void saveAccount(PaymentAccount acc, AlertDialog dialog) {
-        saveToLocalCache(acc); // ✅ LUÔN LƯU LOCAL ĐỂ GHI NHỚ TRƯỚC
+        saveToLocalCache(acc); 
         
         if (userId != null) {
             db.collection("users").document(userId).collection("paymentMethods")
@@ -211,9 +250,7 @@ public class PaymentInfoActivity extends AppCompatActivity {
                     Toast.makeText(this, "Liên kết thành công", Toast.LENGTH_SHORT).show();
                     loadLinkedMethods();
                 }).addOnFailureListener(e -> {
-                    // Nếu lỗi quyền (PERMISSION_DENIED), vẫn coi là thành công cho Demo
                     if (dialog != null) dialog.dismiss();
-                    Toast.makeText(this, "Liên kết thành công (Ghi nhớ thiết bị)", Toast.LENGTH_SHORT).show();
                     loadLinkedMethods();
                 });
         } else {

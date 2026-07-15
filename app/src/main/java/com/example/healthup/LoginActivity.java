@@ -537,7 +537,7 @@ public class LoginActivity extends AppCompatActivity {
         setLoading(true);
         final String normalizedEmail = RegisterValidator.normalizeEmail(email);
         if (TextUtils.isEmpty(normalizedEmail)
-                || UserProfileBuilder.isSyntheticAuthEmail(normalizedEmail)) {
+| UserProfileBuilder.isSyntheticAuthEmail(normalizedEmail)) {
             setLoading(false);
             showIdentifierError(getString(R.string.login_email_invalid_error));
             return;
@@ -614,7 +614,7 @@ public class LoginActivity extends AppCompatActivity {
                         updateLoginButtonState();
                         Exception exception = task.getException();
                         if (exception instanceof FirebaseAuthInvalidCredentialsException
-                                || exception instanceof FirebaseAuthInvalidUserException) {
+| exception instanceof FirebaseAuthInvalidUserException) {
                             showPasswordError(getString(R.string.login_credentials_wrong));
                         } else {
                             showPasswordError(getString(R.string.login_failed_generic));

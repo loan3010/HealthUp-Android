@@ -47,8 +47,11 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
+            <include layout="@layout/layout_login_required" />
+
             <!-- Avatar Section with Cream Background -->
             <FrameLayout
+                android:id="@+id/sectionAvatar"
                 android:layout_width="match_parent"
                 android:layout_height="180dp"
                 android:background="@color/neutral_cream">
@@ -90,6 +93,7 @@
             </FrameLayout>
 
             <LinearLayout
+                android:id="@+id/sectionForm"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
@@ -452,6 +456,8 @@
                     android:textStyle="bold" />
 
             </LinearLayout>
+
+            <include layout="@layout/include_recommendations_section" />
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
@@ -464,10 +470,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <include
-        layout="@layout/layout_login_required"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
