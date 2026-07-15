@@ -16,6 +16,7 @@ public class OtpRepository {
     public static final String COLLECTION_ADMIN_PASSWORD_RESET = "admin_password_reset";
     public static final String COLLECTION_REGISTRATION = "registration_otp";
     public static final String COLLECTION_EMAIL_VERIFICATION = "email_verification";
+    public static final String COLLECTION_PHONE_VERIFICATION = "phone_verification";
     public static final long OTP_EXPIRY_MS = 5 * 60 * 1000L;
     /** Admin forgot-password OTP validity (60s — matches UI countdown). */
     public static final long ADMIN_OTP_EXPIRY_MS = 60 * 1000L;
@@ -80,14 +81,43 @@ public class OtpRepository {
                 .set(data);
     }
 
+    public Task<Void> savePhoneVerificationOtp(
+            @NonNull String uid,
+            @NonNull String phone,
+            @NonNull String otp
+    ) {
+        long now = System.currentTimeMillis();
+        Map<String, Object> data = new HashMap<>();
+        data.put("phone", phone);
+        data.put("otp", otp);
+        data.put("createdAt", now);
+        data.put("expiredAt", now + OTP_EXPIRY_MS);
+        data.put("verified", false);
+        return firestore.collection(COLLECTION_PHONE_VERIFICATION)
+                .document(uid)
+                .set(data);
+    }
+
     public Task<DocumentSnapshot> getEmailVerificationDoc(@NonNull String uid) {
         return firestore.collection(COLLECTION_EMAIL_VERIFICATION)
                 .document(uid)
                 .get();
     }
 
+    public Task<DocumentSnapshot> getPhoneVerificationDoc(@NonNull String uid) {
+        return firestore.collection(COLLECTION_PHONE_VERIFICATION)
+                .document(uid)
+                .get();
+    }
+
     public Task<Void> deleteEmailVerificationDoc(@NonNull String uid) {
         return firestore.collection(COLLECTION_EMAIL_VERIFICATION)
+                .document(uid)
+                .delete();
+    }
+
+    public Task<Void> deletePhoneVerificationDoc(@NonNull String uid) {
+        return firestore.collection(COLLECTION_PHONE_VERIFICATION)
                 .document(uid)
                 .delete();
     }
