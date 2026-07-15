@@ -6,6 +6,8 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -112,6 +114,14 @@ public class CheckoutFragment extends Fragment {
     private boolean isShopNoteExpanded = false;
 
     private final NumberFormat currencyFormat = NumberFormat.getInstance(new Locale("vi", "VN"));
+    private final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private boolean placingOrder = false;
+    private static final long PLACE_ORDER_TIMEOUT_MS = 45_000L;
+    private final Runnable placeOrderTimeoutRunnable = () -> {
+        if (!placingOrder || !isAdded()) return;
+        finishPlaceOrderUi(LocaleHelper.getLanguage(requireContext()),
+                "Đặt hàng quá lâu / không phản hồi. Vui lòng thử lại.");
+    };
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
@@ -769,9 +779,13 @@ public class CheckoutFragment extends Fragment {
     }
 
     private void continuePlaceOrder(@NonNull FirebaseUser user) {
-        btnPlaceOrder.setEnabled(false);
+        if (placingOrder) return;
+        placingOrder = true;
         String currentLang = LocaleHelper.getLanguage(requireContext());
+        btnPlaceOrder.setEnabled(false);
         btnPlaceOrder.setText(currentLang.equals("en") ? "Processing..." : "Đang xử lý...");
+        mainHandler.removeCallbacks(placeOrderTimeoutRunnable);
+        mainHandler.postDelayed(placeOrderTimeoutRunnable, PLACE_ORDER_TIMEOUT_MS);
         String userId = user.getUid();
 
         double itemsTotal = getItemsTotal();
@@ -817,7 +831,7 @@ public class CheckoutFragment extends Fragment {
         StockManager.deductStock(db, stockItems, new StockManager.StockCallback() {
             @Override
             public void onSuccess() {
-                if (!isAdded()) return;
+                // Continue writing the order even if view was destroyed — stock already deducted.
                 order.setStockDeducted(true);
                 commitPlacedOrder(db, userId, orderRef, order, cartSnapshot -> placeOrderBatch(
                         db, userId, orderRef, order, cartSnapshot, currentLang, finalAmount));
@@ -825,19 +839,15 @@ public class CheckoutFragment extends Fragment {
 
             @Override
             public void onInsufficientStock(@NonNull String productName, int available) {
-                if (!isAdded()) return;
-                resetPlaceOrderButton(currentLang);
                 String msg = "en".equals(currentLang)
                         ? productName + " only has " + available + " left in stock."
                         : productName + " chỉ còn " + available + " sản phẩm trong kho.";
-                Toast.makeText(getContext(), msg, Toast.LENGTH_LONG).show();
+                finishPlaceOrderUi(currentLang, msg);
             }
 
             @Override
             public void onError(@NonNull String message) {
-                if (!isAdded()) return;
-                resetPlaceOrderButton(currentLang);
-                Toast.makeText(getContext(), "Lỗi đặt hàng: " + message, Toast.LENGTH_SHORT).show();
+                finishPlaceOrderUi(currentLang, userFacingPlaceOrderError(currentLang, message));
             }
         });
     }
@@ -853,24 +863,15 @@ public class CheckoutFragment extends Fragment {
                                    CartSnapshotCallback callback) {
         db.collection("users").document(userId).collection("cart")
                 .get()
-                .addOnSuccessListener(cartSnapshot -> {
-                    if (!isAdded()) return;
-                    callback.onCartLoaded(cartSnapshot);
-                })
+                .addOnSuccessListener(callback::onCartLoaded)
                 .addOnFailureListener(e -> {
-                    if (!isAdded()) return;
                     StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
-                        @Override
-                        public void onSuccess() { }
-
-                        @Override
-                        public void onInsufficientStock(@NonNull String productName, int available) { }
-
-                        @Override
-                        public void onError(@NonNull String message) { }
+                        @Override public void onSuccess() { }
+                        @Override public void onInsufficientStock(@NonNull String productName, int available) { }
+                        @Override public void onError(@NonNull String message) { }
                     });
-                    resetPlaceOrderButton(LocaleHelper.getLanguage(requireContext()));
-                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    String lang = isAdded() ? LocaleHelper.getLanguage(requireContext()) : "vi";
+                    finishPlaceOrderUi(lang, userFacingPlaceOrderError(lang, e.getMessage()));
                 });
     }
 
@@ -883,8 +884,6 @@ public class CheckoutFragment extends Fragment {
                                  double finalAmount) {
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(userDoc -> {
-                    if (!isAdded()) return;
-
                     WriteBatch batch = db.batch();
                     batch.set(orderRef, order);
 
@@ -939,45 +938,75 @@ public class CheckoutFragment extends Fragment {
 
 
                     batch.commit().addOnSuccessListener(aVoid -> {
+                        placingOrder = false;
+                        mainHandler.removeCallbacks(placeOrderTimeoutRunnable);
                         if (isAdded()) {
+                            resetPlaceOrderButton(currentLang);
                             showSuccessDialog();
                         }
                     }).addOnFailureListener(e -> {
-                        if (!isAdded()) return;
                         StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
-                            @Override
-                            public void onSuccess() { }
-
-                            @Override
-                            public void onInsufficientStock(@NonNull String productName, int available) { }
-
-                            @Override
-                            public void onError(@NonNull String message) { }
+                            @Override public void onSuccess() { }
+                            @Override public void onInsufficientStock(@NonNull String productName, int available) { }
+                            @Override public void onError(@NonNull String message) { }
                         });
-                        resetPlaceOrderButton(currentLang);
-                        Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                        finishPlaceOrderUi(currentLang, userFacingPlaceOrderError(currentLang, e.getMessage()));
                     });
                 })
                 .addOnFailureListener(e -> {
-                    if (!isAdded()) return;
                     StockManager.restoreStock(db, order.getItems(), new StockManager.StockCallback() {
-                        @Override
-                        public void onSuccess() { }
-
-                        @Override
-                        public void onInsufficientStock(@NonNull String productName, int available) { }
-
-                        @Override
-                        public void onError(@NonNull String message) { }
+                        @Override public void onSuccess() { }
+                        @Override public void onInsufficientStock(@NonNull String productName, int available) { }
+                        @Override public void onError(@NonNull String message) { }
                     });
-                    resetPlaceOrderButton(currentLang);
-                    Toast.makeText(getContext(), "Lỗi đặt hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    finishPlaceOrderUi(currentLang, userFacingPlaceOrderError(currentLang, e.getMessage()));
                 });
     }
 
+    private void finishPlaceOrderUi(@Nullable String currentLang, @Nullable String toastMessage) {
+        Runnable ui = () -> {
+            placingOrder = false;
+            mainHandler.removeCallbacks(placeOrderTimeoutRunnable);
+            if (!isAdded()) return;
+            String lang = currentLang != null ? currentLang : LocaleHelper.getLanguage(requireContext());
+            resetPlaceOrderButton(lang);
+            if (toastMessage != null && !toastMessage.isEmpty() && getContext() != null) {
+                Toast.makeText(getContext(), toastMessage, Toast.LENGTH_LONG).show();
+            }
+        };
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            ui.run();
+        } else {
+            mainHandler.post(ui);
+        }
+    }
+
+    @NonNull
+    private static String userFacingPlaceOrderError(@Nullable String currentLang, @Nullable String raw) {
+        String msg = raw != null ? raw : "";
+        boolean en = "en".equals(currentLang);
+        if (msg.toLowerCase(Locale.ROOT).contains("permission")) {
+            return en
+                    ? "Order failed: missing Firestore permission to update product stock/sold. Ask admin to deploy firestore.rules."
+                    : "Đặt hàng thất bại: thiếu quyền Firestore cập nhật tồn kho/sold. Cần deploy firestore.rules.";
+        }
+        if (msg.isEmpty()) {
+            return en ? "Order failed. Please try again." : "Đặt hàng thất bại. Vui lòng thử lại.";
+        }
+        return (en ? "Order failed: " : "Lỗi đặt hàng: ") + msg;
+    }
+
     private void resetPlaceOrderButton(String currentLang) {
+        if (btnPlaceOrder == null) return;
         btnPlaceOrder.setEnabled(true);
         btnPlaceOrder.setText("en".equals(currentLang) ? "Place order" : "Đặt hàng");
+    }
+
+    @Override
+    public void onDestroyView() {
+        mainHandler.removeCallbacks(placeOrderTimeoutRunnable);
+        placingOrder = false;
+        super.onDestroyView();
     }
 
 

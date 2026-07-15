@@ -33,6 +33,7 @@ public final class BotIntentLexicon {
      * "đơn tôi tới đâu rồi", "theo dõi đơn", "order status", etc.
      */
     public static final String[] ORDER_STATUS = {
+            "kiem tra don hang",
             "kiem tra don",
             "tinh trang don",
             "trang thai don",
@@ -67,17 +68,47 @@ public final class BotIntentLexicon {
             "ho tro ve don"
     };
 
+    /**
+     * Loyalty / VIP — avoid ambiguous phrases like "kiem tra hang" that
+     * fuzzy-match "kiem tra don hang" (order status).
+     */
+    public static final String[] MEMBERSHIP = {
+            "khach hang than thiet",
+            "the thanh vien",
+            "hang thanh vien",
+            "hang thanh vien cua toi",
+            "thanh vien cua toi",
+            "thanh vien healthup",
+            // OK after ORDER_STATUS — "don hang" does not contain this phrase.
+            "thanh vien",
+            "hang vip",
+            "len vip",
+            "uu dai vip",
+            "tich diem",
+            "loyalty",
+            "membership",
+            "member tier",
+            "hang cua toi",
+            "toi la hang nao",
+            "kiem tra hang thanh vien",
+            "kiem tra hang vip",
+            "xem hang thanh vien",
+            "quyen loi thanh vien",
+            "quyen loi vip"
+    };
+
     public static final String[] PRODUCT_INQUIRY = {
             "toi muon hoi ve san pham",
             "hoi ve san pham",
             "can hoi ve san pham",
-            "tu van san pham",
             "hoi san pham trong don"
     };
 
     public static final String[] PRODUCT_ADVICE = {
+            "tu van san pham",
+            "tu van dinh duong",
+            "goi y san pham",
             "tu van",
-            "san pham",
             "dinh duong",
             "vitamin",
             "protein",
@@ -98,7 +129,8 @@ public final class BotIntentLexicon {
             "tao mass",
             "eat clean",
             "granola",
-            "loi khuyen mua"
+            "loi khuyen mua",
+            "danh muc san pham"
     };
 
     public static final String[] FAQ_MENU = {

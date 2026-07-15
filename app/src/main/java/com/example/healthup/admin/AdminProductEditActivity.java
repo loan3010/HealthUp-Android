@@ -47,23 +47,25 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
 
     private final AdminRepository repository = new AdminRepository();
     private final List<Product.ProductVariant> variantRows = new ArrayList<>();
+    private final List<Product.VariantDimension> dimensionDrafts = new ArrayList<>();
 
     private String productId;
     private boolean isEdit;
     private boolean isHidden;
     private boolean isDraft;
+    private int loadedReviewCount;
 
     private TextInputEditText etName, etPrice, etOriginalPrice, etStock, etImage, etDescription;
     private TextInputEditText etProductCode;
     private TextInputEditText etIngredients, etNutrition, etUsage, etOrigin;
-    private TextInputEditText etVariantFlavors, etVariantSizes;
-    private TextView tvProductSoldReadonly, tvProductRatingReadonly;
+    private TextView tvProductSoldReadonly, tvProductRatingReadonly, tvVariantTotals;
     private View cardProductPreview;
     private ImageView imgPreview;
     private ImageButton btnRemoveProductImage;
     private Spinner spinnerCategory;
     private SwitchMaterial switchHidden;
     private LinearLayout layoutVariantRows;
+    private LinearLayout layoutVariantDimensions;
     private TextView tvVariantEmpty;
     private View tilProductStock;
     private MaterialButton btnPickProductImage;
@@ -96,21 +98,23 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         etNutrition = findViewById(R.id.etProductNutrition);
         etUsage = findViewById(R.id.etProductUsage);
         etOrigin = findViewById(R.id.etProductOrigin);
-        etVariantFlavors = findViewById(R.id.etVariantFlavors);
-        etVariantSizes = findViewById(R.id.etVariantSizes);
         tvProductSoldReadonly = findViewById(R.id.tvProductSoldReadonly);
         tvProductRatingReadonly = findViewById(R.id.tvProductRatingReadonly);
+        tvVariantTotals = findViewById(R.id.tvVariantTotals);
         cardProductPreview = findViewById(R.id.cardProductPreview);
         imgPreview = findViewById(R.id.imgProductPreview);
         btnRemoveProductImage = findViewById(R.id.btnRemoveProductImage);
         spinnerCategory = findViewById(R.id.spinnerProductCategory);
         switchHidden = findViewById(R.id.switchProductHidden);
         layoutVariantRows = findViewById(R.id.layoutVariantRows);
+        layoutVariantDimensions = findViewById(R.id.layoutVariantDimensions);
         tvVariantEmpty = findViewById(R.id.tvVariantEmpty);
         MaterialButton btnSave = findViewById(R.id.btnSaveProduct);
         MaterialButton btnSaveDraft = findViewById(R.id.btnSaveDraft);
         btnPickProductImage = findViewById(R.id.btnPickProductImage);
         MaterialButton btnGenerateVariants = findViewById(R.id.btnGenerateVariants);
+        MaterialButton btnAddVariantDimension = findViewById(R.id.btnAddVariantDimension);
+        MaterialButton btnSortVariantsBySold = findViewById(R.id.btnSortVariantsBySold);
 
         imagePicker = new AdminProductImagePicker(this);
 
@@ -122,11 +126,19 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
             btnRemoveProductImage.setOnClickListener(v -> clearProductImage());
         }
         btnGenerateVariants.setOnClickListener(v -> generateVariantCombos());
+        if (btnAddVariantDimension != null) {
+            btnAddVariantDimension.setOnClickListener(v -> addDimensionDraft(null));
+        }
+        if (btnSortVariantsBySold != null) {
+            btnSortVariantsBySold.setOnClickListener(v -> sortVariantRowsBySold());
+        }
 
         if (isEdit) {
             loadProduct();
         } else {
             updateReadonlyStats(0, 0f, 0);
+            ensureDefaultDimensions();
+            renderDimensionRows();
             updateVariantSectionVisibility();
             updatePreview();
         }
@@ -159,7 +171,8 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         etUsage.setText(product.getUsage());
         etOrigin.setText(product.getOrigin());
         etNutrition.setText(AdminProductContentHelper.formatNutritionForEdit(product, doc));
-        updateReadonlyStats(product.getSoldCount(), product.getRating(), product.getReviewCount());
+        loadedReviewCount = Math.max(0, product.getReviewCount());
+        updateReadonlyStats(product.getTotalSold(), product.getRating(), loadedReviewCount);
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             productImageUrl = product.getImages().get(0);
             etImage.setText(shortImageLabel(productImageUrl));
@@ -168,11 +181,120 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         int index = CATEGORIES.indexOf(product.getCategory());
         if (index >= 0) spinnerCategory.setSelection(index);
 
-        if (product.getVariants() != null && !product.getVariants().isEmpty()) {
-            variantRows.clear();
+        variantRows.clear();
+        if (product.getVariants() != null) {
             variantRows.addAll(product.getVariants());
-            inferOptionInputsFromVariants();
-            renderVariantRows();
+        }
+
+        dimensionDrafts.clear();
+        hydrateDimensionsForEdit(product);
+
+        renderDimensionRows();
+        renderVariantRows();
+    }
+
+    /**
+     * Rebuild dimension UI so it matches actual SKU rows.
+     * Never wipe variantRows (would lose price/stock of old products).
+     */
+    private void hydrateDimensionsForEdit(@NonNull Product product) {
+        List<Product.VariantDimension> dims = product.resolveVariantDimensions();
+        boolean aligned = AdminVariantComboHelper.dimensionsAlignWithVariantRows(dims, variantRows);
+
+        if (!dims.isEmpty() && aligned) {
+            for (Product.VariantDimension dim : dims) {
+                Product.VariantDimension copy = new Product.VariantDimension();
+                copy.setId(dim.getId());
+                copy.setName(dim.getName());
+                copy.setOptions(dim.getOptions() != null
+                        ? new ArrayList<>(dim.getOptions()) : new ArrayList<>());
+                dimensionDrafts.add(copy);
+            }
+            return;
+        }
+
+        // Rebuild from SKU names — flat SKUs become one "Phân loại" group.
+        List<Product.VariantDimension> rebuilt =
+                AdminVariantComboHelper.rebuildDimensionsFromSkus(variantRows);
+        if (!rebuilt.isEmpty()) {
+            dimensionDrafts.addAll(rebuilt);
+            Toast.makeText(this,
+                    "Đã khớp lại nhóm phân loại theo biến thể đang có. "
+                            + "Kiểm tra rồi bấm Lưu (hoặc Tạo tổ hợp nếu cần nhóm mới).",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
+
+        ensureDefaultDimensions();
+    }
+
+    private void ensureDefaultDimensions() {
+        if (!dimensionDrafts.isEmpty()) return;
+        addDimensionDraft(dimDraft("Khối lượng", ""));
+        addDimensionDraft(dimDraft("Loại đóng gói", ""));
+    }
+
+    private Product.VariantDimension dimDraft(String name, String optionsCsv) {
+        Product.VariantDimension dim = new Product.VariantDimension();
+        dim.setId("dim_" + dimensionDrafts.size());
+        dim.setName(name);
+        dim.setOptions(AdminVariantComboHelper.parseOptionList(optionsCsv));
+        return dim;
+    }
+
+    private void addDimensionDraft(@Nullable Product.VariantDimension existing) {
+        collectDimensionsFromUi();
+        if (dimensionDrafts.size() >= AdminVariantComboHelper.MAX_DIMENSIONS) {
+            Toast.makeText(this, "Tối đa 3 nhóm phân loại", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (existing != null) {
+            dimensionDrafts.add(existing);
+        } else {
+            Product.VariantDimension dim = new Product.VariantDimension();
+            dim.setId("dim_" + System.currentTimeMillis());
+            dim.setName("");
+            dim.setOptions(new ArrayList<>());
+            dimensionDrafts.add(dim);
+        }
+        renderDimensionRows();
+    }
+
+    private void collectDimensionsFromUi() {
+        if (layoutVariantDimensions == null) return;
+        for (int i = 0; i < layoutVariantDimensions.getChildCount() && i < dimensionDrafts.size(); i++) {
+            View row = layoutVariantDimensions.getChildAt(i);
+            TextInputEditText etName = row.findViewById(R.id.etDimensionName);
+            TextInputEditText etOptions = row.findViewById(R.id.etDimensionOptions);
+            Product.VariantDimension dim = dimensionDrafts.get(i);
+            dim.setName(textOf(etName));
+            dim.setOptions(AdminVariantComboHelper.parseOptionList(textOf(etOptions)));
+        }
+    }
+
+    private void renderDimensionRows() {
+        if (layoutVariantDimensions == null) return;
+        layoutVariantDimensions.removeAllViews();
+        LayoutInflater inflater = LayoutInflater.from(this);
+        for (int i = 0; i < dimensionDrafts.size(); i++) {
+            Product.VariantDimension dim = dimensionDrafts.get(i);
+            View row = inflater.inflate(R.layout.item_admin_variant_dimension, layoutVariantDimensions, false);
+            TextView tvIndex = row.findViewById(R.id.tvDimensionIndex);
+            TextInputEditText etDimName = row.findViewById(R.id.etDimensionName);
+            TextInputEditText etDimOptions = row.findViewById(R.id.etDimensionOptions);
+            ImageButton btnRemove = row.findViewById(R.id.btnRemoveDimension);
+            tvIndex.setText("Nhóm " + (i + 1));
+            etDimName.setText(dim.getName() != null ? dim.getName() : "");
+            etDimOptions.setText(dim.getOptions() != null ? TextUtils.join(", ", dim.getOptions()) : "");
+            final int rowIndex = i;
+            btnRemove.setOnClickListener(v -> {
+                collectDimensionsFromUi();
+                if (rowIndex < dimensionDrafts.size()) {
+                    dimensionDrafts.remove(rowIndex);
+                    renderDimensionRows();
+                }
+            });
+            layoutVariantDimensions.addView(row);
         }
     }
 
@@ -189,39 +311,24 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         }
     }
 
-    private void inferOptionInputsFromVariants() {
-        List<String> flavors = new ArrayList<>();
-        List<String> sizes = new ArrayList<>();
-        for (Product.ProductVariant variant : variantRows) {
-            String name = variant.getName();
-            if (name == null || !name.contains(" · ")) continue;
-            String[] parts = name.split(" · ");
-            if (parts.length != 2) continue;
-            if (!flavors.contains(parts[0].trim())) flavors.add(parts[0].trim());
-            if (!sizes.contains(parts[1].trim())) sizes.add(parts[1].trim());
-        }
-        if (!flavors.isEmpty()) {
-            etVariantFlavors.setText(TextUtils.join(", ", flavors));
-        }
-        if (!sizes.isEmpty()) {
-            etVariantSizes.setText(TextUtils.join(", ", sizes));
-        }
-    }
-
     private void generateVariantCombos() {
-        List<String> flavors = AdminVariantComboHelper.parseOptionList(textOf(etVariantFlavors));
-        List<String> sizes = AdminVariantComboHelper.parseOptionList(textOf(etVariantSizes));
-        if (flavors.isEmpty() && sizes.isEmpty()) {
+        collectDimensionsFromUi();
+        List<Product.VariantDimension> usable = new ArrayList<>();
+        for (Product.VariantDimension dim : dimensionDrafts) {
+            if (dim.getName() == null || dim.getName().trim().isEmpty()) continue;
+            if (dim.getOptions() == null || dim.getOptions().isEmpty()) continue;
+            usable.add(dim);
+        }
+        if (usable.isEmpty()) {
             Toast.makeText(this, R.string.admin_variant_no_combos, Toast.LENGTH_SHORT).show();
             return;
         }
 
         double basePrice = parseDouble(textOf(etPrice), 0);
         double baseOriginal = parseDouble(textOf(etOriginalPrice), basePrice);
-        int baseStock = parseInt(textOf(etStock), 0);
         List<Product.ProductVariant> existing = new ArrayList<>(variantRows);
         List<Product.ProductVariant> generated = AdminVariantComboHelper.generateCombinations(
-                flavors, sizes, basePrice, baseOriginal, baseStock);
+                usable, basePrice, baseOriginal);
         variantRows.clear();
         variantRows.addAll(AdminVariantComboHelper.mergeWithExisting(generated, existing));
 
@@ -232,16 +339,29 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
                 variant.setSku(AdminVariantComboHelper.suggestSku(productName, variant.getName(), i));
             }
         }
+        Toast.makeText(this,
+                "Đã tạo " + variantRows.size() + " tổ hợp. Tắt «Đang bán» với tổ hợp không có thật.",
+                Toast.LENGTH_LONG).show();
+        renderVariantRows();
+    }
+
+    private void sortVariantRowsBySold() {
+        collectVariantsFromUi();
+        variantRows.sort((a, b) -> Integer.compare(b.getSold(), a.getSold()));
         renderVariantRows();
     }
 
     private void renderVariantRows() {
         layoutVariantRows.removeAllViews();
         LayoutInflater inflater = LayoutInflater.from(this);
+        int totalStock = 0;
+        int totalSold = 0;
         for (int i = 0; i < variantRows.size(); i++) {
             Product.ProductVariant variant = variantRows.get(i);
             View row = inflater.inflate(R.layout.item_admin_variant_row, layoutVariantRows, false);
             TextView tvName = row.findViewById(R.id.tvVariantComboName);
+            TextView tvSold = row.findViewById(R.id.tvVariantSold);
+            SwitchMaterial switchEnabled = row.findViewById(R.id.switchVariantEnabled);
             TextInputEditText etVariantPrice = row.findViewById(R.id.etVariantPrice);
             TextInputEditText etVariantStock = row.findViewById(R.id.etVariantStock);
             TextInputEditText etVariantSku = row.findViewById(R.id.etVariantSku);
@@ -252,6 +372,19 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
             ImageButton btnRemoveVariantImage = row.findViewById(R.id.btnRemoveVariantImage);
 
             tvName.setText(variant.getName());
+            if (tvSold != null) {
+                tvSold.setText(getString(R.string.admin_variant_sold_label, variant.getSold()));
+            }
+            if (switchEnabled != null) {
+                switchEnabled.setChecked(variant.isEnabled());
+                final int enabledIndex = i;
+                switchEnabled.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                    if (enabledIndex < variantRows.size()) {
+                        variantRows.get(enabledIndex).setEnabled(isChecked);
+                        updateVariantTotals();
+                    }
+                });
+            }
             etVariantPrice.setText(String.valueOf((long) variant.getPrice()));
             etVariantStock.setText(String.valueOf(variant.getStock()));
             if (!TextUtils.isEmpty(variant.getSku())) {
@@ -265,6 +398,11 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
                 btnRemoveVariantImage.setVisibility(View.GONE);
             }
 
+            if (variant.isEnabled()) {
+                totalStock += Math.max(0, variant.getStock());
+            }
+            totalSold += Math.max(0, variant.getSold());
+
             final int rowIndex = i;
             btnVariantPickImage.setOnClickListener(v -> pickVariantImage(rowIndex, etVariantImage, imgVariantPreview, btnRemoveVariantImage));
             btnRemoveVariantCombo.setOnClickListener(v -> confirmRemoveVariantCombo(rowIndex));
@@ -272,7 +410,22 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
 
             layoutVariantRows.addView(row);
         }
+        if (tvVariantTotals != null) {
+            tvVariantTotals.setText(getString(R.string.admin_variant_totals, totalStock, totalSold));
+        }
         updateVariantSectionVisibility();
+    }
+
+    private void updateVariantTotals() {
+        int totalStock = 0;
+        int totalSold = 0;
+        for (Product.ProductVariant variant : variantRows) {
+            if (variant.isEnabled()) totalStock += Math.max(0, variant.getStock());
+            totalSold += Math.max(0, variant.getSold());
+        }
+        if (tvVariantTotals != null) {
+            tvVariantTotals.setText(getString(R.string.admin_variant_totals, totalStock, totalSold));
+        }
     }
 
     private void updateVariantSectionVisibility() {
@@ -290,12 +443,14 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
             TextInputEditText etVariantPrice = row.findViewById(R.id.etVariantPrice);
             TextInputEditText etVariantStock = row.findViewById(R.id.etVariantStock);
             TextInputEditText etVariantSku = row.findViewById(R.id.etVariantSku);
-            TextInputEditText etVariantImage = row.findViewById(R.id.etVariantImage);
-            variant.setPrice(parseDouble(textOf(etVariantPrice), variant.getPrice()));
+            SwitchMaterial switchEnabled = row.findViewById(R.id.switchVariantEnabled);
+            variant.setPrice(parseDouble(textOf(etVariantPrice), 0));
             variant.setOriginalPrice(variant.getPrice());
-            variant.setStock(parseInt(textOf(etVariantStock), variant.getStock()));
+            variant.setStock(parseInt(textOf(etVariantStock), 0));
             variant.setSku(textOf(etVariantSku));
-            // Image URL is set only via picker into variantRows — do not overwrite with short label text.
+            if (switchEnabled != null) {
+                variant.setEnabled(switchEnabled.isChecked());
+            }
         }
     }
 
@@ -470,7 +625,19 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
             return;
         }
 
+        collectDimensionsFromUi();
         collectVariantsFromUi();
+
+        if (!variantRows.isEmpty()) {
+            for (Product.ProductVariant variant : variantRows) {
+                if (variant.isEnabled() && variant.getPrice() <= 0) {
+                    Toast.makeText(this,
+                            "Mỗi tổ hợp đang bán cần giá > 0: " + variant.getName(),
+                            Toast.LENGTH_LONG).show();
+                    return;
+                }
+            }
+        }
 
         Product product = new Product();
         if (isEdit) product.setId(productId);
@@ -484,20 +651,68 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         if (!variantRows.isEmpty()) {
             product.setVariants(new ArrayList<>(variantRows));
             product.setHasVariants(true);
+            product.setVariantDimensions(new ArrayList<>(dimensionDrafts));
+            // Keep product-level price aligned with card/detail display (min enabled SKU).
+            double synced = product.getDisplayPrice();
+            if (synced > 0) {
+                product.setPrice(synced);
+                double syncedOriginal = product.getDisplayOriginalPrice();
+                if (syncedOriginal > 0) {
+                    product.setOriginalPrice(syncedOriginal);
+                }
+            }
             int totalStock = 0;
+            int totalSold = 0;
             for (Product.ProductVariant variant : variantRows) {
-                totalStock += Math.max(0, variant.getStock());
+                if (variant.isEnabled()) {
+                    totalStock += Math.max(0, variant.getStock());
+                }
+                totalSold += Math.max(0, variant.getSold());
             }
             product.setStock(totalStock);
-            List<String> flavorOpts = AdminVariantComboHelper.parseOptionList(textOf(etVariantFlavors));
-            List<String> sizeOpts = AdminVariantComboHelper.parseOptionList(textOf(etVariantSizes));
-            product.setFlavors(AdminVariantComboHelper.toOptionFirestoreList(flavorOpts));
-            product.setWeights(AdminVariantComboHelper.toOptionFirestoreList(sizeOpts));
+            if (totalSold <= 0) {
+                // Seed mock so client never shows 0 sold next to reviews.
+                String seedKey = isEdit && productId != null && !productId.isEmpty()
+                        ? productId
+                        : textOf(etName);
+                int mock = Product.computeMockSold(seedKey, loadedReviewCount);
+                product.setSold(mock);
+                product.setSoldCount(mock);
+            } else {
+                product.setSold(totalSold);
+                product.setSoldCount(totalSold);
+            }
+
+            // Keep legacy fields in sync for older clients
+            List<String> legacyFlavors = new ArrayList<>();
+            List<String> legacyWeights = new ArrayList<>();
+            List<String> legacyPkg = new ArrayList<>();
+            for (Product.VariantDimension dim : dimensionDrafts) {
+                if (dim.getName() == null || dim.getOptions() == null) continue;
+                String n = dim.getName().toLowerCase();
+                if (n.contains("hương") || n.contains("flavor") || n.contains("vị")) {
+                    legacyFlavors.addAll(dim.getOptions());
+                } else if (n.contains("khối") || n.contains("weight") || n.contains("thể tích")
+                        || n.contains("size") || n.contains("dung tích")) {
+                    legacyWeights.addAll(dim.getOptions());
+                } else if (n.contains("đóng") || n.contains("pack") || n.contains("gói")) {
+                    legacyPkg.addAll(dim.getOptions());
+                } else if (legacyPkg.isEmpty()) {
+                    legacyPkg.addAll(dim.getOptions());
+                } else {
+                    legacyFlavors.addAll(dim.getOptions());
+                }
+            }
+            product.setFlavors(AdminVariantComboHelper.toOptionFirestoreList(legacyFlavors));
+            product.setWeights(AdminVariantComboHelper.toOptionFirestoreList(legacyWeights));
+            product.setPackagingTypes(AdminVariantComboHelper.toOptionFirestoreList(legacyPkg));
         } else {
             String stockText = textOf(etStock);
             product.setStock(TextUtils.isEmpty(stockText) ? 0 : Integer.parseInt(stockText));
             product.setFlavors(new ArrayList<>());
             product.setWeights(new ArrayList<>());
+            product.setPackagingTypes(new ArrayList<>());
+            product.setVariantDimensions(new ArrayList<>());
         }
 
         product.setCat((String) spinnerCategory.getSelectedItem());

@@ -4,6 +4,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.example.models.OrderItem;
+import com.example.models.Product;
 import com.google.android.gms.tasks.Task;
 import com.google.android.gms.tasks.Tasks;
 import com.google.firebase.firestore.DocumentReference;
@@ -45,9 +46,24 @@ public final class StockManager {
         if (items == null || items.isEmpty()) {
             return Tasks.forResult(null);
         }
-        return db.runTransaction(transaction -> {
-            applyStockChange(transaction, db, items, true);
+        return db.runTransaction((Transaction.Function<Void>) transaction -> {
+            applyStockChange(transaction, db, items, true, true);
             return null;
+        }).continueWithTask(task -> {
+            if (task.isSuccessful()) {
+                return Tasks.<Void>forResult(null);
+            }
+            if (!isPermissionDenied(task.getException())) {
+                return Tasks.forException(task.getException() != null
+                        ? task.getException()
+                        : new FirebaseFirestoreException("restore_stock_failed",
+                        FirebaseFirestoreException.Code.ABORTED));
+            }
+            // Older rules: retry without top-level sold.
+            return db.runTransaction((Transaction.Function<Void>) transaction -> {
+                applyStockChange(transaction, db, items, true, false);
+                return null;
+            });
         });
     }
 
@@ -82,8 +98,21 @@ public final class StockManager {
             return;
         }
 
+        // Try with top-level sold (needs rules allowing `sold`). If Console still has
+        // older isStockOnlyUpdate(['stock','stockCount','variants']), fall back to
+        // inventory-only keys so checkout still completes (variant.sold stays nested).
+        runStockTransaction(db, items, restore, /*writeProductSold*/ true, callback,
+                /*allowInventoryFallback*/ true);
+    }
+
+    private static void runStockTransaction(@NonNull FirebaseFirestore db,
+                                            @NonNull List<OrderItem> items,
+                                            boolean restore,
+                                            boolean writeProductSold,
+                                            @NonNull StockCallback callback,
+                                            boolean allowInventoryFallback) {
         db.runTransaction(transaction -> {
-            applyStockChange(transaction, db, items, restore);
+            applyStockChange(transaction, db, items, restore, writeProductSold);
             return null;
         }).addOnSuccessListener(unused -> callback.onSuccess())
                 .addOnFailureListener(e -> {
@@ -91,17 +120,46 @@ public final class StockManager {
                     if (cause instanceof InsufficientStockException) {
                         InsufficientStockException ise = (InsufficientStockException) cause;
                         callback.onInsufficientStock(ise.productName, ise.available);
-                    } else {
-                        String message = cause.getMessage() != null ? cause.getMessage() : "Lỗi cập nhật tồn kho";
-                        callback.onError(message);
+                        return;
                     }
+                    if (allowInventoryFallback && writeProductSold && isPermissionDenied(e)) {
+                        runStockTransaction(db, items, restore, false, callback, false);
+                        return;
+                    }
+                    if (isPermissionDenied(e)) {
+                        callback.onError(
+                                "PERMISSION_DENIED: thiếu quyền cập nhật tồn kho trên products. "
+                                        + "Deploy firestore.rules (isStockOnlyUpdate gồm sold).");
+                        return;
+                    }
+                    String message = cause.getMessage() != null ? cause.getMessage() : "Lỗi cập nhật tồn kho";
+                    callback.onError(message);
                 });
+    }
+
+    private static boolean isPermissionDenied(@Nullable Throwable error) {
+        Throwable cursor = error;
+        while (cursor != null) {
+            if (cursor instanceof FirebaseFirestoreException) {
+                if (((FirebaseFirestoreException) cursor).getCode()
+                        == FirebaseFirestoreException.Code.PERMISSION_DENIED) {
+                    return true;
+                }
+            }
+            String m = cursor.getMessage();
+            if (m != null && m.toLowerCase().contains("permission")) {
+                return true;
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
     }
 
     private static void applyStockChange(@NonNull Transaction transaction,
                                          @NonNull FirebaseFirestore db,
                                          @NonNull List<OrderItem> items,
-                                         boolean restore) throws FirebaseFirestoreException {
+                                         boolean restore,
+                                         boolean writeProductSold) throws FirebaseFirestoreException {
         Map<String, Map<String, Integer>> grouped = groupItems(items);
 
         Map<String, DocumentSnapshot> snapshots = new HashMap<>();
@@ -126,7 +184,7 @@ public final class StockManager {
                 int qty = variantEntry.getValue();
                 deltas.put(variantEntry.getKey(), restore ? qty : -qty);
             }
-            applyDeltas(transaction, productRef, snap, deltas);
+            applyDeltas(transaction, productRef, snap, deltas, writeProductSold);
         }
     }
 
@@ -149,7 +207,8 @@ public final class StockManager {
     private static void applyDeltas(@NonNull Transaction transaction,
                                     @NonNull DocumentReference productRef,
                                     @NonNull DocumentSnapshot snap,
-                                    @NonNull Map<String, Integer> deltas) throws FirebaseFirestoreException {
+                                    @NonNull Map<String, Integer> deltas,
+                                    boolean writeProductSold) throws FirebaseFirestoreException {
         @SuppressWarnings("unchecked")
         List<Object> variantsRaw = (List<Object>) snap.get("variants");
         boolean hasVariants = variantsRaw != null && !variantsRaw.isEmpty();
@@ -178,6 +237,26 @@ public final class StockManager {
                                 name != null ? name : "Sản phẩm", current);
                     }
                     variant.put("stock", newStock);
+                    // delta < 0 = deduct → tăng sold; delta > 0 = restore → giảm sold
+                    if (delta < 0) {
+                        int qty = -delta;
+                        int currentVariantSold = readInt(variant.get("sold"), 0);
+                        int currentTotalSold = 0;
+                        for (Map<String, Object> v : variants) {
+                            currentTotalSold += readInt(v.get("sold"), 0);
+                        }
+                        if (currentTotalSold <= 0) {
+                            // First tracked sale: continue from mock baseline (not from 0 → 1).
+                            int reviews = readInt(snap.get("reviewCount"), 0);
+                            int baseline = Product.computeMockSold(snap.getId(), reviews);
+                            variant.put("sold", baseline + qty);
+                        } else {
+                            variant.put("sold", currentVariantSold + qty);
+                        }
+                    } else if (delta > 0) {
+                        int currentSold = readInt(variant.get("sold"), 0);
+                        variant.put("sold", Math.max(0, currentSold - delta));
+                    }
                     found = true;
                     break;
                 }
@@ -187,14 +266,25 @@ public final class StockManager {
             }
 
             int totalStock = 0;
+            int totalSold = 0;
             for (Map<String, Object> variant : variants) {
-                totalStock += readInt(variant.get("stock"), 0);
+                Object enabledVal = variant.get("enabled");
+                boolean enabled = !(enabledVal instanceof Boolean) || (Boolean) enabledVal;
+                if (enabled) {
+                    totalStock += readInt(variant.get("stock"), 0);
+                }
+                totalSold += readInt(variant.get("sold"), 0);
             }
 
+            // Nested variant.sold is part of `variants` key (OK with older rules).
+            // Top-level `sold` needs isStockOnlyUpdate to allow `sold`.
             Map<String, Object> updates = new HashMap<>();
             updates.put("variants", variants);
             updates.put("stock", totalStock);
             updates.put("stockCount", totalStock);
+            if (writeProductSold) {
+                updates.put("sold", totalSold);
+            }
             transaction.update(productRef, updates);
             return;
         }
@@ -214,6 +304,20 @@ public final class StockManager {
         Map<String, Object> updates = new HashMap<>();
         updates.put("stock", newStock);
         updates.put("stockCount", newStock);
+        if (writeProductSold) {
+            if (totalDelta < 0) {
+                int qty = -totalDelta;
+                int currentSold = readInt(snap.get("sold"), readInt(snap.get("soldCount"), 0));
+                if (currentSold <= 0) {
+                    int reviews = readInt(snap.get("reviewCount"), 0);
+                    currentSold = Product.computeMockSold(snap.getId(), reviews);
+                }
+                updates.put("sold", currentSold + qty);
+            } else if (totalDelta > 0) {
+                int currentSold = readInt(snap.get("sold"), readInt(snap.get("soldCount"), 0));
+                updates.put("sold", Math.max(0, currentSold - totalDelta));
+            }
+        }
         transaction.update(productRef, updates);
     }
 

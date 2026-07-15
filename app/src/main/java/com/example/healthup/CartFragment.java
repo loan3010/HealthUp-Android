@@ -1180,7 +1180,8 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     return;
                 }
                 Bundle bundle = new Bundle();
-                bundle.putSerializable("selected_items", (Serializable) selectedItems);
+                bundle.putSerializable("selected_items",
+                        (Serializable) com.example.healthup.util.CheckoutIntentHelper.toIntentSafeItems(selectedItems));
                 bundle.putSerializable("selected_vouchers", (Serializable) selectedVouchers);
 
                 CheckoutFragment fragment = new CheckoutFragment();

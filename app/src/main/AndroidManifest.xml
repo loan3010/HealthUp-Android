@@ -89,7 +89,26 @@
         <activity
             android:name="com.example.healthup.MainActivity"
             android:windowSoftInputMode="adjustResize" />
-        <activity android:name="com.example.healthup.ProductDetailActivity" />
+        <activity android:name="com.example.healthup.ProductDetailActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="healthup-f6eff.firebaseapp.com"
+                    android:pathPrefix="/san-pham/"
+                    android:scheme="https" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data
+                    android:host="product"
+                    android:scheme="healthup" />
+            </intent-filter>
+        </activity>
         <activity android:name="com.example.healthup.OrderDetailActivity" />
         <activity
             android:name="com.example.healthup.ChatActivity"

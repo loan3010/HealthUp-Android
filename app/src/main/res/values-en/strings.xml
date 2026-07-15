@@ -325,6 +325,9 @@
     <string name="chat_suggestion_change">Change question</string>
     <string name="chat_q_order_status">Check Order Status</string>
     <string name="chat_q_cancel_order">Cancel Order</string>
+    <string name="chat_q_membership">Loyal customer</string>
+    <string name="chat_membership_cta">Loyal customer</string>
+    <string name="chat_q_product_browse">Product advice</string>
     <string name="chat_q_product_advice">Product &amp; Nutrition Advice</string>
     <string name="chat_q_faq">FAQ</string>
     <string name="chat_quick_seller">Chat with Seller</string>
@@ -413,6 +416,7 @@
     <string name="product_share_via_apps">Share via Zalo, Messenger, Facebook…</string>
     <string name="product_share_copy_link">Copy link</string>
     <string name="product_share_chooser_title">Share product</string>
+    <string name="product_share_preparing">Preparing share image…</string>
     <string name="product_share_link_copied">Product link copied</string>
     <string name="variant_prefix">Variant: %1$s</string>
     <string name="default_variant">Default</string>

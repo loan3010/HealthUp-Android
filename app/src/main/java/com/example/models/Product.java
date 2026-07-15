@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class Product implements Serializable {
@@ -48,8 +49,11 @@ public class Product implements Serializable {
     private Object sale;
     private int stock;
     private Object reviews;
-    private Timestamp createdAt;
-    private Timestamp updatedAt;
+    // Must be transient: Firebase Timestamp is not java.io.Serializable.
+    // Nesting Product inside CartItem Intent extras otherwise crashes Buy Now
+    // (BadParcelableException / NotSerializableException: Timestamp).
+    private transient Timestamp createdAt;
+    private transient Timestamp updatedAt;
 
     private String starsDisplay;
     private int sold;
@@ -66,6 +70,8 @@ public class Product implements Serializable {
 
     private boolean hasVariants;
     private List<ProductVariant> variants;
+    /** Up to 3 custom-named option groups, e.g. Khối lượng / Loại đóng gói / Thể tích. */
+    private List<VariantDimension> variantDimensions;
     private transient List<ProductVariant> resolvedVariantsCache;
 
     public Product() {
@@ -128,11 +134,46 @@ public class Product implements Serializable {
     }
     public void setReviewCount(int reviewCount) { this.reviewCount = reviewCount; }
 
-    public int getSoldCount() {
+    /**
+     * Real sold recorded in Firestore (no mock). 0 means never seeded / no purchases tracked.
+     */
+    public int getRealSoldCount() {
+        if (variants != null && !variants.isEmpty()) {
+            int sum = 0;
+            for (ProductVariant v : variants) {
+                if (v != null) sum += Math.max(0, v.getSold());
+            }
+            if (sum > 0) return sum;
+        }
         if (sold > 0) return sold;
-        return soldCount;
+        return Math.max(0, soldCount);
+    }
+
+    /**
+     * UI sold count: real data if present, otherwise a stable mock baseline
+     * (looks random per product, always ≥ reviewCount so 3 reviews + 0 sold never appears).
+     */
+    public int getSoldCount() {
+        int real = getRealSoldCount();
+        if (real > 0) return real;
+        return computeMockSold(id, getReviewCount());
     }
     public void setSoldCount(int soldCount) { this.soldCount = soldCount; }
+
+    /**
+     * Deterministic “random” baseline from product id — stable across opens, no server script.
+     * Range ~30–220, and at least reviewCount * 8 + small jitter when there are reviews.
+     */
+    public static int computeMockSold(@Nullable String productId, int reviewCount) {
+        String key = productId != null ? productId : "product";
+        int hash = Math.abs(key.hashCode());
+        int base = 30 + (hash % 191); // 30..220
+        if (reviewCount > 0) {
+            int minForReviews = reviewCount * 8 + (hash % 17); // e.g. 3 reviews → ≥24–40
+            base = Math.max(base, minForReviews);
+        }
+        return Math.max(1, base);
+    }
 
     public int getStock() { return stock > 0 ? stock : stockCount; }
     public void setStock(int stock) { this.stock = stock; }
@@ -359,14 +400,57 @@ public class Product implements Serializable {
     public boolean isHasVariants() { return hasVariants || hasResolvableVariants(); }
     public void setHasVariants(boolean hasVariants) { this.hasVariants = hasVariants; }
     public List<ProductVariant> getVariants() { return variants; }
-    public void setVariants(List<ProductVariant> variants) { this.variants = variants; }
+    public void setVariants(List<ProductVariant> variants) {
+        this.variants = variants;
+        this.resolvedVariantsCache = null;
+    }
+
+    public List<VariantDimension> getVariantDimensions() { return variantDimensions; }
+    public void setVariantDimensions(List<VariantDimension> variantDimensions) {
+        this.variantDimensions = variantDimensions;
+        this.resolvedVariantsCache = null;
+    }
+
+    /** Alias of aggregated sold (variants sum, else product-level). */
+    public int getTotalSold() {
+        return getSoldCount();
+    }
+
+    /**
+     * Sellable stock for UX / purchase checks.
+     * When SKU {@code variants} exist: sum of stocks of {@code enabled} variants only
+     * (ignores stale product-level {@code stock} and disabled combos).
+     * When no variants: product-level stock.
+     */
+    public int getTotalVariantStock() {
+        if (variants != null && !variants.isEmpty()) {
+            int sum = 0;
+            for (ProductVariant v : variants) {
+                if (v != null && v.isEnabled()) sum += Math.max(0, v.getStock());
+            }
+            return sum;
+        }
+        return Math.max(0, getStockCount());
+    }
+
+    /** Alias of {@link #getTotalVariantStock()} for card/detail stock display. */
+    public int getAvailableStock() {
+        return getTotalVariantStock();
+    }
+
+    /** True when at least one sellable unit exists (enabled in-stock SKU, or product stock). */
+    public boolean isInStock() {
+        return getAvailableStock() > 0;
+    }
 
     /** Variants for UI: prefers `variants`, merges pricing from `weights`, falls back to legacy options. */
     public List<ProductVariant> getResolvableVariants() {
         if (resolvedVariantsCache != null) return resolvedVariantsCache;
         List<ProductVariant> resolved;
         if (variants != null && !variants.isEmpty()) {
-            resolved = new ArrayList<>(variants);
+            // Copy SKUs so legacy price/stock fill-in never mutates canonical `variants`
+            // (getAvailableStock / admin stock must keep Firestore truth).
+            resolved = copyVariants(variants);
             List<ProductVariant> fromLegacy = buildVariantsFromLegacyOptions();
             if (!fromLegacy.isEmpty()) {
                 mergeVariantPricing(resolved, fromLegacy);
@@ -378,16 +462,56 @@ public class Product implements Serializable {
         return resolvedVariantsCache;
     }
 
-    /** Returns a map of category names to their respective variants (Weights, Flavors, etc.) */
+    /** Returns a map of category names to their respective option chips for the buyer picker. */
     public Map<String, List<ProductVariant>> getGroupedVariants() {
         Map<String, List<ProductVariant>> groups = new LinkedHashMap<>();
-        
+        List<VariantDimension> dims = resolveVariantDimensions();
+
+        // Prefer dimensions only when they actually cover existing SKUs.
+        // Old catalog often had dims=[Túi zip] while SKUs=[500g,1kg,Túi zip] → client looked "broken".
+        if (!dims.isEmpty() && dimensionsAlignWithVariants(dims, variants)) {
+            for (VariantDimension dim : dims) {
+                if (dim == null || dim.getName() == null) continue;
+                List<ProductVariant> options = new ArrayList<>();
+                List<String> labels = dim.getOptions() != null ? dim.getOptions() : new ArrayList<>();
+                for (int i = 0; i < labels.size(); i++) {
+                    String label = labels.get(i);
+                    if (label == null || label.trim().isEmpty()) continue;
+                    String trimmed = label.trim();
+                    ProductVariant option = new ProductVariant();
+                    option.setId((dim.getId() != null ? dim.getId() : "dim") + "_opt_" + i);
+                    option.setName(trimmed);
+                    ProductVariant sku = findSkuByNameDirect(trimmed);
+                    if (sku != null) {
+                        option.setPrice(sku.getPrice() > 0 ? sku.getPrice() : getPrice());
+                        option.setOriginalPrice(sku.getOriginalPrice() > 0
+                                ? sku.getOriginalPrice() : getOriginalPrice());
+                        option.setStock(Math.max(0, sku.getStock()));
+                        option.setEnabled(sku.isEnabled());
+                    } else {
+                        option.setPrice(getPrice());
+                        option.setOriginalPrice(getOriginalPrice());
+                        option.setStock(0);
+                        option.setEnabled(true);
+                    }
+                    options.add(option);
+                }
+                if (!options.isEmpty()) {
+                    groups.put(dim.getName(), options);
+                }
+            }
+            if (!groups.isEmpty()) {
+                return groups;
+            }
+        }
+
+        // Legacy field fallback
         List<ProductVariant> w = normalizeVariants(parseVariantsField(weights, this));
         if (!w.isEmpty()) groups.put("Khối lượng", w);
-        
+
         List<ProductVariant> f = normalizeVariants(parseVariantsField(flavors, this));
         if (!f.isEmpty()) groups.put("Hương vị", f);
-        
+
         List<ProductVariant> p = normalizeVariants(parseVariantsField(packagingTypes, this));
         if (!p.isEmpty()) groups.put("Loại đóng gói", p);
 
@@ -395,12 +519,210 @@ public class Product implements Serializable {
             inferGroupsFromComboVariants(groups);
         }
 
-        // Only add generic "Phân loại" if we don't have ANY specific groups
+        // Always expose flat SKUs as one "Phân loại" group so buyer never sees empty sheet.
         if (groups.isEmpty() && variants != null && !variants.isEmpty()) {
-            groups.put("Phân loại", normalizeVariants(variants));
+            groups.put("Phân loại", normalizeVariants(new ArrayList<>(variants)));
         }
-        
+
         return groups;
+    }
+
+    /**
+     * True when every SKU can be explained by the dimension options
+     * (exact label, or combo parts joined by " · ").
+     */
+    private static boolean dimensionsAlignWithVariants(
+            @Nullable List<VariantDimension> dims,
+            @Nullable List<ProductVariant> skus) {
+        if (dims == null || dims.isEmpty()) return false;
+        if (skus == null || skus.isEmpty()) return true;
+
+        List<String> allOptions = new ArrayList<>();
+        for (VariantDimension dim : dims) {
+            if (dim == null || dim.getOptions() == null) continue;
+            for (String opt : dim.getOptions()) {
+                if (opt != null && !opt.trim().isEmpty()) {
+                    allOptions.add(opt.trim());
+                }
+            }
+        }
+        if (allOptions.isEmpty()) return false;
+
+        for (ProductVariant sku : skus) {
+            if (sku == null || sku.getName() == null || sku.getName().trim().isEmpty()) continue;
+            String name = sku.getName().trim();
+            if (name.contains(" · ")) {
+                String[] parts = name.split(" · ");
+                if (parts.length > dims.size()) return false;
+                for (String part : parts) {
+                    if (!containsIgnoreCase(allOptions, part.trim())) {
+                        return false;
+                    }
+                }
+            } else if (!containsIgnoreCase(allOptions, name)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean containsIgnoreCase(@NonNull List<String> options, @NonNull String value) {
+        for (String opt : options) {
+            if (opt.equalsIgnoreCase(value)) return true;
+        }
+        return false;
+    }
+
+    @Nullable
+    private ProductVariant findSkuByNameDirect(@NonNull String name) {
+        if (variants == null) return null;
+        for (ProductVariant variant : variants) {
+            if (variant != null && variant.getName() != null
+                    && variant.getName().trim().equalsIgnoreCase(name)) {
+                return variant;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Preferred dimensions: explicit {@code variantDimensions}, else migrate legacy fields.
+     */
+    @NonNull
+    public List<VariantDimension> resolveVariantDimensions() {
+        if (variantDimensions != null && !variantDimensions.isEmpty()) {
+            List<VariantDimension> cleaned = new ArrayList<>();
+            for (VariantDimension dim : variantDimensions) {
+                if (dim == null || dim.getName() == null || dim.getName().trim().isEmpty()) continue;
+                if (dim.getOptions() == null || dim.getOptions().isEmpty()) continue;
+                cleaned.add(dim);
+            }
+            if (!cleaned.isEmpty()) {
+                return cleaned.size() > 3 ? cleaned.subList(0, 3) : cleaned;
+            }
+        }
+        return migrateLegacyDimensionsLocal();
+    }
+
+    @NonNull
+    private List<VariantDimension> migrateLegacyDimensionsLocal() {
+        List<VariantDimension> dims = new ArrayList<>();
+        List<ProductVariant> flavorOpts = parseVariantsField(flavors, this);
+        List<ProductVariant> weightOpts = parseVariantsField(weights, this);
+        List<ProductVariant> pkgOpts = parseVariantsField(packagingTypes, this);
+        if (!flavorOpts.isEmpty()) {
+            dims.add(dimensionFromOptions("dim_flavor", "Hương vị", flavorOpts));
+        }
+        if (!pkgOpts.isEmpty()) {
+            dims.add(dimensionFromOptions("dim_packaging", "Loại đóng gói", pkgOpts));
+        }
+        if (!weightOpts.isEmpty()) {
+            dims.add(dimensionFromOptions("dim_weight", "Khối lượng", weightOpts));
+        }
+        return dims.size() > 3 ? new ArrayList<>(dims.subList(0, 3)) : dims;
+    }
+
+    @NonNull
+    private static VariantDimension dimensionFromOptions(String id, String name,
+                                                         List<ProductVariant> options) {
+        VariantDimension dim = new VariantDimension();
+        dim.setId(id);
+        dim.setName(name);
+        List<String> labels = new ArrayList<>();
+        for (ProductVariant v : options) {
+            if (v != null && v.getName() != null && !v.getName().isEmpty()) {
+                labels.add(v.getName());
+            }
+        }
+        dim.setOptions(labels);
+        return dim;
+    }
+
+    /**
+     * Finds an enabled, in-stock SKU matching the selected options per dimension name.
+     */
+    @Nullable
+    public ProductVariant findEnabledVariant(@NonNull Map<String, String> selectionsByDimName) {
+        if (selectionsByDimName == null || selectionsByDimName.isEmpty()) {
+            return null;
+        }
+        for (ProductVariant variant : getResolvableVariants()) {
+            if (variant == null || !variant.isEnabled() || variant.getStock() <= 0) continue;
+            if (variantMatchesSelections(variant, selectionsByDimName)) {
+                return variant;
+            }
+        }
+        // Allow out-of-stock match for display (caller decides).
+        for (ProductVariant variant : getResolvableVariants()) {
+            if (variant == null || !variant.isEnabled()) continue;
+            if (variantMatchesSelections(variant, selectionsByDimName)) {
+                return variant;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * True if any enabled sellable SKU exists for the given partial selections
+     * (other dims may still be free). Used to grey-out impossible chip paths.
+     */
+    public boolean isOptionAvailable(@NonNull String dimName,
+                                     @NonNull String optionLabel,
+                                     @NonNull Map<String, String> currentSelections) {
+        Map<String, String> trial = new LinkedHashMap<>(currentSelections);
+        trial.put(dimName, optionLabel);
+        for (ProductVariant variant : getResolvableVariants()) {
+            if (variant == null || !variant.isEnabled()) continue;
+            if (variantPartialMatch(variant, trial)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+        private boolean variantMatchesSelections(@NonNull ProductVariant variant,
+                                             @NonNull Map<String, String> selections) {
+        Map<String, String> map = variant.getSelections();
+        if (map != null && !map.isEmpty()) {
+            for (Map.Entry<String, String> entry : selections.entrySet()) {
+                String got = map.get(entry.getKey());
+                if (got == null || !got.equalsIgnoreCase(entry.getValue())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        // Fallback: combo name contains every selected option label
+        String name = variant.getName();
+        if (name == null) return false;
+        for (String value : selections.values()) {
+            if (value == null || !name.toLowerCase().contains(value.toLowerCase())) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private boolean variantPartialMatch(@NonNull ProductVariant variant,
+                                        @NonNull Map<String, String> partial) {
+        Map<String, String> map = variant.getSelections();
+        if (map != null && !map.isEmpty()) {
+            for (Map.Entry<String, String> entry : partial.entrySet()) {
+                String got = map.get(entry.getKey());
+                if (got == null || !got.equalsIgnoreCase(entry.getValue())) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        String name = variant.getName();
+        if (name == null) return false;
+        for (String value : partial.values()) {
+            if (value == null || !name.toLowerCase().contains(value.toLowerCase())) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private void inferGroupsFromComboVariants(@NonNull Map<String, List<ProductVariant>> groups) {
@@ -521,41 +843,33 @@ public class Product implements Serializable {
         if (selectedByGroup == null || selectedByGroup.isEmpty()) {
             return null;
         }
+        Map<String, String> selections = new LinkedHashMap<>();
+        for (Map.Entry<String, ProductVariant> entry : selectedByGroup.entrySet()) {
+            if (entry.getValue() != null && entry.getValue().getName() != null) {
+                selections.put(entry.getKey(), entry.getValue().getName());
+            }
+        }
+        ProductVariant matched = findEnabledVariant(selections);
+        if (matched != null) {
+            return matched;
+        }
+        // Fall through to legacy name matching for older catalogs
         if (selectedByGroup.size() == 1) {
             ProductVariant only = selectedByGroup.values().iterator().next();
             if (only == null) return null;
-            ProductVariant resolved = findVariantByName(only.getName());
-            return resolved != null ? resolved : only;
+            // Only return a real SKU from variants — never the chip stub (stock always 0).
+            return findVariantByName(only.getName());
         }
 
         List<String> parts = new ArrayList<>();
-        ProductVariant flavor = selectedByGroup.get("Hương vị");
-        ProductVariant weight = selectedByGroup.get("Khối lượng");
-        ProductVariant packaging = selectedByGroup.get("Loại đóng gói");
-        if (flavor != null && flavor.getName() != null && !flavor.getName().isEmpty()) {
-            parts.add(flavor.getName().trim());
-        }
-        if (weight != null && weight.getName() != null && !weight.getName().isEmpty()) {
-            parts.add(weight.getName().trim());
-        }
-        if (packaging != null && packaging.getName() != null && !packaging.getName().isEmpty()) {
-            parts.add(packaging.getName().trim());
-        }
-        if (parts.isEmpty()) {
-            for (ProductVariant variant : selectedByGroup.values()) {
-                if (variant != null && variant.getName() != null && !variant.getName().isEmpty()) {
-                    parts.add(variant.getName().trim());
-                }
+        for (ProductVariant variant : selectedByGroup.values()) {
+            if (variant != null && variant.getName() != null && !variant.getName().isEmpty()) {
+                parts.add(variant.getName().trim());
             }
         }
         if (parts.isEmpty()) {
             return null;
         }
-        if (parts.size() == 1) {
-            ProductVariant resolved = findVariantByName(parts.get(0));
-            return resolved != null ? resolved : selectedByGroup.values().iterator().next();
-        }
-
         String combo = String.join(" · ", parts);
         ProductVariant comboVariant = findVariantByName(combo);
         if (comboVariant != null) {
@@ -597,11 +911,91 @@ public class Product implements Serializable {
         return null;
     }
 
+    /**
+     * Unit selling price for a resolved SKU.
+     * Uses the SKU's own {@code price} when &gt; 0; otherwise falls back to product base price
+     * (no variants, or SKU price unset/0).
+     */
+    public double resolveUnitPrice(@Nullable ProductVariant sku) {
+        if (sku != null && sku.getPrice() > 0) return sku.getPrice();
+        return getPrice();
+    }
+
+    /**
+     * Original/compare-at price for a resolved SKU; falls back like {@link #resolveUnitPrice}.
+     */
+    public double resolveOriginalUnitPrice(@Nullable ProductVariant sku) {
+        if (sku != null) {
+            if (sku.getOriginalPrice() > 0) return sku.getOriginalPrice();
+            if (sku.getPrice() > 0) return sku.getPrice();
+        }
+        return getOriginalPrice() > 0 ? getOriginalPrice() : getPrice();
+    }
+
+    /**
+     * True when this product has at least one enabled SKU in the canonical {@code variants} list.
+     * (Independent of stock — disabled-only catalogs fall through to product-level price.)
+     */
+    public boolean hasEnabledVariants() {
+        if (variants == null || variants.isEmpty()) return false;
+        for (ProductVariant v : variants) {
+            if (v != null && v.isEnabled()) return true;
+        }
+        return false;
+    }
+
+    /**
+     * SKU used for card / detail "outside" price before the buyer picks a variant.
+     * Prefers the cheapest enabled in-stock SKU; if all enabled are OOS, the cheapest
+     * enabled SKU (for consistent OOS display). Null when there are no enabled variants.
+     */
+    @Nullable
+    public ProductVariant getDisplayPriceVariant() {
+        if (variants == null || variants.isEmpty()) return null;
+        ProductVariant bestInStock = null;
+        double bestInStockPrice = Double.POSITIVE_INFINITY;
+        ProductVariant bestEnabled = null;
+        double bestEnabledPrice = Double.POSITIVE_INFINITY;
+        for (ProductVariant v : variants) {
+            if (v == null || !v.isEnabled()) continue;
+            double p = resolveUnitPrice(v);
+            if (p < bestEnabledPrice) {
+                bestEnabledPrice = p;
+                bestEnabled = v;
+            }
+            if (v.getStock() > 0 && p < bestInStockPrice) {
+                bestInStockPrice = p;
+                bestInStock = v;
+            }
+        }
+        return bestInStock != null ? bestInStock : bestEnabled;
+    }
+
+    /**
+     * List / detail display price (before opening the variant sheet).
+     * With enabled SKUs: min price among enabled in-stock variants; if none in stock,
+     * min among all enabled. Without variants: product-level {@link #getPrice()}.
+     * Does not replace cart pricing — carts use {@link #resolveUnitPrice} for the selected SKU.
+     */
+    public double getDisplayPrice() {
+        ProductVariant v = getDisplayPriceVariant();
+        if (v != null) return resolveUnitPrice(v);
+        return getPrice();
+    }
+
+    /**
+     * Compare-at / original price paired with {@link #getDisplayPrice()}.
+     * With enabled SKUs: original of the same SKU chosen for display; else product-level.
+     */
+    public double getDisplayOriginalPrice() {
+        ProductVariant v = getDisplayPriceVariant();
+        if (v != null) return resolveOriginalUnitPrice(v);
+        return getOriginalPrice() > 0 ? getOriginalPrice() : getPrice();
+    }
+
     /** Price for a weight/option label; falls back to base product price. */
     public double getPriceForOption(String optionLabel) {
-        ProductVariant variant = findVariantByName(optionLabel);
-        if (variant != null && variant.getPrice() > 0) return variant.getPrice();
-        return getPrice();
+        return resolveUnitPrice(findVariantByName(optionLabel));
     }
 
     public static Product fromDocument(DocumentSnapshot doc) {
@@ -612,27 +1006,46 @@ public class Product implements Serializable {
         p.resolvedVariantsCache = null;
         p.images = normalizeImageList(doc.get("images"), p.imageUrl, p.image);
 
-        // Thu thập tất cả variants từ mọi nguồn (weights, flavors, pkg, variants)
-        List<ProductVariant> allVariants = new ArrayList<>();
+        // True sellable SKUs live only in `variants`.
+        List<ProductVariant> skuVariants = parseVariantsField(doc.get("variants"), p);
+        enrichVariantsFromMaps(doc.get("variants"), skuVariants);
+        p.variants = skuVariants;
 
-        // 1. Phân loại chính (nếu có)
-        allVariants.addAll(parseVariantsField(doc.get("variants"), p));
+        p.variantDimensions = parseVariantDimensions(doc.get("variantDimensions"));
+        if (p.variantDimensions == null || p.variantDimensions.isEmpty()) {
+            p.variantDimensions = p.migrateLegacyDimensionsLocal();
+        }
+        if (p.variantDimensions != null) {
+            for (ProductVariant v : skuVariants) {
+                if (v == null) continue;
+                // inline attach (same logic as AdminVariantComboHelper)
+                if (v.getSelections() == null || v.getSelections().isEmpty()) {
+                    attachSelectionsLocal(v, p.variantDimensions);
+                }
+            }
+        }
 
-        // 2. Khối lượng (Weights)
-        List<ProductVariant> fromWeights = parseVariantsField(doc.get("weights"), p);
-        allVariants = mergeVariantLists(allVariants, fromWeights);
-        
-        // 3. Hương vị (Flavors)
-        List<ProductVariant> fromFlavors = parseVariantsField(doc.get("flavors"), p);
-        allVariants = mergeVariantLists(allVariants, fromFlavors);
-        
-        // 4. Đóng gói (PackagingTypes)
-        List<ProductVariant> fromPkg = parseVariantsField(doc.get("packagingTypes"), p);
-        allVariants = mergeVariantLists(allVariants, fromPkg);
+        p.hasVariants = !skuVariants.isEmpty() || p.hasVariants;
+        if (doc.contains("hasVariants")) {
+            Boolean hv = doc.getBoolean("hasVariants");
+            if (hv != null) {
+                p.hasVariants = hv;
+            }
+        } else {
+            p.hasVariants = !skuVariants.isEmpty()
+                    || (p.variantDimensions != null && !p.variantDimensions.isEmpty());
+        }
 
-        p.variants = allVariants;
-        if (!p.variants.isEmpty()) {
-            p.hasVariants = true;
+        // Prefer aggregated variant sold when product-level sold missing.
+        if (p.getRealSoldCount() <= 0 && !skuVariants.isEmpty()) {
+            int sumSold = 0;
+            for (ProductVariant v : skuVariants) {
+                if (v != null) sumSold += Math.max(0, v.getSold());
+            }
+            if (sumSold > 0) {
+                p.setSold(sumSold);
+                p.setSoldCount(sumSold);
+            }
         }
 
         Boolean hiddenVal = doc.getBoolean("hidden");
@@ -648,6 +1061,98 @@ public class Product implements Serializable {
             p.setCreatedAt(doc.getTimestamp("createdAt"));
         }
         return p;
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void enrichVariantsFromMaps(@Nullable Object raw,
+                                               @NonNull List<ProductVariant> variants) {
+        if (!(raw instanceof List) || variants.isEmpty()) return;
+        List<?> list = (List<?>) raw;
+        for (int i = 0; i < list.size() && i < variants.size(); i++) {
+            Object item = list.get(i);
+            if (!(item instanceof Map)) continue;
+            Map<?, ?> map = (Map<?, ?>) item;
+            ProductVariant v = variants.get(i);
+            Object soldVal = map.get("sold");
+            if (soldVal instanceof Number) {
+                v.setSold(((Number) soldVal).intValue());
+            }
+            Object enabledVal = map.get("enabled");
+            if (enabledVal instanceof Boolean) {
+                v.setEnabled((Boolean) enabledVal);
+            } else {
+                v.setEnabled(true);
+            }
+            Object selections = map.get("selections");
+            if (selections instanceof Map) {
+                Map<String, String> sel = new LinkedHashMap<>();
+                for (Map.Entry<?, ?> e : ((Map<?, ?>) selections).entrySet()) {
+                    if (e.getKey() != null && e.getValue() != null) {
+                        sel.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+                    }
+                }
+                if (!sel.isEmpty()) {
+                    v.setSelections(sel);
+                }
+            }
+        }
+    }
+
+    @Nullable
+    private static List<VariantDimension> parseVariantDimensions(@Nullable Object raw) {
+        if (!(raw instanceof List)) return null;
+        List<VariantDimension> result = new ArrayList<>();
+        int i = 0;
+        for (Object item : (List<?>) raw) {
+            if (!(item instanceof Map)) continue;
+            Map<?, ?> map = (Map<?, ?>) item;
+            String name = map.get("name") != null ? String.valueOf(map.get("name")).trim() : "";
+            if (name.isEmpty()) continue;
+            List<String> options = new ArrayList<>();
+            Object optsRaw = map.get("options");
+            if (optsRaw instanceof List) {
+                for (Object o : (List<?>) optsRaw) {
+                    if (o == null) continue;
+                    String label = String.valueOf(o).trim();
+                    if (!label.isEmpty() && !options.contains(label)) options.add(label);
+                }
+            }
+            if (options.isEmpty()) continue;
+            VariantDimension dim = new VariantDimension();
+            dim.setId(map.get("id") != null ? String.valueOf(map.get("id")) : ("dim_" + i));
+            dim.setName(name);
+            dim.setOptions(options);
+            result.add(dim);
+            i++;
+            if (result.size() >= 3) break;
+        }
+        return result.isEmpty() ? null : result;
+    }
+
+    private static void attachSelectionsLocal(@NonNull ProductVariant variant,
+                                              @NonNull List<VariantDimension> dimensions) {
+        String name = variant.getName();
+        if (name == null || name.isEmpty()) return;
+        Map<String, String> selections = new LinkedHashMap<>();
+        if (name.contains(" · ")) {
+            String[] parts = name.split(" · ");
+            for (int i = 0; i < parts.length && i < dimensions.size(); i++) {
+                selections.put(dimensions.get(i).getName(), parts[i].trim());
+            }
+        } else {
+            for (VariantDimension dim : dimensions) {
+                if (dim.getOptions() == null) continue;
+                for (String opt : dim.getOptions()) {
+                    if (name.equalsIgnoreCase(opt)) {
+                        selections.put(dim.getName(), opt);
+                        break;
+                    }
+                }
+            }
+        }
+        if (!selections.isEmpty()) {
+            variant.setSelections(selections);
+        }
     }
 
     /** Normalizes Firestore image fields (list, single string, or legacy image/imageUrl). */
@@ -685,9 +1190,12 @@ public class Product implements Serializable {
             boolean found = false;
             for (ProductVariant t : target) {
                 if (s.getName().equalsIgnoreCase(t.getName().trim())) {
-                    // Cập nhật giá và kho nếu nguồn mới có giá trị tốt hơn
-                    if (s.getPrice() > 0) t.setPrice(s.getPrice());
-                    if (s.getOriginalPrice() > 0) t.setOriginalPrice(s.getOriginalPrice());
+                    // Only fill missing fields — never overwrite a real SKU price with
+                    // legacy chip defaults (legacy strings often inherit product base price).
+                    if (t.getPrice() <= 0 && s.getPrice() > 0) t.setPrice(s.getPrice());
+                    if (t.getOriginalPrice() <= 0 && s.getOriginalPrice() > 0) {
+                        t.setOriginalPrice(s.getOriginalPrice());
+                    }
                     if (s.getStock() > 0) t.setStock(s.getStock());
                     found = true;
                     break;
@@ -700,17 +1208,30 @@ public class Product implements Serializable {
         return target;
     }
 
-    /** Applies per-variant price/stock from weights when the variants list only has labels. */
+    /**
+     * Fills missing per-variant price/stock from legacy weights/flavors/packaging.
+     * Never overwrite an existing SKU price/stock: legacy option maps often store
+     * label-only strings that inherit product.price, which would wipe real SKU prices.
+     */
     private static void mergeVariantPricing(List<ProductVariant> target, List<ProductVariant> pricingSource) {
         Map<String, ProductVariant> byName = new HashMap<>();
         for (ProductVariant source : pricingSource) {
-            if (source.getName() != null) byName.put(source.getName(), source);
+            if (source.getName() != null) {
+                byName.put(source.getName().trim().toLowerCase(Locale.ROOT), source);
+            }
         }
         for (ProductVariant variant : target) {
-            ProductVariant priced = byName.get(variant.getName());
+            if (variant.getName() == null) continue;
+            ProductVariant priced = byName.get(variant.getName().trim().toLowerCase(Locale.ROOT));
             if (priced == null) continue;
-            if (priced.getPrice() > 0) variant.setPrice(priced.getPrice());
-            variant.setStock(priced.getStock());
+            if (variant.getPrice() <= 0 && priced.getPrice() > 0) {
+                variant.setPrice(priced.getPrice());
+            }
+            if (variant.getOriginalPrice() <= 0 && priced.getOriginalPrice() > 0) {
+                variant.setOriginalPrice(priced.getOriginalPrice());
+            }
+            // Same rule as mergeVariantLists: only adopt positive stock from legacy.
+            if (priced.getStock() > 0) variant.setStock(priced.getStock());
         }
     }
 
@@ -762,7 +1283,8 @@ public class Product implements Serializable {
                     if (p > 0) {
                         keyed.setPrice(p);
                         keyed.setOriginalPrice(p);
-                        keyed.setStock(parent.getStockCount());
+                        // Do not inherit product total stock onto a variant option.
+                        keyed.setStock(0);
                         return keyed;
                     }
                 } catch (Exception ignored) {}
@@ -773,19 +1295,19 @@ public class Product implements Serializable {
         if (value instanceof Number) {
             keyed.setPrice(((Number) value).doubleValue());
             keyed.setOriginalPrice(keyed.getPrice());
-            keyed.setStock(parent.getStockCount());
+            keyed.setStock(0);
             return keyed;
         }
         if (value instanceof String) {
             try {
                 keyed.setPrice(Double.parseDouble(((String) value).trim()));
                 keyed.setOriginalPrice(keyed.getPrice());
-                keyed.setStock(parent.getStockCount());
+                keyed.setStock(0);
                 return keyed;
             } catch (NumberFormatException ignored) {
                 keyed.setPrice(parent.getPrice());
                 keyed.setOriginalPrice(parent.getOriginalPrice());
-                keyed.setStock(parent.getStockCount());
+                keyed.setStock(0);
                 return keyed;
             }
         }
@@ -838,7 +1360,8 @@ public class Product implements Serializable {
             v.setName(name);
             v.setPrice(firstDouble(map, parent.getPrice(), "price", "salePrice", "variantPrice", "amount"));
             v.setOriginalPrice(firstDouble(map, v.getPrice(), "originalPrice", "oldPrice", "marketPrice"));
-            v.setStock(firstInt(map, "stock", "stockCount", parent.getStockCount()));
+            // Missing stock on a variant = 0, never product total stock.
+            v.setStock(firstInt(map, "stock", "stockCount", 0));
             v.setSku(firstString(map, "sku", "SKU"));
             v.setImageUrl(firstString(map, "image", "imageUrl"));
             Object outOfStock = map.get("outOfStock");
@@ -867,17 +1390,22 @@ public class Product implements Serializable {
                     } catch (Exception e) {
                         v.setPrice(parent.getPrice());
                     }
-                    v.setStock(parent.getStockCount());
+                    String stockStr = extractVal(raw, "stock");
+                    try {
+                        v.setStock(stockStr != null ? Integer.parseInt(stockStr) : 0);
+                    } catch (Exception e) {
+                        v.setStock(0);
+                    }
                     return v;
                 }
             }
 
-            // Trường hợp chuỗi văn bản bình thường
+            // Label-only option (e.g. weight/flavor chip) — no own stock.
             ProductVariant v = new ProductVariant();
             v.setId("variant_" + index);
             v.setName(raw);
             v.setPrice(parent.getPrice());
-            v.setStock(parent.getStockCount());
+            v.setStock(0);
             return v;
         }
         return null;
@@ -905,11 +1433,34 @@ public class Product implements Serializable {
                 if (v.getId() == null || v.getId().isEmpty()) v.setId("variant_" + i);
                 if (v.getPrice() <= 0) v.setPrice(getPrice());
                 if (v.getOriginalPrice() <= 0) v.setOriginalPrice(getOriginalPrice());
-                if (v.getStock() <= 0) v.setStock(getStockCount());
+                // Keep stock as-is (including 0). Never copy product total onto a SKU.
                 result.add(v);
             }
         }
         return result;
+    }
+
+    @NonNull
+    private static List<ProductVariant> copyVariants(@NonNull List<ProductVariant> source) {
+        List<ProductVariant> copies = new ArrayList<>(source.size());
+        for (ProductVariant v : source) {
+            if (v == null) continue;
+            ProductVariant c = new ProductVariant();
+            c.setId(v.getId());
+            c.setName(v.getName());
+            c.setPrice(v.getPrice());
+            c.setOriginalPrice(v.getOriginalPrice());
+            c.setStock(v.getStock());
+            c.setSold(v.getSold());
+            c.setEnabled(v.isEnabled());
+            c.setSku(v.getSku());
+            c.setImageUrl(v.getImageUrl());
+            if (v.getSelections() != null && !v.getSelections().isEmpty()) {
+                c.setSelections(new LinkedHashMap<>(v.getSelections()));
+            }
+            copies.add(c);
+        }
+        return copies;
     }
 
     private List<ProductVariant> buildVariantsFromLegacyOptions() {
@@ -1006,6 +1557,10 @@ public class Product implements Serializable {
         private double price;
         private double originalPrice;
         private int stock;
+        private int sold;
+        private boolean enabled = true;
+        /** Dimension name → option label, e.g. {"Khối lượng":"2kg","Loại đóng gói":"Zip"}. */
+        private Map<String, String> selections;
         private String sku;
         private String imageUrl;
         public ProductVariant() {}
@@ -1019,10 +1574,30 @@ public class Product implements Serializable {
         public void setOriginalPrice(double originalPrice) { this.originalPrice = originalPrice; }
         public int getStock() { return stock; }
         public void setStock(int stock) { this.stock = stock; }
+        public int getSold() { return sold; }
+        public void setSold(int sold) { this.sold = sold; }
+        public boolean isEnabled() { return enabled; }
+        public void setEnabled(boolean enabled) { this.enabled = enabled; }
+        public Map<String, String> getSelections() { return selections; }
+        public void setSelections(Map<String, String> selections) { this.selections = selections; }
         public String getSku() { return sku; }
         public void setSku(String sku) { this.sku = sku; }
         public String getImageUrl() { return imageUrl; }
         public void setImageUrl(String imageUrl) { this.imageUrl = imageUrl; }
+    }
+
+    /** One buyer-facing option group (admin-named), max 3 per product. */
+    public static class VariantDimension implements Serializable {
+        private String id;
+        private String name;
+        private List<String> options;
+        public VariantDimension() {}
+        public String getId() { return id; }
+        public void setId(String id) { this.id = id; }
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        public List<String> getOptions() { return options; }
+        public void setOptions(List<String> options) { this.options = options; }
     }
 
     public static class NutritionItem implements Serializable {

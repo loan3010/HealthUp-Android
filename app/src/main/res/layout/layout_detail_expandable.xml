@@ -24,13 +24,13 @@
 
         <ImageView
             android:id="@+id/iv_expand_arrow"
-            android:layout_width="24dp"
-            android:layout_height="24dp"
+            android:layout_width="18dp"
+            android:layout_height="18dp"
             android:layout_alignParentEnd="true"
             android:layout_centerVertical="true"
-            android:src="@drawable/ic_back"
-            android:rotation="-90"
-            app:tint="@color/text_dark" />
+            android:contentDescription="@null"
+            android:src="@drawable/ic_arrow_down"
+            app:tint="@color/text_gray_muted" />
     </RelativeLayout>
 
     <TextView

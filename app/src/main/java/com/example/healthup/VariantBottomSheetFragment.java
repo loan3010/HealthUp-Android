@@ -21,6 +21,8 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import java.text.NumberFormat;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -34,7 +36,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
     private Product product;
     private OnVariantSelectedListener listener;
     private ProductVariant selectedVariant;
-    private Map<String, ProductVariant> selectedVariantsMap = new java.util.LinkedHashMap<>();
+    private final Map<String, ProductVariant> selectedVariantsMap = new LinkedHashMap<>();
     private int quantity = 1;
     private boolean isBuyNow = false;
 
@@ -48,7 +50,8 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         return newInstance(product, false, listener);
     }
 
-    public static VariantBottomSheetFragment newInstance(Product product, boolean isBuyNow, OnVariantSelectedListener listener) {
+    public static VariantBottomSheetFragment newInstance(Product product, boolean isBuyNow,
+                                                         OnVariantSelectedListener listener) {
         VariantBottomSheetFragment fragment = new VariantBottomSheetFragment();
         fragment.product = product;
         fragment.isBuyNow = isBuyNow;
@@ -58,7 +61,8 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
         return inflater.inflate(R.layout.bottom_sheet_variant_selection, container, false);
     }
 
@@ -88,6 +92,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
         Map<String, List<ProductVariant>> grouped = product.getGroupedVariants();
         layoutGroups.removeAllViews();
+        selectedVariantsMap.clear();
 
         if (!grouped.isEmpty()) {
             for (Map.Entry<String, List<ProductVariant>> entry : grouped.entrySet()) {
@@ -97,17 +102,31 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
                 tvLabel.setText(entry.getKey());
                 cg.removeAllViews();
+                cg.setTag(entry.getKey());
 
-                List<ProductVariant> variants = entry.getValue();
-                for (ProductVariant v : variants) {
+                List<ProductVariant> options = entry.getValue();
+                for (ProductVariant v : options) {
                     Chip chip = (Chip) getLayoutInflater().inflate(R.layout.item_variant_chip, cg, false);
                     chip.setText(v.getName());
-                    chip.setOnClickListener(view -> selectVariantInGroup(entry.getKey(), cg, v));
+                    chip.setTag(v);
+                    chip.setOnClickListener(view -> {
+                        if (!chip.isEnabled()) {
+                            Toast.makeText(getContext(),
+                                    "Tổ hợp này không có hoặc hết hàng", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                        selectVariantInGroup(entry.getKey(), cg, v);
+                    });
                     cg.addView(chip);
                 }
                 layoutGroups.addView(groupView);
-                if (!variants.isEmpty()) selectVariantInGroup(entry.getKey(), cg, variants.get(0));
             }
+            // Auto-pick first available path across dimensions
+            autoSelectFirstAvailable(grouped);
+            refreshChipAvailability();
+        } else {
+            selectedVariant = null;
+            updateDisplay();
         }
 
         btnMinus.setOnClickListener(v -> {
@@ -118,7 +137,7 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         });
 
         btnPlus.setOnClickListener(v -> {
-            int maxStock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
+            int maxStock = resolveDisplayStock();
             if (quantity < maxStock) {
                 quantity++;
                 tvQuantity.setText(String.valueOf(quantity));
@@ -134,12 +153,18 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
             if (toConfirm == null) {
                 toConfirm = selectedVariant;
             }
-            if (product.hasResolvableVariants() && toConfirm == null) {
-                Toast.makeText(getContext(), "Vui lòng chọn phân loại", Toast.LENGTH_SHORT).show();
-                return;
+            if (!product.getGroupedVariants().isEmpty()) {
+                if (toConfirm == null || !toConfirm.isEnabled()) {
+                    Toast.makeText(getContext(), "Vui lòng chọn phân loại còn bán", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (toConfirm.getStock() <= 0) {
+                    Toast.makeText(getContext(), "Phân loại này đã hết hàng", Toast.LENGTH_SHORT).show();
+                    return;
+                }
             }
             if (listener != null) {
-                Map<String, String> selections = new java.util.HashMap<>();
+                Map<String, String> selections = new HashMap<>();
                 for (Map.Entry<String, ProductVariant> entry : selectedVariantsMap.entrySet()) {
                     selections.put(entry.getKey(), entry.getValue().getName());
                 }
@@ -149,55 +174,135 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         });
     }
 
-    private void selectVariantInGroup(String groupName, ChipGroup group, ProductVariant variant) {
-        String targetName = variant.getName();
-        
-        for (int i = 0; i < group.getChildCount(); i++) {
-            Chip chip = (Chip) group.getChildAt(i);
-            boolean isThis = chip.getText().toString().equals(targetName);
-            updateVariantChipStyle(chip, isThis);
-            if (isThis) {
-                chip.setChecked(true);
-            }
-        }
-
-        selectedVariantsMap.put(groupName, variant);
-
-        ProductVariant resolved = product.resolveComboVariant(selectedVariantsMap);
-        if (resolved != null) {
-            selectedVariant = resolved;
-        } else {
-            // Cập nhật selectedVariant để hiển thị giá/kho chính xác
-            // Ưu tiên variant có giá khác biệt (thường là khối lượng)
-            ProductVariant bestVariant = null;
-
-            if (selectedVariantsMap.containsKey("Khối lượng")) {
-                ProductVariant v = selectedVariantsMap.get("Khối lượng");
-                if (v != null && v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
-                    bestVariant = v;
+    private void autoSelectFirstAvailable(@NonNull Map<String, List<ProductVariant>> grouped) {
+        Map<String, String> trial = new LinkedHashMap<>();
+        for (Map.Entry<String, List<ProductVariant>> entry : grouped.entrySet()) {
+            String dimName = entry.getKey();
+            ProductVariant picked = null;
+            for (ProductVariant option : entry.getValue()) {
+                if (product.isOptionAvailable(dimName, option.getName(), trial)) {
+                    picked = option;
+                    break;
                 }
             }
-
-            if (bestVariant == null) {
-                for (ProductVariant v : selectedVariantsMap.values()) {
-                    if (v.getPrice() > 0 && v.getPrice() != product.getPrice()) {
-                        bestVariant = v;
-                        break;
-                    }
-                }
+            if (picked == null && !entry.getValue().isEmpty()) {
+                picked = entry.getValue().get(0);
             }
-
-            if (bestVariant == null && !selectedVariantsMap.isEmpty()) {
-                bestVariant = selectedVariantsMap.values().iterator().next();
+            if (picked != null) {
+                trial.put(dimName, picked.getName());
+                selectedVariantsMap.put(dimName, picked);
             }
-            selectedVariant = bestVariant;
         }
-
+        applySelectionStyles();
+        selectedVariant = product.resolveComboVariant(selectedVariantsMap);
         refreshPreviewImage();
         updateDisplay();
     }
 
+    private void selectVariantInGroup(String groupName, ChipGroup group, ProductVariant variant) {
+        selectedVariantsMap.put(groupName, variant);
+        applySelectionStyles();
+        refreshChipAvailability();
+
+        // If current path became invalid for another dim, clear/re-pick that dim.
+        Map<String, String> current = currentSelectionLabels();
+        for (Map.Entry<String, ProductVariant> entry : new LinkedHashMap<>(selectedVariantsMap).entrySet()) {
+            if (entry.getKey().equals(groupName)) continue;
+            if (!product.isOptionAvailable(entry.getKey(), entry.getValue().getName(),
+                    withoutKey(current, entry.getKey()))) {
+                // Drop invalid sibling and pick first available
+                List<ProductVariant> options = product.getGroupedVariants().get(entry.getKey());
+                ProductVariant replacement = null;
+                if (options != null) {
+                    Map<String, String> base = withoutKey(current, entry.getKey());
+                    base.put(groupName, variant.getName());
+                    for (ProductVariant opt : options) {
+                        if (product.isOptionAvailable(entry.getKey(), opt.getName(), base)) {
+                            replacement = opt;
+                            break;
+                        }
+                    }
+                }
+                if (replacement != null) {
+                    selectedVariantsMap.put(entry.getKey(), replacement);
+                } else {
+                    selectedVariantsMap.remove(entry.getKey());
+                }
+            }
+        }
+
+        applySelectionStyles();
+        refreshChipAvailability();
+        selectedVariant = product.resolveComboVariant(selectedVariantsMap);
+        refreshPreviewImage();
+        updateDisplay();
+    }
+
+    @NonNull
+    private Map<String, String> currentSelectionLabels() {
+        Map<String, String> map = new LinkedHashMap<>();
+        for (Map.Entry<String, ProductVariant> e : selectedVariantsMap.entrySet()) {
+            if (e.getValue() != null && e.getValue().getName() != null) {
+                map.put(e.getKey(), e.getValue().getName());
+            }
+        }
+        return map;
+    }
+
+    @NonNull
+    private Map<String, String> withoutKey(@NonNull Map<String, String> source, @NonNull String key) {
+        Map<String, String> copy = new LinkedHashMap<>(source);
+        copy.remove(key);
+        return copy;
+    }
+
+    private void applySelectionStyles() {
+        for (int g = 0; g < layoutGroups.getChildCount(); g++) {
+            View groupView = layoutGroups.getChildAt(g);
+            ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
+            if (cg == null) continue;
+            String dimName = cg.getTag() instanceof String ? (String) cg.getTag() : null;
+            ProductVariant selected = dimName != null ? selectedVariantsMap.get(dimName) : null;
+            String selectedName = selected != null ? selected.getName() : null;
+            for (int i = 0; i < cg.getChildCount(); i++) {
+                Chip chip = (Chip) cg.getChildAt(i);
+                boolean isThis = selectedName != null
+                        && selectedName.equals(chip.getText().toString());
+                if (chip.isEnabled()) {
+                    updateVariantChipStyle(chip, isThis);
+                }
+                chip.setChecked(isThis);
+            }
+        }
+    }
+
+    /** Grey out options that have no enabled SKU under current other selections (Shopee-style). */
+    private void refreshChipAvailability() {
+        Map<String, String> current = currentSelectionLabels();
+        for (int g = 0; g < layoutGroups.getChildCount(); g++) {
+            View groupView = layoutGroups.getChildAt(g);
+            ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
+            if (cg == null) continue;
+            String dimName = cg.getTag() instanceof String ? (String) cg.getTag() : null;
+            if (dimName == null) continue;
+            Map<String, String> others = withoutKey(current, dimName);
+            for (int i = 0; i < cg.getChildCount(); i++) {
+                Chip chip = (Chip) cg.getChildAt(i);
+                String label = chip.getText().toString();
+                boolean available = product.isOptionAvailable(dimName, label, others);
+                chip.setEnabled(available);
+                chip.setAlpha(available ? 1f : 0.35f);
+                if (!available) {
+                    chip.setChecked(false);
+                    chip.setChipBackgroundColorResource(R.color.bg_chip_filter);
+                    chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.text_secondary));
+                }
+            }
+        }
+    }
+
     private void updateVariantChipStyle(Chip chip, boolean isSelected) {
+        if (!chip.isEnabled()) return;
         if (isSelected) {
             chip.setChipBackgroundColorResource(R.color.primary_default);
             chip.setTextColor(ContextCompat.getColor(requireContext(), R.color.white));
@@ -212,19 +317,13 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
 
     private void refreshPreviewImage() {
         if (ivImage == null || product == null) return;
-        String imageUrl = resolvePreviewImageUrl();
-        ImageLoadHelper.loadInto(ivImage, imageUrl);
+        ImageLoadHelper.loadInto(ivImage, resolvePreviewImageUrl());
     }
 
     @Nullable
     private String resolvePreviewImageUrl() {
         if (selectedVariant != null && !TextUtils.isEmpty(selectedVariant.getImageUrl())) {
             return selectedVariant.getImageUrl();
-        }
-        for (ProductVariant v : selectedVariantsMap.values()) {
-            if (v != null && !TextUtils.isEmpty(v.getImageUrl())) {
-                return v.getImageUrl();
-            }
         }
         List<String> productImages = product.getImages();
         if (productImages != null) {
@@ -235,18 +334,35 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
         return product.getImageUrl();
     }
 
+    private int resolveDisplayStock() {
+        if (selectedVariant != null) {
+            return Math.max(0, selectedVariant.getStock());
+        }
+        if (!product.getGroupedVariants().isEmpty()) {
+            return 0; // chưa resolve SKU — không hiện tồn tổng gây hiểu nhầm
+        }
+        return product.getAvailableStock();
+    }
+
     private void updateDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
-        double price = (selectedVariant != null) ? selectedVariant.getPrice() : product.getPrice();
-        int stock = (selectedVariant != null) ? selectedVariant.getStock() : product.getStockCount();
+        boolean hasGroups = !product.getGroupedVariants().isEmpty();
+        double price = product.resolveUnitPrice(selectedVariant);
+        int stock = resolveDisplayStock();
 
         tvPrice.setText(formatter.format(price) + "đ");
-        tvStock.setText("Kho: " + (stock > 0 ? stock : "Hết hàng"));
-        
-        StringBuilder label = new StringBuilder("Phân loại: ");
-        if (selectedVariantsMap.isEmpty()) {
-            label.append("Chưa chọn");
+        if (hasGroups && selectedVariant == null) {
+            tvStock.setText("Kho: —");
         } else {
+            tvStock.setText("Kho: " + (stock > 0 ? stock : getString(R.string.out_of_stock)));
+        }
+
+        if (!hasGroups) {
+            tvSelectedName.setText("Không có phân loại");
+        } else if (selectedVariantsMap.isEmpty()) {
+            tvSelectedName.setText("Phân loại: Chưa chọn");
+        } else {
+            StringBuilder label = new StringBuilder("Phân loại: ");
             boolean first = true;
             for (ProductVariant v : selectedVariantsMap.values()) {
                 String name = v.getName();
@@ -256,20 +372,35 @@ public class VariantBottomSheetFragment extends BottomSheetDialogFragment {
                     first = false;
                 }
             }
+            tvSelectedName.setText(label.toString());
         }
-        tvSelectedName.setText(label.toString());
 
-        if (quantity > stock && stock > 0) {
-            quantity = stock;
+        boolean productSellable = product.isInStock();
+        boolean canBuy = !hasGroups
+                ? productSellable && stock > 0
+                : selectedVariant != null && selectedVariant.isEnabled() && selectedVariant.getStock() > 0;
+
+        if (canBuy) {
+            if (quantity > stock) {
+                quantity = Math.max(1, stock);
+            }
+            if (quantity < 1) quantity = 1;
             tvQuantity.setText(String.valueOf(quantity));
-        } else if (stock == 0) {
-            quantity = 0;
-            tvQuantity.setText("0");
-            btnConfirm.setEnabled(false);
-            btnConfirm.setText("Hết hàng");
-        } else {
             btnConfirm.setEnabled(true);
-            btnConfirm.setText(isBuyNow ? "Mua ngay" : "Thêm vào giỏ hàng");
+            btnConfirm.setAlpha(1f);
+            btnConfirm.setText(isBuyNow ? getString(R.string.buy_now) : "Thêm vào giỏ hàng");
+        } else {
+            quantity = hasGroups ? 1 : 0;
+            tvQuantity.setText(String.valueOf(Math.max(quantity, 0)));
+            btnConfirm.setEnabled(false);
+            btnConfirm.setAlpha(0.45f);
+            if (!productSellable) {
+                btnConfirm.setText(R.string.out_of_stock);
+            } else {
+                btnConfirm.setText(hasGroups && selectedVariant == null
+                        ? "Chọn phân loại"
+                        : getString(R.string.out_of_stock));
+            }
         }
     }
 }

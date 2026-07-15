@@ -21,7 +21,6 @@ import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -43,8 +42,9 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
     private FirebaseFirestore db;
     private View rootView;
     private LinearLayout layoutGroups;
-    private TextView tvPrice, tvSelectedOptions;
+    private TextView tvPrice, tvSelectedOptions, tvStockWarning;
     private Product loadedProduct;
+    private boolean hasVariantGroups;
 
     private final DecimalFormat currencyFormat = new DecimalFormat("#,###đ");
 
@@ -68,6 +68,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
         tvPrice = rootView.findViewById(R.id.tvPrice);
         tvSelectedOptions = rootView.findViewById(R.id.tvSelectedOptions);
+        tvStockWarning = rootView.findViewById(R.id.tvStockWarning);
         TextView tvQuantity = rootView.findViewById(R.id.tvQuantity);
         View btnDecrease = rootView.findViewById(R.id.btnDecrease);
         View btnIncrease = rootView.findViewById(R.id.btnIncrease);
@@ -113,7 +114,7 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     private void loadProductOptions() {
         if (item.getProductId() == null) {
-            showFallbackOptions();
+            showNoVariantOptions();
             return;
         }
 
@@ -124,35 +125,24 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
                         Product p = Product.fromDocument(doc);
                         if (p != null) {
                             updateOptionsUI(p);
+                            return;
                         }
-                    } else {
-                        showFallbackOptions();
                     }
+                    showNoVariantOptions();
                 })
-                .addOnFailureListener(e -> showFallbackOptions());
+                .addOnFailureListener(e -> showNoVariantOptions());
     }
 
-    private void showFallbackOptions() {
-        layoutGroups.removeAllViews();
-        addFallbackGroup("Khối lượng", Arrays.asList("250g", "500g", "1kg"), selectedWeight, v -> {
-            selectedWeight = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-        });
-        addFallbackGroup("Loại đóng gói", Arrays.asList("Túi zip", "Hũ thủy tinh"), selectedPackage, v -> {
-            selectedPackage = v;
-            updatePriceDisplay();
-            updateSelectedSummary();
-        });
-    }
-
-    private void addFallbackGroup(String label, List<String> options, String currentValue, OnOptionSelected callback) {
-        View groupView = getLayoutInflater().inflate(R.layout.layout_variant_group, layoutGroups, false);
-        TextView tvLabel = groupView.findViewById(R.id.tv_group_label);
-        ChipGroup cg = groupView.findViewById(R.id.chip_group_variants);
-        tvLabel.setText(label);
-        buildOptionGroup(cg, options, currentValue, callback);
-        layoutGroups.addView(groupView);
+    /** No hard-coded fake chips — match product-detail sheet when Firestore has no variants. */
+    private void showNoVariantOptions() {
+        hasVariantGroups = false;
+        if (layoutGroups != null) {
+            layoutGroups.removeAllViews();
+        }
+        int stock = loadedProduct != null ? loadedProduct.getAvailableStock() : item.getStock();
+        updateStockDisplay(Math.max(0, stock));
+        updatePriceDisplay();
+        updateSelectedSummary();
     }
 
     private void updateOptionsUI(Product product) {
@@ -185,10 +175,11 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
         Map<String, List<Product.ProductVariant>> grouped = product.getGroupedVariants();
         if (grouped.isEmpty()) {
-            showFallbackOptions();
+            showNoVariantOptions();
             return;
         }
 
+        hasVariantGroups = true;
         for (Map.Entry<String, List<Product.ProductVariant>> entry : grouped.entrySet()) {
             View groupView = getLayoutInflater().inflate(R.layout.layout_variant_group, layoutGroups, false);
             TextView tvLabel = groupView.findViewById(R.id.tv_group_label);
@@ -212,10 +203,25 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
             }
 
             buildOptionGroup(cg, options, currentValue, v -> {
-                if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")) selectedWeight = v;
-                else if (normalizedName.contains("hương vị") || normalizedName.contains("flavor")) selectedFlavor = v;
-                else if (normalizedName.contains("đóng gói") || normalizedName.contains("package") || normalizedName.contains("quy cách")) selectedPackage = v;
+                if (normalizedName.contains("khối lượng") || normalizedName.contains("weight")
+                        || normalizedName.contains("phân loại")) {
+                    selectedWeight = v;
+                    // Flat "Phân loại" group — clear other dims so combo resolve stays single-SKU.
+                    if (normalizedName.contains("phân loại")) {
+                        selectedFlavor = null;
+                        selectedPackage = null;
+                    }
+                } else if (normalizedName.contains("hương vị") || normalizedName.contains("flavor")) {
+                    selectedFlavor = v;
+                } else if (normalizedName.contains("đóng gói") || normalizedName.contains("package")
+                        || normalizedName.contains("quy cách")) {
+                    selectedPackage = v;
+                } else {
+                    // Unknown dimension label: still track as primary selection for price lookup.
+                    selectedWeight = v;
+                }
 
+                updateStockDisplay(resolveSelectedStock());
                 updatePriceDisplay();
                 updateSelectedSummary();
                 updateVariantImagePreview();
@@ -223,32 +229,43 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
             layoutGroups.addView(groupView);
         }
+        updateStockDisplay(resolveSelectedStock());
         updatePriceDisplay();
         updateSelectedSummary();
         updateVariantImagePreview();
+    }
+
+    private void updateStockDisplay(int stock) {
+        if (tvStockWarning == null) return;
+        if (stock > 0) {
+            tvStockWarning.setText("Kho: " + stock);
+        } else {
+            tvStockWarning.setText("Kho: Hết hàng");
+        }
+    }
+
+    private int resolveSelectedStock() {
+        Product.ProductVariant resolved = resolveSelectedVariant();
+        if (resolved != null) {
+            return Math.max(0, resolved.getStock());
+        }
+        if (loadedProduct == null) {
+            return Math.max(0, item.getStock());
+        }
+        if (!hasVariantGroups) {
+            return Math.max(0, loadedProduct.getAvailableStock());
+        }
+        // Variants exist but none selected yet — do not show product total as "selected" stock.
+        return 0;
     }
 
     private void updateVariantImagePreview() {
         if (rootView == null || loadedProduct == null) return;
         ImageView imgProduct = rootView.findViewById(R.id.imgProduct);
         String imageUrl = null;
-        if (selectedWeight != null && !selectedWeight.isEmpty()) {
-            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedWeight);
-            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
-                imageUrl = variant.getImageUrl();
-            }
-        }
-        if (imageUrl == null && selectedFlavor != null && !selectedFlavor.isEmpty()) {
-            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedFlavor);
-            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
-                imageUrl = variant.getImageUrl();
-            }
-        }
-        if (imageUrl == null && selectedPackage != null && !selectedPackage.isEmpty()) {
-            Product.ProductVariant variant = loadedProduct.findVariantByName(selectedPackage);
-            if (variant != null && variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
-                imageUrl = variant.getImageUrl();
-            }
+        Product.ProductVariant resolved = resolveSelectedVariant();
+        if (resolved != null && resolved.getImageUrl() != null && !resolved.getImageUrl().isEmpty()) {
+            imageUrl = resolved.getImageUrl();
         }
         if (imageUrl == null) {
             imageUrl = loadedProduct.getImageUrl();
@@ -271,28 +288,72 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
         if (selectedFlavor != null && !selectedFlavor.isEmpty()) parts.add(selectedFlavor);
         if (selectedPackage != null && !selectedPackage.isEmpty()) parts.add(selectedPackage);
 
-        if (parts.isEmpty()) {
+        if (!hasVariantGroups && parts.isEmpty()) {
+            tvSelectedOptions.setText("Không có phân loại");
+        } else if (parts.isEmpty()) {
             tvSelectedOptions.setText("Phân loại: Chưa chọn");
         } else {
             tvSelectedOptions.setText("Phân loại: " + String.join(", ", parts));
         }
     }
 
+    @Nullable
+    private Product.ProductVariant resolveSelectedVariant() {
+        if (loadedProduct == null) return null;
+        Map<String, Product.ProductVariant> selectedByGroup = new java.util.LinkedHashMap<>();
+        Map<String, List<Product.ProductVariant>> grouped = loadedProduct.getGroupedVariants();
+        for (Map.Entry<String, List<Product.ProductVariant>> entry : grouped.entrySet()) {
+            String groupName = entry.getKey();
+            String normalized = groupName != null ? groupName.toLowerCase(Locale.ROOT) : "";
+            String label = null;
+            if (normalized.contains("khối lượng") || normalized.contains("weight")
+                    || normalized.contains("phân loại")) {
+                label = selectedWeight;
+            } else if (normalized.contains("hương vị") || normalized.contains("flavor")) {
+                label = selectedFlavor;
+            } else if (normalized.contains("đóng gói") || normalized.contains("package")
+                    || normalized.contains("quy cách")) {
+                label = selectedPackage;
+            } else {
+                label = selectedWeight != null ? selectedWeight
+                        : (selectedFlavor != null ? selectedFlavor : selectedPackage);
+            }
+            if (label == null || label.trim().isEmpty()) continue;
+            Product.ProductVariant match = null;
+            if (entry.getValue() != null) {
+                for (Product.ProductVariant opt : entry.getValue()) {
+                    if (opt != null && label.equalsIgnoreCase(opt.getName())) {
+                        match = opt;
+                        break;
+                    }
+                }
+            }
+            if (match == null) {
+                match = loadedProduct.findVariantByName(label);
+            }
+            if (match != null) {
+                selectedByGroup.put(groupName, match);
+            }
+        }
+        if (!selectedByGroup.isEmpty()) {
+            Product.ProductVariant combo = loadedProduct.resolveComboVariant(selectedByGroup);
+            if (combo != null) return combo;
+        }
+        if (selectedWeight != null && !selectedWeight.trim().isEmpty()) {
+            return loadedProduct.findVariantByName(selectedWeight);
+        }
+        if (selectedFlavor != null && !selectedFlavor.trim().isEmpty()) {
+            return loadedProduct.findVariantByName(selectedFlavor);
+        }
+        if (selectedPackage != null && !selectedPackage.trim().isEmpty()) {
+            return loadedProduct.findVariantByName(selectedPackage);
+        }
+        return null;
+    }
+
     private double resolveSelectedPrice() {
         if (loadedProduct != null) {
-            if (selectedWeight != null && !selectedWeight.trim().isEmpty()) {
-                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedWeight);
-                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
-            }
-            if (selectedFlavor != null && !selectedFlavor.trim().isEmpty()) {
-                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedFlavor);
-                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
-            }
-            if (selectedPackage != null && !selectedPackage.trim().isEmpty()) {
-                Product.ProductVariant variant = loadedProduct.findVariantByName(selectedPackage);
-                if (variant != null && variant.getPrice() > 0) return variant.getPrice();
-            }
-            return loadedProduct.getPrice();
+            return loadedProduct.resolveUnitPrice(resolveSelectedVariant());
         }
         return item.getPrice();
     }

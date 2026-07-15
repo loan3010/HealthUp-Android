@@ -28,19 +28,19 @@ public final class SuggestionProvider {
     private static final List<List<Item>> SETS = Arrays.asList(
             Arrays.asList(
                     new Item("Kiểm tra đơn hàng", R.drawable.ic_chat_order),
-                    new Item("Hủy đơn hàng", R.drawable.ic_chat_cancel),
-                    new Item("Tư vấn sản phẩm & Dinh dưỡng", R.drawable.ic_chat_nutrition),
+                    new Item("Khách hàng thân thiết", R.drawable.ic_loyalty),
+                    new Item("Tư vấn sản phẩm", R.drawable.ic_chat_nutrition),
                     new Item("Câu hỏi thường gặp", R.drawable.ic_chat_help)
             ),
             Arrays.asList(
                     new Item("Thời gian giao hàng mất bao lâu?", R.drawable.ic_chat_shipping),
                     new Item("Phí vận chuyển tính như thế nào?", R.drawable.ic_chat_payment),
                     new Item("Chính sách đổi trả ra sao?", R.drawable.ic_chat_return),
-                    new Item("HealthUp hỗ trợ thanh toán nào?", R.drawable.ic_chat_payment)
+                    new Item("Khách hàng thân thiết của tôi", R.drawable.ic_loyalty)
             ),
             Arrays.asList(
                     new Item("Đơn tôi tới đâu rồi?", R.drawable.ic_chat_order),
-                    new Item("Phí ship bao nhiêu?", R.drawable.ic_chat_payment),
+                    new Item("Hạng VIP cần gì?", R.drawable.ic_loyalty),
                     new Item("Gợi ý whey protein tăng cơ", R.drawable.ic_chat_nutrition),
                     new Item("Tôi muốn hủy đơn đặt hàng", R.drawable.ic_chat_cancel)
             )

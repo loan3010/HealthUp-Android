@@ -7,17 +7,22 @@ import android.view.ViewGroup;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.BottomSheetProductOptionsBinding;
 import com.example.models.Product;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import com.google.android.material.chip.Chip;
+import com.google.android.material.chip.ChipGroup;
 import java.text.DecimalFormat;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment {
     private BottomSheetProductOptionsBinding binding;
     private Product product;
     private String actionType; // "add" or "buy"
     private int quantity = 1;
+    private final Map<String, Product.ProductVariant> selectedByGroup = new LinkedHashMap<>();
+    private final DecimalFormat df = new DecimalFormat("#,###đ");
 
     public static ProductOptionsBottomSheetFragment newInstance(Product product, String actionType) {
         ProductOptionsBottomSheetFragment fragment = new ProductOptionsBottomSheetFragment();
@@ -38,7 +43,7 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        
+
         if (getArguments() != null) {
             product = (Product) getArguments().getSerializable("product");
             actionType = getArguments().getString("action_type");
@@ -54,54 +59,78 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
     }
 
     private void displayProductInfo() {
-        DecimalFormat df = new DecimalFormat("#,###đ");
-        binding.tvPriceSmall.setText(df.format(product.getPrice()));
-        binding.tvStock.setText("Kho: " + (product.getStock() > 0 ? product.getStock() : "Còn hàng"));
-        
+        refreshPriceAndStock();
+
         if (product.getImages() != null && !product.getImages().isEmpty()) {
             com.example.healthup.util.ImageLoadHelper.loadInto(
                     binding.ivProductSmall, product.getImages().get(0));
         }
 
         setupDynamicChips();
+        refreshPriceAndStock();
+    }
 
-        binding.btnAction.setText(actionType.equals("buy") ? "Mua ngay" : "Thêm vào Giỏ hàng");
+    private void refreshPriceAndStock() {
+        Product.ProductVariant resolved = product.resolveComboVariant(selectedByGroup);
+        double price = product.resolveUnitPrice(resolved);
+        binding.tvPriceSmall.setText(df.format(price));
+
+        int stock = resolved != null ? Math.max(0, resolved.getStock()) : product.getAvailableStock();
+        boolean inStock = stock > 0;
+        binding.tvStock.setText(getString(R.string.stock_prefix, stock));
+
+        binding.btnAction.setEnabled(inStock);
+        binding.btnAction.setAlpha(inStock ? 1f : 0.45f);
+        if (!inStock) {
+            binding.btnAction.setText(R.string.out_of_stock);
+        } else {
+            boolean buy = "buy".equals(actionType);
+            binding.btnAction.setText(buy ? getString(R.string.buy_now) : getString(R.string.add_to_cart));
+        }
     }
 
     private void setupDynamicChips() {
-        // Setup Weights
+        selectedByGroup.clear();
+        setupWeightChips();
+        setupFlavorChips();
+        setupPackagingChips();
+    }
+
+    private void setupWeightChips() {
         if (product.getWeights() != null && !product.getWeights().isEmpty()) {
             binding.tvWeightLabel.setVisibility(View.VISIBLE);
             binding.cgWeight.setVisibility(View.VISIBLE);
             binding.cgWeight.removeAllViews();
             for (Object w : product.getWeights()) {
-                addChipToGroup(binding.cgWeight, Product.extractOptionLabel(w));
+                addChipToGroup(binding.cgWeight, "Khối lượng", Product.extractOptionLabel(w));
             }
         } else {
             binding.tvWeightLabel.setVisibility(View.GONE);
             binding.cgWeight.setVisibility(View.GONE);
         }
+    }
 
-        // Setup Flavors
+    private void setupFlavorChips() {
         if (product.getFlavors() != null && !product.getFlavors().isEmpty()) {
             binding.tvFlavorLabel.setVisibility(View.VISIBLE);
             binding.cgFlavor.setVisibility(View.VISIBLE);
             binding.cgFlavor.removeAllViews();
             for (Object f : product.getFlavors()) {
-                addChipToGroup(binding.cgFlavor, Product.extractOptionLabel(f));
+                addChipToGroup(binding.cgFlavor, "Hương vị", Product.extractOptionLabel(f));
             }
         } else {
             binding.tvFlavorLabel.setVisibility(View.GONE);
             binding.cgFlavor.setVisibility(View.GONE);
         }
+    }
 
-        // Setup Packaging
+    private void setupPackagingChips() {
         if (product.getPackagingTypes() != null && !product.getPackagingTypes().isEmpty()) {
             binding.tvPackagingLabel.setVisibility(View.VISIBLE);
             binding.cgPackaging.setVisibility(View.VISIBLE);
             binding.cgPackaging.removeAllViews();
             for (Object p : product.getPackagingTypes()) {
-                addChipToGroup(binding.cgPackaging, Product.extractOptionLabel(p));
+                addChipToGroup(binding.cgPackaging, "Loại đóng gói", Product.extractOptionLabel(p));
             }
         } else {
             binding.tvPackagingLabel.setVisibility(View.GONE);
@@ -109,18 +138,34 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
         }
     }
 
-    private void addChipToGroup(com.google.android.material.chip.ChipGroup group, String text) {
-        com.google.android.material.chip.Chip chip = new com.google.android.material.chip.Chip(getContext());
+    private void addChipToGroup(ChipGroup group, String groupName, String text) {
+        Chip chip = new Chip(getContext());
         chip.setText(text);
         chip.setCheckable(true);
         chip.setClickable(true);
-        // Style the chip to match your theme if needed
         group.addView(chip);
-        
+
         // Select the first chip by default if none selected
         if (group.getCheckedChipId() == View.NO_ID) {
             chip.setChecked(true);
+            rememberSelection(groupName, text);
         }
+
+        chip.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                rememberSelection(groupName, text);
+                refreshPriceAndStock();
+            }
+        });
+    }
+
+    private void rememberSelection(String groupName, String label) {
+        Product.ProductVariant found = product.findVariantByName(label);
+        if (found == null) {
+            found = new Product.ProductVariant();
+            found.setName(label);
+        }
+        selectedByGroup.put(groupName, found);
     }
 
     private void setupListeners() {
@@ -139,7 +184,11 @@ public class ProductOptionsBottomSheetFragment extends BottomSheetDialogFragment
         });
 
         binding.btnAction.setOnClickListener(v -> {
-            String msg = actionType.equals("buy") ? "Tiến hành thanh toán " : "Đã thêm vào giỏ hàng ";
+            if (!product.isInStock()) {
+                Toast.makeText(getContext(), R.string.out_of_stock, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            String msg = "buy".equals(actionType) ? "Tiến hành thanh toán " : "Đã thêm vào giỏ hàng ";
             Toast.makeText(getContext(), msg + quantity + " sản phẩm", Toast.LENGTH_SHORT).show();
             dismiss();
         });

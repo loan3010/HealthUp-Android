@@ -278,13 +278,19 @@ public class AdminNotificationsActivity extends BaseAppCompatActivity {
         @Override
         public void onBindViewHolder(@NonNull Holder holder, int position) {
             AdminNotification item = visibleItems.get(position);
+            boolean isUnread = !item.read;
             holder.tvTitle.setText(item.title);
             holder.tvBody.setText(item.body);
             holder.tvTime.setText(item.createdAt != null ? dateFormat.format(item.createdAt) : "");
-            holder.tvTitle.setTypeface(null, item.read ? Typeface.NORMAL : Typeface.BOLD);
+            holder.tvTitle.setTypeface(null, isUnread ? Typeface.BOLD : Typeface.NORMAL);
             holder.tvTitle.setTextColor(ContextCompat.getColor(
                     AdminNotificationsActivity.this,
-                    item.read ? R.color.text_secondary : R.color.text_dark));
+                    isUnread ? R.color.text_dark : R.color.text_secondary));
+            holder.tvBody.setAlpha(isUnread ? 1f : 0.75f);
+            holder.layoutContent.setBackgroundResource(isUnread
+                    ? R.drawable.bg_notification_item_unread
+                    : R.drawable.bg_notification_item_read);
+            holder.unreadDot.setVisibility(isUnread ? View.VISIBLE : View.GONE);
             holder.itemView.setOnClickListener(v -> openNotification(item));
         }
 
@@ -294,15 +300,19 @@ public class AdminNotificationsActivity extends BaseAppCompatActivity {
         }
 
         final class Holder extends RecyclerView.ViewHolder {
+            final View layoutContent;
             final TextView tvTitle;
             final TextView tvBody;
             final TextView tvTime;
+            final View unreadDot;
 
             Holder(@NonNull View itemView) {
                 super(itemView);
+                layoutContent = itemView.findViewById(R.id.layoutAdminNotifContent);
                 tvTitle = itemView.findViewById(R.id.tvAdminNotifTitle);
                 tvBody = itemView.findViewById(R.id.tvAdminNotifBody);
                 tvTime = itemView.findViewById(R.id.tvAdminNotifTime);
+                unreadDot = itemView.findViewById(R.id.viewAdminUnreadDot);
             }
         }
     }

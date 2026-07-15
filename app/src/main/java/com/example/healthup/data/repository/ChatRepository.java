@@ -3,6 +3,8 @@ package com.example.healthup.data.repository;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.healthup.admin.AdminGate;
+import com.example.healthup.util.StaffRoleHelper;
 import com.example.models.ChatMessage;
 import com.example.models.Conversation;
 import com.google.firebase.auth.FirebaseAuth;
@@ -132,17 +134,21 @@ public class ChatRepository {
 
     private void fetchUserRole(@NonNull String uid, @NonNull Source source,
                                @NonNull RoleCallback callback) {
-        firestore.collection("users").document(uid).get(source)
+        // Admin app-password login uses a synthetic Auth UID; role lives on
+        // users/{profileDocId} linked via user_sessions — same as AdminGate.
+        AdminGate.resolveProfileDocId(uid)
+                .continueWithTask(task -> {
+                    String profileDocId = (task.isSuccessful() && task.getResult() != null)
+                            ? task.getResult()
+                            : uid;
+                    return firestore.collection("users").document(profileDocId).get(source);
+                })
                 .addOnSuccessListener(doc -> {
-                    if (!doc.exists()) {
+                    if (doc == null || !doc.exists()) {
                         callback.onRole(null);
                         return;
                     }
-                    String role = doc.getString("role");
-                    if (role == null || role.trim().isEmpty()) {
-                        role = doc.getString("userRole");
-                    }
-                    callback.onRole(role);
+                    callback.onRole(StaffRoleHelper.resolveRole(doc));
                 })
                 .addOnFailureListener(e -> callback.onRole(null));
     }
@@ -514,10 +520,12 @@ public class ChatRepository {
         m.setOrderId(doc.getString("orderId"));
         m.setOrderCode(doc.getString("orderCode"));
         m.setOrderStatus(doc.getString("orderStatus"));
-        Double orderTotal = doc.getDouble("orderTotal");
-        m.setOrderTotal(orderTotal != null ? orderTotal : 0d);
-        Long orderItemCount = doc.getLong("orderItemCount");
-        m.setOrderItemCount(orderItemCount != null ? orderItemCount.intValue() : 0);
+        Object orderTotalVal = doc.get("orderTotal");
+        m.setOrderTotal(orderTotalVal instanceof Number
+                ? ((Number) orderTotalVal).doubleValue() : 0d);
+        Object orderItemCountVal = doc.get("orderItemCount");
+        m.setOrderItemCount(orderItemCountVal instanceof Number
+                ? ((Number) orderItemCountVal).intValue() : 0);
         m.setProductId(doc.getString("productId"));
         m.setProductName(doc.getString("productName"));
         m.setProductImageUrl(doc.getString("productImageUrl"));

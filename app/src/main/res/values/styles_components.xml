@@ -102,6 +102,11 @@
         <item name="android:textColor">@color/neutral_black</item>
     </style>
 
+    <style name="Widget.HealthUp.Badge.OutOfStock" parent="Widget.HealthUp.Badge.Sale">
+        <item name="android:background">@drawable/badge_out_of_stock</item>
+        <item name="android:textColor">@color/neutral_white</item>
+    </style>
+
     <style name="Widget.HealthUp.Badge.Outline">
         <item name="android:background">@drawable/badge_outline</item>
         <item name="android:textColor">@color/primary_default</item>

@@ -8,12 +8,15 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.text.HtmlCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.healthup.util.FullscreenImagePager;
 import com.example.healthup.util.ImageLoadHelper;
 import com.example.healthup.R;
 import com.example.healthup.chat.ChatBubbleHelper;
+import com.example.healthup.chat.OrderStatusCopy;
 import com.example.healthup.chat.SuggestionProvider;
 import com.example.models.ChatMessage;
 
@@ -41,9 +44,15 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private static final int TYPE_LOGIN_ACTION = 7;
     private static final int TYPE_IMAGE_USER = 8;
     private static final int TYPE_IMAGE_INCOMING = 9;
+    private static final int TYPE_ORDER_CAROUSEL = 10;
+    private static final int TYPE_ACTION_PROMPT = 11;
+    private static final int TYPE_CATEGORY_PICK = 12;
 
     public interface Listener {
         void onOrderCardClick(@NonNull ChatMessage message);
+
+        /** Buyer picked an order from the carousel (status / cancel flow). */
+        void onOrderSelect(@NonNull ChatMessage message);
 
         void onSuggestionQuestionClick(@NonNull String question);
 
@@ -51,9 +60,13 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         void onLoginActionClick();
 
+        void onActionPromptClick(@NonNull ChatMessage message);
+
         void onProductAddToCart(@NonNull ChatMessage message);
 
         void onProductBuyNow(@NonNull ChatMessage message);
+
+        void onCategorySelected(@NonNull String category);
     }
 
     private final List<ChatMessage> items = new ArrayList<>();
@@ -101,11 +114,20 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         if (ChatMessage.TYPE_ORDER_CARD.equals(m.getType())) {
             return TYPE_ORDER_CARD;
         }
+        if (ChatMessage.TYPE_ORDER_CAROUSEL.equals(m.getType())) {
+            return TYPE_ORDER_CAROUSEL;
+        }
+        if (ChatMessage.TYPE_ACTION_PROMPT.equals(m.getType())) {
+            return TYPE_ACTION_PROMPT;
+        }
         if (ChatMessage.TYPE_PRODUCT_CARD.equals(m.getType())) {
             return TYPE_PRODUCT_CARD;
         }
         if (ChatMessage.TYPE_LOGIN_ACTION.equals(m.getType())) {
             return TYPE_LOGIN_ACTION;
+        }
+        if (ChatMessage.TYPE_CATEGORY_PICK.equals(m.getType())) {
+            return TYPE_CATEGORY_PICK;
         }
         if (ChatMessage.TYPE_SYSTEM.equals(m.getType())
                 || ChatMessage.SENDER_SYSTEM.equals(m.getSenderType())) {
@@ -145,12 +167,18 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 return new SystemVH(inflater.inflate(R.layout.item_chat_message_system, parent, false));
             case TYPE_ORDER_CARD:
                 return new OrderCardVH(inflater.inflate(R.layout.item_chat_order_card, parent, false));
+            case TYPE_ORDER_CAROUSEL:
+                return new OrderCarouselVH(inflater.inflate(R.layout.item_chat_order_carousel, parent, false));
+            case TYPE_ACTION_PROMPT:
+                return new ActionPromptVH(inflater.inflate(R.layout.item_chat_login_action, parent, false));
             case TYPE_SUGGESTION:
                 return new SuggestionVH(inflater.inflate(R.layout.item_chat_suggestion, parent, false));
             case TYPE_PRODUCT_CARD:
                 return new ProductCardVH(inflater.inflate(R.layout.item_chat_product_card, parent, false));
             case TYPE_LOGIN_ACTION:
                 return new LoginActionVH(inflater.inflate(R.layout.item_chat_login_action, parent, false));
+            case TYPE_CATEGORY_PICK:
+                return new CategoryPickVH(inflater.inflate(R.layout.item_chat_category_pick, parent, false));
             case TYPE_IMAGE_USER:
                 return new ImageUserVH(inflater.inflate(R.layout.item_chat_message_image_user, parent, false));
             case TYPE_IMAGE_INCOMING:
@@ -173,12 +201,18 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             ((BotVH) holder).bind(m, groupPosition, items, position, staffView);
         } else if (holder instanceof OrderCardVH) {
             ((OrderCardVH) holder).bind(m, listener);
+        } else if (holder instanceof OrderCarouselVH) {
+            ((OrderCarouselVH) holder).bind(m, listener);
+        } else if (holder instanceof ActionPromptVH) {
+            ((ActionPromptVH) holder).bind(m, listener);
         } else if (holder instanceof SuggestionVH) {
             ((SuggestionVH) holder).bind(suggestionItems, listener);
         } else if (holder instanceof ProductCardVH) {
             ((ProductCardVH) holder).bind(m, listener);
         } else if (holder instanceof LoginActionVH) {
             ((LoginActionVH) holder).bind(m, listener);
+        } else if (holder instanceof CategoryPickVH) {
+            ((CategoryPickVH) holder).bind(m, listener);
         } else if (holder instanceof ImageUserVH) {
             ((ImageUserVH) holder).bind(m, items, position);
         } else if (holder instanceof ImageIncomingVH) {
@@ -335,7 +369,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                   @NonNull List<ChatMessage> items,
                   int position,
                   boolean staffView) {
-            text.setText(message.getText());
+            text.setText(htmlOrPlain(message.getText()));
             text.setBackgroundResource(ChatBubbleHelper.incomingBubbleBackground(groupPosition));
             applyVerticalPadding(itemView, groupPosition);
 
@@ -427,6 +461,192 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
+    static class OrderCardVH extends RecyclerView.ViewHolder {
+        final View root;
+        final TextView code;
+        final TextView status;
+        final TextView items;
+        final TextView total;
+        final TextView cta;
+
+        OrderCardVH(@NonNull View v) {
+            super(v);
+            root = v.findViewById(R.id.orderCardRoot);
+            code = v.findViewById(R.id.orderCardCode);
+            status = v.findViewById(R.id.orderCardStatus);
+            items = v.findViewById(R.id.orderCardItems);
+            total = v.findViewById(R.id.orderCardTotal);
+            cta = v.findViewById(R.id.orderCardCta);
+        }
+
+        void bind(ChatMessage m, Listener listener) {
+            String orderCode = m.getOrderCode() != null ? m.getOrderCode() : "";
+            code.setText("Đơn hàng #" + orderCode);
+            status.setText(OrderStatusCopy.statusLabel(m.getOrderStatus()));
+            items.setText(itemView.getContext()
+                    .getString(R.string.chat_order_card_items, m.getOrderItemCount()));
+            total.setText("Tổng: " + formatCurrency(m.getOrderTotal()));
+            boolean selectMode = ChatMessage.ORDER_PURPOSE_STATUS.equals(m.getOrderPurpose())
+                    || ChatMessage.ORDER_PURPOSE_CANCEL.equals(m.getOrderPurpose());
+            if (cta != null) {
+                if (m.getActionLabel() != null && !m.getActionLabel().isEmpty()) {
+                    cta.setText(m.getActionLabel());
+                } else if (selectMode) {
+                    cta.setText(R.string.chat_order_pick_button);
+                } else if (ChatMessage.ORDER_PURPOSE_DETAIL.equals(m.getOrderPurpose())) {
+                    cta.setText(R.string.chat_order_status_cta);
+                } else {
+                    cta.setText(R.string.chat_order_card_view_detail);
+                }
+            }
+            root.setOnClickListener(v -> {
+                if (listener == null) {
+                    return;
+                }
+                if (selectMode) {
+                    listener.onOrderSelect(m);
+                } else {
+                    listener.onOrderCardClick(m);
+                }
+            });
+        }
+
+        private String formatCurrency(double value) {
+            String formatted = new DecimalFormat("#,###").format(value);
+            return formatted.replace(',', '.') + "đ";
+        }
+    }
+
+    static class OrderCarouselVH extends RecyclerView.ViewHolder {
+        final RecyclerView list;
+
+        OrderCarouselVH(@NonNull View v) {
+            super(v);
+            list = v.findViewById(R.id.orderCarouselList);
+            list.setLayoutManager(new LinearLayoutManager(
+                    v.getContext(), LinearLayoutManager.HORIZONTAL, false));
+            list.setNestedScrollingEnabled(false);
+        }
+
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+            List<ChatMessage> choices = message.getOrderChoices();
+            if (choices == null) {
+                choices = Collections.emptyList();
+            }
+            list.setAdapter(new OrderPickAdapter(choices, listener));
+        }
+    }
+
+    static class OrderPickAdapter extends RecyclerView.Adapter<OrderPickAdapter.VH> {
+        private final List<ChatMessage> choices;
+        private final Listener listener;
+
+        OrderPickAdapter(@NonNull List<ChatMessage> choices, @Nullable Listener listener) {
+            this.choices = choices;
+            this.listener = listener;
+        }
+
+        @NonNull
+        @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_chat_order_pick_card, parent, false);
+            return new VH(v);
+        }
+
+        @Override
+        public void onBindViewHolder(@NonNull VH holder, int position) {
+            holder.bind(choices.get(position), listener);
+        }
+
+        @Override
+        public int getItemCount() {
+            return choices.size();
+        }
+
+        static class VH extends RecyclerView.ViewHolder {
+            final ImageView thumb;
+            final TextView code;
+            final TextView product;
+            final TextView status;
+            final TextView meta;
+            final TextView button;
+
+            VH(@NonNull View v) {
+                super(v);
+                thumb = v.findViewById(R.id.orderPickThumb);
+                code = v.findViewById(R.id.orderPickCode);
+                product = v.findViewById(R.id.orderPickProduct);
+                status = v.findViewById(R.id.orderPickStatus);
+                meta = v.findViewById(R.id.orderPickMeta);
+                button = v.findViewById(R.id.orderPickButton);
+            }
+
+            void bind(@NonNull ChatMessage m, @Nullable Listener listener) {
+                String orderCode = m.getOrderCode() != null ? m.getOrderCode() : "";
+                code.setText("Đơn #" + orderCode);
+                status.setText(OrderStatusCopy.statusLabel(m.getOrderStatus()));
+                String productName = m.getProductName();
+                if (productName != null && !productName.trim().isEmpty()) {
+                    product.setText(productName.trim());
+                    product.setVisibility(View.VISIBLE);
+                } else {
+                    product.setText("Đơn hàng HealthUp");
+                }
+                if (m.getProductImageUrl() != null && !m.getProductImageUrl().isEmpty()) {
+                    ImageLoadHelper.loadInto(thumb, m.getProductImageUrl());
+                } else {
+                    thumb.setImageResource(R.drawable.ic_chat_order);
+                }
+                String total = formatCurrency(m.getOrderTotal());
+                meta.setText(itemView.getContext().getString(
+                        R.string.chat_order_card_meta, m.getOrderItemCount(), total));
+                if (m.getActionLabel() != null && !m.getActionLabel().isEmpty()) {
+                    button.setText(m.getActionLabel());
+                } else {
+                    button.setText(R.string.chat_order_pick_button);
+                }
+                View.OnClickListener click = v -> {
+                    if (listener != null) {
+                        listener.onOrderSelect(m);
+                    }
+                };
+                itemView.setOnClickListener(click);
+                button.setOnClickListener(click);
+            }
+
+            private String formatCurrency(double value) {
+                String formatted = new DecimalFormat("#,###").format(value);
+                return formatted.replace(',', '.') + "đ";
+            }
+        }
+    }
+
+    static class ActionPromptVH extends RecyclerView.ViewHolder {
+        final TextView text;
+        final TextView button;
+
+        ActionPromptVH(@NonNull View v) {
+            super(v);
+            text = v.findViewById(R.id.chatLoginPromptText);
+            button = v.findViewById(R.id.btnChatLogin);
+        }
+
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+            text.setText(message.getText());
+            if (message.getActionLabel() != null && !message.getActionLabel().isEmpty()) {
+                button.setText(message.getActionLabel());
+            } else {
+                button.setText(R.string.chat_order_browse_cta);
+            }
+            button.setOnClickListener(v -> {
+                if (listener != null) {
+                    listener.onActionPromptClick(message);
+                }
+            });
+        }
+    }
+
     static class LoginActionVH extends RecyclerView.ViewHolder {
         final TextView text;
         final View loginButton;
@@ -439,6 +659,9 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
             text.setText(message.getText());
+            if (loginButton instanceof TextView) {
+                ((TextView) loginButton).setText(R.string.chat_login_action);
+            }
             loginButton.setOnClickListener(v -> {
                 if (listener != null) {
                     listener.onLoginActionClick();
@@ -447,70 +670,53 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
     }
 
-    static class OrderCardVH extends RecyclerView.ViewHolder {
-        final View root;
-        final TextView code;
-        final TextView status;
-        final TextView items;
-        final TextView total;
+    static class CategoryPickVH extends RecyclerView.ViewHolder {
+        final TextView text;
+        final com.google.android.material.chip.ChipGroup chipGroup;
 
-        OrderCardVH(@NonNull View v) {
+        CategoryPickVH(@NonNull View v) {
             super(v);
-            root = v.findViewById(R.id.orderCardRoot);
-            code = v.findViewById(R.id.orderCardCode);
-            status = v.findViewById(R.id.orderCardStatus);
-            items = v.findViewById(R.id.orderCardItems);
-            total = v.findViewById(R.id.orderCardTotal);
+            text = v.findViewById(R.id.chatCategoryPromptText);
+            chipGroup = v.findViewById(R.id.chatCategoryChipGroup);
         }
 
-        void bind(ChatMessage m, Listener listener) {
-            String orderCode = m.getOrderCode() != null ? m.getOrderCode() : "";
-            code.setText("Đơn hàng #" + orderCode);
-            status.setText(statusLabel(status, m.getOrderStatus()));
-            items.setText(itemView.getContext()
-                    .getString(R.string.chat_order_card_items, m.getOrderItemCount()));
-            total.setText("Tổng: " + formatCurrency(m.getOrderTotal()));
-            root.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onOrderCardClick(m);
-                }
-            });
-        }
-
-        private String statusLabel(View v, String status) {
-            int resId;
-            if (status == null) {
-                resId = R.string.chat_order_status_unknown;
-            } else {
-                switch (status) {
-                    case "pending":
-                        resId = R.string.chat_order_status_pending;
-                        break;
-                    case "confirmed":
-                        resId = R.string.chat_order_status_confirmed;
-                        break;
-                    case "shipping":
-                        resId = R.string.chat_order_status_shipping;
-                        break;
-                    case "delivered":
-                        resId = R.string.chat_order_status_delivered;
-                        break;
-                    case "cancelled":
-                        resId = R.string.chat_order_status_cancelled;
-                        break;
-                    default:
-                        resId = R.string.chat_order_status_unknown;
-                        break;
-                }
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+            text.setText(message.getText());
+            chipGroup.removeAllViews();
+            List<String> cats = message.getCategoryChoices();
+            if (cats == null) {
+                return;
             }
-            return v.getContext().getString(resId);
+            for (String cat : cats) {
+                if (cat == null || cat.trim().isEmpty()) {
+                    continue;
+                }
+                String name = cat.trim();
+                com.google.android.material.chip.Chip chip =
+                        new com.google.android.material.chip.Chip(chipGroup.getContext());
+                chip.setText(name);
+                chip.setCheckable(false);
+                chip.setClickable(true);
+                chip.setOnClickListener(v -> {
+                    if (listener != null) {
+                        listener.onCategorySelected(name);
+                    }
+                });
+                chipGroup.addView(chip);
+            }
         }
+    }
 
-        private String formatCurrency(double value) {
-            String formatted = new DecimalFormat("#,###").format(value);
-            // Vietnamese uses "." as the thousands separator.
-            return formatted.replace(',', '.') + "đ";
+    /** Renders bot HTML (`<b>`) when present; otherwise plain text. */
+    @NonNull
+    private static CharSequence htmlOrPlain(@Nullable String raw) {
+        if (raw == null) {
+            return "";
         }
+        if (raw.contains("<b>") || raw.contains("<br")) {
+            return HtmlCompat.fromHtml(raw, HtmlCompat.FROM_HTML_MODE_LEGACY);
+        }
+        return raw;
     }
 
     static class SuggestionVH extends RecyclerView.ViewHolder {

@@ -55,10 +55,11 @@ public class AdminProductAdapter extends RecyclerView.Adapter<AdminProductAdapte
         } else {
             holder.tvCategory.setText(product.getCategory());
         }
-        holder.tvPrice.setText(priceFormat.format(product.getPrice()) + " đ");
+        holder.tvPrice.setText(priceFormat.format(product.getDisplayPrice()) + " đ");
 
-        int stock = product.getStock();
-        holder.tvStock.setText("Tồn kho: " + stock);
+        int stock = product.getAvailableStock();
+        int sold = product.getTotalSold();
+        holder.tvStock.setText("Tồn: " + stock + " · Đã bán: " + sold);
         if (stock <= 0) {
             holder.tvStock.setTextColor(ContextCompat.getColor(holder.itemView.getContext(), R.color.error));
         } else if (stock < LOW_STOCK_THRESHOLD) {
@@ -73,7 +74,7 @@ public class AdminProductAdapter extends RecyclerView.Adapter<AdminProductAdapte
         } else if (product.isHidden()) {
             holder.tvBadge.setVisibility(View.VISIBLE);
             holder.tvBadge.setText(R.string.admin_hidden_badge);
-        } else if (stock <= 0) {
+        } else if (!product.isInStock()) {
             holder.tvBadge.setVisibility(View.VISIBLE);
             holder.tvBadge.setText(R.string.admin_out_of_stock_badge);
         } else if (stock < LOW_STOCK_THRESHOLD) {

@@ -74,6 +74,8 @@ public class MainActivity extends BaseAppCompatActivity {
     private ListenerRegistration notifBadgeListener;
     private FirebaseAuth.AuthStateListener authStateListener;
     private long lastBackPressAt;
+    /** When true, Back from overlay flows (Buy Now checkout) finishes this Main → previous Activity. */
+    private boolean returnToPreviousOnBack;
     private final AccountDisabledWatcher accountDisabledWatcher = new AccountDisabledWatcher();
     private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
         @Override
@@ -177,7 +179,20 @@ public class MainActivity extends BaseAppCompatActivity {
                     getSupportFragmentManager().popBackStack();
                     return;
                 }
+                // Buy Now / chat checkout opened this Main on top of ProductDetail (or Chat).
+                // Finish so the previous Activity returns — do not show "exit app".
+                if (returnToPreviousOnBack) {
+                    finish();
+                    return;
+                }
                 if (navView != null && navView.getSelectedItemId() != R.id.nav_home) {
+                    showHomeTab();
+                    return;
+                }
+                // Checkout / cart flows replace into the container without back-stack entries
+                // while the bottom tab may still be "Home". Don't treat that as exit-app.
+                Fragment current = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                if (current != null && !(current instanceof HomeFragment)) {
                     showHomeTab();
                     return;
                 }
@@ -428,6 +443,7 @@ public class MainActivity extends BaseAppCompatActivity {
                 // "Quay lại" biết cần finish() Activity này (quay về ProductDetailActivity)
                 // thay vì cố popBackStack rồi rơi về tab Trang chủ.
                 boolean returnToPrevious = intent.getBooleanExtra("return_to_previous", false);
+                returnToPreviousOnBack = returnToPrevious;
                 CartFragment fragment = new CartFragment();
                 Bundle args = new Bundle();
                 if (isRebuy) {
@@ -446,6 +462,7 @@ public class MainActivity extends BaseAppCompatActivity {
                 return;
             } else if ("phone_verification".equals(target)) {
                 boolean returnToPrevious = intent.getBooleanExtra("return_to_previous", false);
+                returnToPreviousOnBack = returnToPrevious;
                 if (!returnToPrevious) {
                     selectNavTab(R.id.nav_cart);
                 }
@@ -456,11 +473,21 @@ public class MainActivity extends BaseAppCompatActivity {
                 loadFragmentAllowingStateLoss(fragment);
                 return;
             } else if ("checkout".equals(target)) {
+                returnToPreviousOnBack = intent.getBooleanExtra("return_to_previous", false);
                 List<CartItem> checkoutItems = readCheckoutItems(intent);
+                if (checkoutItems == null || checkoutItems.isEmpty()) {
+                    if (CheckoutIntentHelper.hasPendingCheckout(this)) {
+                        checkoutItems = CheckoutIntentHelper.getPendingCheckout(this);
+                        CheckoutIntentHelper.clearPendingCheckout(this);
+                    }
+                }
                 if (checkoutItems != null && !checkoutItems.isEmpty()) {
                     CheckoutFragment fragment = new CheckoutFragment();
                     Bundle args = new Bundle();
-                    args.putSerializable("selected_items", (Serializable) checkoutItems);
+                    // Intent-safe copies: no nested Product / Timestamp (same IPC crash as Buy Now).
+                    args.putSerializable("selected_items",
+                            (Serializable) CheckoutIntentHelper.toIntentSafeItems(checkoutItems));
+                    args.putBoolean("return_to_previous", returnToPreviousOnBack);
                     fragment.setArguments(args);
                     loadFragmentAllowingStateLoss(fragment);
                 } else {

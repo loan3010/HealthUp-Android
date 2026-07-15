@@ -73,14 +73,14 @@ public final class GuestCartManager {
         if (variant != null) {
             newItem.setVariantId(variant.getId());
             newItem.setVariantName(variant.getName());
-            newItem.setPrice(variant.getPrice());
-            newItem.setOriginalPrice(variant.getPrice());
+            newItem.setPrice(product.resolveUnitPrice(variant));
+            newItem.setOriginalPrice(product.resolveOriginalUnitPrice(variant));
             if (variant.getImageUrl() != null && !variant.getImageUrl().isEmpty()) {
                 newItem.setImageUrl(variant.getImageUrl());
             }
         } else {
             newItem.setPrice(product.getPrice());
-            newItem.setOriginalPrice(product.getOriginalPrice());
+            newItem.setOriginalPrice(product.resolveOriginalUnitPrice(null));
         }
         newItem.setSelected(true);
         items.add(newItem);

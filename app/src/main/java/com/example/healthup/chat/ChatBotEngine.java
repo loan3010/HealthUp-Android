@@ -20,6 +20,7 @@ public class ChatBotEngine {
         GREETING,
         ORDER_STATUS,
         CANCEL_ORDER,
+        MEMBERSHIP,
         PRODUCT_ADVICE,
         FAQ,
         FALLBACK
@@ -31,23 +32,38 @@ public class ChatBotEngine {
         public final List<ChatMessage> messages;
         /** When true the caller should query Firestore orders and render cards. */
         public final boolean needsOrderLookup;
+        /** When true the caller should load membership spend / tier. */
+        public final boolean needsMembershipLookup;
+        /** When true the caller should show category chips then product suggestions. */
+        public final boolean needsCategoryLookup;
         /** When true the UI should surface the "Chat với người bán" action. */
         public final boolean offerHumanHandoff;
         /** When true the guest must sign in before continuing. */
         public final boolean requiresLogin;
 
         BotResponse(Intent intent, List<ChatMessage> messages,
-                    boolean needsOrderLookup, boolean offerHumanHandoff, boolean requiresLogin) {
+                    boolean needsOrderLookup, boolean needsMembershipLookup,
+                    boolean needsCategoryLookup,
+                    boolean offerHumanHandoff, boolean requiresLogin) {
             this.intent = intent;
             this.messages = messages;
             this.needsOrderLookup = needsOrderLookup;
+            this.needsMembershipLookup = needsMembershipLookup;
+            this.needsCategoryLookup = needsCategoryLookup;
             this.offerHumanHandoff = offerHumanHandoff;
             this.requiresLogin = requiresLogin;
         }
 
         BotResponse(Intent intent, List<ChatMessage> messages,
+                    boolean needsOrderLookup, boolean needsMembershipLookup,
+                    boolean offerHumanHandoff, boolean requiresLogin) {
+            this(intent, messages, needsOrderLookup, needsMembershipLookup,
+                    false, offerHumanHandoff, requiresLogin);
+        }
+
+        BotResponse(Intent intent, List<ChatMessage> messages,
                     boolean needsOrderLookup, boolean offerHumanHandoff) {
-            this(intent, messages, needsOrderLookup, offerHumanHandoff, false);
+            this(intent, messages, needsOrderLookup, false, false, offerHumanHandoff, false);
         }
     }
 
@@ -63,40 +79,41 @@ public class ChatBotEngine {
         String text = TextNormalizer.normalize(rawText);
         List<ChatMessage> messages = new ArrayList<>();
 
-        // 1) Cancel order (before generic order phrases)
+        // 1) Cancel order (before generic order phrases) — pick a recent order first
         if (hit(text, BotIntentLexicon.CANCEL_ORDER)) {
-            messages.add(bot("Bạn có thể tự hủy đơn khi đơn vẫn ở trạng thái \"Chờ xác nhận\": "
-                    + "vào Đơn hàng của tôi → chọn đơn → Hủy đơn.\n\n"
-                    + "Nếu đơn đã được xác nhận hoặc đang giao và bạn vẫn muốn hủy, "
-                    + "mình sẽ kết nối bạn với người bán để được hỗ trợ."));
-            return new BotResponse(Intent.CANCEL_ORDER, messages, false, true);
+            messages.add(bot("Bạn muốn hủy đơn nào ạ? HealthUp lấy vài đơn gần đây để bạn chọn nhé."));
+            return new BotResponse(Intent.CANCEL_ORDER, messages, true, false, true, false);
         }
 
-        // 2) Order status / tracking (paraphrases + fuzzy)
+        // 2) Order status BEFORE membership — "Kiểm tra đơn hàng" must never
+        // hit loyalty (membership phrase "kiem tra hang" used to fuzzy-match it).
         if (hit(text, BotIntentLexicon.ORDER_STATUS)
                 || BotIntentLexicon.looksLikeOrderQuestion(text)) {
-            messages.add(bot("Để mình kiểm tra giúp bạn nhé. Đây là các đơn hàng gần đây của bạn:"));
-            return new BotResponse(Intent.ORDER_STATUS, messages, true, false);
+            messages.add(bot("Để HealthUp kiểm tra giúp bạn, bạn chọn một trong các đơn gần đây bên dưới nhé 💚"));
+            return new BotResponse(Intent.ORDER_STATUS, messages, true, false, false, false);
         }
 
-        // 3) Product inquiry (from product / order detail deep-link phrasing)
+        // 3) Membership / Khách hàng thân thiết (VIP)
+        if (hit(text, BotIntentLexicon.MEMBERSHIP)) {
+            messages.add(bot("Để mình xem hạng khách hàng thân thiết HealthUp của bạn nhé 💚"));
+            return new BotResponse(Intent.MEMBERSHIP, messages, false, true, false, false);
+        }
+
+        // 4) Product inquiry about an order item (not general browse advice)
         if (hit(text, BotIntentLexicon.PRODUCT_INQUIRY)) {
             messages.add(bot(buildProductInquiryReply(rawText)));
             return new BotResponse(Intent.PRODUCT_ADVICE, messages, false, true);
         }
 
-        // 4) Product & nutrition advice
+        // 5) Product & nutrition advice → pick a category then suggest products
         if (hit(text, BotIntentLexicon.PRODUCT_ADVICE)) {
-            messages.add(bot("HealthUp có thể gợi ý theo mục tiêu của bạn:\n"
-                    + "• Tăng cơ: Whey Protein, BCAA\n"
-                    + "• Giảm cân: Thực phẩm ít calo, trà thảo mộc\n"
-                    + "• Tăng đề kháng: Vitamin C, Kẽm, Omega-3\n\n"
-                    + "Bạn đang quan tâm mục tiêu nào? Bạn cũng có thể xem thêm ở mục Sản phẩm. "
-                    + "Nếu cần tư vấn chuyên sâu, mình có thể kết nối bạn với người bán."));
-            return new BotResponse(Intent.PRODUCT_ADVICE, messages, false, true);
+            messages.add(bot("Bạn muốn HealthUp gợi ý sản phẩm theo danh mục nào? "
+                    + "Chọn một nhóm bên dưới nhé 💚"));
+            return new BotResponse(Intent.PRODUCT_ADVICE, messages,
+                    false, false, true, false, false);
         }
 
-        // 5) FAQ overview
+        // 6) FAQ overview
         if (hit(text, BotIntentLexicon.FAQ_MENU)) {
             StringBuilder sb = new StringBuilder("Một số câu hỏi thường gặp tại HealthUp:\n");
             for (FAQ f : FaqProvider.getFaqs()) {
@@ -107,33 +124,34 @@ public class ChatBotEngine {
             return new BotResponse(Intent.FAQ, messages, false, false);
         }
 
-        // 6) Specific FAQ (synonyms + fuzzy keyword score)
+        // 7) Specific FAQ (synonyms + fuzzy keyword score)
         FAQ faq = FaqProvider.match(text);
         if (faq != null) {
             messages.add(bot(faq.getAnswer()));
             return new BotResponse(Intent.FAQ, messages, false, false);
         }
 
-        // 7) Greeting
+        // 8) Greeting
         if (hit(text, BotIntentLexicon.GREETING)) {
             messages.add(bot("Xin chào! HealthUp có thể giúp gì cho bạn hôm nay? "
-                    + "Bạn có thể hỏi về đơn hàng, sản phẩm, dinh dưỡng hoặc chính sách nhé."));
+                    + "Bạn có thể hỏi về đơn hàng, khách hàng thân thiết / VIP, sản phẩm, "
+                    + "dinh dưỡng hoặc chính sách nhé."));
             return new BotResponse(Intent.GREETING, messages, false, false);
         }
 
-        // 8) Fallback -> offer human handoff
-        messages.add(bot("Xin lỗi, mình chưa hiểu rõ câu hỏi của bạn. "
-                + "Bạn có thể hỏi về trạng thái đơn (\"đơn tôi tới đâu rồi\"), hủy đơn, "
-                + "tư vấn sản phẩm, hoặc chọn \"Chat với người bán\" để được hỗ trợ trực tiếp nhé."));
+        // 9) Fallback -> offer human handoff
+        messages.add(bot("Xin lỗi bạn nhé, mình chưa hiểu rõ câu hỏi. "
+                + "Bạn có thể hỏi về trạng thái đơn, khách hàng thân thiết / VIP, hủy đơn, "
+                + "tư vấn sản phẩm, hoặc chọn \"Chat với người bán\" để HealthUp hỗ trợ trực tiếp ạ."));
         return new BotResponse(Intent.FALLBACK, messages, false, true);
     }
 
     /** Bot greeting shown when the thread is opened. */
     public ChatMessage greeting() {
         return bot("Xin chào! Mình là trợ lý HealthUp \uD83C\uDF3F\n"
-                + "Mình có thể giúp bạn kiểm tra đơn hàng, hủy đơn, tư vấn sản phẩm & dinh dưỡng "
-                + "và trả lời các câu hỏi thường gặp.\n"
-                + "Ví dụ: \"đơn tôi tới đâu rồi\", \"phí ship bao nhiêu\", \"gợi ý whey tăng cơ\".");
+                + "Mình có thể giúp bạn kiểm tra đơn hàng, xem khách hàng thân thiết / VIP, hủy đơn, "
+                + "tư vấn sản phẩm & dinh dưỡng và trả lời câu hỏi thường gặp.\n"
+                + "Ví dụ: \"đơn tôi tới đâu rồi\", \"khách hàng thân thiết\", \"gợi ý whey tăng cơ\".");
     }
 
     private static String buildProductInquiryReply(String rawText) {

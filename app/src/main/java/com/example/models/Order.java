@@ -49,6 +49,8 @@ public class Order implements Serializable {
     private String promoCode;
     private double shippingFee;
     private double totalPrice;
+    /** Used by chat order cards when {@link #items} is not loaded. */
+    private int itemCount;
     private Address address;
     private java.util.Date createdAt;
     private java.util.Date updatedAt;
@@ -171,13 +173,16 @@ public class Order implements Serializable {
     public double getTotalAmount() { return totalPrice; }
     public void setTotalAmount(double totalAmount) { this.totalPrice = totalAmount; }
 
-    /** Chat card item count derived from line items. */
+    /** Prefer line-items size when loaded; otherwise the denormalized chat field. */
     public int getItemCount() {
-        return items != null ? items.size() : 0;
+        if (items != null && !items.isEmpty()) {
+            return items.size();
+        }
+        return itemCount;
     }
 
     public void setItemCount(int itemCount) {
-        // Legacy chat mapper field; count is derived from items when present.
+        this.itemCount = itemCount;
     }
 
     public Address getAddress() { return address; }

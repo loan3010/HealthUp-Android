@@ -205,9 +205,8 @@ public final class WishlistManager {
                     .get()
                     .addOnSuccessListener(doc -> {
                         if (doc.exists()) {
-                            Product product = doc.toObject(Product.class);
+                            Product product = Product.fromDocument(doc);
                             if (product != null) {
-                                product.setId(doc.getId());
                                 product.setFavorite(true);
                                 loaded.add(product);
                             }

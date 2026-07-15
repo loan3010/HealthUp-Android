@@ -248,6 +248,11 @@ public class AdminRepository {
                 variantData.put("price", variant.getPrice());
                 variantData.put("originalPrice", variant.getOriginalPrice() > 0 ? variant.getOriginalPrice() : variant.getPrice());
                 variantData.put("stock", variant.getStock());
+                variantData.put("sold", Math.max(0, variant.getSold()));
+                variantData.put("enabled", variant.isEnabled());
+                if (variant.getSelections() != null && !variant.getSelections().isEmpty()) {
+                    variantData.put("selections", new HashMap<>(variant.getSelections()));
+                }
                 if (!TextUtils.isEmpty(variant.getSku())) {
                     variantData.put("sku", variant.getSku());
                 }
@@ -261,30 +266,52 @@ public class AdminRepository {
             data.put("variants", variantMaps);
             data.put("hasVariants", true);
             int totalStock = 0;
+            int totalSold = 0;
             for (Map<String, Object> variantData : variantMaps) {
                 Object stockVal = variantData.get("stock");
                 if (stockVal instanceof Number) {
-                    totalStock += ((Number) stockVal).intValue();
+                    Object enabledVal = variantData.get("enabled");
+                    boolean enabled = !(enabledVal instanceof Boolean) || (Boolean) enabledVal;
+                    if (enabled) {
+                        totalStock += ((Number) stockVal).intValue();
+                    }
+                }
+                Object soldVal = variantData.get("sold");
+                if (soldVal instanceof Number) {
+                    totalSold += ((Number) soldVal).intValue();
                 }
             }
             data.put("stock", totalStock);
             data.put("stockCount", totalStock);
+            data.put("sold", totalSold);
+            data.put("variantDimensions",
+                    AdminVariantComboHelper.dimensionsToFirestore(
+                            product.getVariantDimensions() != null
+                                    ? product.getVariantDimensions()
+                                    : new ArrayList<>()));
             if (product.getFlavors() != null) {
                 data.put("flavors", product.getFlavors());
             }
             if (product.getWeights() != null) {
                 data.put("weights", product.getWeights());
             }
+            if (product.getPackagingTypes() != null) {
+                data.put("packagingTypes", product.getPackagingTypes());
+            }
         } else if (isNew) {
             data.put("variants", variantMaps);
             data.put("hasVariants", product.isHasVariants());
             data.put("flavors", new ArrayList<>());
             data.put("weights", new ArrayList<>());
+            data.put("packagingTypes", new ArrayList<>());
+            data.put("variantDimensions", new ArrayList<>());
         } else {
             data.put("variants", new ArrayList<>());
             data.put("hasVariants", false);
             data.put("flavors", new ArrayList<>());
             data.put("weights", new ArrayList<>());
+            data.put("packagingTypes", new ArrayList<>());
+            data.put("variantDimensions", new ArrayList<>());
         }
 
         data.put("updatedAt", Timestamp.now());

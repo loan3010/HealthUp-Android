@@ -151,17 +151,24 @@ service cloud.firestore {
       allow read, write: if isSignedIn() && request.auth.uid == uid;
     }
 
-    // Buyer checkout: StockManager may only change inventory fields.
+    // Buyer checkout: StockManager may only change inventory / sold counters.
+    // Include `sold` — client writes product-level sold after deduct/restore.
+    // (sold inside variants[] is covered by the `variants` key itself.)
     function isStockOnlyUpdate() {
       return request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['stock', 'stockCount', 'variants']);
+          .hasOnly(['stock', 'stockCount', 'variants', 'sold', 'soldCount']);
     }
 
     // --- Catalog / demo content (student project) -------------------------
     match /products/{productId} {
       allow read: if true;
       allow create, delete: if isStaff();
-      allow update: if isStaff() || isSignedIn();
+      // Prefer tight inventory updates over wide-open isSignedIn() product edits.
+      allow update: if isStaff()
+                    || (isSignedIn()
+                        && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly(['favorite']))
+                    || (isSignedIn() && isStockOnlyUpdate());
 
       match /reviews/{reviewId} {
         allow read: if true;

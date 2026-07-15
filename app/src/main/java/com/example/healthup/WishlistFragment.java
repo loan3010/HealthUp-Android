@@ -301,9 +301,8 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
                     if (!isAdded()) return;
                     List<Product> pool = new ArrayList<>();
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
-                        Product product = doc.toObject(Product.class);
+                        Product product = Product.fromDocument(doc);
                         if (product != null) {
-                            product.setId(doc.getId());
 
 
 

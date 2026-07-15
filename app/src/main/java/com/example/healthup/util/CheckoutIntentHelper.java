@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.example.healthup.LoginActivity;
 import com.example.healthup.MainActivity;
@@ -35,6 +36,43 @@ public final class CheckoutIntentHelper {
 
     public static void savePendingCheckout(Context context, List<CartItem> items) {
         PendingCheckoutStore.save(context, items);
+    }
+
+    /**
+     * Intent-safe cart lines for IPC: flat fields only, never nested {@link CartItem#getProduct()}.
+     * Product embeds Firebase {@code Timestamp} which is not java.io.Serializable and crashes
+     * {@code putExtra("checkout_items", ...)} / startActivity (Buy Now path).
+     */
+    @NonNull
+    public static ArrayList<CartItem> toIntentSafeItems(@Nullable List<CartItem> items) {
+        ArrayList<CartItem> out = new ArrayList<>();
+        if (items == null) {
+            return out;
+        }
+        for (CartItem src : items) {
+            if (src == null) {
+                continue;
+            }
+            CartItem copy = new CartItem();
+            copy.setId(src.getId());
+            copy.setProductId(src.getProductId());
+            copy.setName(src.getName());
+            copy.setImageUrl(src.getImageUrl());
+            copy.setPrice(src.getPrice());
+            copy.setOriginalPrice(src.getOriginalPrice());
+            copy.setQuantity(src.getQuantity());
+            copy.setStock(src.getStock());
+            copy.setVariantId(src.getVariantId());
+            copy.setVariantName(src.getVariantName());
+            copy.setWeight(src.getWeight());
+            copy.setFlavor(src.getFlavor());
+            copy.setPackageType(src.getPackageType());
+            copy.setSelected(src.isSelected());
+            copy.setUserId(src.getUserId());
+            copy.setProduct(null);
+            out.add(copy);
+        }
+        return out;
     }
 
     public static boolean hasPendingCheckout(Context context) {
@@ -71,7 +109,7 @@ public final class CheckoutIntentHelper {
         if (hasPendingCheckout(context)) {
             List<CartItem> items = getPendingCheckout(context);
             intent.putExtra(EXTRA_NAVIGATE_TO, NAV_CHECKOUT);
-            intent.putExtra(EXTRA_CHECKOUT_ITEMS, new ArrayList<CartItem>(items));
+            intent.putExtra(EXTRA_CHECKOUT_ITEMS, toIntentSafeItems(items));
             clearPendingCheckout(context);
         }
 

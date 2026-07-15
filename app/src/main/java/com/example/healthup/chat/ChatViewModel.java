@@ -20,6 +20,7 @@ import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -76,6 +77,8 @@ public class ChatViewModel extends ViewModel {
     private String pendingProductName;
     private String pendingProductVariant;
     private String pendingProductId;
+    /** {@link ChatMessage#ORDER_PURPOSE_STATUS} or {@link ChatMessage#ORDER_PURPOSE_CANCEL}. */
+    private String pendingOrderPurpose = ChatMessage.ORDER_PURPOSE_STATUS;
 
     public ChatViewModel() {
         this(new ChatRepository(), new OrderRepository(), new ChatBotEngine());
@@ -213,7 +216,7 @@ public class ChatViewModel extends ViewModel {
         card.setProductId(product.getId());
         card.setProductName(product.getName());
         card.setProductImageUrl(product.getImageUrl());
-        card.setProductPrice(product.getPrice());
+        card.setProductPrice(product.getDisplayPrice());
         card.setProductVariant(variant);
         card.setText(product.getName());
         return card;
@@ -453,7 +456,10 @@ public class ChatViewModel extends ViewModel {
             return;
         }
         if (uid == null) {
+            removeLocalById("local_login_login_seller");
             addLoginPrompt("login_seller");
+            recompute();
+            toast.setValue(new Event<>("Vui lòng đăng nhập để chat với nhân viên HealthUp."));
             return;
         }
         if (conversationId == null) {
@@ -520,6 +526,23 @@ public class ChatViewModel extends ViewModel {
 
     private void runBot(@NonNull String text) {
         ChatBotEngine.BotResponse response = botEngine.process(text);
+
+        if ((response.needsOrderLookup || response.needsMembershipLookup) && uid == null) {
+            String loginCopy = response.needsMembershipLookup
+                    ? "Bạn vui lòng đăng nhập để HealthUp xem hạng thành viên giúp bạn nhé!"
+                    : "Bạn vui lòng đăng nhập để HealthUp kiểm tra đơn hàng giúp bạn nhé!";
+            showAndPersistBotText(loginCopy);
+            addLoginPrompt(response.needsMembershipLookup ? "login_membership" : "login_orders");
+            recompute();
+            return;
+        }
+
+        if (response.intent == ChatBotEngine.Intent.CANCEL_ORDER) {
+            pendingOrderPurpose = ChatMessage.ORDER_PURPOSE_CANCEL;
+        } else if (response.needsOrderLookup) {
+            pendingOrderPurpose = ChatMessage.ORDER_PURPOSE_STATUS;
+        }
+
         for (ChatMessage m : response.messages) {
             addLocal(m, nextLocalSort());
             persistBotMessage(m);
@@ -527,17 +550,22 @@ public class ChatViewModel extends ViewModel {
         recompute();
 
         if (response.needsOrderLookup) {
-            if (uid == null) {
-                addLoginPrompt("login_orders");
-                recompute();
-            } else {
-                lookupOrders();
-            }
+            lookupOrders();
+        } else if (response.needsMembershipLookup) {
+            lookupMembership();
+        } else if (response.needsCategoryLookup) {
+            showCategoryPicker();
         }
     }
 
     private void showAndPersistBotText(@NonNull String text) {
         ChatMessage msg = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, text);
+        addLocal(msg, nextLocalSort());
+        persistBotMessage(msg);
+    }
+
+    private void showAndPersistBotHtml(@NonNull String html) {
+        ChatMessage msg = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, html);
         addLocal(msg, nextLocalSort());
         persistBotMessage(msg);
     }
@@ -567,9 +595,11 @@ public class ChatViewModel extends ViewModel {
         card.setSenderId(ChatMessage.SENDER_BOT);
         card.setType(ChatMessage.TYPE_LOGIN_ACTION);
         if ("login_orders".equals(reason)) {
-            card.setText("Bạn cần đăng nhập để mình tra cứu đơn hàng và hỗ trợ chính xác hơn.");
+            card.setText("Bạn vui lòng Đăng nhập để kiểm tra đơn hàng nhé!");
+        } else if ("login_membership".equals(reason)) {
+            card.setText("Bạn vui lòng Đăng nhập để xem Khách hàng thân thiết HealthUp nhé!");
         } else if ("login_seller".equals(reason)) {
-            card.setText("Bạn cần đăng nhập để chat với nhân viên HealthUp.");
+            card.setText("Bạn vui lòng Đăng nhập để chat với nhân viên HealthUp nhé!");
         } else {
             card.setText("Đăng nhập để HealthUp hỗ trợ bạn tốt hơn với đơn hàng và tài khoản của bạn.");
         }
@@ -578,29 +608,61 @@ public class ChatViewModel extends ViewModel {
 
     private void lookupOrders() {
         if (uid == null) {
-            showAndPersistBotText("Bạn cần đăng nhập để mình tra cứu đơn hàng. "
-                    + "Vui lòng quay lại màn Đăng nhập rồi mở chat nhé.");
+            showAndPersistBotText("Bạn vui lòng Đăng nhập để kiểm tra đơn hàng nhé!");
+            addLoginPrompt("login_orders");
             recompute();
             return;
         }
+        final String purpose = pendingOrderPurpose != null
+                ? pendingOrderPurpose
+                : ChatMessage.ORDER_PURPOSE_STATUS;
         orderRepository.getOrdersForBuyer(uid, orders -> {
             if (orders.isEmpty()) {
-                showAndPersistBotText("Mình chưa tìm thấy đơn hàng nào trong tài khoản của bạn. "
-                        + "Nếu bạn vừa đặt hàng, vui lòng thử lại sau ít phút nhé.");
-            } else {
-                for (Order order : orders) {
-                    ChatMessage card = buildOrderCard(order);
-                    addLocal(card, nextLocalSort());
-                    persistBotMessage(card);
-                }
                 showAndPersistBotText(
-                        "Chạm vào một đơn hàng để xem chi tiết. Bạn cần hỗ trợ thêm gì không?");
+                        "Mình chưa thấy đơn gần đây nào trong tài khoản HealthUp của bạn. "
+                                + "Nếu vừa đặt hàng, thử lại sau ít phút hoặc xem toàn bộ đơn nhé.");
+                addBrowseOrdersPrompt();
+            } else {
+                ChatMessage carousel = buildOrderCarousel(orders, purpose);
+                addLocal(carousel, nextLocalSort());
+                showAndPersistBotText(
+                        "Vuốt ngang để xem thêm đơn gần đây (tối đa "
+                                + OrderRepository.MAX_ORDERS
+                                + " đơn), rồi chạm Chọn đơn hàng nhé.");
             }
             recompute();
         });
     }
 
-    private ChatMessage buildOrderCard(@NonNull Order order) {
+    private void addBrowseOrdersPrompt() {
+        ChatMessage card = new ChatMessage();
+        card.setId("local_browse_orders_" + System.currentTimeMillis());
+        card.setSenderType(ChatMessage.SENDER_BOT);
+        card.setSenderId(ChatMessage.SENDER_BOT);
+        card.setType(ChatMessage.TYPE_ACTION_PROMPT);
+        card.setText("Xem danh sách đơn hàng của bạn trên HealthUp:");
+        card.setActionId(ChatMessage.ACTION_BROWSE_ORDERS);
+        card.setActionLabel("Xem đơn hàng");
+        addLocal(card, nextLocalSort());
+    }
+
+    private ChatMessage buildOrderCarousel(@NonNull List<Order> orders, @NonNull String purpose) {
+        ChatMessage carousel = new ChatMessage();
+        carousel.setId("local_order_carousel_" + System.currentTimeMillis());
+        carousel.setSenderType(ChatMessage.SENDER_BOT);
+        carousel.setSenderId(ChatMessage.SENDER_BOT);
+        carousel.setType(ChatMessage.TYPE_ORDER_CAROUSEL);
+        carousel.setOrderPurpose(purpose);
+        carousel.setText("Chọn đơn hàng");
+        List<ChatMessage> choices = new ArrayList<>();
+        for (Order order : orders) {
+            choices.add(buildOrderCard(order, purpose));
+        }
+        carousel.setOrderChoices(choices);
+        return carousel;
+    }
+
+    private ChatMessage buildOrderCard(@NonNull Order order, @NonNull String purpose) {
         ChatMessage card = new ChatMessage();
         card.setSenderType(ChatMessage.SENDER_BOT);
         card.setSenderId(ChatMessage.SENDER_BOT);
@@ -610,8 +672,209 @@ public class ChatViewModel extends ViewModel {
         card.setOrderStatus(order.getStatus());
         card.setOrderTotal(order.getTotalAmount());
         card.setOrderItemCount(order.getItemCount());
+        card.setOrderPurpose(purpose);
         card.setText("Đơn hàng " + order.getOrderCode());
+        if (order.getItems() != null && !order.getItems().isEmpty()) {
+            com.example.models.OrderItem first = order.getItems().get(0);
+            card.setProductName(first.getName());
+            card.setProductImageUrl(first.getImageUrl());
+        }
+        if (ChatMessage.ORDER_PURPOSE_DETAIL.equals(purpose)) {
+            card.setActionLabel("Trạng thái đơn hàng");
+        } else {
+            card.setActionLabel("Chọn đơn hàng");
+        }
         return card;
+    }
+
+    /** Buyer tapped “Chọn đơn hàng” on a carousel card. */
+    public void onOrderSelected(@NonNull ChatMessage selected) {
+        String purpose = selected.getOrderPurpose() != null
+                ? selected.getOrderPurpose()
+                : ChatMessage.ORDER_PURPOSE_STATUS;
+        String code = selected.getOrderCode() != null ? selected.getOrderCode() : "";
+
+        showAndPersistBotText("Bạn đã chọn đơn #" + code + ". HealthUp kiểm tra ngay nhé!");
+
+        if (ChatMessage.ORDER_PURPOSE_CANCEL.equals(purpose)) {
+            showAndPersistBotHtml(OrderStatusCopy.explainCancelHtml(code, selected.getOrderStatus()));
+            if (selected.getOrderStatus() != null
+                    && !Order.STATUS_PENDING.equals(selected.getOrderStatus())) {
+                // Offer human handoff path via existing toast/copy — keep a detail CTA.
+            }
+        } else {
+            showAndPersistBotHtml(OrderStatusCopy.explainStatusHtml(code, selected.getOrderStatus()));
+        }
+
+        ChatMessage detailCard = new ChatMessage();
+        detailCard.setSenderType(ChatMessage.SENDER_BOT);
+        detailCard.setSenderId(ChatMessage.SENDER_BOT);
+        detailCard.setType(ChatMessage.TYPE_ORDER_CARD);
+        detailCard.setOrderId(selected.getOrderId());
+        detailCard.setOrderCode(selected.getOrderCode());
+        detailCard.setOrderStatus(selected.getOrderStatus());
+        detailCard.setOrderTotal(selected.getOrderTotal());
+        detailCard.setOrderItemCount(selected.getOrderItemCount());
+        detailCard.setProductName(selected.getProductName());
+        detailCard.setProductImageUrl(selected.getProductImageUrl());
+        detailCard.setOrderPurpose(ChatMessage.ORDER_PURPOSE_DETAIL);
+        detailCard.setActionLabel("Trạng thái đơn hàng");
+        detailCard.setText("Đơn hàng " + code);
+        addLocal(detailCard, nextLocalSort());
+        persistBotMessage(detailCard);
+        recompute();
+    }
+
+    /**
+     * Same spend rule as {@link com.example.healthup.MemberTierFragment}:
+     * sum {@code totalPrice} of delivered orders for this user.
+     */
+    private void lookupMembership() {
+        if (uid == null) {
+            showAndPersistBotText("Bạn vui lòng Đăng nhập để xem Khách hàng thân thiết HealthUp nhé!");
+            addLoginPrompt("login_membership");
+            recompute();
+            return;
+        }
+        FirebaseFirestore.getInstance().collection("orders")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("status", "delivered")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    double spent = 0d;
+                    if (snap != null) {
+                        for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+                            Object raw = doc.get("totalPrice");
+                            if (!(raw instanceof Number)) {
+                                raw = doc.get("totalAmount");
+                            }
+                            Double total = MembershipRules.numberOrNull(raw);
+                            if (total != null) {
+                                spent += total;
+                            }
+                        }
+                    }
+                    long spentLong = (long) spent;
+                    showAndPersistBotHtml(MembershipRules.buildStatusHtml(spentLong));
+                    addMembershipPrompt();
+                    recompute();
+                })
+                .addOnFailureListener(e -> {
+                    showAndPersistBotText(
+                            "Mình chưa tải được hạng khách hàng thân thiết lúc này. Bạn thử mở "
+                                    + "Khách hàng thân thiết trong hồ sơ, hoặc hỏi lại sau ít phút nhé.");
+                    addMembershipPrompt();
+                    recompute();
+                });
+    }
+
+    private void addMembershipPrompt() {
+        ChatMessage card = new ChatMessage();
+        card.setId("local_membership_" + System.currentTimeMillis());
+        card.setSenderType(ChatMessage.SENDER_BOT);
+        card.setSenderId(ChatMessage.SENDER_BOT);
+        card.setType(ChatMessage.TYPE_ACTION_PROMPT);
+        card.setText("Xem quyền lợi và tiến độ lên hạng trên HealthUp:");
+        card.setActionId(ChatMessage.ACTION_OPEN_MEMBERSHIP);
+        card.setActionLabel("Khách hàng thân thiết");
+        addLocal(card, nextLocalSort());
+    }
+
+    private static final List<String> DEFAULT_CHAT_CATEGORIES = Arrays.asList(
+            "Hạt dinh dưỡng", "Granola", "Trái cây sấy",
+            "Đồ ăn vặt", "Trà thảo mộc", "Combo"
+    );
+
+    private void showCategoryPicker() {
+        removeLocalById("local_category_pick");
+        ChatMessage card = new ChatMessage();
+        card.setId("local_category_pick");
+        card.setSenderType(ChatMessage.SENDER_BOT);
+        card.setSenderId(ChatMessage.SENDER_BOT);
+        card.setType(ChatMessage.TYPE_CATEGORY_PICK);
+        card.setText("Chọn danh mục bạn muốn tư vấn:");
+        card.setCategoryChoices(new ArrayList<>(DEFAULT_CHAT_CATEGORIES));
+        addLocal(card, nextLocalSort());
+        recompute();
+
+        FirebaseFirestore.getInstance().collection("categories")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (snap == null || snap.isEmpty()) {
+                        return;
+                    }
+                    List<String> names = new ArrayList<>();
+                    for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+                        String name = doc.getString("name");
+                        if (name != null && !name.trim().isEmpty()) {
+                            names.add(name.trim());
+                        }
+                    }
+                    if (names.isEmpty()) {
+                        return;
+                    }
+                    Collections.sort(names);
+                    for (ChatMessage local : localMessages) {
+                        if ("local_category_pick".equals(local.getId())) {
+                            local.setCategoryChoices(names);
+                            break;
+                        }
+                    }
+                    recompute();
+                });
+    }
+
+    /** Buyer tapped a category chip inside the category-pick bubble. */
+    public void onCategorySelected(@NonNull String category) {
+        if (category.trim().isEmpty()) {
+            return;
+        }
+        persistUserMessage(category.trim());
+        removeLocalById("local_category_pick");
+        showAndPersistBotText("HealthUp đang tìm gợi ý trong danh mục “" + category.trim() + "”…");
+        recompute();
+        suggestProductsForCategory(category.trim());
+    }
+
+    private void suggestProductsForCategory(@NonNull String category) {
+        FirebaseFirestore.getInstance().collection("products")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    List<Product> matches = new ArrayList<>();
+                    if (snap != null) {
+                        for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+                            Product p = Product.fromDocument(doc);
+                            if (p == null || p.isHidden() || p.isDraft()) {
+                                continue;
+                            }
+                            String cat = p.getCategory();
+                            if (cat != null && cat.equalsIgnoreCase(category)) {
+                                matches.add(p);
+                            }
+                        }
+                    }
+                    matches.sort((a, b) -> Integer.compare(b.getSoldCount(), a.getSoldCount()));
+                    int limit = Math.min(4, matches.size());
+                    if (limit == 0) {
+                        showAndPersistBotText(
+                                "Hiện chưa có sản phẩm phù hợp trong “" + category + "”. "
+                                        + "Bạn thử danh mục khác hoặc Chat với người bán nhé.");
+                        showCategoryPicker();
+                        return;
+                    }
+                    showAndPersistBotText(
+                            "Gợi ý một số sản phẩm “" + category + "” được quan tâm nhiều:");
+                    for (int i = 0; i < limit; i++) {
+                        ChatMessage card = buildProductCard(matches.get(i), null);
+                        addLocal(card, nextLocalSort());
+                    }
+                    recompute();
+                })
+                .addOnFailureListener(e -> {
+                    showAndPersistBotText(
+                            "Mình chưa tải được sản phẩm lúc này. Bạn thử lại sau ít phút nhé.");
+                    recompute();
+                });
     }
 
     // ---- Seller actions --------------------------------------------------
@@ -722,11 +985,20 @@ public class ChatViewModel extends ViewModel {
         if (ChatMessage.TYPE_ORDER_CARD.equals(message.getType())) {
             return true;
         }
+        if (ChatMessage.TYPE_ORDER_CAROUSEL.equals(message.getType())) {
+            return true;
+        }
+        if (ChatMessage.TYPE_ACTION_PROMPT.equals(message.getType())) {
+            return true;
+        }
         if (ChatMessage.TYPE_PRODUCT_CARD.equals(message.getType())) {
             return false;
         }
         if (ChatMessage.TYPE_LOGIN_ACTION.equals(message.getType())) {
             return false;
+        }
+        if (ChatMessage.TYPE_CATEGORY_PICK.equals(message.getType())) {
+            return true;
         }
         return ChatMessage.SENDER_BOT.equals(message.getSenderType());
     }

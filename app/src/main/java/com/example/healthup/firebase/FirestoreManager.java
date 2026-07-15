@@ -57,23 +57,20 @@ public class FirestoreManager {
      * 3. Sắp xếp theo sortOrder
      * Tất cả xử lý bằng Java, không cần Firestore composite index.
      *
-     * Lưu ý: đọc trực tiếp field thô ("price", "rating", "sold", "createdAt") từ
-     * DocumentSnapshot để không phụ thuộc vào tên hàm getter cụ thể trong Product.java.
+     * Sold / sort "Phổ biến" dùng {@link Product#getSoldCount()} (cùng API Home/Detail).
      */
     public List<Product> processProductSnapshots(QuerySnapshot snapshots, String sortOrder,
                                                  double minPrice, double maxPrice, float minRating) {
         List<Product> filtered = new ArrayList<>();
         Map<String, Double> priceMap = new HashMap<>();
-        Map<String, Long> soldMap = new HashMap<>();
         Map<String, Timestamp> createdAtMap = new HashMap<>();
 
         if (snapshots == null) return filtered;
 
         for (DocumentSnapshot doc : snapshots) {
-            Product p = doc.toObject(Product.class);
+            Product p = Product.fromDocument(doc);
             if (p == null) continue;
             if (!Product.isVisibleToBuyers(doc)) continue;
-            p.setId(doc.getId());
 
             Double priceVal = doc.getDouble("price");
             double price = (priceVal != null) ? priceVal : 0;
@@ -87,8 +84,6 @@ public class FirestoreManager {
             if (minRating > 0 && rating < minRating) continue;
 
             priceMap.put(doc.getId(), price);
-            Long soldVal = doc.getLong("sold");
-            soldMap.put(doc.getId(), soldVal != null ? soldVal : 0L);
             createdAtMap.put(doc.getId(), doc.getTimestamp("createdAt"));
 
             filtered.add(p);
@@ -113,9 +108,7 @@ public class FirestoreManager {
                     return tb.compareTo(ta); // mới nhất lên trước
                 });
             } else if (sortOrder.equals("Phổ biến")) {
-                filtered.sort((a, b) -> Long.compare(
-                        soldMap.getOrDefault(b.getId(), 0L),
-                        soldMap.getOrDefault(a.getId(), 0L)));
+                filtered.sort((a, b) -> Integer.compare(b.getSoldCount(), a.getSoldCount()));
             }
         }
 

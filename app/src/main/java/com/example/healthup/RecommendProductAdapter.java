@@ -59,16 +59,20 @@ public class RecommendProductAdapter extends RecyclerView.Adapter<RecommendProdu
 
         public void bind(Product product) {
             binding.tvName.setText(product.getName());
-            binding.tvPrice.setText(df.format(product.getPrice()));
+            binding.tvPrice.setText(df.format(product.getDisplayPrice()));
             binding.tvRating.setText(String.valueOf(product.getRating()));
             
-            if (product.getSoldCount() >= 1000) {
-                binding.tvSold.setText("Đã bán " + (product.getSoldCount() / 1000.0) + "k");
-            } else {
-                binding.tvSold.setText("Đã bán " + product.getSoldCount());
-            }
+            binding.tvSold.setText("Đã bán " + product.getSoldCount());
 
             com.example.healthup.util.ImageLoadHelper.loadInto(binding.imgProduct, product.getImageUrl());
+
+            boolean inStock = product.isInStock();
+            if (binding.tvBadgeOutOfStock != null) {
+                binding.tvBadgeOutOfStock.setVisibility(inStock ? android.view.View.GONE : android.view.View.VISIBLE);
+            }
+            binding.btnAdd.setEnabled(inStock);
+            binding.btnAdd.setAlpha(inStock ? 1f : 0.45f);
+            binding.btnAdd.setText(inStock ? "Thêm" : context.getString(R.string.out_of_stock));
 
             itemView.setOnClickListener(v -> {
                 if (listener != null) {

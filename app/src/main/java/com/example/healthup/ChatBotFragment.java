@@ -239,6 +239,23 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         recyclerView.setAdapter(adapter);
 
+        recyclerView.setOnTouchListener((v, event) -> {
+            if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                hideKeyboard();
+            }
+            return false;
+        });
+
+        View chipsRow = view.findViewById(R.id.chatQuickChipsRow);
+        if (chipsRow != null) {
+            chipsRow.setOnTouchListener((v, event) -> {
+                if (event.getAction() == android.view.MotionEvent.ACTION_DOWN) {
+                    hideKeyboard();
+                }
+                return false;
+            });
+        }
+
 
 
         setupWindowInsets(view);
@@ -613,9 +630,21 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
                 viewModel.onSuggestedQuestionTapped(getString(R.string.chat_q_order_status)));
 
+        View chipMembership = view.findViewById(R.id.chipMembership);
+        if (chipMembership != null) {
+            chipMembership.setOnClickListener(v ->
+                    viewModel.onSuggestedQuestionTapped(getString(R.string.chat_q_membership)));
+        }
+
         view.findViewById(R.id.chipCancelOrder).setOnClickListener(v ->
 
                 viewModel.onSuggestedQuestionTapped(getString(R.string.chat_q_cancel_order)));
+
+        View chipProductAdvice = view.findViewById(R.id.chipProductAdvice);
+        if (chipProductAdvice != null) {
+            chipProductAdvice.setOnClickListener(v ->
+                    viewModel.onSuggestedQuestionTapped(getString(R.string.chat_q_product_browse)));
+        }
 
         View chipSeller = view.findViewById(R.id.chipSeller);
 
@@ -639,8 +668,40 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         input.setText("");
 
-        input.requestFocus();
+        // Keep IME open after Send (send button must not steal focus — see layout focusable=false).
+        keepKeyboardOpen();
 
+    }
+
+    private void keepKeyboardOpen() {
+        if (input == null || !isAdded()) {
+            return;
+        }
+        input.requestFocus();
+        input.post(() -> {
+            if (!isAdded() || input == null) {
+                return;
+            }
+            android.view.inputmethod.InputMethodManager imm =
+                    (android.view.inputmethod.InputMethodManager)
+                            requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+            if (imm != null) {
+                imm.showSoftInput(input, android.view.inputmethod.InputMethodManager.SHOW_IMPLICIT);
+            }
+        });
+    }
+
+    private void hideKeyboard() {
+        if (input == null || !isAdded()) {
+            return;
+        }
+        android.view.inputmethod.InputMethodManager imm =
+                (android.view.inputmethod.InputMethodManager)
+                        requireContext().getSystemService(android.content.Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.hideSoftInputFromWindow(input.getWindowToken(), 0);
+        }
+        input.clearFocus();
     }
 
 
@@ -773,9 +834,64 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
     @Override
 
+    public void onOrderSelect(@NonNull ChatMessage message) {
+
+        viewModel.onOrderSelected(message);
+
+    }
+
+    @Override
+    public void onCategorySelected(@NonNull String category) {
+        viewModel.onCategorySelected(category);
+    }
+
+
+
+    @Override
+
     public void onLoginActionClick() {
 
         startActivity(new Intent(requireContext(), LoginActivity.class));
+
+    }
+
+
+
+    @Override
+
+    public void onActionPromptClick(@NonNull ChatMessage message) {
+
+        String actionId = message.getActionId();
+
+        if (ChatMessage.ACTION_OPEN_MEMBERSHIP.equals(actionId)) {
+
+            requireActivity().getSupportFragmentManager()
+
+                    .beginTransaction()
+
+                    .replace(R.id.fragment_container, new MemberTierFragment())
+
+                    .addToBackStack(null)
+
+                    .commit();
+
+            return;
+
+        }
+
+        // Default / browse_orders → order history
+
+        OrderHistoryFragment fragment = new OrderHistoryFragment();
+
+        requireActivity().getSupportFragmentManager()
+
+                .beginTransaction()
+
+                .replace(R.id.fragment_container, fragment)
+
+                .addToBackStack(null)
+
+                .commit();
 
     }
 
@@ -853,21 +969,21 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
             buyNowItem.setVariantName(variant.getName());
 
-            buyNowItem.setPrice(variant.getPrice());
+            buyNowItem.setPrice(product.resolveUnitPrice(variant));
+            buyNowItem.setOriginalPrice(product.resolveOriginalUnitPrice(variant));
 
         } else {
 
             buyNowItem.setPrice(product.getPrice());
+            buyNowItem.setOriginalPrice(product.resolveOriginalUnitPrice(null));
 
         }
 
 
 
-        ArrayList<CartItem> checkoutItems = new ArrayList<>();
-
-        checkoutItems.add(buyNowItem);
-
-
+        // Strip nested Product — Firebase Timestamp is not Serializable (Buy Now Intent crash).
+        ArrayList<CartItem> checkoutItems = CheckoutIntentHelper.toIntentSafeItems(
+                java.util.Collections.singletonList(buyNowItem));
 
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
@@ -886,9 +1002,9 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
         }
 
-
-
-        buyNowItem.setUserId(user.getUid());
+        if (!checkoutItems.isEmpty()) {
+            checkoutItems.get(0).setUserId(user.getUid());
+        }
 
         PhoneVerifiedHelper.requireForCheckout(new PhoneVerifiedHelper.Callback() {
 

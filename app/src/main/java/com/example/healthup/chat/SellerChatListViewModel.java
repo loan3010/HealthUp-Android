@@ -91,7 +91,7 @@ public class SellerChatListViewModel extends ViewModel {
                 loading.setValue(false);
                 accessDenied.setValue(new Event<>(
                         "Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư. "
-                                + "Kiểm tra field role=admin trên users/" + uid + " trong Firestore."));
+                                + "Kiểm tra role=admin trên hồ sơ users (và user_sessions nếu dùng đăng nhập admin)."));
             }
         });
     }

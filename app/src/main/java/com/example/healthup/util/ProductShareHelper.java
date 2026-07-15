@@ -4,8 +4,17 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ResolveInfo;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.RectF;
+import android.graphics.Typeface;
 import android.net.Uri;
+import android.text.Layout;
+import android.text.StaticLayout;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.ImageView;
@@ -15,6 +24,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 
 import com.bumptech.glide.Glide;
@@ -28,14 +38,17 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.NumberFormat;
+import java.util.List;
 import java.util.Locale;
 
 /**
- * Product share flow similar to Shopee/Lazada: preview sheet, rich caption, image + link.
+ * Product share: preview sheet + intent with branded image card and product link.
+ * Apps like WhatsApp show the image; caption carries the tap-to-open link.
  */
 public final class ProductShareHelper {
 
-    private static final String SHARE_HOST = "https://healthup.app/san-pham/";
+    /** Firebase Hosting path the app can deep-link; keeps product id for open-in-app. */
+    private static final String SHARE_HOST = "https://healthup-f6eff.firebaseapp.com/san-pham/";
 
     private ProductShareHelper() {
     }
@@ -60,7 +73,7 @@ public final class ProductShareHelper {
 
         NumberFormat currency = NumberFormat.getInstance(new Locale("vi", "VN"));
         if (tvPreviewPrice != null) {
-            tvPreviewPrice.setText(currency.format(product.getPrice()) + "đ");
+            tvPreviewPrice.setText(currency.format(product.getDisplayPrice()) + "đ");
         }
         if (tvPreviewMeta != null) {
             tvPreviewMeta.setText(buildPreviewMeta(activity, product));
@@ -94,10 +107,19 @@ public final class ProductShareHelper {
         String imageUrl = product.getImageUrl();
 
         if (TextUtils.isEmpty(imageUrl)) {
+            Bitmap card = createShareCard(activity, null, product);
+            if (card != null) {
+                File imageFile = writeShareImage(activity, product.getId(), card);
+                if (imageFile != null) {
+                    launchImageShare(activity, imageFile, shareText);
+                    return;
+                }
+            }
             launchTextShare(activity, shareText);
             return;
         }
 
+        Toast.makeText(activity, R.string.product_share_preparing, Toast.LENGTH_SHORT).show();
         Glide.with(activity)
                 .asBitmap()
                 .load(ImageLoadHelper.resolveLoadTarget(imageUrl))
@@ -108,7 +130,9 @@ public final class ProductShareHelper {
                             @Nullable Transition<? super Bitmap> transition
                     ) {
                         if (activity.isFinishing()) return;
-                        File imageFile = writeShareImage(activity, product.getId(), resource);
+                        Bitmap card = createShareCard(activity, resource, product);
+                        File imageFile = writeShareImage(activity, product.getId(),
+                                card != null ? card : resource);
                         if (imageFile != null) {
                             launchImageShare(activity, imageFile, shareText);
                         } else {
@@ -122,11 +146,90 @@ public final class ProductShareHelper {
 
                     @Override
                     public void onLoadFailed(@Nullable android.graphics.drawable.Drawable errorDrawable) {
-                        if (!activity.isFinishing()) {
-                            launchTextShare(activity, shareText);
+                        if (activity.isFinishing()) return;
+                        Bitmap card = createShareCard(activity, null, product);
+                        if (card != null) {
+                            File imageFile = writeShareImage(activity, product.getId(), card);
+                            if (imageFile != null) {
+                                launchImageShare(activity, imageFile, shareText);
+                                return;
+                            }
                         }
+                        launchTextShare(activity, shareText);
                     }
                 });
+    }
+
+    /**
+     * Branded share preview card: product photo + name + price + HealthUp footer.
+     * Recipients see this image immediately (WhatsApp / Zalo / Messenger).
+     */
+    @Nullable
+    private static Bitmap createShareCard(
+            @NonNull Context context,
+            @Nullable Bitmap productImage,
+            @NonNull Product product
+    ) {
+        final int width = 1080;
+        final int height = 1440;
+        Bitmap out = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(out);
+        canvas.drawColor(Color.WHITE);
+
+        int brand = ContextCompat.getColor(context, R.color.brand_primary);
+        Paint bar = new Paint(Paint.ANTI_ALIAS_FLAG);
+        bar.setColor(brand);
+        canvas.drawRect(0, 0, width, 120, bar);
+
+        TextPaint brandPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        brandPaint.setColor(Color.WHITE);
+        brandPaint.setTextSize(56f);
+        brandPaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        canvas.drawText("HealthUp", 48, 78, brandPaint);
+
+        int photoTop = 120;
+        int photoHeight = 900;
+        if (productImage != null && !productImage.isRecycled()) {
+            RectF dst = new RectF(0, photoTop, width, photoTop + photoHeight);
+            canvas.drawBitmap(productImage, null, dst, new Paint(Paint.FILTER_BITMAP_FLAG));
+        } else {
+            Paint fill = new Paint();
+            fill.setColor(0xFFF3F4F6);
+            canvas.drawRect(0, photoTop, width, photoTop + photoHeight, fill);
+        }
+
+        int textTop = photoTop + photoHeight + 40;
+        TextPaint namePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        namePaint.setColor(0xFF1A1A1A);
+        namePaint.setTextSize(48f);
+        namePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        String name = product.getName() == null ? "" : product.getName().trim();
+        StaticLayout nameLayout = StaticLayout.Builder
+                .obtain(name, 0, name.length(), namePaint, width - 96)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL)
+                .setMaxLines(2)
+                .setEllipsize(TextUtils.TruncateAt.END)
+                .build();
+        canvas.save();
+        canvas.translate(48, textTop);
+        nameLayout.draw(canvas);
+        canvas.restore();
+
+        NumberFormat currency = NumberFormat.getInstance(new Locale("vi", "VN"));
+        TextPaint pricePaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        pricePaint.setColor(brand);
+        pricePaint.setTextSize(52f);
+        pricePaint.setTypeface(Typeface.create(Typeface.DEFAULT, Typeface.BOLD));
+        float priceY = textTop + nameLayout.getHeight() + 64;
+        canvas.drawText(currency.format(product.getDisplayPrice()) + "đ", 48, priceY, pricePaint);
+
+        TextPaint linkPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+        linkPaint.setColor(0xFF6B7280);
+        linkPaint.setTextSize(32f);
+        String link = buildProductLink(product);
+        canvas.drawText(link, 48, height - 48, linkPaint);
+
+        return out;
     }
 
     @Nullable
@@ -134,7 +237,7 @@ public final class ProductShareHelper {
         String safeId = TextUtils.isEmpty(productId) ? "product" : productId.replaceAll("[^a-zA-Z0-9_-]", "_");
         File out = new File(context.getCacheDir(), "share_" + safeId + ".jpg");
         try (FileOutputStream stream = new FileOutputStream(out)) {
-            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 92, stream)) {
+            if (!bitmap.compress(Bitmap.CompressFormat.JPEG, 90, stream)) {
                 return null;
             }
             return out;
@@ -158,12 +261,28 @@ public final class ProductShareHelper {
         intent.putExtra(Intent.EXTRA_STREAM, uri);
         intent.putExtra(Intent.EXTRA_TEXT, shareText);
         intent.putExtra(Intent.EXTRA_SUBJECT, extractSubject(shareText));
+        intent.putExtra(Intent.EXTRA_TITLE, extractSubject(shareText));
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        intent.setClipData(ClipData.newRawUri("shared_image", uri));
-        activity.startActivity(Intent.createChooser(
+        intent.setClipData(ClipData.newUri(
+                activity.getContentResolver(),
+                "HealthUp product",
+                uri
+        ));
+
+        Intent chooser = Intent.createChooser(
                 intent,
                 activity.getString(R.string.product_share_chooser_title)
-        ));
+        );
+        List<ResolveInfo> targets = activity.getPackageManager()
+                .queryIntentActivities(intent, 0);
+        for (ResolveInfo info : targets) {
+            activity.grantUriPermission(
+                    info.activityInfo.packageName,
+                    uri,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+            );
+        }
+        activity.startActivity(chooser);
     }
 
     private static void launchTextShare(@NonNull AppCompatActivity activity, @NonNull String shareText) {
@@ -191,27 +310,23 @@ public final class ProductShareHelper {
         boolean en = "en".equals(LocaleHelper.getLanguage(context));
         NumberFormat currency = NumberFormat.getInstance(new Locale("vi", "VN"));
         String name = product.getName() == null ? "" : product.getName().trim();
-        String price = currency.format(product.getPrice()) + "đ";
+        String price = currency.format(product.getDisplayPrice()) + "đ";
         String link = buildProductLink(product);
 
         StringBuilder sb = new StringBuilder();
         if (en) {
-            sb.append("Check out this product on HealthUp!\n\n");
             sb.append(name).append('\n');
             sb.append("Price: ").append(price);
             appendDiscountLine(sb, product, currency, true);
             appendRatingLine(sb, product, true);
-            appendShortDescLine(sb, product);
-            sb.append("\nShop now: ").append(link);
+            sb.append("\n\n").append(link);
             sb.append("\n\nHealthUp — Live healthier every day");
         } else {
-            sb.append("Mình thấy sản phẩm này trên HealthUp, bạn xem thử nhé!\n\n");
             sb.append(name).append('\n');
             sb.append("Giá: ").append(price);
             appendDiscountLine(sb, product, currency, false);
             appendRatingLine(sb, product, false);
-            appendShortDescLine(sb, product);
-            sb.append("\nXem & mua ngay: ").append(link);
+            sb.append("\n\n").append(link);
             sb.append("\n\nHealthUp — Sống khỏe mỗi ngày");
         }
         return sb.toString();
@@ -223,9 +338,10 @@ public final class ProductShareHelper {
             @NonNull NumberFormat currency,
             boolean en
     ) {
-        double price = product.getPrice();
-        double original = product.getOriginalPrice() > price
-                ? product.getOriginalPrice()
+        double price = product.getDisplayPrice();
+        double displayOriginal = product.getDisplayOriginalPrice();
+        double original = displayOriginal > price
+                ? displayOriginal
                 : (product.getOldPrice() > price ? product.getOldPrice() : 0);
         if (original <= price) return;
 
@@ -259,16 +375,6 @@ public final class ProductShareHelper {
         }
     }
 
-    private static void appendShortDescLine(@NonNull StringBuilder sb, @NonNull Product product) {
-        String shortDesc = product.getShortDesc();
-        if (TextUtils.isEmpty(shortDesc)) return;
-        String trimmed = shortDesc.trim();
-        if (trimmed.length() > 120) {
-            trimmed = trimmed.substring(0, 117).trim() + "...";
-        }
-        sb.append("\n").append(trimmed);
-    }
-
     @NonNull
     private static String buildPreviewMeta(@NonNull Context context, @NonNull Product product) {
         boolean en = "en".equals(LocaleHelper.getLanguage(context));
@@ -291,8 +397,11 @@ public final class ProductShareHelper {
 
     @NonNull
     public static String buildProductLink(@NonNull Product product) {
-        String slug = buildSlug(product);
-        return SHARE_HOST + slug;
+        String id = product.getId();
+        if (!TextUtils.isEmpty(id)) {
+            return SHARE_HOST + id.trim();
+        }
+        return SHARE_HOST + buildSlug(product);
     }
 
     @NonNull
@@ -300,10 +409,6 @@ public final class ProductShareHelper {
         String code = product.getProductCode();
         if (!TextUtils.isEmpty(code)) {
             return slugify(code);
-        }
-        String id = product.getId();
-        if (!TextUtils.isEmpty(id)) {
-            return slugify(id);
         }
         return slugify(product.getName());
     }

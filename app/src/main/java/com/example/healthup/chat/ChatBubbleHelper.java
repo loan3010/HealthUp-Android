@@ -23,7 +23,10 @@ public final class ChatBubbleHelper {
     public static boolean isGroupable(@NonNull ChatMessage message) {
         if (ChatMessage.TYPE_SUGGESTION.equals(message.getType())
                 || ChatMessage.TYPE_ORDER_CARD.equals(message.getType())
+                || ChatMessage.TYPE_ORDER_CAROUSEL.equals(message.getType())
+                || ChatMessage.TYPE_ACTION_PROMPT.equals(message.getType())
                 || ChatMessage.TYPE_PRODUCT_CARD.equals(message.getType())
+                || ChatMessage.TYPE_CATEGORY_PICK.equals(message.getType())
                 || ChatMessage.TYPE_LOGIN_ACTION.equals(message.getType())
                 || ChatMessage.TYPE_IMAGE.equals(message.getType())) {
             return false;

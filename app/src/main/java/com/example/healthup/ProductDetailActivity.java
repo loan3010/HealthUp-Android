@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.text.TextUtils;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
@@ -14,6 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.widget.NestedScrollView;
@@ -84,6 +86,10 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
         String productId = getIntent().getStringExtra("productId");
         product = (Product) getIntent().getSerializableExtra("product");
 
+        if (productId == null || productId.isEmpty()) {
+            productId = resolveProductIdFromDeepLink(getIntent());
+        }
+
         if (productId != null) {
             fetchProductDetails(productId);
         } else if (product != null && product.getId() != null) {
@@ -92,6 +98,36 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             Toast.makeText(this, "Không tìm thấy thông tin sản phẩm", Toast.LENGTH_SHORT).show();
             finish();
         }
+    }
+
+    @Nullable
+    private static String resolveProductIdFromDeepLink(@Nullable Intent intent) {
+        if (intent == null) {
+            return null;
+        }
+        Uri data = intent.getData();
+        if (data == null) {
+            return null;
+        }
+        // healthup://product/{id}
+        if ("healthup".equalsIgnoreCase(data.getScheme()) && "product".equalsIgnoreCase(data.getHost())) {
+            String path = data.getPath();
+            if (path != null && path.length() > 1) {
+                return path.substring(1);
+            }
+            if (data.getLastPathSegment() != null) {
+                return data.getLastPathSegment();
+            }
+        }
+        // https://…/san-pham/{id}
+        java.util.List<String> segments = data.getPathSegments();
+        if (segments != null && segments.size() >= 2 && "san-pham".equalsIgnoreCase(segments.get(0))) {
+            return segments.get(1);
+        }
+        if (segments != null && segments.size() == 1 && !segments.get(0).isEmpty()) {
+            return segments.get(0);
+        }
+        return null;
     }
 
     private void fetchProductDetails(String productId) {
@@ -180,8 +216,20 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
                 startActivity(intent);
             });
         }
-        btnAddCart.setOnClickListener(v -> showVariantSelection(false));
-        btnBuyNow.setOnClickListener(v -> showVariantSelection(true));
+        btnAddCart.setOnClickListener(v -> {
+            if (product == null || !product.isInStock()) {
+                Toast.makeText(this, R.string.out_of_stock, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showVariantSelection(false);
+        });
+        btnBuyNow.setOnClickListener(v -> {
+            if (product == null || !product.isInStock()) {
+                Toast.makeText(this, R.string.out_of_stock, Toast.LENGTH_SHORT).show();
+                return;
+            }
+            showVariantSelection(true);
+        });
         if (btnChat != null) {
             btnChat.setOnClickListener(v -> openProductChat());
         }
@@ -266,6 +314,10 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             if (isFinishing()) return;
             ReviewStatsHelper.applyToProduct(product, stats);
             updateRatingUi(stats.avgRating, stats.count);
+            // Mock sold depends on reviewCount — keep in sync with Home/list after enrich.
+            if (tvSold != null) {
+                tvSold.setText("Đã bán " + product.getSoldCount());
+            }
         });
     }
 
@@ -337,22 +389,30 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
 
     private void updatePriceDisplay() {
         NumberFormat formatter = NumberFormat.getInstance(new Locale("vi", "VN"));
-        double displayPrice = product.getPrice();
-        int stock = product.getStockCount();
+        // Selected SKU after picker; otherwise min enabled in-stock (or min enabled if OOS).
+        double displayPrice = selectedVariant != null
+                ? product.resolveUnitPrice(selectedVariant)
+                : product.getDisplayPrice();
+        double compareAt = selectedVariant != null
+                ? product.resolveOriginalUnitPrice(selectedVariant)
+                : product.getDisplayOriginalPrice();
+        // Prefer enabled-SKU sum when variants exist; never trust stale product.stock alone.
+        int stock = product.getAvailableStock();
+        boolean inStock = stock > 0;
 
         tvPrice.setText(formatter.format(displayPrice) + "đ");
 
-        if (product.getOriginalPrice() > displayPrice) {
+        if (compareAt > displayPrice) {
             tvOriginalPrice.setVisibility(View.VISIBLE);
             tvDiscount.setVisibility(View.VISIBLE);
             tvSavings.setVisibility(View.VISIBLE);
 
-            tvOriginalPrice.setText(formatter.format(product.getOriginalPrice()) + "đ");
+            tvOriginalPrice.setText(formatter.format(compareAt) + "đ");
             tvOriginalPrice.setPaintFlags(tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
 
-            int discountPercent = (int) (((product.getOriginalPrice() - displayPrice) / product.getOriginalPrice()) * 100);
+            int discountPercent = (int) (((compareAt - displayPrice) / compareAt) * 100);
             tvDiscount.setText("-" + discountPercent + "%");
-            tvSavings.setText("Tiết kiệm " + formatter.format(product.getOriginalPrice() - displayPrice) + "đ");
+            tvSavings.setText("Tiết kiệm " + formatter.format(compareAt - displayPrice) + "đ");
         } else {
             tvOriginalPrice.setVisibility(View.GONE);
             tvDiscount.setVisibility(View.GONE);
@@ -360,9 +420,17 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
         }
 
         if (tvStock != null) {
+            // Same source as isInStock() — never show stale product.stock while buy is OOS.
             tvStock.setText(getString(R.string.stock_prefix, stock));
-            btnAddCart.setEnabled(stock > 0);
-            btnBuyNow.setEnabled(stock > 0);
+        }
+        if (btnAddCart != null) {
+            btnAddCart.setEnabled(inStock);
+            btnAddCart.setAlpha(inStock ? 1f : 0.45f);
+        }
+        if (btnBuyNow != null) {
+            btnBuyNow.setEnabled(inStock);
+            btnBuyNow.setAlpha(inStock ? 1f : 0.45f);
+            btnBuyNow.setText(inStock ? getString(R.string.buy_now) : getString(R.string.out_of_stock));
         }
     }
 
@@ -469,10 +537,10 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
                 if (tvContent != null && ivArrow != null) {
                     if (tvContent.getVisibility() == View.GONE) {
                         tvContent.setVisibility(View.VISIBLE);
-                        ivArrow.setRotation(90);
+                        ivArrow.animate().rotation(180f).setDuration(180).start();
                     } else {
                         tvContent.setVisibility(View.GONE);
-                        ivArrow.setRotation(-90);
+                        ivArrow.animate().rotation(0f).setDuration(180).start();
                     }
                 }
             });
@@ -626,6 +694,7 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
     private void showVariantSelection(boolean isBuyNow) {
         VariantBottomSheetFragment bottomSheet = VariantBottomSheetFragment.newInstance(product, isBuyNow, (variant, quantity, selections) -> {
             selectedVariant = variant;
+            updatePriceDisplay();
             if (isBuyNow) {
                 performBuyNow(quantity, selections);
             } else {
@@ -641,9 +710,16 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
         if (selectedVariant != null) {
             buyNowItem.setVariantId(selectedVariant.getId());
             buyNowItem.setVariantName(selectedVariant.getName());
-            buyNowItem.setPrice(selectedVariant.getPrice());
+            buyNowItem.setPrice(product.resolveUnitPrice(selectedVariant));
+            buyNowItem.setOriginalPrice(product.resolveOriginalUnitPrice(selectedVariant));
+            if (selectedVariant.getImageUrl() != null && !selectedVariant.getImageUrl().isEmpty()) {
+                buyNowItem.setImageUrl(selectedVariant.getImageUrl());
+            }
+            buyNowItem.setStock(Math.max(0, selectedVariant.getStock()));
         } else {
             buyNowItem.setPrice(product.getPrice());
+            buyNowItem.setOriginalPrice(product.resolveOriginalUnitPrice(null));
+            buyNowItem.setStock(product.getAvailableStock());
         }
 
         if (selections != null) {
@@ -655,12 +731,16 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             }
         }
 
-        ArrayList<com.example.models.CartItem> checkoutItems = new ArrayList<>();
-        checkoutItems.add(buyNowItem);
+        // Never pass nested Product across Intent — Firebase Timestamp is not Serializable
+        // and crashes startActivity (BadParcelableException). Flat CartItem fields are enough.
+        ArrayList<com.example.models.CartItem> checkoutItems =
+                com.example.healthup.util.CheckoutIntentHelper.toIntentSafeItems(
+                        java.util.Collections.singletonList(buyNowItem));
 
         com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+        // Keep ProductDetail under this Main so Back returns to the product (do NOT CLEAR_TOP).
         Intent intent = new Intent(this, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        intent.putExtra("return_to_previous", true);
 
         if (user == null) {
             com.example.healthup.util.CheckoutIntentHelper.savePendingCheckout(this, checkoutItems);
@@ -669,7 +749,9 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
             return;
         }
 
-        buyNowItem.setUserId(user.getUid());
+        if (!checkoutItems.isEmpty()) {
+            checkoutItems.get(0).setUserId(user.getUid());
+        }
         com.example.healthup.util.PhoneVerifiedHelper.requireForCheckout(
                 new com.example.healthup.util.PhoneVerifiedHelper.Callback() {
                     @Override

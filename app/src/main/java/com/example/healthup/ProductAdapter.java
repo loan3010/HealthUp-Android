@@ -128,7 +128,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
     static class ProductViewHolder extends RecyclerView.ViewHolder {
         ImageView ivProduct, btnAdd, btnWishlist;
         TextView tvName, tvPrice, tvOriginalPrice, tvRating, tvSoldCount;
-        TextView tvBadgeNew, tvBadgeHot;
+        TextView tvBadgeNew, tvBadgeHot, tvBadgeOutOfStock;
         CheckBox cbSelect;
         LinearLayout layoutRatingSold;
 
@@ -142,6 +142,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             tvSoldCount = itemView.findViewById(R.id.tvSoldCount);
             tvBadgeNew = itemView.findViewById(R.id.tvBadgeNew);
             tvBadgeHot = itemView.findViewById(R.id.tvBadgeHot);
+            tvBadgeOutOfStock = itemView.findViewById(R.id.tvBadgeOutOfStock);
             btnAdd = itemView.findViewById(R.id.btnAddToCart);
             btnWishlist = itemView.findViewById(R.id.btnWishlist);
             cbSelect = itemView.findViewById(R.id.cbSelect);
@@ -163,7 +164,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             }
 
             DecimalFormat df = new DecimalFormat("#,###đ");
-            String formattedPrice = df.format(product.getPrice());
+            double displayPrice = product.getDisplayPrice();
+            String formattedPrice = df.format(displayPrice);
             tvPrice.setText(formattedPrice);
 
             if (isHorizontal) {
@@ -184,9 +186,10 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 btnWishlist.getLayoutParams().height = (int) (32 * itemView.getContext().getResources().getDisplayMetrics().density);
             }
 
-            if (product.getOriginalPrice() > 0 && product.getOriginalPrice() > product.getPrice()) {
+            double displayOriginal = product.getDisplayOriginalPrice();
+            if (displayOriginal > 0 && displayOriginal > displayPrice) {
                 tvOriginalPrice.setVisibility(View.VISIBLE);
-                tvOriginalPrice.setText(df.format(product.getOriginalPrice()));
+                tvOriginalPrice.setText(df.format(displayOriginal));
                 tvOriginalPrice.setPaintFlags(tvOriginalPrice.getPaintFlags() | Paint.STRIKE_THRU_TEXT_FLAG);
             } else {
                 tvOriginalPrice.setVisibility(View.GONE);
@@ -195,7 +198,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             if (tvRating != null) {
                 tvRating.setText(ReviewStatsHelper.formatCardRating(product));
             }
-            if (tvSoldCount != null) tvSoldCount.setText("đã bán " + product.getSoldCount());
+            if (tvSoldCount != null) tvSoldCount.setText("Đã bán " + product.getSoldCount());
 
             if (layoutRatingSold != null && tvSoldCount != null) {
                 LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tvSoldCount.getLayoutParams();
@@ -210,7 +213,15 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 tvSoldCount.setLayoutParams(lp);
             }
 
-            if (product.isNew()) {
+            boolean inStock = product.isInStock();
+            if (tvBadgeOutOfStock != null) {
+                tvBadgeOutOfStock.setVisibility(inStock ? View.GONE : View.VISIBLE);
+            }
+            if (!inStock) {
+                // Out-of-stock badge takes priority over NEW/HOT on the image.
+                tvBadgeNew.setVisibility(View.GONE);
+                tvBadgeHot.setVisibility(View.GONE);
+            } else if (product.isNew()) {
                 tvBadgeNew.setVisibility(View.VISIBLE);
                 tvBadgeHot.setVisibility(View.GONE);
             } else if (product.isHot()) {
@@ -237,6 +248,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 cbSelect.setVisibility(View.GONE);
                 btnWishlist.setVisibility(View.VISIBLE);
                 btnAdd.setVisibility(View.VISIBLE);
+                btnAdd.setEnabled(inStock);
+                btnAdd.setAlpha(inStock ? 1f : 0.4f);
                 if (wishlistDisabled) {
                     product.setFavorite(false);
                     updateWishlistIcon(btnWishlist, product, true);
@@ -247,7 +260,15 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
 
             if (listener != null) {
                 itemView.setOnClickListener(v -> listener.onProductClick(product));
-                btnAdd.setOnClickListener(v -> listener.onAddToCart(product));
+                btnAdd.setOnClickListener(v -> {
+                    if (!product.isInStock()) {
+                        Toast.makeText(itemView.getContext(),
+                                itemView.getContext().getString(R.string.out_of_stock),
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    listener.onAddToCart(product);
+                });
                 // FIX: WishlistManager.toggle() đổi product.isFavorite() NGAY LẬP TỨC (đồng bộ)
                 // trước khi gửi request Firestore (bất đồng bộ). Gọi listener.onFavoriteClick()
                 // trước (nó gọi toggle() bên trong), rồi cập nhật icon NGAY TẠI ĐÂY — không phụ

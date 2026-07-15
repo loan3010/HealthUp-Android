@@ -53,10 +53,12 @@ public final class FaqProvider {
         list.add(new FAQ(
                 "membership",
                 "Hạng thành viên có lợi ích gì?",
-                "Thành viên HealthUp tích điểm cho mỗi đơn hàng và nhận ưu đãi theo hạng (Bạc, Vàng, Kim Cương): "
-                        + "giảm giá riêng, quà sinh nhật và freeship thường xuyên hơn.",
-                "thanh vien", "hang", "tich diem", "membership", "uu dai", "vip",
-                "hang thanh vien", "diem thuong", "diem tich luy", "loi ich thanh vien"));
+                "Thành viên HealthUp tích điểm theo tổng chi tiêu đơn đã giao và nhận ưu đãi theo hạng "
+                        + "(Thành viên / VIP từ 5.000.000đ): giảm giá VIP, freeship, quà sinh nhật "
+                        + "và tư vấn dinh dưỡng riêng.",
+                "thanh vien", "tich diem", "membership", "uu dai", "vip",
+                "hang thanh vien", "khach hang than thiet",
+                "diem thuong", "diem tich luy", "loi ich thanh vien"));
         cached = list;
         return cached;
     }

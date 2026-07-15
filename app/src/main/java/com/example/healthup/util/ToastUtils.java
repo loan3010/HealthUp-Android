@@ -44,7 +44,12 @@ public final class ToastUtils {
         snackbarLayout.removeAllViews(); // Xóa sạch nội dung mặc định của Snackbar
         
         View customView = LayoutInflater.from(context).inflate(R.layout.layout_custom_toast, null);
-        
+
+        ImageView iconView = customView.findViewById(R.id.iv_toast_icon);
+        if (iconView != null) {
+            iconView.setImageResource(R.drawable.ic_app_logo);
+        }
+
         TextView textView = customView.findViewById(R.id.tv_toast_message);
         textView.setText(message);
 

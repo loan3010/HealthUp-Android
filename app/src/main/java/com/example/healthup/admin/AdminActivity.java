@@ -3,6 +3,7 @@ package com.example.healthup.admin;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -22,11 +23,13 @@ import com.example.healthup.AccountInfoActivity;
 import com.example.healthup.LoginActivity;
 import com.example.healthup.R;
 import com.example.healthup.SellerChatListActivity;
+import com.example.healthup.auth.UserProfileBuilder;
 import com.example.healthup.util.AppEntryRouter;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.ListenerRegistration;
 
@@ -161,10 +164,9 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
     }
 
     private void setupDrawer() {
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         TextView tvEmail = findViewById(R.id.tvAdminDrawerEmail);
-        if (tvEmail != null && user != null) {
-            tvEmail.setText(user.getEmail() != null ? user.getEmail() : user.getUid());
+        if (tvEmail != null) {
+            bindAdminDrawerEmail(tvEmail);
         }
 
         View rowSettings = findViewById(R.id.rowAdminAccountSettings);
@@ -178,9 +180,86 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
         if (rowLogout != null) {
             rowLogout.setOnClickListener(v -> {
                 drawerLayout.closeDrawer(GravityCompat.START);
-                logout();
+                confirmLogout();
             });
         }
+    }
+
+    private void confirmLogout() {
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_logout_title)
+                .setMessage(R.string.admin_logout_message)
+                .setNegativeButton(android.R.string.cancel, null)
+                .setPositiveButton(R.string.admin_drawer_logout, (dialog, which) -> logout())
+                .show();
+    }
+
+    /**
+     * Prefer Firestore {@code displayEmail}/{@code email}; never show synthetic Auth emails
+     * like {@code admin-...@healthup.app}.
+     */
+    private void bindAdminDrawerEmail(@NonNull TextView tvEmail) {
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            tvEmail.setText(R.string.account_email_empty);
+            return;
+        }
+        // Placeholder until profile loads — never flash the synthetic Auth email.
+        if (UserProfileBuilder.isRealEmail(user.getEmail())) {
+            tvEmail.setText(user.getEmail());
+        } else if (!TextUtils.isEmpty(user.getDisplayName())) {
+            tvEmail.setText(user.getDisplayName());
+        } else {
+            tvEmail.setText(R.string.account_email_empty);
+        }
+
+        String authUid = user.getUid();
+        AdminGate.resolveProfileDocId(authUid)
+                .continueWithTask(task -> {
+                    String profileDocId = (task.isSuccessful() && !TextUtils.isEmpty(task.getResult()))
+                            ? task.getResult()
+                            : authUid;
+                    return FirebaseFirestore.getInstance()
+                            .collection("users")
+                            .document(profileDocId)
+                            .get();
+                })
+                .addOnSuccessListener(doc -> {
+                    if (isFinishing()) return;
+                    tvEmail.setText(resolveDrawerEmailLabel(doc, user));
+                });
+    }
+
+    @NonNull
+    private String resolveDrawerEmailLabel(@Nullable DocumentSnapshot doc, @NonNull FirebaseUser user) {
+        if (doc != null && doc.exists()) {
+            String display = doc.getString("displayEmail");
+            String email = doc.getString("email");
+            if (UserProfileBuilder.isRealEmail(display)) {
+                return display.trim();
+            }
+            if (UserProfileBuilder.isRealEmail(email)) {
+                return email.trim();
+            }
+            String name = firstNonEmpty(doc.getString("fullName"), doc.getString("displayName"));
+            if (!TextUtils.isEmpty(name)) {
+                return name;
+            }
+        }
+        if (UserProfileBuilder.isRealEmail(user.getEmail())) {
+            return user.getEmail().trim();
+        }
+        if (!TextUtils.isEmpty(user.getDisplayName())) {
+            return user.getDisplayName();
+        }
+        return getString(R.string.account_email_empty);
+    }
+
+    @Nullable
+    private static String firstNonEmpty(@Nullable String a, @Nullable String b) {
+        if (!TextUtils.isEmpty(a)) return a.trim();
+        if (!TextUtils.isEmpty(b)) return b.trim();
+        return null;
     }
 
     private void syncTitleWithSelectedTab() {

@@ -22,12 +22,30 @@ public class ChatMessage {
     public static final String TYPE_TEXT = "text";
     public static final String TYPE_IMAGE = "image";
     public static final String TYPE_ORDER_CARD = "order_card";
+    /** Local-only horizontal picker of recent orders. */
+    public static final String TYPE_ORDER_CAROUSEL = "order_carousel";
+    /** Local CTA card (empty orders, browse orders, etc.). */
+    public static final String TYPE_ACTION_PROMPT = "action_prompt";
     public static final String TYPE_SYSTEM = "system";
     public static final String TYPE_SUGGESTION = "suggestion";
     /** Local card prompting guest to sign in. */
     public static final String TYPE_LOGIN_ACTION = "login_action";
     /** Local product context card from product detail. */
     public static final String TYPE_PRODUCT_CARD = "product_card";
+    /** Local category picker for product advice. */
+    public static final String TYPE_CATEGORY_PICK = "category_pick";
+
+    /** Order-card CTA: pick for status check. */
+    public static final String ORDER_PURPOSE_STATUS = "status";
+    /** Order-card CTA: pick for cancel help. */
+    public static final String ORDER_PURPOSE_CANCEL = "cancel";
+    /** Order-card CTA: open order detail. */
+    public static final String ORDER_PURPOSE_DETAIL = "detail";
+
+    /** Action-prompt button: open order history. */
+    public static final String ACTION_BROWSE_ORDERS = "browse_orders";
+    /** Action-prompt button: open MemberTierFragment. */
+    public static final String ACTION_OPEN_MEMBERSHIP = "open_membership";
 
     private String id;
     private String senderId;
@@ -46,6 +64,14 @@ public class ChatMessage {
     private String orderStatus;
     private double orderTotal;
     private int orderItemCount;
+    /** status | cancel | detail — drives carousel / result CTA label. */
+    private String orderPurpose;
+    /** Nested order cards for {@link #TYPE_ORDER_CAROUSEL} (local-only). */
+    private java.util.List<ChatMessage> orderChoices;
+    /** Secondary button label on order / action cards. */
+    private String actionLabel;
+    /** {@link #ACTION_BROWSE_ORDERS} etc. for {@link #TYPE_ACTION_PROMPT}. */
+    private String actionId;
 
     // Denormalized product-card payload (present when type == product_card).
     private String productId;
@@ -53,6 +79,9 @@ public class ChatMessage {
     private String productImageUrl;
     private double productPrice;
     private String productVariant;
+
+    /** Category names for {@link #TYPE_CATEGORY_PICK}. */
+    private java.util.List<String> categoryChoices;
 
     /**
      * Client-side ordering key in millis. Persisted messages use their server
@@ -203,6 +232,38 @@ public class ChatMessage {
         this.orderItemCount = orderItemCount;
     }
 
+    public String getOrderPurpose() {
+        return orderPurpose;
+    }
+
+    public void setOrderPurpose(String orderPurpose) {
+        this.orderPurpose = orderPurpose;
+    }
+
+    public java.util.List<ChatMessage> getOrderChoices() {
+        return orderChoices;
+    }
+
+    public void setOrderChoices(java.util.List<ChatMessage> orderChoices) {
+        this.orderChoices = orderChoices;
+    }
+
+    public String getActionLabel() {
+        return actionLabel;
+    }
+
+    public void setActionLabel(String actionLabel) {
+        this.actionLabel = actionLabel;
+    }
+
+    public String getActionId() {
+        return actionId;
+    }
+
+    public void setActionId(String actionId) {
+        this.actionId = actionId;
+    }
+
     public String getProductId() {
         return productId;
     }
@@ -241,6 +302,14 @@ public class ChatMessage {
 
     public void setProductVariant(String productVariant) {
         this.productVariant = productVariant;
+    }
+
+    public java.util.List<String> getCategoryChoices() {
+        return categoryChoices;
+    }
+
+    public void setCategoryChoices(java.util.List<String> categoryChoices) {
+        this.categoryChoices = categoryChoices;
     }
 
     public long getSortTime() {

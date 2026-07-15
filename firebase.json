@@ -8,6 +8,12 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "/san-pham/**",
+        "destination": "/san-pham.html"
+      }
     ]
   },
   "functions": [

@@ -771,9 +771,8 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                         if (!Product.isVisibleToBuyers(doc)) {
                             continue;
                         }
-                        Product product = doc.toObject(Product.class);
+                        Product product = Product.fromDocument(doc);
                         if (product != null) {
-                            product.setId(doc.getId());
                             createdAtById.put(doc.getId(), Product.readCreatedAtMillis(doc));
                             allFetched.add(product);
 

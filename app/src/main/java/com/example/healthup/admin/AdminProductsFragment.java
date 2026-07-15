@@ -52,7 +52,8 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
 
     private static final List<String> SORT_KEYS = Arrays.asList(
             "updated_desc", "updated_asc",
-            "name_asc", "name_desc", "price_asc", "price_desc", "stock_asc", "stock_desc"
+            "name_asc", "name_desc", "price_asc", "price_desc",
+            "stock_asc", "stock_desc", "sold_desc", "sold_asc"
     );
 
     private final AdminRepository repository = new AdminRepository();
@@ -175,7 +176,9 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                 getString(R.string.admin_sort_price_asc),
                 getString(R.string.admin_sort_price_desc),
                 getString(R.string.admin_sort_stock_asc),
-                getString(R.string.admin_sort_stock_desc)
+                getString(R.string.admin_sort_stock_desc),
+                getString(R.string.admin_sort_sold_desc),
+                getString(R.string.admin_sort_sold_asc)
         );
         spinnerSort.setAdapter(new ArrayAdapter<>(requireContext(), android.R.layout.simple_spinner_dropdown_item, sortLabels));
         spinnerSort.setOnItemSelectedListener(new android.widget.AdapterView.OnItemSelectedListener() {
@@ -300,7 +303,8 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
 
     private boolean matchesProductFilter(Product product, String filter) {
         if (FILTER_LOW_STOCK.equals(filter)) {
-            return !product.isDraft() && !product.isHidden() && product.getStock() < LOW_STOCK_THRESHOLD;
+            return !product.isDraft() && !product.isHidden()
+                    && product.getAvailableStock() < LOW_STOCK_THRESHOLD;
         }
         if (FILTER_ACTIVE.equals(filter)) {
             return !product.isHidden() && !product.isDraft();
@@ -381,16 +385,22 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                 comparator = (a, b) -> safeName(b).compareToIgnoreCase(safeName(a));
                 break;
             case "price_asc":
-                comparator = Comparator.comparingDouble(Product::getPrice);
+                comparator = Comparator.comparingDouble(Product::getDisplayPrice);
                 break;
             case "price_desc":
-                comparator = (a, b) -> Double.compare(b.getPrice(), a.getPrice());
+                comparator = (a, b) -> Double.compare(b.getDisplayPrice(), a.getDisplayPrice());
                 break;
             case "stock_asc":
                 comparator = Comparator.comparingInt(Product::getStock);
                 break;
             case "stock_desc":
-                comparator = (a, b) -> Integer.compare(b.getStock(), a.getStock());
+                comparator = (a, b) -> Integer.compare(b.getAvailableStock(), a.getAvailableStock());
+                break;
+            case "sold_desc":
+                comparator = (a, b) -> Integer.compare(b.getTotalSold(), a.getTotalSold());
+                break;
+            case "sold_asc":
+                comparator = Comparator.comparingInt(Product::getTotalSold);
                 break;
             case "name_asc":
             default:
@@ -448,7 +458,7 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
             minPrice = range.min;
             maxPrice = range.max;
         }
-        double price = product.getPrice();
+        double price = product.getDisplayPrice();
         if (minPrice != null && price < minPrice) {
             return false;
         }

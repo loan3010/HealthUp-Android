@@ -170,9 +170,8 @@ public class ProductListFragment extends Fragment implements ProductAdapter.OnPr
             allProductsForSearch.clear();
             for (DocumentSnapshot doc : snapshots) {
                 if (Product.isVisibleToBuyers(doc)) {
-                    Product p = doc.toObject(Product.class);
+                    Product p = Product.fromDocument(doc);
                     if (p != null) {
-                        p.setId(doc.getId());
                         allProductsForSearch.add(p);
                     }
                 }
