@@ -94,7 +94,7 @@ public class AccountInfoActivity extends AppCompatActivity {
         mAuth = FirebaseAuth.getInstance();
         
         if (mAuth.getCurrentUser() == null) {
-            setupLoginRequired();
+            setupGuestMode();
             return;
         }
 
@@ -166,15 +166,14 @@ public class AccountInfoActivity extends AppCompatActivity {
         binding.ivEditAvatar.setOnClickListener(avatarPickerListener);
     }
 
-    private void setupLoginRequired() {
-        View layout = findViewById(R.id.layoutLoginRequired);
-        if (layout != null) {
-            layout.setVisibility(View.VISIBLE);
-            layout.findViewById(R.id.btnLoginRequired).setOnClickListener(v -> {
-                startActivity(new Intent(this, LoginActivity.class));
-            });
-            layout.findViewById(R.id.btnLater).setOnClickListener(v -> finish());
-        }
+    private void setupGuestMode() {
+        binding.sectionAvatar.setVisibility(View.GONE);
+        binding.sectionForm.setVisibility(View.GONE);
+        binding.btnSave.setVisibility(View.GONE);
+        binding.btnBack.setOnClickListener(v -> finish());
+
+        com.example.healthup.util.GuestLoginRequiredHelper.bind(binding.getRoot(), this);
+        com.example.healthup.util.GuestRecommendationsHelper.bind(binding.getRoot(), this);
     }
 
     private void setupKeyboardHandling() {

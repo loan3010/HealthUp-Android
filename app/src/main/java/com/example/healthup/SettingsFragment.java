@@ -38,8 +38,15 @@ public class SettingsFragment extends Fragment {
 
 
         setupUI();
+        updateAuthVisibility();
 
         binding.btnBack.setOnClickListener(v -> getParentFragmentManager().popBackStack());
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        updateAuthVisibility();
     }
 
 
@@ -180,6 +187,15 @@ public class SettingsFragment extends Fragment {
             rowBinding.tvValue.setVisibility(View.VISIBLE);
             rowBinding.tvValue.setText(value);
         }
+    }
+
+
+    private void updateAuthVisibility() {
+        boolean loggedIn = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser() != null;
+        int visibility = loggedIn ? View.VISIBLE : View.GONE;
+
+        binding.itemDeleteAccount.getRoot().setVisibility(visibility);
+        binding.btnLogout.setVisibility(visibility);
     }
 
 
