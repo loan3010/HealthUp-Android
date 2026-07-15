@@ -90,7 +90,7 @@ public class ChangePhoneActivity extends AppCompatActivity {
                 })
                 .addOnFailureListener(e -> {
                     setLoading(false);
-                    Toast.makeText(this, "Lỗi gửi mã OTP", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, "Lỗi gửi mã OTP: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
