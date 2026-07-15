@@ -156,7 +156,6 @@ public class SettingsFragment extends Fragment {
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog.setContentView(R.layout.dialog_delete_account);
 
-
         Window window = dialog.getWindow();
         if (window != null) {
             window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT);
@@ -164,17 +163,50 @@ public class SettingsFragment extends Fragment {
             window.setDimAmount(0.6f);
         }
 
-
         Button btnCancel = dialog.findViewById(R.id.btnCancel);
         Button btnConfirm = dialog.findViewById(R.id.btnConfirmDelete);
 
-
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnConfirm.setOnClickListener(v -> {
-            dialog.dismiss();
-            Toast.makeText(getActivity(), "Yêu cầu xóa tài khoản đã được gửi", Toast.LENGTH_SHORT).show();
-        });
+            com.google.firebase.auth.FirebaseUser user = com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
+            if (user != null) {
+                String uid = user.getUid();
+                dialog.dismiss();
+                
+                // 1. Xóa dữ liệu hồ sơ Firestore
+                com.google.firebase.firestore.FirebaseFirestore.getInstance()
+                        .collection("users").document(uid).delete();
+                
+                // 2. Xóa tài khoản đã lưu trên máy (Account card & Password)
+                if (getContext() != null) {
+                    com.example.healthup.account.SavedAccountStore.remove(getContext(), uid);
+                }
 
+                // 3. Xóa tài khoản Auth vĩnh viễn
+                user.delete().addOnCompleteListener(task -> {
+                    if (task.isSuccessful()) {
+                        Toast.makeText(getActivity(), "Tài khoản của bạn đã được xóa vĩnh viễn.", Toast.LENGTH_LONG).show();
+                        Intent intent = new Intent(getActivity(), MainActivity.class);
+                        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
+                        startActivity(intent);
+                        if (getActivity() != null) getActivity().finish();
+                    } else {
+                        Exception e = task.getException();
+                        if (e instanceof com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException) {
+                            Toast.makeText(getActivity(), "Vì lý do bảo mật, bạn cần đăng nhập lại trước khi thực hiện xóa tài khoản.", Toast.LENGTH_LONG).show();
+                            com.google.firebase.auth.FirebaseAuth.getInstance().signOut();
+                            Intent intent = new Intent(getActivity(), LoginActivity.class);
+                            startActivity(intent);
+                            if (getActivity() != null) getActivity().finish();
+                        } else {
+                            Toast.makeText(getActivity(), "Lỗi xóa tài khoản: " + (e != null ? e.getMessage() : "Không xác định"), Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
+            } else {
+                dialog.dismiss();
+            }
+        });
 
         dialog.show();
     }
