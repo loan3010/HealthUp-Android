@@ -45,8 +45,6 @@
             android:orientation="vertical"
             android:paddingBottom="24dp">
 
-            <include layout="@layout/layout_login_required" />
-
             <!-- Linked Methods Section -->
             <LinearLayout
                 android:id="@+id/layoutLinked"
@@ -113,9 +111,9 @@
                 android:id="@+id/cardAddZalo"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivZAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_zalopay" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivZAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Ví ZaloPay" />
+                    <ImageView android:id="@+id/ivZAdd" android:layout_width="60dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_zalopay" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkZalo" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivZAdd" android:layout_toStartOf="@id/btnLinkZalo" android:layout_centerVertical="true" android:layout_marginStart="12dp" android:layout_marginEnd="8dp" android:text="Ví ZaloPay" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
@@ -124,9 +122,9 @@
                 android:id="@+id/cardAddMoMo"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivMAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_momo" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivMAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Ví MoMo" />
+                    <ImageView android:id="@+id/ivMAdd" android:layout_width="36dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_momo" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkMoMo" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivMAdd" android:layout_toStartOf="@id/btnLinkMoMo" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:text="Ví MoMo" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
@@ -135,9 +133,9 @@
                 android:id="@+id/cardAddVnpay"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivVAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_payment_wallet" app:tint="#005BAA" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivVAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="VNPay QR" />
+                    <ImageView android:id="@+id/ivVAdd" android:layout_width="36dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_payment_wallet" app:tint="#005BAA" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkVnpay" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivVAdd" android:layout_toStartOf="@id/btnLinkVnpay" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:text="VNPay QR" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
@@ -146,9 +144,9 @@
                 android:id="@+id/cardAddAtm"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivAAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_bank" app:tint="@color/text_gray" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivAAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Thẻ ATM nội địa" />
+                    <ImageView android:id="@+id/ivAAdd" android:layout_width="36dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_bank" app:tint="@color/text_gray" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkAtm" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivAAdd" android:layout_toStartOf="@id/btnLinkAtm" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:text="Thẻ ATM nội địa" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
@@ -157,9 +155,9 @@
                 android:id="@+id/cardAddLinkedBank"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivLBAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_bank" app:tint="@color/green_button" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivLBAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Tài khoản ngân hàng liên kết" />
+                    <ImageView android:id="@+id/ivLBAdd" android:layout_width="36dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_bank" app:tint="@color/green_button" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkBank" style="@style/PaymentLinkButtonStyle" android:text="Liên kết" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivLBAdd" android:layout_toStartOf="@id/btnLinkBank" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:text="Tài khoản ngân hàng liên kết" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
@@ -168,13 +166,20 @@
                 android:id="@+id/cardAddCard"
                 style="@style/PaymentAddCardStyle">
                 <RelativeLayout style="@style/PaymentAddInnerStyle">
-                    <ImageView android:id="@+id/ivCAdd" android:layout_width="32dp" android:layout_height="32dp" android:src="@drawable/ic_payment_card" />
-                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivCAdd" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:text="Thẻ tín dụng / Ghi nợ" />
+                    <ImageView android:id="@+id/ivCAdd" android:layout_width="36dp" android:layout_height="36dp" android:layout_centerVertical="true" android:src="@drawable/ic_payment_card" android:scaleType="fitCenter" />
                     <TextView android:id="@+id/btnLinkCard" style="@style/PaymentLinkButtonStyle" android:text="Thêm" />
+                    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_toEndOf="@id/ivCAdd" android:layout_toStartOf="@id/btnLinkCard" android:layout_centerVertical="true" android:layout_marginStart="16dp" android:layout_marginEnd="8dp" android:text="Thẻ tín dụng / Ghi nợ" />
                 </RelativeLayout>
             </androidx.cardview.widget.CardView>
 
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
+
+    <include
+        layout="@layout/layout_login_required"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/header" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

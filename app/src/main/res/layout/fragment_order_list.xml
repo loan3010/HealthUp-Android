@@ -87,18 +87,20 @@
                 android:paddingHorizontal="10dp"
                 android:nestedScrollingEnabled="false" />
 
-            <com.google.android.material.button.MaterialButton
+            <TextView
                 android:id="@+id/btnMoreRecommend"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center"
-                android:layout_marginTop="8dp"
-                android:layout_marginBottom="24dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="32dp"
+                android:padding="8dp"
                 android:text="Xem thêm sản phẩm gợi ý ⌵"
-                android:textAllCaps="false"
-                android:textColor="@color/text_hint"
-                android:textSize="13sp" />
+                android:textColor="@color/text_color_primary_pressed"
+                android:textSize="13sp"
+                android:clickable="true"
+                android:focusable="true"
+                android:background="@android:color/transparent" />
         </LinearLayout>
     </LinearLayout>
 </androidx.core.widget.NestedScrollView>

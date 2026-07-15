@@ -252,12 +252,18 @@ public class OrderListFragment extends Fragment {
             }
 
             binding.btnMoreRecommend.setOnClickListener(v -> {
-                binding.btnMoreRecommend.setVisibility(View.GONE);
                 int currentSize = displayedRecommendProducts.size();
-                for (int i = currentSize; i < allRecommendProducts.size(); i++) {
+                int nextSize = Math.min(currentSize + 6, allRecommendProducts.size());
+
+                for (int i = currentSize; i < nextSize; i++) {
                     displayedRecommendProducts.add(allRecommendProducts.get(i));
                 }
+
                 recommendAdapter.updateData(new ArrayList<>(displayedRecommendProducts));
+
+                if (displayedRecommendProducts.size() >= allRecommendProducts.size()) {
+                    binding.btnMoreRecommend.setVisibility(View.GONE);
+                }
             });
 
             binding.tvViewAllRecommend.setOnClickListener(v -> {

@@ -49,7 +49,8 @@ public class ChatActivity extends BaseAppCompatActivity {
                                                @NonNull String orderCode,
                                                @NonNull String productName,
                                                @Nullable String variant,
-                                               @Nullable String orderId) {
+                                               @Nullable String orderId,
+                                               @Nullable String productId) {
         Intent intent = new Intent(context, ChatActivity.class);
         intent.putExtra(EXTRA_ORDER_CODE, orderCode);
         intent.putExtra(EXTRA_PRODUCT_NAME, productName);
@@ -58,6 +59,9 @@ public class ChatActivity extends BaseAppCompatActivity {
         }
         if (orderId != null) {
             intent.putExtra(EXTRA_ORDER_ID, orderId);
+        }
+        if (productId != null) {
+            intent.putExtra(EXTRA_PRODUCT_ID, productId);
         }
         intent.putExtra(EXTRA_AUTO_SEND_INQUIRY, true);
         return intent;

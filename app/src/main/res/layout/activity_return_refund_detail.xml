@@ -344,7 +344,7 @@
                         android:layout_centerVertical="true"
                         android:layout_marginStart="12dp"
                         android:layout_toEndOf="@id/imgRefundMethod"
-                        android:text="Ví MoMo – 09xx xxx 567"
+                        android:text="Đang tải thông tin..."
                         android:textColor="@color/text_main"
                         android:textSize="15sp" />
                 </RelativeLayout>

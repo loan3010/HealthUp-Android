@@ -887,9 +887,9 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onRemove(CartItem item) {
         new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setTitle("Xóa sản phẩm")
-                .setMessage("Bạn có chắc chắn muốn xóa sản phẩm này khỏi giỏ hàng?")
-                .setPositiveButton("Xóa", (dialog, which) -> {
+                .setTitle(R.string.cart_remove_title)
+                .setMessage(R.string.cart_remove_msg)
+                .setPositiveButton(R.string.delete, (dialog, which) -> {
                     cartItems.remove(item);
                     if (adapter != null) adapter.notifyDataSetChanged();
                     renderList();
@@ -903,7 +903,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         GuestCartManager.getInstance(requireContext()).removeItem(item.getId());
                     }
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show();
     }
 
@@ -1107,7 +1107,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     updateFooter();
                     ToastUtils.show(getContext(), "Đã xóa sản phẩm thành công");
                 })
-                .setNegativeButton("Hủy", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show();
     }
 

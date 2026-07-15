@@ -4,6 +4,7 @@ package com.example.healthup;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
+import android.text.Layout;
 import android.text.TextUtils;
 import android.view.View;
 import androidx.annotation.Nullable;
@@ -137,6 +138,33 @@ public class ViewReviewsActivity extends BaseAppCompatActivity {
                 itemBinding.tvComment.setText(review.getComment());
                 if (review.getComment() == null || review.getComment().isEmpty()) {
                     itemBinding.tvComment.setVisibility(View.GONE);
+                } else {
+                    itemBinding.tvComment.setVisibility(View.VISIBLE);
+                    // ✅ Xử lý Xem thêm / Thu gọn
+                    itemBinding.tvComment.setMaxLines(3);
+                    itemBinding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
+                    itemBinding.tvToggleExpand.setVisibility(View.GONE);
+
+                    itemBinding.tvComment.post(() -> {
+                        Layout layout = itemBinding.tvComment.getLayout();
+                        if (layout != null) {
+                            int lineCount = layout.getLineCount();
+                            if (lineCount >= 3 && (lineCount > 3 || layout.getEllipsisCount(lineCount - 1) > 0)) {
+                                itemBinding.tvToggleExpand.setVisibility(View.VISIBLE);
+                                itemBinding.tvToggleExpand.setOnClickListener(v -> {
+                                    if (itemBinding.tvComment.getMaxLines() == 3) {
+                                        itemBinding.tvComment.setMaxLines(Integer.MAX_VALUE);
+                                        itemBinding.tvComment.setEllipsize(null);
+                                        itemBinding.tvToggleExpand.setText("Thu gọn");
+                                    } else {
+                                        itemBinding.tvComment.setMaxLines(3);
+                                        itemBinding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
+                                        itemBinding.tvToggleExpand.setText("Xem thêm");
+                                    }
+                                });
+                            }
+                        }
+                    });
                 }
 
                 if (review.getCreatedAt() != null) {

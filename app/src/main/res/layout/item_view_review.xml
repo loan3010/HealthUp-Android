@@ -91,6 +91,17 @@
                 android:textColor="@color/text_main"
                 android:textSize="14sp" />
 
+            <TextView
+                android:id="@+id/tvToggleExpand"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Xem thêm"
+                android:textColor="@color/primary"
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:paddingVertical="4dp"
+                android:visibility="gone" />
+
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvMedia"
                 android:layout_width="match_parent"

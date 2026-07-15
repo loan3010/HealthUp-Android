@@ -198,9 +198,6 @@ public class WishlistFragment extends Fragment implements ProductAdapter.OnProdu
             deleteSelected();
         });
 
-
-
-
         // FIX: gắn listener cho checkbox "Tất cả" — khi tick/bỏ tick, chọn hoặc bỏ chọn toàn
         // bộ sản phẩm đang hiển thị (theo bộ lọc tìm kiếm hiện tại).
         attachSelectAllListener();

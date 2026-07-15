@@ -17,6 +17,9 @@ import com.example.healthup.util.FullscreenImagePager;
 import com.example.healthup.util.ReturnProgressHelper;
 import com.example.models.Order;
 import com.example.models.OrderItem;
+import com.example.models.PaymentAccount;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
@@ -123,6 +126,14 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
         });
 
         dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 
@@ -186,7 +197,7 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
             binding.lnRefundMethodRow.setVisibility(View.VISIBLE);
             binding.lnShippingAddressRow.setVisibility(View.GONE);
             binding.tvRefundAmount.setText(df.format(order.getTotalPrice()));
-            binding.tvRefundMethod.setText(getDisplayRefundMethod(order.getPaymentMethod()));
+            fetchRealRefundDetailAndPopulate();
         }
 
         List<String> mediaStrings = order.getReturnMediaUris();
@@ -355,6 +366,14 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
         binding.lnTimeline.addView(stepBinding.getRoot());
     }
 
+    private void fetchRealRefundDetailAndPopulate() {
+        if (order == null || order.getPaymentMethod() == null) {
+            binding.tvRefundMethod.setText("Chưa rõ phương thức");
+            return;
+        }
+        binding.tvRefundMethod.setText(getDisplayRefundMethod(order.getPaymentMethod()));
+    }
+
     private String getDisplayRefundMethod(String paymentMethod) {
         if (paymentMethod == null) return "Phương thức đã chọn";
         String pm = paymentMethod.toLowerCase();
@@ -366,8 +385,10 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
             return "Ví ZaloPay";
         } else if (pm.contains("vnpay")) {
             return "Ví VNPAY";
-        } else if (pm.contains("card") || pm.contains("thẻ") || pm.contains("tài khoản")) {
+        } else if (pm.contains("card") || pm.contains("thẻ tín dụng") || pm.contains("ghi nợ")) {
             return "Thẻ Tín dụng / Ghi nợ";
+        } else if (pm.contains("atm") || pm.contains("nội địa")) {
+            return "Thẻ ATM nội địa";
         }
         return paymentMethod;
     }

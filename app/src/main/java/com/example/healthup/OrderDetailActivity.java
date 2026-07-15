@@ -23,6 +23,7 @@ import com.example.healthup.databinding.LayoutBottomSheetCancelOrderBinding;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnReason;
+import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -100,7 +101,9 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
         binding.rowFAQ.setOnClickListener(v -> {
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra("navigate_to", "faq");
-            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+            intent.putExtra("return_to_previous", true);
+            // Bỏ CLEAR_TOP và SINGLE_TOP để tạo MainActivity instance mới chồng lên trên,
+            // giúp khi nhấn back ở FAQ sẽ quay về đúng trang chi tiết đơn hàng này.
             startActivity(intent);
         });
 
@@ -147,6 +150,14 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
         });
 
         dialogBinding.btnCancel.setOnClickListener(v -> dialog.dismiss());
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
+        });
+
         dialog.show();
     }
 
@@ -304,6 +315,13 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
             }
             dialog.dismiss();
             showLoadingAndThenUpdateFirebase("cancelled", selected.getTitle());
+        });
+
+        dialog.setOnShowListener(dialogInterface -> {
+            View bottomSheetInternal = dialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+            if (bottomSheetInternal != null) {
+                BottomSheetBehavior.from(bottomSheetInternal).setState(BottomSheetBehavior.STATE_EXPANDED);
+            }
         });
 
         dialog.show();

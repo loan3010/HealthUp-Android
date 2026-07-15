@@ -33,11 +33,12 @@ public final class OrderChatHelper {
                                        @NonNull OrderItem item) {
         String orderCode = resolveOrderCode(order, orderCodeFallback);
         String orderId = order != null ? order.getId() : null;
+        String productId = item.getProductId();
         String productName = item.getName() != null ? item.getName() : "sản phẩm";
         String variant = item.getVariantLabel();
         if (!TextUtils.isEmpty(orderCode)) {
             context.startActivity(ChatActivity.buyerIntentForProduct(
-                    context, orderCode, productName, variant, orderId));
+                    context, orderCode, productName, variant, orderId, productId));
         } else {
             context.startActivity(ChatActivity.buyerIntent(context));
         }

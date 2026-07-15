@@ -800,6 +800,7 @@ public class CheckoutFragment extends Fragment {
             else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "ZaloPay Wallet";
             else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "VNPAY Wallet";
             else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Credit / Debit Card";
+            else if ("atm".equals(selectedPaymentMethod)) paymentDisplay = "Domestic ATM Card";
             else if ("linked_bank".equals(selectedPaymentMethod)) paymentDisplay = "Linked Bank Account";
         } else {
             if ("cod".equals(selectedPaymentMethod)) paymentDisplay = "Thanh toán khi nhận hàng (COD)";
@@ -807,6 +808,7 @@ public class CheckoutFragment extends Fragment {
             else if ("zalopay".equals(selectedPaymentMethod)) paymentDisplay = "Ví ZaloPay";
             else if ("vnpay".equals(selectedPaymentMethod)) paymentDisplay = "Ví VNPAY";
             else if ("card".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ Tín dụng / Ghi nợ";
+            else if ("atm".equals(selectedPaymentMethod)) paymentDisplay = "Thẻ ATM nội địa";
             else if ("linked_bank".equals(selectedPaymentMethod)) paymentDisplay = "Tài khoản ngân hàng liên kết";
         }
 
