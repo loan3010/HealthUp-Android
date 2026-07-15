@@ -278,6 +278,10 @@ public class ChatRepository {
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
                     ChatMessage system = ChatMessage.system(systemMessage);
+                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    if (user != null) {
+                        system.setSenderId(user.getUid());
+                    }
                     sendMessage(conversationId, system, callback);
                 })
                 .addOnFailureListener(e -> callback.onComplete(false));
@@ -313,6 +317,10 @@ public class ChatRepository {
                 .set(data, SetOptions.merge())
                 .addOnSuccessListener(unused -> {
                     ChatMessage system = ChatMessage.system(systemMessage);
+                    FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+                    if (user != null) {
+                        system.setSenderId(user.getUid());
+                    }
                     sendMessage(conversationId, system, callback);
                 })
                 .addOnFailureListener(e -> callback.onComplete(false));
@@ -373,6 +381,13 @@ public class ChatRepository {
             data.put("orderStatus", message.getOrderStatus());
             data.put("orderTotal", message.getOrderTotal());
             data.put("orderItemCount", message.getOrderItemCount());
+        }
+        if (message.getProductId() != null) {
+            data.put("productId", message.getProductId());
+            data.put("productName", message.getProductName());
+            data.put("productImageUrl", message.getProductImageUrl());
+            data.put("productPrice", message.getProductPrice());
+            data.put("productVariant", message.getProductVariant());
         }
 
         String preview = ChatMessage.TYPE_IMAGE.equals(message.getType())
@@ -502,6 +517,12 @@ public class ChatRepository {
         m.setOrderTotal(orderTotal != null ? orderTotal : 0d);
         Long orderItemCount = doc.getLong("orderItemCount");
         m.setOrderItemCount(orderItemCount != null ? orderItemCount.intValue() : 0);
+        m.setProductId(doc.getString("productId"));
+        m.setProductName(doc.getString("productName"));
+        m.setProductImageUrl(doc.getString("productImageUrl"));
+        Double productPrice = doc.getDouble("productPrice");
+        m.setProductPrice(productPrice != null ? productPrice : 0d);
+        m.setProductVariant(doc.getString("productVariant"));
         Boolean read = doc.getBoolean("read");
         m.setRead(read != null && read);
 

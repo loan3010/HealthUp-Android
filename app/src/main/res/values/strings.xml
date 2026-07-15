@@ -641,6 +641,11 @@
     <string name="admin_order_actions">Thao tác đơn hàng</string>
     <string name="admin_order_history">Lịch sử đơn hàng</string>
     <string name="admin_action_confirm_order">Xác nhận đơn</string>
+    <string name="admin_action_cancel_order">Hủy đơn</string>
+    <string name="admin_cancel_order_title">Hủy đơn hàng</string>
+    <string name="admin_cancel_order_message">Đơn đang chờ xác nhận sẽ chuyển sang Đã hủy. Kho sẽ được hoàn nếu đã trừ.</string>
+    <string name="admin_cancel_order_hint">Nhập lý do hủy đơn</string>
+    <string name="admin_cancel_order_reason_required">Vui lòng nhập lý do hủy</string>
     <string name="admin_action_start_shipping">Bắt đầu giao hàng</string>
     <string name="admin_action_delivery_success">Đã giao hàng thành công</string>
     <string name="admin_action_delivery_failed">Giao không thành công</string>

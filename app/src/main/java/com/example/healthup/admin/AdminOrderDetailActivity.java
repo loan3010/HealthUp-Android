@@ -153,6 +153,8 @@ public class AdminOrderDetailActivity extends BaseAppCompatActivity {
         if (Order.STATUS_PENDING.equals(status)) {
             addActionButton(getString(R.string.admin_action_confirm_order), true, v ->
                     runAction(() -> repository.confirmOrder(currentOrder, refreshCallback())));
+            addActionButton(getString(R.string.admin_action_cancel_order), false, v ->
+                    showAdminCancelOrderDialog());
         } else if (Order.STATUS_CONFIRMED.equals(status)) {
             addActionButton(getString(R.string.admin_action_start_shipping), true, v ->
                     runAction(() -> repository.startShipping(currentOrder, refreshCallback())));
@@ -214,6 +216,30 @@ public class AdminOrderDetailActivity extends BaseAppCompatActivity {
         }
         btn.setOnClickListener(listener);
         layoutOrderActions.addView(btn);
+    }
+
+    private void showAdminCancelOrderDialog() {
+        EditText input = new EditText(this);
+        input.setHint(R.string.admin_cancel_order_hint);
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMinLines(2);
+        int pad = (int) (16 * getResources().getDisplayMetrics().density);
+        input.setPadding(pad, pad, pad, pad);
+
+        new AlertDialog.Builder(this)
+                .setTitle(R.string.admin_cancel_order_title)
+                .setMessage(R.string.admin_cancel_order_message)
+                .setView(input)
+                .setPositiveButton(R.string.admin_action_cancel_order, (d, w) -> {
+                    String reason = input.getText() != null ? input.getText().toString().trim() : "";
+                    if (reason.isEmpty()) {
+                        Toast.makeText(this, R.string.admin_cancel_order_reason_required, Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    runAction(() -> repository.cancelPendingOrder(currentOrder, reason, refreshCallback()));
+                })
+                .setNegativeButton(android.R.string.cancel, null)
+                .show();
     }
 
     private void showDeliveryFailureDialog() {

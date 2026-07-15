@@ -40,9 +40,12 @@ public class ImageSliderAdapter extends RecyclerView.Adapter<ImageSliderAdapter.
                         .placeholder(R.drawable.ic_loading)
                         .error(R.drawable.ic_launcher_background);
         if (centerCrop) {
+            holder.imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
             request.centerCrop().into(holder.imageView);
         } else {
-            request.centerInside().into(holder.imageView);
+            // Fullscreen viewer: keep aspect ratio (letterbox), don't crop like product carousel.
+            holder.imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            request.fitCenter().into(holder.imageView);
         }
     }
 

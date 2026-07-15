@@ -582,6 +582,32 @@ public class AdminRepository {
                 "cancel_approved", "Duyệt yêu cầu hủy đơn hàng", extra, callback);
     }
 
+    /** Admin hủy đơn đang chờ xác nhận (pending → cancelled), hoàn kho nếu đã trừ. */
+    public void cancelPendingOrder(@NonNull Order order,
+                                   @NonNull String reason,
+                                   @NonNull SimpleCallback callback) {
+        if (TextUtils.isEmpty(order.getId())) {
+            callback.onError("Thiếu đơn hàng");
+            return;
+        }
+        if (!Order.STATUS_PENDING.equals(order.getStatus())) {
+            callback.onError("Chỉ hủy đơn đang chờ xác nhận");
+            return;
+        }
+        String trimmed = reason.trim();
+        if (trimmed.isEmpty()) {
+            callback.onError("Vui lòng nhập lý do hủy");
+            return;
+        }
+        Map<String, Object> extra = new HashMap<>();
+        extra.put("cancelRequested", false);
+        extra.put("cancelSource", Order.CANCEL_SOURCE_ADMIN);
+        extra.put("cancelReason", trimmed);
+        extra.put("cancelledAt", Timestamp.now());
+        advanceOrderLifecycle(order.getId(), order.getStatus(), Order.STATUS_CANCELLED,
+                "admin_cancelled", "Admin hủy đơn: " + trimmed, extra, callback);
+    }
+
     /** confirmed → shipping */
     public void startShipping(@NonNull Order order, @NonNull SimpleCallback callback) {
         if (TextUtils.isEmpty(order.getId())) {
@@ -1020,6 +1046,17 @@ public class AdminRepository {
                             buyerTitle = "Đơn hàng đang giao";
                             buyerBody = "Đơn #" + displayCode(order) + " đã bắt đầu giao hàng.";
                             notifType = "ORDER_SHIPPING";
+                            break;
+                        case Order.STATUS_CANCELLED:
+                            buyerTitle = "Đơn hàng đã hủy";
+                            String cancelReasonText = extraUpdates != null
+                                    && extraUpdates.get("cancelReason") instanceof String
+                                    ? (String) extraUpdates.get("cancelReason")
+                                    : null;
+                            buyerBody = TextUtils.isEmpty(cancelReasonText)
+                                    ? "Đơn #" + displayCode(order) + " đã bị hủy."
+                                    : "Đơn #" + displayCode(order) + " đã bị hủy. Lý do: " + cancelReasonText;
+                            notifType = "ORDER_CANCELLED";
                             break;
                         default:
                             buyerTitle = "Cập nhật đơn hàng";

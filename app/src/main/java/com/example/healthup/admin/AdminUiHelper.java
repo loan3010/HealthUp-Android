@@ -66,6 +66,8 @@ public final class AdminUiHelper {
                 case "redelivery_scheduled": return "Giao lại";
                 case "customer_received": return "Khách xác nhận đã nhận";
                 case "customer_cancelled": return "Khách hủy đơn";
+                case "admin_cancelled": return "Admin hủy đơn";
+                case "cancel_approved": return "Duyệt yêu cầu hủy đơn";
                 case "return_requested": return "Khách yêu cầu trả hàng";
                 case "return_approved": return "Duyệt yêu cầu trả hàng";
                 case "return_progress": return "Cập nhật tiến trình trả hàng";

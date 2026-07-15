@@ -30,12 +30,13 @@ import java.util.List;
  *
  * <p>The message list shown to the buyer is a merge of:</p>
  * <ul>
- *   <li>locally-generated items (greeting, suggestion card, bot replies and
- *       order cards) — deterministic and free, never written to Firestore, and</li>
- *   <li>persisted messages streamed from Firestore (buyer texts, system handoff
- *       and seller replies).</li>
+ *   <li>locally-generated items shown immediately (greeting, suggestion card, bot
+ *       replies, order/product cards), and</li>
+ *   <li>persisted messages streamed from Firestore (buyer texts, bot replies when
+ *       signed-in, system handoff, seller replies, images).</li>
  * </ul>
  * Items are ordered by {@code sortTime}; greeting/suggestion pin to the top.
+ * Suggestion chips and login CTAs stay local-only.
  */
 public class ChatViewModel extends ViewModel {
 
@@ -165,11 +166,11 @@ public class ChatViewModel extends ViewModel {
             String botMsg = "Chào bạn! Mình thấy bạn đang cần hỗ trợ về sản phẩm "
                     + pendingProductName + variantPart + orderPart
                     + ". Bạn cần mình tư vấn thêm gì về sản phẩm này không?";
-            addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
+            showAndPersistBotText(botMsg);
         } else if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
             String botMsg = "Chào bạn! Mình đã nhận được yêu cầu hỗ trợ cho đơn hàng "
                     + pendingOrderCode + ". Bạn đang gặp vấn đề gì với đơn hàng này (vận chuyển, thanh toán, đổi trả...) để mình giúp nhé?";
-            addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg), nextLocalSort());
+            showAndPersistBotText(botMsg);
         }
         recompute();
     }
@@ -185,20 +186,20 @@ public class ChatViewModel extends ViewModel {
                                 ChatMessage.SENDER_BOT,
                                 "Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm nhé.");
                         addLocal(hint, sortHint);
-                        addLocal(buildProductCard(product, pendingProductVariant), nextLocalSort());
+                        persistBotMessage(hint);
+                        ChatMessage card = buildProductCard(product, pendingProductVariant);
+                        addLocal(card, nextLocalSort());
+                        persistBotMessage(card);
                     } else if (pendingProductName != null) {
-                        String botMsg = "Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
-                                + pendingProductName + ".";
-                        addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, botMsg),
-                                nextLocalSort());
+                        showAndPersistBotText("Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
+                                + pendingProductName + ".");
                     }
                     recompute();
                 })
                 .addOnFailureListener(e -> {
                     if (pendingProductName != null) {
-                        addLocal(ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT,
-                                "Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm " + pendingProductName + "."),
-                                nextLocalSort());
+                        showAndPersistBotText("Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
+                                + pendingProductName + ".");
                         recompute();
                     }
                 });
@@ -300,7 +301,9 @@ public class ChatViewModel extends ViewModel {
         }
 
         if (remoteMessages.isEmpty() && !hasLocalGreeting()) {
-            addLocal(botEngine.greeting(), SORT_GREETING);
+            ChatMessage greeting = botEngine.greeting();
+            addLocal(greeting, SORT_GREETING);
+            persistBotMessage(greeting);
             addSuggestionCard();
         }
         recompute();
@@ -519,6 +522,7 @@ public class ChatViewModel extends ViewModel {
         ChatBotEngine.BotResponse response = botEngine.process(text);
         for (ChatMessage m : response.messages) {
             addLocal(m, nextLocalSort());
+            persistBotMessage(m);
         }
         recompute();
 
@@ -530,6 +534,30 @@ public class ChatViewModel extends ViewModel {
                 lookupOrders();
             }
         }
+    }
+
+    private void showAndPersistBotText(@NonNull String text) {
+        ChatMessage msg = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT, text);
+        addLocal(msg, nextLocalSort());
+        persistBotMessage(msg);
+    }
+
+    /**
+     * Persists bot content for signed-in buyers. Firestore rules require
+     * {@code senderId == auth.uid}; {@code senderType} stays {@code bot}.
+     */
+    private void persistBotMessage(@NonNull ChatMessage message) {
+        if (sellerMode || conversationId == null || uid == null) {
+            return;
+        }
+        String type = message.getType();
+        if (!ChatMessage.TYPE_TEXT.equals(type)
+                && !ChatMessage.TYPE_ORDER_CARD.equals(type)
+                && !ChatMessage.TYPE_PRODUCT_CARD.equals(type)) {
+            return;
+        }
+        message.setSenderId(uid);
+        chatRepository.sendMessage(conversationId, message, null);
     }
 
     private void addLoginPrompt(@NonNull String reason) {
@@ -550,26 +578,23 @@ public class ChatViewModel extends ViewModel {
 
     private void lookupOrders() {
         if (uid == null) {
-            ChatMessage loginHint = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT,
-                    "Bạn cần đăng nhập để mình tra cứu đơn hàng. "
-                            + "Vui lòng quay lại màn Đăng nhập rồi mở chat nhé.");
-            addLocal(loginHint, nextLocalSort());
+            showAndPersistBotText("Bạn cần đăng nhập để mình tra cứu đơn hàng. "
+                    + "Vui lòng quay lại màn Đăng nhập rồi mở chat nhé.");
             recompute();
             return;
         }
         orderRepository.getOrdersForBuyer(uid, orders -> {
             if (orders.isEmpty()) {
-                ChatMessage empty = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT,
-                        "Mình chưa tìm thấy đơn hàng nào trong tài khoản của bạn. "
-                                + "Nếu bạn vừa đặt hàng, vui lòng thử lại sau ít phút nhé.");
-                addLocal(empty, nextLocalSort());
+                showAndPersistBotText("Mình chưa tìm thấy đơn hàng nào trong tài khoản của bạn. "
+                        + "Nếu bạn vừa đặt hàng, vui lòng thử lại sau ít phút nhé.");
             } else {
                 for (Order order : orders) {
-                    addLocal(buildOrderCard(order), nextLocalSort());
+                    ChatMessage card = buildOrderCard(order);
+                    addLocal(card, nextLocalSort());
+                    persistBotMessage(card);
                 }
-                ChatMessage hint = ChatMessage.text(ChatMessage.SENDER_BOT, ChatMessage.SENDER_BOT,
+                showAndPersistBotText(
                         "Chạm vào một đơn hàng để xem chi tiết. Bạn cần hỗ trợ thêm gì không?");
-                addLocal(hint, nextLocalSort());
             }
             recompute();
         });
@@ -716,7 +741,7 @@ public class ChatViewModel extends ViewModel {
             merged.add(local);
         }
         for (ChatMessage remote : remoteMessages) {
-            if (!isDuplicateOfLocalUserMessage(remote)) {
+            if (!isDuplicateOfLocalMessage(remote)) {
                 merged.add(remote);
             }
         }
@@ -729,23 +754,42 @@ public class ChatViewModel extends ViewModel {
         messages.setValue(merged);
     }
 
-    /** Skips Firestore echo when we already showed the same user text/image locally. */
-    private boolean isDuplicateOfLocalUserMessage(@NonNull ChatMessage remote) {
-        if (!ChatMessage.SENDER_USER.equals(remote.getSenderType())) {
+    /** Skips Firestore echo when we already showed the same user/bot message locally. */
+    private boolean isDuplicateOfLocalMessage(@NonNull ChatMessage remote) {
+        String remoteType = remote.getSenderType();
+        if (!ChatMessage.SENDER_USER.equals(remoteType)
+                && !ChatMessage.SENDER_BOT.equals(remoteType)) {
             return false;
         }
         String remoteText = remote.getText();
         String remoteImage = remote.getImageUrl();
+        String remoteOrderId = remote.getOrderId();
+        String remoteProductId = remote.getProductId();
         for (ChatMessage local : localMessages) {
-            if (!ChatMessage.SENDER_USER.equals(local.getSenderType())) {
+            if (!remoteType.equals(local.getSenderType())) {
                 continue;
             }
-            if (Math.abs(local.getSortTime() - remote.getSortTime()) >= 60_000L) {
+            if (Math.abs(local.getSortTime() - remote.getSortTime()) >= 60_000L
+                    && local.getCreatedAt() != null) {
                 continue;
             }
             if (ChatMessage.TYPE_IMAGE.equals(remote.getType())
                     || ChatMessage.TYPE_IMAGE.equals(local.getType())) {
                 if (remoteImage != null && remoteImage.equals(local.getImageUrl())) {
+                    return true;
+                }
+                continue;
+            }
+            if (ChatMessage.TYPE_ORDER_CARD.equals(remote.getType())
+                    || ChatMessage.TYPE_ORDER_CARD.equals(local.getType())) {
+                if (remoteOrderId != null && remoteOrderId.equals(local.getOrderId())) {
+                    return true;
+                }
+                continue;
+            }
+            if (ChatMessage.TYPE_PRODUCT_CARD.equals(remote.getType())
+                    || ChatMessage.TYPE_PRODUCT_CARD.equals(local.getType())) {
+                if (remoteProductId != null && remoteProductId.equals(local.getProductId())) {
                     return true;
                 }
                 continue;
