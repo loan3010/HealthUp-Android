@@ -140,8 +140,8 @@ public class OrderListFragment extends Fragment {
                 binding.rvOrders.setAdapter(new OrderAdapter(getContext(), filteredOrders, filter));
             }
 
-            boolean showRecommend = "pending".equals(filter) || "confirmed".equals(filter) || "shipping".equals(filter) || filteredOrders.isEmpty();
-            binding.lnRecommend.setVisibility(showRecommend ? View.VISIBLE : View.GONE);
+            // Hiển thị phần gợi ý cho bạn ở tất cả các tab theo yêu cầu của người dùng
+            binding.lnRecommend.setVisibility(View.VISIBLE);
         }).addOnFailureListener(e -> {
             if (getContext() != null) {
                 Toast.makeText(getContext(), "Lỗi tải đơn hàng: " + e.getMessage(), Toast.LENGTH_SHORT).show();

@@ -244,27 +244,13 @@ public class ReturnRefundDetailActivity extends BaseAppCompatActivity {
     }
 
     private void showSuccessDialog(String message, String targetTab) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        DialogSuccessBinding dialogBinding = DialogSuccessBinding.inflate(getLayoutInflater());
-        builder.setView(dialogBinding.getRoot());
-        dialogBinding.tvMessage.setText(message);
-
-        AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-
-        dialogBinding.btnConfirm.setOnClickListener(v -> {
-            dialog.dismiss();
+        UIUtils.showSuccessDialog(this, message, () -> {
             Intent intent = new Intent(this, MainActivity.class);
             intent.putExtra("navigate_to", targetTab);
             intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
             startActivity(intent);
             finish();
         });
-
-        dialog.setCancelable(false);
-        dialog.show();
     }
 
     private void setupUIByRequestType() {

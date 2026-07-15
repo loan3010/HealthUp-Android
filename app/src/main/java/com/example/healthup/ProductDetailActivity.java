@@ -1,7 +1,10 @@
 package com.example.healthup;
 
-import android.text.TextUtils;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.text.TextUtils;
 import android.content.res.ColorStateList;
 import android.os.Bundle;
 import android.util.Log;
@@ -50,6 +53,28 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
     private ProductAdapter recommendationAdapter;
     private Product.ProductVariant selectedVariant;
     private com.google.firebase.firestore.ListenerRegistration cartListener;
+
+    private final BroadcastReceiver guestCartReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            setupCartBadgeListener();
+        }
+    };
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        IntentFilter filter = new IntentFilter(com.example.healthup.util.GuestCartManager.ACTION_GUEST_CART_CHANGED);
+        androidx.core.content.ContextCompat.registerReceiver(this, guestCartReceiver, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        try {
+            unregisterReceiver(guestCartReceiver);
+        } catch (Exception ignored) {}
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -355,17 +380,11 @@ public class ProductDetailActivity extends BaseAppCompatActivity {
                     .collection("cart")
                     .addSnapshotListener((value, error) -> {
                         if (value != null && tvCartBadgeHeader != null) {
-                            int count = 0;
-                            for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
-                                if (CartHelper.isValidCartDocument(doc)) {
-                                    count++;
-                                }
-                            }
-                            updateCartBadge(count);
+                            updateCartBadge(CartHelper.getCartCount(value));
                         }
                     });
         } else {
-            updateCartBadge(com.example.healthup.util.GuestCartManager.getInstance(this).getItems().size());
+            updateCartBadge(CartHelper.getGuestCartCount(this));
         }
     }
 

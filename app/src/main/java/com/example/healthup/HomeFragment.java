@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.healthup.util.GuestWishlistUiHelper;
 import com.example.healthup.util.LocaleHelper;
 import com.example.healthup.util.ReviewStatsHelper;
+import com.example.healthup.util.ToastUtils;
 import com.example.healthup.util.TranslationManager;
 import com.bumptech.glide.Glide;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -91,7 +92,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                 if (isGranted) {
                     launchCamera();
                 } else {
-                    Toast.makeText(getContext(), "Cần quyền Camera để tìm kiếm bằng hình ảnh", Toast.LENGTH_SHORT).show();
+                    ToastUtils.show(getContext(), "Cần quyền Camera để tìm kiếm bằng hình ảnh");
                 }
             });
 
@@ -363,7 +364,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         try {
             startActivityForResult(intent, REQUEST_CODE_SPEECH_INPUT);
         } catch (Exception e) {
-            Toast.makeText(getContext(), "Máy bạn không hỗ trợ tìm kiếm giọng nói", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Máy bạn không hỗ trợ tìm kiếm giọng nói");
         }
     }
 
@@ -428,7 +429,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         } else if (requestCode == 200 && grantResults.length > 0 && grantResults[0] == android.content.pm.PackageManager.PERMISSION_GRANTED) {
             launchCamera();
         } else if (requestCode == 100) {
-            Toast.makeText(getContext(), "Bạn cần cấp quyền Micro để sử dụng tính năng này", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Bạn cần cấp quyền Micro để sử dụng tính năng này");
         }
     }
 
@@ -458,7 +459,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
 
     private void processImageForSearch(android.net.Uri uri) {
         if (uri == null || getContext() == null) return;
-        Toast.makeText(getContext(), "Đang phân tích dấu vân tay thị giác...", Toast.LENGTH_SHORT).show();
+        ToastUtils.show(getContext(), "Đang phân tích dấu vân tay thị giác...");
 
         try {
             // Hiển thị ảnh xem trước TRONG thanh search (thay thế text)
@@ -490,7 +491,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             labeler.process(image)
                     .addOnSuccessListener(labels -> {
                         if (labels.isEmpty()) {
-                            Toast.makeText(getContext(), "Không nhận diện được đặc trưng vật thể", Toast.LENGTH_SHORT).show();
+                            ToastUtils.show(getContext(), "Không nhận diện được đặc trưng vật thể");
                             return;
                         }
 
@@ -514,7 +515,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     })
                     .addOnFailureListener(e -> {
                         if (getContext() != null)
-                            Toast.makeText(getContext(), "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            ToastUtils.show(getContext(), "Lỗi: " + e.getMessage());
                     });
         } catch (IOException e) {
             Log.e("HomeFragment", "Visual search error", e);
@@ -616,9 +617,9 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
         rvSearch.setAdapter(searchAdapter);
 
         if (results.isEmpty()) {
-            Toast.makeText(getContext(), "Không tìm thấy sản phẩm tương đồng", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Không tìm thấy sản phẩm tương đồng");
         } else {
-            Toast.makeText(getContext(), "Đã tìm thấy " + results.size() + " sản phẩm phù hợp nhất", Toast.LENGTH_SHORT).show();
+            ToastUtils.show(getContext(), "Đã tìm thấy " + results.size() + " sản phẩm phù hợp nhất");
         }
     }
 
@@ -704,7 +705,7 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
             else if (name.contains("Granola")) icon = "dry.png";
             else if (name.contains("Trái cây")) icon = "fruit.png";
             else if (name.contains("vặt")) icon = "cooking.png";
-            else if (name.contains("Trà")) icon = "leaf.png";
+            else if (name.contains("Trà")) icon = "coffee.png";
             else if (name.contains("Combo")) icon = "multiple.png";
 
             categoryList.add(new Category(String.valueOf(i + 1), name, icon));
@@ -718,11 +719,15 @@ public class HomeFragment extends Fragment implements ProductAdapter.OnProductCl
                     for (DocumentSnapshot doc : queryDocumentSnapshots) {
                         String name = doc.getString("name");
                         String iconUrl = doc.getString("iconUrl");
-                        if (name != null && iconUrl != null) {
-                            for (Category cat : categoryList) {
-                                if (cat.getName().equalsIgnoreCase(name)) {
-                                    cat.setIconUrl(iconUrl);
-                                    hasChanges = true;
+                        if (name != null && iconUrl != null && !iconUrl.isEmpty()) {
+                            // Chỉ ghi đè nếu iconUrl không phải là fruit.png hoặc là link http thực tế
+                            // Điều này ngăn chặn việc tất cả bị reset về fruit.png từ DB cũ
+                            if (iconUrl.startsWith("http") || !iconUrl.equals("fruit.png")) {
+                                for (Category cat : categoryList) {
+                                    if (cat.getName().equalsIgnoreCase(name)) {
+                                        cat.setIconUrl(iconUrl);
+                                        hasChanges = true;
+                                    }
                                 }
                             }
                         }

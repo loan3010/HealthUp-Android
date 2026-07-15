@@ -69,6 +69,7 @@
 
 
         <LinearLayout
+            android:id="@+id/layoutRatingSold"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
@@ -76,22 +77,28 @@
             android:orientation="horizontal">
 
 
-            <ImageView
-                android:layout_width="12dp"
-                android:layout_height="12dp"
-                android:src="@drawable/ic_star"
-                app:tint="#FFB300"
-                android:layout_marginEnd="2dp"/>
-
-
-            <TextView
-                android:id="@+id/tvRating"
+            <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="4.5"
-                android:textSize="11sp"
-                android:textColor="@color/neutral_black"
-                android:textStyle="bold" />
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+                <ImageView
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:src="@drawable/ic_star"
+                    app:tint="#FFB300"
+                    android:layout_marginEnd="2dp"/>
+
+
+                <TextView
+                    android:id="@+id/tvRating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4.5"
+                    android:textSize="11sp"
+                    android:textColor="@color/neutral_black"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
 
             <TextView
@@ -125,6 +132,8 @@
                     style="@style/TextAppearance.HealthUp.Content"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:maxLines="1"
+                    android:ellipsize="end"
                     android:text="100.000đ"
                     android:textColor="@color/primary_default"
                     android:textStyle="bold" />

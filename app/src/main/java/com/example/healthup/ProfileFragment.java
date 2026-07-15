@@ -290,6 +290,34 @@ public class ProfileFragment extends Fragment {
         if (rowLoyalty != null) {
             rowLoyalty.setOnClickListener(v -> loadFragment(new MemberTierFragment()));
         }
+
+        View appRatingRow = view.findViewById(R.id.row_app_rating);
+        if (appRatingRow != null) {
+            appRatingRow.setOnClickListener(v -> showAppRatingDialog());
+        }
+
+        View tvPhone = view.findViewById(R.id.tv_phone);
+        if (tvPhone != null) {
+            ((View) tvPhone.getParent()).setOnClickListener(v -> {
+                Intent intent = new Intent(Intent.ACTION_DIAL);
+                intent.setData(android.net.Uri.parse("tel:0769845728"));
+                startActivity(intent);
+            });
+        }
+
+        View tvEmail = view.findViewById(R.id.tv_email);
+        if (tvEmail != null) {
+            ((View) tvEmail.getParent()).setOnClickListener(v -> {
+                Intent intent = new Intent(Intent.ACTION_SENDTO);
+                intent.setData(android.net.Uri.parse("mailto:healthup@gmail.com"));
+                intent.putExtra(Intent.EXTRA_SUBJECT, "Hỗ trợ khách hàng - HealthUp");
+                try {
+                    startActivity(intent);
+                } catch (android.content.ActivityNotFoundException e) {
+                    Toast.makeText(requireContext(), "Không tìm thấy ứng dụng email", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
     }
 
 
@@ -318,11 +346,29 @@ public class ProfileFragment extends Fragment {
 
 
     private void confirmLogout() {
-        new AlertDialog.Builder(requireContext())
+        new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setTitle(R.string.profile_logout_title)
                 .setMessage(R.string.profile_logout_message)
                 .setNegativeButton(R.string.account_management_cancel, null)
                 .setPositiveButton(R.string.profile_logout, (dialog, which) -> performLogout())
+                .show();
+    }
+
+    private void showAppRatingDialog() {
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_app_rating, null);
+        android.widget.RatingBar ratingBar = dialogView.findViewById(R.id.ratingBar);
+
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(requireContext())
+                .setView(dialogView)
+                .setPositiveButton("Gửi đánh giá", (dialog, which) -> {
+                    float rating = ratingBar.getRating();
+                    if (rating > 0) {
+                        Toast.makeText(requireContext(), "Cảm ơn bạn đã gửi đánh giá!", Toast.LENGTH_SHORT).show();
+                    } else {
+                        Toast.makeText(requireContext(), "Vui lòng chọn số sao!", Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Để sau", null)
                 .show();
     }
 

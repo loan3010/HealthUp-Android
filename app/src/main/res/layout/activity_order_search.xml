@@ -3,75 +3,103 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_cream"
+    android:background="@color/white"
     android:orientation="vertical">
 
     <!-- Header / Search Bar -->
     <LinearLayout
+        android:id="@+id/layoutHeader"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingTop="30dp"
-        android:paddingBottom="12dp"
-        android:paddingHorizontal="16dp"
-        android:background="@color/bg_cream"
+        android:background="@color/white"
+        android:elevation="2dp"
         android:gravity="center_vertical"
-        android:orientation="horizontal">
+        android:orientation="horizontal"
+        android:paddingHorizontal="12dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp">
 
         <ImageButton
             android:id="@+id/btnBack"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Quay lại"
             android:src="@drawable/ic_back"
             app:tint="@color/text_main" />
 
-        <EditText
-            android:id="@+id/etSearch"
+        <FrameLayout
             android:layout_width="0dp"
             android:layout_height="44dp"
-            android:layout_weight="1"
             android:layout_marginStart="8dp"
-            android:background="@drawable/bg_search_input"
-            android:hint="Tìm theo mã đơn hoặc tên SP..."
-            android:paddingHorizontal="12dp"
-            android:textSize="14sp"
-            android:imeOptions="actionSearch"
-            android:inputType="text"
-            android:maxLines="1" />
+            android:layout_weight="1">
+
+            <EditText
+                android:id="@+id/etSearch"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/bg_search_input"
+                android:hint="Tìm theo mã đơn hoặc tên SP..."
+                android:imeOptions="actionSearch"
+                android:inputType="text"
+                android:maxLines="1"
+                android:paddingStart="40dp"
+                android:paddingEnd="12dp"
+                android:textColor="@color/text_main"
+                android:textColorHint="@color/text_gray"
+                android:textSize="14sp" />
+
+            <ImageView
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center_vertical|start"
+                android:layout_marginStart="12dp"
+                android:src="@drawable/ic_search"
+                app:tint="@color/text_gray" />
+        </FrameLayout>
     </LinearLayout>
 
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rvSearchResults"
+    <FrameLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:clipToPadding="false"
-        android:paddingBottom="16dp" />
+        android:background="@color/bg_cream">
 
-    <!-- Empty State -->
-    <LinearLayout
-        android:id="@+id/lnEmptyState"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:visibility="gone">
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvSearchResults"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp" />
 
-        <ImageView
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:background="@drawable/bg_circle_light"
-            android:padding="20dp"
-            android:src="@drawable/ic_search"
-            app:tint="@color/text_gray" />
-
-        <TextView
-            android:id="@+id/tvEmptyMessage"
-            android:layout_width="wrap_content"
+        <!-- Empty State -->
+        <LinearLayout
+            android:id="@+id/lnEmptyState"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="Nhập từ khóa để tìm kiếm"
-            android:textColor="@color/text_gray"
-            android:textSize="16sp" />
-    </LinearLayout>
+            android:layout_gravity="center"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingHorizontal="40dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="120dp"
+                android:layout_height="120dp"
+                android:alpha="0.5"
+                android:src="@drawable/ic_search"
+                app:tint="@color/text_gray" />
+
+            <TextView
+                android:id="@+id/tvEmptyMessage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:lineSpacingExtra="4dp"
+                android:text="Nhập mã đơn hoặc tên sản phẩm để tìm kiếm"
+                android:textColor="@color/text_gray"
+                android:textSize="15sp" />
+        </LinearLayout>
+    </FrameLayout>
 
 </LinearLayout>

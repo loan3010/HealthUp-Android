@@ -219,6 +219,17 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
         userId = user.getUid();
         refreshUsername();
         refreshEmailField();
+        refreshPhoneField();
+    }
+
+    private void refreshPhoneField() {
+        if (userId == null) return;
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(documentSnapshot -> {
+                    if (documentSnapshot.exists()) {
+                        binding.etPhone.setText(documentSnapshot.getString("phone"));
+                    }
+                });
     }
 
     private void refreshUsername() {

@@ -14,6 +14,7 @@ public class Review implements Serializable {
     private List<String> mediaUris;
     private java.util.Date createdAt;
     private String variantLabel;
+    private String userId;
 
     public Review() {}
 
@@ -57,4 +58,6 @@ public class Review implements Serializable {
     public void setCreatedAt(java.util.Date createdAt) { this.createdAt = createdAt; }
     public String getVariantLabel() { return variantLabel; }
     public void setVariantLabel(String variantLabel) { this.variantLabel = variantLabel; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
 }

@@ -65,6 +65,7 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
                         .load(review.getUserAvatar())
                         .placeholder(R.drawable.ic_profile)
                         .error(R.drawable.ic_profile)
+                        .centerCrop()
                         .into(binding.ivUserAvatar);
             } else {
                 binding.ivUserAvatar.setImageResource(R.drawable.ic_profile);
@@ -79,6 +80,28 @@ public class ProductReviewEntryAdapter extends RecyclerView.Adapter<ProductRevie
 
             binding.tvComment.setText(
                     !TextUtils.isEmpty(review.getComment()) ? review.getComment() : "");
+
+            // ✅ FIX: Xử lý "Xem thêm" / "Thu gọn" cho comment dài > 3 dòng
+            binding.tvComment.setMaxLines(3);
+            binding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
+            binding.tvToggleExpand.setVisibility(View.GONE);
+
+            binding.tvComment.post(() -> {
+                if (binding.tvComment.getLineCount() > 3) {
+                    binding.tvToggleExpand.setVisibility(View.VISIBLE);
+                    binding.tvToggleExpand.setOnClickListener(v -> {
+                        if (binding.tvComment.getMaxLines() == 3) {
+                            binding.tvComment.setMaxLines(Integer.MAX_VALUE);
+                            binding.tvComment.setEllipsize(null);
+                            binding.tvToggleExpand.setText("Thu gọn");
+                        } else {
+                            binding.tvComment.setMaxLines(3);
+                            binding.tvComment.setEllipsize(TextUtils.TruncateAt.END);
+                            binding.tvToggleExpand.setText("Xem thêm");
+                        }
+                    });
+                }
+            });
 
             bindReviewImages(review);
         }

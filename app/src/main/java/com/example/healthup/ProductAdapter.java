@@ -5,7 +5,9 @@ import android.graphics.Paint;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.CheckBox;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
@@ -127,7 +129,8 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
         ImageView ivProduct, btnAdd, btnWishlist;
         TextView tvName, tvPrice, tvOriginalPrice, tvRating, tvSoldCount;
         TextView tvBadgeNew, tvBadgeHot;
-        android.widget.CheckBox cbSelect;
+        CheckBox cbSelect;
+        LinearLayout layoutRatingSold;
 
         public ProductViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -142,6 +145,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
             btnAdd = itemView.findViewById(R.id.btnAddToCart);
             btnWishlist = itemView.findViewById(R.id.btnWishlist);
             cbSelect = itemView.findViewById(R.id.cbSelect);
+            layoutRatingSold = itemView.findViewById(R.id.layoutRatingSold);
         }
 
         public void bind(Product product, OnProductClickListener listener, boolean selectionMode,
@@ -171,7 +175,7 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 btnWishlist.getLayoutParams().width = (int) (24 * itemView.getContext().getResources().getDisplayMetrics().density);
                 btnWishlist.getLayoutParams().height = (int) (24 * itemView.getContext().getResources().getDisplayMetrics().density);
             } else {
-                tvPrice.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16f);
+                tvPrice.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f);
                 tvName.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 14f);
 
                 btnAdd.getLayoutParams().width = (int) (32 * itemView.getContext().getResources().getDisplayMetrics().density);
@@ -192,6 +196,19 @@ public class ProductAdapter extends RecyclerView.Adapter<ProductAdapter.ProductV
                 tvRating.setText(ReviewStatsHelper.formatCardRating(product));
             }
             if (tvSoldCount != null) tvSoldCount.setText("đã bán " + product.getSoldCount());
+
+            if (layoutRatingSold != null && tvSoldCount != null) {
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) tvSoldCount.getLayoutParams();
+                if (isHorizontal) {
+                    layoutRatingSold.setOrientation(LinearLayout.VERTICAL);
+                    lp.setMargins(0, 0, 0, 0);
+                } else {
+                    layoutRatingSold.setOrientation(LinearLayout.HORIZONTAL);
+                    int margin = (int) (6 * itemView.getContext().getResources().getDisplayMetrics().density);
+                    lp.setMargins(margin, 0, 0, 0);
+                }
+                tvSoldCount.setLayoutParams(lp);
+            }
 
             if (product.isNew()) {
                 tvBadgeNew.setVisibility(View.VISIBLE);

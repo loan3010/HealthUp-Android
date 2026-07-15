@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
 import com.example.healthup.databinding.ActivityChangePhoneBinding;
+import com.example.healthup.data.repository.OtpRepository;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -11,6 +12,8 @@ public class ChangePhoneActivity extends BaseAppCompatActivity {
     private ActivityChangePhoneBinding binding;
     private FirebaseFirestore db;
     private String userId;
+    private OtpRepository otpRepository;
+    private String generatedOtp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -19,6 +22,8 @@ public class ChangePhoneActivity extends BaseAppCompatActivity {
         setContentView(binding.getRoot());
 
         db = FirebaseFirestore.getInstance();
+        otpRepository = new OtpRepository(db);
+
         if (FirebaseAuth.getInstance().getCurrentUser() != null) {
             userId = FirebaseAuth.getInstance().getCurrentUser().getUid();
         }
@@ -28,7 +33,7 @@ public class ChangePhoneActivity extends BaseAppCompatActivity {
         binding.tvGetOtp.setOnClickListener(v -> {
             String phone = binding.etNewPhone.getText().toString().trim();
             // Giả lập logic kiểm tra: Nếu chứa chữ @ (ví dụ nhập nhầm @abc123 như trong hình 1) hoặc trống
-            if (phone.isEmpty() || phone.contains("@")) {
+            if (phone.isEmpty() || phone.contains("@") || phone.length() < 10) {
                 binding.tvErrorPhone.setText("Số điện thoại không hợp lệ.");
                 binding.tvErrorPhone.setVisibility(View.VISIBLE);
             } else if (phone.equals("0366649188")) { // Giả lập hình 3: SĐT đã liên kết với tài khoản khác
@@ -36,7 +41,15 @@ public class ChangePhoneActivity extends BaseAppCompatActivity {
                 binding.tvErrorPhone.setVisibility(View.VISIBLE);
             } else {
                 binding.tvErrorPhone.setVisibility(View.GONE);
-                // Giả lập gửi OTP thành công
+                
+                // Tạo OTP ngẫu nhiên 6 số
+                generatedOtp = otpRepository.generateOtp();
+                
+                // Hiển thị OTP lên màn hình (giả lập nhận tin nhắn)
+                binding.tvDebugOtp.setText("Mã xác thực của bạn là: " + generatedOtp);
+                binding.tvDebugOtp.setVisibility(View.VISIBLE);
+                
+                Toast.makeText(this, "Mã OTP đã được gửi", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -49,8 +62,13 @@ public class ChangePhoneActivity extends BaseAppCompatActivity {
                 return;
             }
 
-            // Giả lập logic kiểm tra OTP: "123456" là mã đúng
-            if ("123456".equals(otp)) {
+            if (generatedOtp == null) {
+                Toast.makeText(this, "Vui lòng nhận mã OTP trước", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // Kiểm tra OTP người dùng nhập với mã đã tạo
+            if (generatedOtp.equals(otp)) {
                 binding.tvErrorOtp.setVisibility(View.GONE);
                 
                 // Thực hiện update Firestore
