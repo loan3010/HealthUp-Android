@@ -28,7 +28,7 @@ import java.util.Map;
 public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
     public interface OnConfirmListener {
-        void onConfirm(String weight, String flavor, String packageType, int quantity, double price);
+        void onConfirm(String weight, String flavor, String packageType, int quantity, double price, String variantId, String variantName);
     }
 
     private final CartItem item;
@@ -99,7 +99,10 @@ public class EditCartItemBottomSheet extends BottomSheetDialogFragment {
 
         btnConfirm.setOnClickListener(v -> {
             updateVariantImagePreview();
-            listener.onConfirm(selectedWeight, selectedFlavor, selectedPackage, quantity, resolveSelectedPrice());
+            Product.ProductVariant selectedSku = resolveSelectedVariant();
+            String vId = selectedSku != null ? selectedSku.getId() : null;
+            String vName = selectedSku != null ? selectedSku.getName() : null;
+            listener.onConfirm(selectedWeight, selectedFlavor, selectedPackage, quantity, resolveSelectedPrice(), vId, vName);
             dismiss();
         });
 

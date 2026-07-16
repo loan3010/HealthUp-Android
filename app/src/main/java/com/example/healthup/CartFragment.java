@@ -676,8 +676,11 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             }
         }
         updateGuestBanner();
-        renderList();
-        updateFooter();
+        hydrateCartStock(() -> {
+            if (!isAdded()) return;
+            renderList();
+            updateFooter();
+        });
     }
 
     private void updateGuestBanner() {
@@ -968,13 +971,16 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onEditVariant(CartItem item) {
         EditCartItemBottomSheet sheet = new EditCartItemBottomSheet(item,
-                (weight, flavor, packageType, quantity, price) -> {
+                (weight, flavor, packageType, quantity, price, variantId, variantName) -> {
                     item.setWeight(weight);
                     item.setFlavor(flavor);
                     item.setPackageType(packageType);
                     item.setQuantity(quantity);
                     item.setPrice(price);
                     item.setOriginalPrice(price);
+                    item.setVariantId(variantId);
+                    item.setVariantName(variantName);
+                    
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
                     }
@@ -988,15 +994,19 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         updates.put("quantity", quantity);
                         updates.put("price", price);
                         updates.put("originalPrice", price);
+                        updates.put("variantId", variantId);
+                        updates.put("variantName", variantName);
                         updates.put("updatedAt", com.google.firebase.Timestamp.now());
                         if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
                             updates.put("imageUrl", item.getImageUrl());
                         }
                         db.collection("users").document(userId).collection("cart")
                                 .document(item.getId())
-                                .update(updates);
+                                .update(updates)
+                                .addOnSuccessListener(v -> hydrateCartStock(this::renderList));
                     } else if (userId == null) {
                         GuestCartManager.getInstance(requireContext()).updateItem(item);
+                        hydrateCartStock(this::renderList);
                     }
                 });
         sheet.show(getChildFragmentManager(), "edit_cart_item");
