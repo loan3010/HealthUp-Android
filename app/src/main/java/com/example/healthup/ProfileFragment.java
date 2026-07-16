@@ -526,12 +526,18 @@ public class ProfileFragment extends Fragment {
                         if (returnStatus == null || returnStatus.equals("none")) continue;
 
                         String orderId = doc.getId();
-                        // Key kết hợp để khi admin cập nhật trạng thái trả hàng (duyệt/từ chối) thì badge sẽ hiện lại
-                        String seenKey = orderId + "_" + returnStatus;
-                        currentReturnedIds.add(seenKey);
 
-                        if (!OrderSeenManager.isSeen(requireContext(), seenKey)) {
+                        // 1. Đang xử lý: requested, approved -> Luôn hiện badge (lời nhắc nhở đơn đang chạy)
+                        if (returnStatus.equals("requested") || returnStatus.equals("approved")) {
                             badgeCount++;
+                        } 
+                        // 2. Đã xong: completed, rejected -> Chỉ hiện cho đến khi người dùng nhấn vào xem
+                        else if (returnStatus.equals("completed") || returnStatus.equals("rejected")) {
+                            String seenKey = orderId + "_" + returnStatus;
+                            currentReturnedIds.add(seenKey);
+                            if (!OrderSeenManager.isSeen(requireContext(), seenKey)) {
+                                badgeCount++;
+                            }
                         }
                     }
                     if (badgeCount > 0) {

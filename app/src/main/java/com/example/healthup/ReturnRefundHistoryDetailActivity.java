@@ -139,9 +139,10 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
     }
 
     private void populateUI() {
-        // Mark any return status as seen when opened
-        if (order.getReturnStatus() != null && !"none".equalsIgnoreCase(order.getReturnStatus())) {
-            OrderSeenManager.markAsSeen(this, order.getId() + "_" + order.getReturnStatus());
+        // Mark only finished return status as seen (to remove persistent badge in Profile)
+        String rs = order.getReturnStatus();
+        if ("completed".equalsIgnoreCase(rs) || "rejected".equalsIgnoreCase(rs)) {
+            OrderSeenManager.markAsSeen(this, order.getId() + "_" + rs);
         }
 
         String handling = ReturnProgressHelper.normalizeHandling(order.getReturnHandling());
