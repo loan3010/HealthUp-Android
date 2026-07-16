@@ -214,7 +214,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         } else if (holder instanceof SystemVH) {
             ((SystemVH) holder).text.setText(m.getText());
         } else if (holder instanceof BotVH) {
-            ((BotVH) holder).bind(m, groupPosition, items, position, staffView);
+            ((BotVH) holder).bind(m, groupPosition, items, position, staffView, customerDisplayName);
         } else if (holder instanceof OrderCardVH) {
             ((OrderCardVH) holder).bind(m, listener);
         } else if (holder instanceof OrderCarouselVH) {
@@ -232,7 +232,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         } else if (holder instanceof ImageUserVH) {
             ((ImageUserVH) holder).bind(m, items, position);
         } else if (holder instanceof ImageIncomingVH) {
-            ((ImageIncomingVH) holder).bind(m, items, position, staffView);
+            ((ImageIncomingVH) holder).bind(m, items, position, staffView, customerDisplayName);
         }
     }
 
@@ -286,7 +286,8 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         void bind(@NonNull ChatMessage message,
                   @NonNull List<ChatMessage> items,
                   int position,
-                  boolean staffView) {
+                  boolean staffView,
+                  @Nullable String customerDisplayName) {
             ImageLoadHelper.loadInto(image, message.getImageUrl());
             if (avatarContainer != null) {
                 avatarContainer.setVisibility(View.VISIBLE);
@@ -386,7 +387,8 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                   @NonNull ChatBubbleHelper.GroupPosition groupPosition,
                   @NonNull List<ChatMessage> items,
                   int position,
-                  boolean staffView) {
+                  boolean staffView,
+                  @Nullable String customerDisplayName) {
             text.setText(htmlOrPlain(message.getText()));
             text.setBackgroundResource(ChatBubbleHelper.incomingBubbleBackground(groupPosition));
             applyVerticalPadding(itemView, groupPosition);
