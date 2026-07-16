@@ -198,33 +198,37 @@ public class ChatRepository {
                                   @Nullable Runnable after) {
         firestore.collection("users").document(buyerId).get()
                 .addOnSuccessListener(userDoc -> {
-                    if (!userDoc.exists()) {
-                        if (after != null) {
-                            after.run();
-                        }
-                        return;
-                    }
                     Map<String, Object> patch = new HashMap<>();
-                    String username = userDoc.getString("username");
-                    String phone = userDoc.getString("phone");
-                    if (username != null && !username.trim().isEmpty()) {
-                        patch.put("buyerUsername", username.trim());
-                    }
-                    if (phone != null && !phone.trim().isEmpty()) {
-                        patch.put("buyerPhone", phone.trim());
-                    }
-                    String name = userDoc.getString("fullName");
-                    if (name == null || name.trim().isEmpty()) {
-                        name = userDoc.getString("name");
-                    }
-                    if (name != null && !name.trim().isEmpty()) {
-                        patch.put("buyerName", name.trim());
-                    }
-                    if (patch.isEmpty()) {
-                        if (after != null) {
-                            after.run();
+                    // Always keep buyerId so staff UI can show UID even when profile is empty.
+                    patch.put("buyerId", buyerId);
+
+                    if (userDoc.exists()) {
+                        String username = userDoc.getString("username");
+                        String phone = userDoc.getString("phone");
+                        if (username != null && !username.trim().isEmpty()) {
+                            patch.put("buyerUsername", username.trim());
                         }
-                        return;
+                        if (phone != null && !phone.trim().isEmpty()) {
+                            patch.put("buyerPhone", phone.trim());
+                        }
+                        String name = firstNonEmpty(
+                                userDoc.getString("fullName"),
+                                userDoc.getString("name"),
+                                userDoc.getString("displayName"));
+                        if (name != null) {
+                            patch.put("buyerName", name);
+                        } else if (phone != null && !phone.trim().isEmpty()) {
+                            patch.put("buyerName", phone.trim());
+                        } else {
+                            String email = firstNonEmpty(
+                                    userDoc.getString("displayEmail"),
+                                    userDoc.getString("email"));
+                            if (email != null
+                                    && !email.toLowerCase(java.util.Locale.ROOT)
+                                    .endsWith("@healthup.app")) {
+                                patch.put("buyerName", email);
+                            }
+                        }
                     }
                     ref.set(patch, SetOptions.merge())
                             .addOnCompleteListener(task -> {
@@ -568,5 +572,18 @@ public class ChatRepository {
         c.setLastMessageAt(doc.getDate("lastMessageAt"));
         c.setUpdatedAt(doc.getDate("updatedAt"));
         return c;
+    }
+
+    @Nullable
+    private static String firstNonEmpty(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.trim().isEmpty()) {
+                return value.trim();
+            }
+        }
+        return null;
     }
 }

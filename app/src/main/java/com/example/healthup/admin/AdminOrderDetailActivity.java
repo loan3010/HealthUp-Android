@@ -204,11 +204,14 @@ public class AdminOrderDetailActivity extends BaseAppCompatActivity {
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT);
-        lp.topMargin = 8;
+        lp.topMargin = layoutOrderActions.getChildCount() == 0 ? 0 : 8;
         btn.setLayoutParams(lp);
         btn.setText(label);
         btn.setCornerRadius(24);
-        if (!primary) {
+        if (primary) {
+            btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.brand_primary)));
+            btn.setTextColor(getColor(R.color.white));
+        } else {
             btn.setBackgroundTintList(android.content.res.ColorStateList.valueOf(getColor(R.color.white)));
             btn.setTextColor(getColor(R.color.brand_primary));
             btn.setStrokeColor(android.content.res.ColorStateList.valueOf(getColor(R.color.brand_primary)));

@@ -47,14 +47,6 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <ImageView
-            android:layout_width="20dp"
-            android:layout_height="20dp"
-            android:layout_marginEnd="8dp"
-            android:contentDescription="@string/admin_view_customer_detail"
-            android:src="@drawable/ic_chevron_right"
-            app:tint="@color/text_secondary" />
-
         <com.google.android.material.switchmaterial.SwitchMaterial
             android:id="@+id/switchCustomerDisabled"
             android:layout_width="wrap_content"

@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.TransitionDrawable;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -19,6 +21,7 @@ import androidx.activity.OnBackPressedCallback;
 import com.example.healthup.BaseAppCompatActivity;
 import androidx.core.content.ContextCompat;
 
+import com.example.healthup.LoginActivity;
 import com.example.healthup.OTPActivity;
 import com.example.healthup.R;
 import com.example.healthup.RegisterValidator;
@@ -27,6 +30,7 @@ import com.example.healthup.util.UserPhoneLookup;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
@@ -70,6 +74,9 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
     private int fullNameBorderRes = R.drawable.bg_input_default;
     private int phoneBorderRes = R.drawable.bg_input_default;
 
+    private final Handler authWaitHandler = new Handler(Looper.getMainLooper());
+    private boolean destroyed;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -77,11 +84,6 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
 
         firebaseAuth = FirebaseAuth.getInstance();
         firebaseFirestore = FirebaseFirestore.getInstance();
-
-        if (firebaseAuth.getCurrentUser() == null) {
-            finish();
-            return;
-        }
 
         authEmail = getIntent().getStringExtra(EXTRA_AUTH_EMAIL);
         authProvider = getIntent().getStringExtra(EXTRA_AUTH_PROVIDER);
@@ -94,7 +96,7 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
 
         bindViews();
         String prefillName = getIntent().getStringExtra(EXTRA_FULL_NAME);
-        if (!TextUtils.isEmpty(prefillName)) {
+        if (!TextUtils.isEmpty(prefillName) && fullNameEditText != null) {
             fullNameEditText.setText(prefillName);
         }
 
@@ -102,6 +104,56 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
         setupActions();
         setupBackNavigation();
         updateContinueButtonState();
+
+        // Google sign-in can briefly leave Auth null after Login finishes; wait then
+        // fall back to Login instead of finish()-only (which looks like "app kicked out").
+        ensureAuthenticatedSession();
+    }
+
+    @Override
+    protected void onDestroy() {
+        destroyed = true;
+        authWaitHandler.removeCallbacksAndMessages(null);
+        super.onDestroy();
+    }
+
+    private void ensureAuthenticatedSession() {
+        if (firebaseAuth.getCurrentUser() != null) {
+            return;
+        }
+        setLoading(true);
+        final long deadlineMs = System.currentTimeMillis() + 2000L;
+        authWaitHandler.post(new Runnable() {
+            @Override
+            public void run() {
+                if (destroyed) {
+                    return;
+                }
+                FirebaseUser user = firebaseAuth.getCurrentUser();
+                if (user != null) {
+                    setLoading(false);
+                    return;
+                }
+                if (System.currentTimeMillis() >= deadlineMs) {
+                    setLoading(false);
+                    // Do not leave a half-created Google Auth session as a "logged in" user.
+                    IncompleteSocialSessionCleaner.cleanup(() ->
+                            runOnUiThread(SocialCompleteProfileActivity.this::returnToLoginSafely));
+                    return;
+                }
+                authWaitHandler.postDelayed(this, 100L);
+            }
+        });
+    }
+
+    private void returnToLoginSafely() {
+        if (isFinishing()) {
+            return;
+        }
+        Intent intent = new Intent(this, LoginActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
     }
 
     private void setupBackNavigation() {
@@ -117,7 +169,7 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
         setLoading(true);
         IncompleteSocialSessionCleaner.cleanup(() -> runOnUiThread(() -> {
             setLoading(false);
-            finish();
+            returnToLoginSafely();
         }));
     }
 
@@ -134,6 +186,10 @@ public class SocialCompleteProfileActivity extends BaseAppCompatActivity {
         phoneEditText = findViewById(R.id.phoneEditText);
         continueButton = findViewById(R.id.continueButton);
         loadingOverlay = findViewById(R.id.loadingOverlay);
+        TextView back = findViewById(R.id.backTextView);
+        if (back != null) {
+            back.setOnClickListener(v -> abortIncompleteRegistration());
+        }
     }
 
     private void setupActions() {

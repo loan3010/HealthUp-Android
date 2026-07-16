@@ -233,6 +233,7 @@
     <string name="change_email_link_google_message">This is a Gmail. Verification does not auto-link Google. You can link Google later in Account settings.</string>
     <string name="change_email_link_google_later">Got it</string>
     <string name="account_email_empty">No email added</string>
+    <string name="account_profile_incomplete_hint">Phone not verified yet — this is not a HealthUp account. Finish signup (OTP). For Google sign-in, sign in again and enter your phone number.</string>
     <string name="account_email_unverified">Email not verified — you cannot sign in with email yet.</string>
     <string name="account_verify_email_button">Verify email now</string>
     <string name="account_save_session_expired">Session expired. Please sign in again.</string>
@@ -396,6 +397,7 @@
     <string name="profile_staff_inbox_card_subtitle">View and reply to customer messages</string>
     <string name="seller_reply_hint">Type a reply…</string>
     <string name="conversation_buyer_fallback">Customer</string>
+    <string name="conversation_buyer_uid_copied">buyerId copied</string>
     <string name="chat_sender_bot">Virtual assistant</string>
     <string name="chat_sender_staff">Staff</string>
     <string name="chat_sender_customer">Customer</string>

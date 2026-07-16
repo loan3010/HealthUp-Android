@@ -238,6 +238,7 @@
     <string name="change_email_link_google_message">Đây là Gmail. Xác thực email chưa tự liên kết đăng nhập Google. Bạn có thể liên kết Google sau trong Cài đặt tài khoản.</string>
     <string name="change_email_link_google_later">Đã hiểu</string>
     <string name="account_email_empty">Chưa thêm email</string>
+    <string name="account_profile_incomplete_hint">Hồ sơ chưa xác thực SĐT — chưa phải tài khoản HealthUp. Vui lòng hoàn tất đăng ký (OTP). Nếu đang dùng Google, hãy đăng nhập lại và nhập số điện thoại.</string>
     <string name="account_email_unverified">Email chưa xác thực — bạn chưa thể đăng nhập bằng email.</string>
     <string name="account_verify_email_button">Xác thực email ngay</string>
     <string name="account_save_session_expired">Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.</string>
@@ -405,6 +406,7 @@
     <string name="profile_staff_inbox_card_subtitle">Xem và trả lời tin nhắn từ khách hàng</string>
     <string name="seller_reply_hint">Nhập tin nhắn trả lời…</string>
     <string name="conversation_buyer_fallback">Khách hàng</string>
+    <string name="conversation_buyer_uid_copied">Đã copy buyerId</string>
     <string name="chat_sender_bot">Trợ lý ảo</string>
     <string name="chat_sender_staff">Nhân viên</string>
     <string name="chat_sender_customer">Khách hàng</string>
@@ -797,7 +799,12 @@
     <string name="admin_customer_detail">Chi tiết khách hàng</string>
     <string name="admin_view_customer">Xem chi tiết khách hàng</string>
     <string name="admin_view_customer_detail">Xem chi tiết</string>
+    <string name="admin_order_open_detail">Xem đơn ›</string>
     <string name="admin_customer_spent_label">Tổng chi tiêu</string>
+    <string name="admin_customer_tier_member">Thành viên</string>
+    <string name="admin_customer_tier_vip">VIP</string>
+    <string name="admin_customer_tier_hint_to_vip">Còn %1$sđ để lên VIP (ngưỡng 5.000.000đ)</string>
+    <string name="admin_customer_tier_hint_vip">Đã đạt hạng VIP (≥ 5.000.000đ)</string>
     <string name="admin_customer_total_orders">Tổng đơn hàng</string>
     <string name="admin_customer_pending_orders">%1$d đơn chờ xử lý</string>
     <string name="admin_customer_contact_section">Thông tin liên hệ</string>

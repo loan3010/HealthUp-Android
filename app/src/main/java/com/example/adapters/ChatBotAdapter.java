@@ -6,6 +6,8 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import android.text.TextUtils;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.text.HtmlCompat;
@@ -74,6 +76,9 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
     private List<SuggestionProvider.Item> suggestionItems = SuggestionProvider.getSet(0);
     /** When true (seller/admin view), own replies appear on the right. */
     private boolean staffView;
+    /** Seller-mode label for buyer bubbles (username / name / phone). */
+    @Nullable
+    private String customerDisplayName;
 
     public ChatBotAdapter(Listener listener) {
         this.listener = listener;
@@ -85,6 +90,17 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         }
         this.staffView = staffView;
         notifyDataSetChanged();
+    }
+
+    public void setCustomerDisplayName(@Nullable String customerDisplayName) {
+        String next = customerDisplayName != null ? customerDisplayName.trim() : null;
+        if (TextUtils.equals(this.customerDisplayName, next)) {
+            return;
+        }
+        this.customerDisplayName = next;
+        if (staffView) {
+            notifyDataSetChanged();
+        }
     }
 
     public void setSuggestionItems(@Nullable List<SuggestionProvider.Item> items) {
@@ -292,7 +308,9 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 }
             } else if (staffView && ChatMessage.SENDER_USER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                name.setText(R.string.chat_sender_customer);
+                name.setText(!TextUtils.isEmpty(customerDisplayName)
+                        ? customerDisplayName
+                        : itemView.getContext().getString(R.string.chat_sender_customer));
             } else {
                 name.setVisibility(View.GONE);
             }
@@ -401,7 +419,9 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
                 name.setText(R.string.chat_sender_bot);
             } else if (staffView && ChatMessage.SENDER_USER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                name.setText(R.string.chat_sender_customer);
+                name.setText(!TextUtils.isEmpty(customerDisplayName)
+                        ? customerDisplayName
+                        : itemView.getContext().getString(R.string.chat_sender_customer));
             } else {
                 name.setVisibility(View.GONE);
             }

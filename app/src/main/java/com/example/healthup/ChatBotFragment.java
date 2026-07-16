@@ -54,6 +54,7 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.adapters.ChatBotAdapter;
 
 import com.example.healthup.chat.ChatViewModel;
+import com.example.healthup.chat.ConversationBuyerLabel;
 
 import com.example.healthup.VariantBottomSheetFragment;
 
@@ -783,37 +784,30 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
 
 
     private void updateSellerConversationTitle(@Nullable Conversation conversation) {
-
-        if (conversation == null) {
-
-            title.setText(R.string.conversation_buyer_fallback);
-
-            return;
-
+        String label = ConversationBuyerLabel.resolveOrFallback(
+                conversation,
+                getString(R.string.conversation_buyer_fallback));
+        title.setText(label);
+        if (adapter != null) {
+            adapter.setCustomerDisplayName(label);
         }
-
-        String username = conversation.getBuyerUsername();
-
-        if (!TextUtils.isEmpty(username)) {
-
-            title.setText(username.startsWith("@") ? username : "@" + username);
-
-            return;
-
-        }
-
-        String buyerName = conversation.getBuyerName();
-
-        if (buyerName != null && !buyerName.trim().isEmpty()) {
-
-            title.setText(buyerName);
-
+        String buyerUid = ConversationBuyerLabel.resolveBuyerUid(conversation);
+        if (!TextUtils.isEmpty(buyerUid)) {
+            title.setOnLongClickListener(v -> {
+                android.content.ClipboardManager clipboard =
+                        (android.content.ClipboardManager)
+                                requireContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                if (clipboard != null) {
+                    clipboard.setPrimaryClip(
+                            android.content.ClipData.newPlainText("buyerId", buyerUid));
+                    Toast.makeText(requireContext(), R.string.conversation_buyer_uid_copied,
+                            Toast.LENGTH_SHORT).show();
+                }
+                return true;
+            });
         } else {
-
-            title.setText(R.string.conversation_buyer_fallback);
-
+            title.setOnLongClickListener(null);
         }
-
     }
 
 

@@ -20,6 +20,7 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.healthup.R;
+import com.example.healthup.chat.MembershipRules;
 import com.example.models.Order;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.card.MaterialCardView;
@@ -127,11 +128,15 @@ public class AdminCustomerDetailActivity extends BaseAppCompatActivity
         TextView tvUsername = findViewById(R.id.tvAdminCustomerUsername);
         TextView tvStatus = findViewById(R.id.tvAdminCustomerStatus);
         TextView tvSpent = findViewById(R.id.tvAdminCustomerSpent);
+        TextView tvTier = findViewById(R.id.tvAdminCustomerTier);
+        TextView tvTierHint = findViewById(R.id.tvAdminCustomerTierHint);
 
+        long spentAmount = spent != null ? spent : 0L;
         tvAvatar.setText(initialLetter(displayName));
         tvName.setText(displayName);
         tvUsername.setText(TextUtils.isEmpty(username) ? "—" : ("@" + username));
-        tvSpent.setText(moneyFormat.format(spent != null ? spent : 0L) + " đ");
+        tvSpent.setText(moneyFormat.format(spentAmount) + " đ");
+        bindMembershipTier(tvTier, tvTierHint, spentAmount);
         updateStatusBadge(tvStatus);
 
         if (disabled && !TextUtils.isEmpty(disabledReason)) {
@@ -252,6 +257,23 @@ public class AdminCustomerDetailActivity extends BaseAppCompatActivity
             if (!buttonView.isPressed()) return;
             handleDisableToggle(isChecked);
         });
+    }
+
+    private void bindMembershipTier(@Nullable TextView tvTier,
+                                    @Nullable TextView tvTierHint,
+                                    long spentAmount) {
+        if (tvTier == null || tvTierHint == null) return;
+        boolean vip = MembershipRules.isVip(spentAmount);
+        tvTier.setText(vip
+                ? R.string.admin_customer_tier_vip
+                : R.string.admin_customer_tier_member);
+        if (vip) {
+            tvTierHint.setText(R.string.admin_customer_tier_hint_vip);
+        } else {
+            tvTierHint.setText(getString(
+                    R.string.admin_customer_tier_hint_to_vip,
+                    moneyFormat.format(MembershipRules.remainingToVip(spentAmount))));
+        }
     }
 
     private void updateStatusBadge(TextView tvStatus) {

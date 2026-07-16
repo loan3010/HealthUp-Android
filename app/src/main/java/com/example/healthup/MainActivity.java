@@ -164,7 +164,12 @@ public class MainActivity extends BaseAppCompatActivity {
             return;
         }
         AppEntryRouter.resolveHomeIntent(this, resolved -> {
-            if (AdminActivity.class.getName().equals(resolved.getComponent().getClassName())) {
+            if (resolved.getComponent() == null) {
+                return;
+            }
+            String dest = resolved.getComponent().getClassName();
+            // Incomplete Google Auth → finish OTP profile; admin → AdminActivity.
+            if (!MainActivity.class.getName().equals(dest)) {
                 startActivity(resolved);
                 finish();
             }

@@ -105,6 +105,7 @@
         android:layout_margin="16dp"
         android:contentDescription="@string/admin_add_product"
         android:src="@drawable/ic_plus"
+        app:backgroundTint="@color/brand_primary"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:tint="@color/white" />

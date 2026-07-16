@@ -11,6 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.healthup.R;
+import com.example.healthup.chat.ConversationBuyerLabel;
 import com.example.models.Conversation;
 
 import java.text.SimpleDateFormat;
@@ -57,16 +58,9 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         Conversation c = items.get(position);
 
-        String username = c.getBuyerUsername();
-        String displayName;
-        if (!TextUtils.isEmpty(username)) {
-            displayName = username.startsWith("@") ? username : "@" + username;
-        } else {
-            displayName = c.getBuyerName();
-            if (displayName == null || displayName.trim().isEmpty()) {
-                displayName = holder.itemView.getContext().getString(R.string.conversation_buyer_fallback);
-            }
-        }
+        String displayName = ConversationBuyerLabel.resolveOrFallback(
+                c,
+                holder.itemView.getContext().getString(R.string.conversation_buyer_fallback));
         holder.name.setText(displayName);
 
         // Messenger-style: preview is always the last message (not phone).

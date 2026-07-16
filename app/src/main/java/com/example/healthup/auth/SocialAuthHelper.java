@@ -643,7 +643,13 @@ public class SocialAuthHelper {
         intent.putExtra(SocialCompleteProfileActivity.EXTRA_AUTH_EMAIL, user.getEmail() == null ? "" : user.getEmail());
         intent.putExtra(SocialCompleteProfileActivity.EXTRA_AUTH_PROVIDER, authProvider);
         activity.startActivity(intent);
-        activity.finish();
+        // Finish after CompleteProfile starts so Auth session is already visible there.
+        // Bare finish-before-ready + null Auth looked like "app kicked the user out".
+        activity.getWindow().getDecorView().post(() -> {
+            if (!activity.isFinishing()) {
+                activity.finish();
+            }
+        });
     }
 
     @NonNull

@@ -8,6 +8,7 @@ import android.graphics.Rect;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.MediaStore;
+import android.text.TextUtils;
 import android.text.method.HideReturnsTransformationMethod;
 import android.text.method.PasswordTransformationMethod;
 import android.view.View;
@@ -247,21 +248,9 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
         if (userId == null) return;
         db.collection("users").document(userId).get()
                 .addOnSuccessListener(doc -> {
-                    if (!doc.exists()) {
-                        updateEmailVerificationUi(null, null, false);
-                        return;
-                    }
-                    String display = doc.getString("displayEmail");
-                    String email = doc.getString("email");
-                    String authEmail = null;
-                    com.google.firebase.auth.FirebaseUser authUser =
-                            com.google.firebase.auth.FirebaseAuth.getInstance().getCurrentUser();
-                    if (authUser != null
-                            && userId != null
-                            && userId.equals(authUser.getUid())
-                            && UserProfileBuilder.isRealEmail(authUser.getEmail())) {
-                        authEmail = authUser.getEmail();
-                    }
+                    String display = doc.exists() ? doc.getString("displayEmail") : null;
+                    String email = doc.exists() ? doc.getString("email") : null;
+                    String authEmail = resolveAuthEmail();
                     String show = UserProfileBuilder.isRealEmail(authEmail)
                             ? authEmail
                             : (UserProfileBuilder.isRealEmail(display)
@@ -270,18 +259,53 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
                     if (show != null) {
                         binding.etEmail.setText(show);
                         // Heal stale Firestore displayEmail if Auth Google email differs.
-                        if (UserProfileBuilder.isRealEmail(authEmail)
+                        if (doc.exists()
+                                && UserProfileBuilder.isRealEmail(authEmail)
                                 && (display == null
                                 || !authEmail.equalsIgnoreCase(display.trim()))) {
                             db.collection("users").document(userId)
-                                    .update("displayEmail", authEmail.trim().toLowerCase());
+                                    .set(Map.of(
+                                            "displayEmail",
+                                            authEmail.trim().toLowerCase(Locale.ROOT)),
+                                            SetOptions.merge());
                         }
                     } else {
                         binding.etEmail.setText(getString(R.string.account_email_empty));
                     }
-                    Boolean verified = doc.getBoolean("emailVerified");
-                    updateEmailVerificationUi(show, display, verified != null && verified);
+                    Boolean verified = doc.exists() ? doc.getBoolean("emailVerified") : null;
+                    boolean assumedVerified = UserProfileBuilder.isRealEmail(authEmail)
+                            && (verified == null || verified);
+                    updateEmailVerificationUi(show, display,
+                            verified != null ? verified : assumedVerified);
                 });
+    }
+
+    @Nullable
+    private String resolveAuthEmail() {
+        FirebaseUser authUser = mAuth.getCurrentUser();
+        if (authUser != null
+                && userId != null
+                && userId.equals(authUser.getUid())
+                && UserProfileBuilder.isRealEmail(authUser.getEmail())) {
+            return authUser.getEmail();
+        }
+        return null;
+    }
+
+    /** Prefill editable fields from Firebase Auth when Firestore profile is missing/empty. */
+    private void applyAuthFallbacks() {
+        FirebaseUser authUser = mAuth.getCurrentUser();
+        if (authUser == null) return;
+
+        CharSequence currentName = binding.etFullName.getText();
+        if (TextUtils.isEmpty(currentName) && !TextUtils.isEmpty(authUser.getDisplayName())) {
+            binding.etFullName.setText(authUser.getDisplayName());
+        }
+        CharSequence currentPhone = binding.etPhone.getText();
+        if (TextUtils.isEmpty(currentPhone) && !TextUtils.isEmpty(authUser.getPhoneNumber())) {
+            binding.etPhone.setText(authUser.getPhoneNumber());
+        }
+        refreshEmailField();
     }
 
     private void updateEmailVerificationUi(@Nullable String shownEmail,
@@ -341,6 +365,19 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
                             binding.ivAvatar.setImageTintList(null);
                             binding.ivAvatar.setPadding(0, 0, 0, 0);
                         }
+                        // Doc exists but may still lack name/email (incomplete social signup).
+                        applyAuthFallbacks();
+                        if (TextUtils.isEmpty(binding.etFullName.getText())
+                                && TextUtils.isEmpty(documentSnapshot.getString("username"))) {
+                            Toast.makeText(this, R.string.account_profile_incomplete_hint,
+                                    Toast.LENGTH_LONG).show();
+                        }
+                    } else {
+                        // No users/{uid} yet — do NOT create a stub account.
+                        // Account is only created after phone OTP (OTPActivity).
+                        applyAuthFallbacks();
+                        Toast.makeText(this, R.string.account_profile_incomplete_hint,
+                                Toast.LENGTH_LONG).show();
                     }
                 })
                 .addOnFailureListener(e -> {
@@ -405,19 +442,34 @@ public class AccountInfoActivity extends BaseAppCompatActivity {
             Toast.makeText(this, R.string.account_save_session_expired, Toast.LENGTH_LONG).show();
             return;
         }
-        db.collection("users").document(userId).update(updates)
-                .addOnSuccessListener(aVoid -> {
-                    binding.progressBar.setVisibility(View.GONE);
-                    UIUtils.showSuccessDialog(this, null);
+        // Only update existing OTP-created profiles — never invent a buyers doc here.
+        db.collection("users").document(userId).get()
+                .addOnSuccessListener(doc -> {
+                    if (!doc.exists() || !Boolean.TRUE.equals(doc.getBoolean("phoneVerified"))) {
+                        binding.progressBar.setVisibility(View.GONE);
+                        Toast.makeText(this, R.string.account_profile_incomplete_hint,
+                                Toast.LENGTH_LONG).show();
+                        return;
+                    }
+                    db.collection("users").document(userId).update(updates)
+                            .addOnSuccessListener(aVoid -> {
+                                binding.progressBar.setVisibility(View.GONE);
+                                UIUtils.showSuccessDialog(this, null);
+                            })
+                            .addOnFailureListener(e -> {
+                                binding.progressBar.setVisibility(View.GONE);
+                                String msg = e.getMessage() != null ? e.getMessage() : "";
+                                if (msg.toLowerCase(Locale.ROOT).contains("permission")) {
+                                    Toast.makeText(this, R.string.account_save_session_expired,
+                                            Toast.LENGTH_LONG).show();
+                                } else {
+                                    Toast.makeText(this, "Lỗi: " + msg, Toast.LENGTH_SHORT).show();
+                                }
+                            });
                 })
                 .addOnFailureListener(e -> {
                     binding.progressBar.setVisibility(View.GONE);
-                    String msg = e.getMessage() != null ? e.getMessage() : "";
-                    if (msg.toLowerCase(Locale.ROOT).contains("permission")) {
-                        Toast.makeText(this, R.string.account_save_session_expired, Toast.LENGTH_LONG).show();
-                    } else {
-                        Toast.makeText(this, "Lỗi: " + msg, Toast.LENGTH_SHORT).show();
-                    }
+                    Toast.makeText(this, "Lỗi: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 });
     }
 
