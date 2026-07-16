@@ -36,7 +36,7 @@ import java.util.Locale;
 
 
 
-public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
+public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
 
 
@@ -50,9 +50,14 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
         // FIX (bug #2): cho phép bấm trực tiếp icon trái tim trên từng sản phẩm trong giỏ hàng
         // để thêm/xóa khỏi Đã thích, mà không xóa sản phẩm khỏi giỏ hàng.
         void onToggleFavorite(CartItem item);
+        void onClearOutOfStock();
     }
 
 
+
+
+    private static final int TYPE_ITEM = 1;
+    private static final int TYPE_HEADER = 2;
 
 
     private final List<CartItem> items;
@@ -70,39 +75,66 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
+    @Override
+    public int getItemViewType(int position) {
+        if (items.get(position).isHeader()) return TYPE_HEADER;
+        return TYPE_ITEM;
+    }
+
+
     @NonNull
     @Override
-    public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+    public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (viewType == TYPE_HEADER) {
+            View v = LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_cart_header, parent, false);
+            return new HeaderViewHolder(v);
+        }
         View v = LayoutInflater.from(parent.getContext())
                 .inflate(R.layout.item_cart, parent, false);
-        return new ViewHolder(v);
+        return new ItemViewHolder(v);
     }
 
 
 
 
     @Override
-    public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
+    public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
         CartItem item = items.get(position);
 
 
+        if (holder instanceof HeaderViewHolder) {
+            HeaderViewHolder h = (HeaderViewHolder) holder;
+            h.btnClear.setOnClickListener(v -> listener.onClearOutOfStock());
+            return;
+        }
 
 
-        // FIX (yêu cầu #1): trước đây chỉ ảnh sản phẩm và tên sản phẩm có thể bấm để mở
-        // Chi tiết sản phẩm, phần còn lại của ô (giá, số lượng, khoảng trống...) không phản
-        // hồi khi bấm, khiến người dùng có cảm giác "không click vào sản phẩm được". Gắn thêm
-        // listener cho toàn bộ ô (itemView); các nút con đã có listener riêng (checkbox, tăng/
-        // giảm số lượng, xóa, trái tim, chọn phân loại) sẽ tự nhận sự kiện chạm trước và không
-        // bị ảnh hưởng bởi listener này.
-        holder.itemView.setOnClickListener(v -> listener.onItemClick(item));
+        ItemViewHolder h = (ItemViewHolder) holder;
+
+
+        boolean isOutOfStock = item.getStock() <= 0;
+        h.rootLayout.setAlpha(isOutOfStock ? 0.6f : 1.0f);
+        h.tvOutOfStockOverlay.setVisibility(isOutOfStock ? View.VISIBLE : View.GONE);
+
+
+        h.cbSelect.setOnCheckedChangeListener(null);
+        h.cbSelect.setEnabled(!isOutOfStock);
+        if (isOutOfStock) {
+            item.setSelected(false);
+            h.cbSelect.setChecked(false);
+        } else {
+            h.cbSelect.setChecked(item.isSelected());
+        }
+
+
+        h.itemView.setOnClickListener(v -> listener.onItemClick(item));
 
 
 
 
-        if (holder.cbSelect != null) {
-            holder.cbSelect.setOnCheckedChangeListener(null);
-            holder.cbSelect.setChecked(item.isSelected());
-            holder.cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
+        if (h.cbSelect != null) {
+            h.cbSelect.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 item.setSelected(isChecked);
                 listener.onSelectChanged(item, isChecked);
             });
@@ -111,15 +143,15 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-        if (holder.tvName != null) {
+        if (h.tvName != null) {
             String name = item.getName();
-            holder.tvName.setText(name != null ? name : "");
+            h.tvName.setText(name != null ? name : "");
 
 
-            String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+            String currentLang = LocaleHelper.getLanguage(h.itemView.getContext());
             if ("en".equals(currentLang) && name != null) {
                 TranslationManager.translate(name, "en", translated -> {
-                    if (translated != null) holder.tvName.setText(translated);
+                    if (translated != null) h.tvName.setText(translated);
                 });
             }
         }
@@ -127,15 +159,15 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-        if (holder.tvVariant != null) {
+        if (h.tvVariant != null) {
             String variantLabel = item.getVariantLabel();
-            holder.tvVariant.setText(variantLabel != null ? variantLabel : "");
+            h.tvVariant.setText(variantLabel != null ? variantLabel : "");
 
 
-            String currentLang = LocaleHelper.getLanguage(holder.itemView.getContext());
+            String currentLang = LocaleHelper.getLanguage(h.itemView.getContext());
             if ("en".equals(currentLang) && variantLabel != null) {
                 TranslationManager.translate(variantLabel, "en", translated -> {
-                    if (translated != null) holder.tvVariant.setText(translated);
+                    if (translated != null) h.tvVariant.setText(translated);
                 });
             }
         }
@@ -143,73 +175,76 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-        if (holder.tvPrice != null) {
+        if (h.tvPrice != null) {
             double price = item.getPrice();
-            holder.tvPrice.setText("đ " + currencyFormat.format(price));
+            h.tvPrice.setText("đ " + currencyFormat.format(price));
         }
 
 
 
 
-        if (holder.tvQuantity != null) {
+        if (h.tvQuantity != null) {
             int quantity = Math.max(item.getQuantity(), 1);
-            holder.tvQuantity.setText(String.valueOf(quantity));
+            h.tvQuantity.setText(String.valueOf(quantity));
         }
 
 
 
 
-        if (holder.tvOriginalPrice != null) {
+        if (h.tvOriginalPrice != null) {
             if (item.getOriginalPrice() > item.getPrice()) {
-                holder.tvOriginalPrice.setVisibility(View.VISIBLE);
-                holder.tvOriginalPrice.setText("đ " + currencyFormat.format(item.getOriginalPrice()));
-                holder.tvOriginalPrice.setPaintFlags(
-                        holder.tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
+                h.tvOriginalPrice.setVisibility(View.VISIBLE);
+                h.tvOriginalPrice.setText("đ " + currencyFormat.format(item.getOriginalPrice()));
+                h.tvOriginalPrice.setPaintFlags(
+                        h.tvOriginalPrice.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
             } else {
-                holder.tvOriginalPrice.setVisibility(View.GONE);
+                h.tvOriginalPrice.setVisibility(View.GONE);
             }
         }
 
 
 
 
-        if (holder.tvStockWarning != null) {
-            if (item.getStock() > 0 && item.getStock() <= 3) {
-                holder.tvStockWarning.setVisibility(View.VISIBLE);
-                holder.tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
+        if (h.tvStockWarning != null) {
+            if (!isOutOfStock && item.getStock() <= 3) {
+                h.tvStockWarning.setVisibility(View.VISIBLE);
+                h.tvStockWarning.setText("Chỉ còn " + item.getStock() + " sản phẩm");
             } else {
-                holder.tvStockWarning.setVisibility(View.GONE);
+                h.tvStockWarning.setVisibility(View.GONE);
             }
         }
 
 
 
 
-        if (holder.imgProduct != null) {
+        if (h.imgProduct != null) {
             String imagePath = item.getImageUrl();
             if (imagePath != null && !imagePath.isEmpty()) {
-                ImageLoadHelper.loadInto(holder.imgProduct, imagePath);
+                ImageLoadHelper.loadInto(h.imgProduct, imagePath);
             } else {
-                holder.imgProduct.setImageResource(R.color.neutral_light_grey);
+                h.imgProduct.setImageResource(R.color.neutral_light_grey);
             }
-            holder.imgProduct.setOnClickListener(v -> listener.onItemClick(item));
+            h.imgProduct.setOnClickListener(v -> listener.onItemClick(item));
         }
 
 
 
 
-        if (holder.tvName != null) {
-            holder.tvName.setOnClickListener(v -> listener.onItemClick(item));
+        if (h.tvName != null) {
+            h.tvName.setOnClickListener(v -> listener.onItemClick(item));
         }
 
 
 
 
-        if (holder.tvVariant != null) {
-            holder.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
+        if (h.tvVariant != null) {
+            h.tvVariant.setEnabled(!isOutOfStock);
+            h.tvVariant.setOnClickListener(v -> {
+                if (!isOutOfStock) listener.onEditVariant(item);
+            });
         }
-        if (holder.btnRemove != null) {
-            holder.btnRemove.setOnClickListener(v -> listener.onRemove(item));
+        if (h.btnRemove != null) {
+            h.btnRemove.setOnClickListener(v -> listener.onRemove(item));
         }
 
 
@@ -217,25 +252,27 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
         // FIX (bug #2): icon trái tim phản ánh đúng trạng thái yêu thích của sản phẩm; bấm vào
         // để thêm/xóa khỏi Đã thích trực tiếp ngay tại Giỏ hàng, không làm mất sản phẩm khỏi giỏ.
-        if (holder.ivFavorite != null) {
+        if (h.ivFavorite != null) {
             boolean fav = item.isFavorite();
-            holder.ivFavorite.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
-            int tintColor = ContextCompat.getColor(holder.itemView.getContext(),
+            h.ivFavorite.setImageResource(fav ? R.drawable.ic_heart_filled : R.drawable.ic_heart_outline);
+            int tintColor = ContextCompat.getColor(h.itemView.getContext(),
                     fav ? R.color.error : R.color.text_gray_light);
-            holder.ivFavorite.setColorFilter(tintColor);
-            holder.ivFavorite.setOnClickListener(v -> listener.onToggleFavorite(item));
+            h.ivFavorite.setColorFilter(tintColor);
+            h.ivFavorite.setOnClickListener(v -> listener.onToggleFavorite(item));
         }
 
 
 
 
-        if (holder.btnIncrease != null) {
-            holder.btnIncrease.setOnClickListener(v -> {
+        if (h.btnIncrease != null) {
+            h.btnIncrease.setEnabled(!isOutOfStock);
+            h.btnIncrease.setOnClickListener(v -> {
+                if (isOutOfStock) return;
                 int newQty = item.getQuantity() + 1;
                 if (item.getStock() > 0 && newQty > item.getStock()) return;
                 item.setQuantity(newQty);
-                if (holder.tvQuantity != null) {
-                    holder.tvQuantity.setText(String.valueOf(newQty));
+                if (h.tvQuantity != null) {
+                    h.tvQuantity.setText(String.valueOf(newQty));
                 }
                 listener.onQuantityChanged(item, newQty);
             });
@@ -244,13 +281,15 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-        if (holder.btnDecrease != null) {
-            holder.btnDecrease.setOnClickListener(v -> {
+        if (h.btnDecrease != null) {
+            h.btnDecrease.setEnabled(!isOutOfStock);
+            h.btnDecrease.setOnClickListener(v -> {
+                if (isOutOfStock) return;
                 int newQty = item.getQuantity() - 1;
                 if (newQty < 1) return;
                 item.setQuantity(newQty);
-                if (holder.tvQuantity != null) {
-                    holder.tvQuantity.setText(String.valueOf(newQty));
+                if (h.tvQuantity != null) {
+                    h.tvQuantity.setText(String.valueOf(newQty));
                 }
                 listener.onQuantityChanged(item, newQty);
             });
@@ -266,7 +305,17 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-    static class ViewHolder extends RecyclerView.ViewHolder {
+    static class HeaderViewHolder extends RecyclerView.ViewHolder {
+        TextView btnClear;
+        HeaderViewHolder(@NonNull View itemView) {
+            super(itemView);
+            btnClear = itemView.findViewById(R.id.btnClearOutOfStock);
+        }
+    }
+
+
+    static class ItemViewHolder extends RecyclerView.ViewHolder {
+        View rootLayout, tvOutOfStockOverlay;
         CheckBox cbSelect;
         ImageView imgProduct, btnRemove, ivFavorite;
         TextView tvName, tvVariant, tvStockWarning, tvPrice, tvOriginalPrice, tvQuantity, btnDecrease, btnIncrease;
@@ -274,8 +323,10 @@ public class CartAdapter extends RecyclerView.Adapter<CartAdapter.ViewHolder> {
 
 
 
-        ViewHolder(@NonNull View itemView) {
+        ItemViewHolder(@NonNull View itemView) {
             super(itemView);
+            rootLayout = itemView.findViewById(R.id.rootLayout);
+            tvOutOfStockOverlay = itemView.findViewById(R.id.tvOutOfStockOverlay);
             cbSelect = itemView.findViewById(R.id.cbSelect);
             imgProduct = itemView.findViewById(R.id.imgProduct);
             btnRemove = itemView.findViewById(R.id.btnRemove);

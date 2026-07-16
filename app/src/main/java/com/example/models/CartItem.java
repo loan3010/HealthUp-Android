@@ -38,6 +38,9 @@ public class CartItem implements Serializable {
     private transient com.google.firebase.Timestamp updatedAt;
 
 
+    private boolean isHeader; // Marker for "Out of Stock" section title in cart
+
+
     public CartItem() {
     }
 
@@ -176,4 +179,7 @@ public class CartItem implements Serializable {
 
         return "";
     }
+
+    public boolean isHeader() { return isHeader; }
+    public void setHeader(boolean header) { isHeader = header; }
 }

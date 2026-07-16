@@ -53,6 +53,7 @@ import java.util.Map;
 public class CartFragment extends Fragment implements CartAdapter.Listener {
 
     private List<CartItem> cartItems = new ArrayList<>();
+    private List<CartItem> displayItems = new ArrayList<>(); // Items including potential header
     private List<Voucher> selectedVouchers = new ArrayList<>();
     private CartAdapter adapter;
     private ProductAdapter recommendAdapter;
@@ -228,7 +229,13 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     private void attachSelectAllListener(CheckBox checkBox) {
         if (checkBox == null) return;
         checkBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            for (CartItem item : cartItems) item.setSelected(isChecked);
+            for (CartItem item : cartItems) {
+                if (item.getStock() > 0) {
+                    item.setSelected(isChecked);
+                } else {
+                    item.setSelected(false);
+                }
+            }
             if (adapter != null) adapter.notifyDataSetChanged();
             updateFooter();
             syncSelectAllCheckboxes(isChecked);
@@ -833,6 +840,29 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
             return;
         }
 
+
+        // Prepare display list: in-stock first, then header, then out-of-stock
+        displayItems.clear();
+        List<CartItem> inStock = new ArrayList<>();
+        List<CartItem> outOfStock = new ArrayList<>();
+
+        for (CartItem item : cartItems) {
+            if (item.getStock() > 0) {
+                inStock.add(item);
+            } else {
+                outOfStock.add(item);
+            }
+        }
+
+        displayItems.addAll(inStock);
+        if (!outOfStock.isEmpty()) {
+            CartItem header = new CartItem();
+            header.setHeader(true);
+            displayItems.add(header);
+            displayItems.addAll(outOfStock);
+        }
+
+
         boolean isEmpty = cartItems.isEmpty();
         if (isEmpty && editMode) {
             setEditMode(false);
@@ -853,11 +883,39 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
         updateGuestBanner();
 
         if (adapter == null) {
-            adapter = new CartAdapter(cartItems, this);
+            adapter = new CartAdapter(displayItems, this);
+            rvCartItems.setAdapter(adapter);
         } else {
             adapter.notifyDataSetChanged();
         }
-        rvCartItems.setAdapter(adapter);
+    }
+
+
+    @Override
+    public void onClearOutOfStock() {
+        List<CartItem> toRemove = new ArrayList<>();
+        for (CartItem item : cartItems) {
+            if (item.getStock() <= 0) toRemove.add(item);
+        }
+        if (toRemove.isEmpty()) return;
+
+        if (userId != null) {
+            WriteBatch batch = db.batch();
+            for (CartItem item : toRemove) {
+                if (item.getId() != null) {
+                    batch.delete(db.collection("users").document(userId)
+                            .collection("cart").document(item.getId()));
+                }
+            }
+            batch.commit();
+        } else {
+            GuestCartManager.getInstance(requireContext()).removeItems(toRemove);
+        }
+
+        cartItems.removeAll(toRemove);
+        renderList();
+        updateFooter();
+        ToastUtils.show(getContext(), "Đã xóa sản phẩm hết hàng");
     }
 
     @Override
