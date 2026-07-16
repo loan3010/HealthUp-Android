@@ -236,30 +236,16 @@ public class AdminNotificationsActivity extends BaseAppCompatActivity {
 
     private void openNotification(@NonNull AdminNotification item) {
         markAsRead(item);
-        if (isReturnNotification(item)) {
-            String orderId = !TextUtils.isEmpty(item.orderId) ? item.orderId : item.returnId;
-            if (TextUtils.isEmpty(orderId)) {
-                Toast.makeText(this, R.string.admin_notifications_empty, Toast.LENGTH_SHORT).show();
-                return;
-            }
-            Intent intent = new Intent(this, com.example.healthup.ReturnRefundHistoryDetailActivity.class);
-            intent.putExtra("extra_order_id", orderId);
-            if (!TextUtils.isEmpty(item.returnId)) {
-                intent.putExtra("returnId", item.returnId);
-            }
-            startActivity(intent);
+        // Always open admin order detail (handles return approve/reject there).
+        // Do NOT open buyer ReturnRefundHistoryDetailActivity from admin inbox.
+        String orderId = !TextUtils.isEmpty(item.orderId) ? item.orderId : item.returnId;
+        if (TextUtils.isEmpty(orderId)) {
+            Toast.makeText(this, R.string.admin_notifications_empty, Toast.LENGTH_SHORT).show();
             return;
         }
-        if (TextUtils.isEmpty(item.orderId)) return;
         Intent intent = new Intent(this, AdminOrderDetailActivity.class);
-        intent.putExtra(AdminOrderDetailActivity.EXTRA_ORDER_ID, item.orderId);
+        intent.putExtra(AdminOrderDetailActivity.EXTRA_ORDER_ID, orderId);
         startActivity(intent);
-    }
-
-    private static boolean isReturnNotification(@NonNull AdminNotification item) {
-        String type = item.type != null ? item.type.toUpperCase(Locale.US) : "";
-        return type.contains("RETURN")
-                || !TextUtils.isEmpty(item.returnId);
     }
 
     private void openOrder(@NonNull AdminNotification item) {

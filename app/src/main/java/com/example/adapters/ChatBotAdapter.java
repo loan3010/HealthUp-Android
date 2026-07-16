@@ -68,6 +68,10 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
         void onProductBuyNow(@NonNull ChatMessage message);
 
+        /** Staff tapped the product context card (open admin edit). */
+        default void onProductCardClick(@NonNull ChatMessage message) {
+        }
+
         void onCategorySelected(@NonNull String category);
     }
 
@@ -224,7 +228,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         } else if (holder instanceof SuggestionVH) {
             ((SuggestionVH) holder).bind(suggestionItems, listener);
         } else if (holder instanceof ProductCardVH) {
-            ((ProductCardVH) holder).bind(m, listener);
+            ((ProductCardVH) holder).bind(m, listener, staffView);
         } else if (holder instanceof LoginActionVH) {
             ((LoginActionVH) holder).bind(m, listener);
         } else if (holder instanceof CategoryPickVH) {
@@ -442,6 +446,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         final TextView name;
         final TextView variant;
         final TextView price;
+        final View actionsRow;
         final View btnAddCart;
         final View btnBuyNow;
 
@@ -451,11 +456,12 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             name = v.findViewById(R.id.productCardName);
             variant = v.findViewById(R.id.productCardVariant);
             price = v.findViewById(R.id.productCardPrice);
+            actionsRow = v.findViewById(R.id.productCardActions);
             btnAddCart = v.findViewById(R.id.btnProductAddCart);
             btnBuyNow = v.findViewById(R.id.btnProductBuyNow);
         }
 
-        void bind(@NonNull ChatMessage message, @Nullable Listener listener) {
+        void bind(@NonNull ChatMessage message, @Nullable Listener listener, boolean staffView) {
             name.setText(message.getProductName() != null ? message.getProductName() : "");
             if (message.getProductVariant() != null && !message.getProductVariant().isEmpty()) {
                 variant.setVisibility(View.VISIBLE);
@@ -465,16 +471,49 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
             price.setText(formatCurrency(message.getProductPrice()));
             ImageLoadHelper.loadInto(image, message.getProductImageUrl());
-            btnAddCart.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onProductAddToCart(message);
+            View root = itemView.findViewById(R.id.productCardRoot);
+            if (staffView) {
+                // Admin/seller: product context only — no Mua ngay / Thêm giỏ.
+                if (actionsRow != null) {
+                    actionsRow.setVisibility(View.GONE);
+                } else {
+                    btnAddCart.setVisibility(View.GONE);
+                    btnBuyNow.setVisibility(View.GONE);
                 }
-            });
-            btnBuyNow.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onProductBuyNow(message);
+                View.OnClickListener openEdit = v -> {
+                    if (listener != null) {
+                        listener.onProductCardClick(message);
+                    }
+                };
+                if (root != null) {
+                    root.setOnClickListener(openEdit);
+                    root.setClickable(true);
+                } else {
+                    itemView.setOnClickListener(openEdit);
                 }
-            });
+            } else {
+                if (actionsRow != null) {
+                    actionsRow.setVisibility(View.VISIBLE);
+                }
+                btnAddCart.setVisibility(View.VISIBLE);
+                btnBuyNow.setVisibility(View.VISIBLE);
+                if (root != null) {
+                    root.setOnClickListener(null);
+                    root.setClickable(false);
+                } else {
+                    itemView.setOnClickListener(null);
+                }
+                btnAddCart.setOnClickListener(v -> {
+                    if (listener != null) {
+                        listener.onProductAddToCart(message);
+                    }
+                });
+                btnBuyNow.setOnClickListener(v -> {
+                    if (listener != null) {
+                        listener.onProductBuyNow(message);
+                    }
+                });
+            }
         }
 
         private String formatCurrency(double value) {

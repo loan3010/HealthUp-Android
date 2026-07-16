@@ -391,6 +391,8 @@
     <string name="chat_product_browse_hint">You are viewing this product. Ask about ingredients or usage, or tap Buy now / Add.</string>
     <string name="chat_login_action">Log in</string>
     <string name="seller_inbox_search_hint">Search by username or phone…</string>
+    <string name="seller_inbox_product_preview">Product: %1$s</string>
+    <string name="seller_chat_product_context">About: %1$s</string>
     <string name="seller_inbox_no_access">Only sellers or administrators can open the inbox.</string>
     <string name="profile_seller_inbox">Customer Support Inbox</string>
     <string name="profile_staff_inbox_card_title">Customer Support Inbox</string>

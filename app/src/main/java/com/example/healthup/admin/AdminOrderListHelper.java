@@ -28,14 +28,25 @@ public final class AdminOrderListHelper {
     private AdminOrderListHelper() {
     }
 
+    /**
+     * Sort key for admin order list: prefer latest status/activity time
+     * ({@code updatedAt}, cancel/return request), not only order creation.
+     */
     public static long getSortTime(@NonNull Order order) {
-        if (order.getCreatedAt() != null) {
-            return order.getCreatedAt().getTime();
-        }
+        long best = 0L;
         if (order.getUpdatedAt() != null) {
-            return order.getUpdatedAt().getTime();
+            best = Math.max(best, order.getUpdatedAt().getTime());
         }
-        return 0L;
+        if (order.getCancelRequestedAt() != null) {
+            best = Math.max(best, order.getCancelRequestedAt().getTime());
+        }
+        if (order.getReturnRequestedAt() != null) {
+            best = Math.max(best, order.getReturnRequestedAt().getTime());
+        }
+        if (order.getCreatedAt() != null) {
+            best = Math.max(best, order.getCreatedAt().getTime());
+        }
+        return best;
     }
 
     public static void sort(@NonNull List<Order> orders, @Nullable String sortKey) {

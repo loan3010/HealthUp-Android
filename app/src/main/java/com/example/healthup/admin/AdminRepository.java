@@ -565,13 +565,7 @@ public class AdminRepository {
     }
 
     private static long getOrderSortTime(@NonNull Order order) {
-        if (order.getUpdatedAt() != null) {
-            return order.getUpdatedAt().getTime();
-        }
-        if (order.getCreatedAt() != null) {
-            return order.getCreatedAt().getTime();
-        }
-        return 0L;
+        return AdminOrderListHelper.getSortTime(order);
     }
 
     private static long getHistorySortTime(@NonNull OrderHistoryEntry entry) {

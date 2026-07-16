@@ -403,7 +403,9 @@ public class ChatRepository {
 
         String preview = ChatMessage.TYPE_IMAGE.equals(message.getType())
                 ? "[Hình ảnh]"
-                : message.getText();
+                : (ChatMessage.TYPE_PRODUCT_CARD.equals(message.getType())
+                ? ("[Sản phẩm] " + (message.getProductName() != null ? message.getProductName() : ""))
+                : message.getText());
         convRef.collection("messages").add(data)
                 .addOnSuccessListener(ref -> {
                     updateLastMessage(convRef, preview);
@@ -416,6 +418,35 @@ public class ChatRepository {
                         callback.onComplete(false);
                     }
                 });
+    }
+
+    /**
+     * Stores the product the buyer opened chat about so staff inbox/thread can show context.
+     */
+    public void attachProductContext(@NonNull String conversationId,
+                                     @Nullable String productId,
+                                     @Nullable String productName,
+                                     @Nullable String productImageUrl,
+                                     @Nullable String productVariant) {
+        Map<String, Object> data = new HashMap<>();
+        if (productId != null && !productId.trim().isEmpty()) {
+            data.put("productId", productId.trim());
+        }
+        if (productName != null && !productName.trim().isEmpty()) {
+            data.put("productName", productName.trim());
+        }
+        if (productImageUrl != null && !productImageUrl.trim().isEmpty()) {
+            data.put("productImageUrl", productImageUrl.trim());
+        }
+        if (productVariant != null && !productVariant.trim().isEmpty()) {
+            data.put("productVariant", productVariant.trim());
+        }
+        if (data.isEmpty()) {
+            return;
+        }
+        data.put("updatedAt", FieldValue.serverTimestamp());
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge());
     }
 
     public void deleteConversationHistory(@NonNull String conversationId, @NonNull SimpleCallback callback) {
@@ -558,6 +589,9 @@ public class ChatRepository {
         c.setMode(mode != null ? mode : Conversation.MODE_BOT);
         c.setLastMessage(doc.getString("lastMessage"));
         c.setProductId(doc.getString("productId"));
+        c.setProductName(doc.getString("productName"));
+        c.setProductImageUrl(doc.getString("productImageUrl"));
+        c.setProductVariant(doc.getString("productVariant"));
         c.setHumanSessionStartedAt(doc.getDate("humanSessionStartedAt"));
         c.setLastSessionClosedAt(doc.getDate("lastSessionClosedAt"));
         c.setSessionBucket(doc.getString("sessionBucket"));

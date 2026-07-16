@@ -791,6 +791,17 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
         if (adapter != null) {
             adapter.setCustomerDisplayName(label);
         }
+        if (conversation != null && !TextUtils.isEmpty(conversation.getProductName())) {
+            String product = conversation.getProductName().trim();
+            if (!TextUtils.isEmpty(conversation.getProductVariant())) {
+                product = product + " · " + conversation.getProductVariant().trim();
+            }
+            subtitle.setText(getString(R.string.seller_chat_product_context, product));
+        } else if (viewModel.isClosedSessionView()) {
+            subtitle.setText(R.string.chat_status_session_closed);
+        } else {
+            subtitle.setText(R.string.chat_status_human);
+        }
         String buyerUid = ConversationBuyerLabel.resolveBuyerUid(conversation);
         if (!TextUtils.isEmpty(buyerUid)) {
             title.setOnLongClickListener(v -> {
@@ -900,6 +911,23 @@ public class ChatBotFragment extends Fragment implements ChatBotAdapter.Listener
     @Override
     public void onProductBuyNow(@NonNull ChatMessage message) {
         loadProductForCard(message, true);
+    }
+
+    @Override
+    public void onProductCardClick(@NonNull ChatMessage message) {
+        if (!viewModel.isSellerMode()) {
+            return;
+        }
+        String productId = message.getProductId();
+        if (TextUtils.isEmpty(productId)) {
+            Toast.makeText(requireContext(), R.string.register_error_generic, Toast.LENGTH_SHORT).show();
+            return;
+        }
+        // startActivity (no CLEAR_TASK) → system Back returns to this chat.
+        Intent intent = new Intent(requireContext(),
+                com.example.healthup.admin.AdminProductEditActivity.class);
+        intent.putExtra(com.example.healthup.admin.AdminProductEditActivity.EXTRA_PRODUCT_ID, productId);
+        startActivity(intent);
     }
 
     private void loadProductForCard(@NonNull ChatMessage message, boolean isBuyNow) {

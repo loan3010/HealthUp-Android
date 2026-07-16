@@ -63,8 +63,15 @@ public class ChatStaffAdapter extends RecyclerView.Adapter<ChatStaffAdapter.View
                 holder.itemView.getContext().getString(R.string.conversation_buyer_fallback));
         holder.name.setText(displayName);
 
-        // Messenger-style: preview is always the last message (not phone).
-        String preview = c.getLastMessage();
+        // Prefer product context so staff knows what the buyer is asking about.
+        String preview = null;
+        if (!TextUtils.isEmpty(c.getProductName())) {
+            preview = holder.itemView.getContext().getString(
+                    R.string.seller_inbox_product_preview, c.getProductName().trim());
+        }
+        if (TextUtils.isEmpty(preview)) {
+            preview = c.getLastMessage();
+        }
         if (TextUtils.isEmpty(preview)) {
             preview = !TextUtils.isEmpty(c.getBuyerPhone()) ? c.getBuyerPhone() : "";
         }

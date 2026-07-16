@@ -33,6 +33,10 @@ public class Conversation {
     private Date lastMessageAt;
     private Date updatedAt;
     private String productId;
+    /** Latest product the buyer opened chat about (for staff context). */
+    private String productName;
+    private String productImageUrl;
+    private String productVariant;
     /** Server time when the buyer requested a human (seller) session. */
     private Date humanSessionStartedAt;
     /** Server time when staff closed the human session. */
@@ -129,6 +133,30 @@ public class Conversation {
 
     public void setProductId(String productId) {
         this.productId = productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    public String getProductImageUrl() {
+        return productImageUrl;
+    }
+
+    public void setProductImageUrl(String productImageUrl) {
+        this.productImageUrl = productImageUrl;
+    }
+
+    public String getProductVariant() {
+        return productVariant;
+    }
+
+    public void setProductVariant(String productVariant) {
+        this.productVariant = productVariant;
     }
 
     public Date getHumanSessionStartedAt() {

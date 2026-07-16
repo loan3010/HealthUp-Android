@@ -400,6 +400,8 @@
     <string name="chat_product_browse_hint">Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm nhé.</string>
     <string name="chat_login_action">Đăng nhập</string>
     <string name="seller_inbox_search_hint">Tìm theo username hoặc số điện thoại…</string>
+    <string name="seller_inbox_product_preview">SP: %1$s</string>
+    <string name="seller_chat_product_context">Hỏi về: %1$s</string>
     <string name="seller_inbox_no_access">Chỉ người bán hoặc quản trị viên mới có thể mở hộp thư.</string>
     <string name="profile_seller_inbox">Hộp thư hỗ trợ khách</string>
     <string name="profile_staff_inbox_card_title">Hộp thư hỗ trợ khách</string>

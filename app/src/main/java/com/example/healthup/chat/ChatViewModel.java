@@ -140,17 +140,8 @@ public class ChatViewModel extends ViewModel {
         if (!pendingInquiry || !initialized || sellerMode) {
             return;
         }
-        if (isHumanMode()) {
-            pendingInquiry = false;
-            return;
-        }
-        if (pendingProductId != null && !pendingProductId.isEmpty()
-                && (conversationId == null || uid == null)) {
-            pendingInquiry = false;
-            loadAndShowProductCard(pendingProductId);
-            return;
-        }
-        if (conversationId == null) {
+        // Wait until conversation exists so product card is written to Firestore for staff.
+        if (conversationId == null || uid == null) {
             return;
         }
         pendingInquiry = false;
@@ -170,6 +161,8 @@ public class ChatViewModel extends ViewModel {
                     + pendingProductName + variantPart + orderPart
                     + ". Bạn cần mình tư vấn thêm gì về sản phẩm này không?";
             showAndPersistBotText(botMsg);
+            chatRepository.attachProductContext(conversationId, null, pendingProductName,
+                    null, pendingProductVariant);
         } else if (pendingOrderCode != null && !pendingOrderCode.isEmpty()) {
             String botMsg = "Chào bạn! Mình đã nhận được yêu cầu hỗ trợ cho đơn hàng "
                     + pendingOrderCode + ". Bạn đang gặp vấn đề gì với đơn hàng này (vận chuyển, thanh toán, đổi trả...) để mình giúp nhé?";
@@ -183,19 +176,38 @@ public class ChatViewModel extends ViewModel {
                 .addOnSuccessListener(doc -> {
                     Product product = Product.fromDocument(doc);
                     if (product != null) {
+                        product.setId(doc.getId());
                         long sortHint = nextLocalSort();
                         ChatMessage hint = ChatMessage.text(
                                 ChatMessage.SENDER_BOT,
                                 ChatMessage.SENDER_BOT,
                                 "Bạn đang xem sản phẩm này. Hỏi mình về thành phần, cách dùng hoặc bấm Mua ngay / Thêm nhé.");
-                        addLocal(hint, sortHint);
-                        persistBotMessage(hint);
+                        // In human mode keep card for staff; skip buyer-only bot copy.
+                        if (!isHumanMode()) {
+                            addLocal(hint, sortHint);
+                            persistBotMessage(hint);
+                        }
                         ChatMessage card = buildProductCard(product, pendingProductVariant);
                         addLocal(card, nextLocalSort());
                         persistBotMessage(card);
+                        if (conversationId != null) {
+                            chatRepository.attachProductContext(
+                                    conversationId,
+                                    product.getId(),
+                                    product.getName(),
+                                    product.getImageUrl(),
+                                    pendingProductVariant);
+                            if (isHumanMode()) {
+                                chatRepository.markStaffUnread(conversationId);
+                            }
+                        }
                     } else if (pendingProductName != null) {
                         showAndPersistBotText("Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
                                 + pendingProductName + ".");
+                        if (conversationId != null) {
+                            chatRepository.attachProductContext(conversationId, productId,
+                                    pendingProductName, null, pendingProductVariant);
+                        }
                     }
                     recompute();
                 })
@@ -203,6 +215,10 @@ public class ChatViewModel extends ViewModel {
                     if (pendingProductName != null) {
                         showAndPersistBotText("Chào bạn! Mình thấy bạn cần hỗ trợ về sản phẩm "
                                 + pendingProductName + ".");
+                        if (conversationId != null) {
+                            chatRepository.attachProductContext(conversationId, productId,
+                                    pendingProductName, null, pendingProductVariant);
+                        }
                         recompute();
                     }
                 });
