@@ -139,9 +139,9 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
     }
 
     private void populateUI() {
-        // Mark completed or rejected return as seen
-        if ("completed".equalsIgnoreCase(order.getReturnStatus()) || "rejected".equalsIgnoreCase(order.getReturnStatus())) {
-            OrderSeenManager.markAsSeen(this, order.getId());
+        // Mark any return status as seen when opened
+        if (order.getReturnStatus() != null && !"none".equalsIgnoreCase(order.getReturnStatus())) {
+            OrderSeenManager.markAsSeen(this, order.getId() + "_" + order.getReturnStatus());
         }
 
         String handling = ReturnProgressHelper.normalizeHandling(order.getReturnHandling());

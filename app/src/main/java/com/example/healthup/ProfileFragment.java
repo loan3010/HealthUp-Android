@@ -498,8 +498,10 @@ public class ProfileFragment extends Fragment {
                     int unseenCount = 0;
                     for (DocumentSnapshot doc : snap) {
                         String orderId = doc.getId();
-                        currentDeliveredIds.add(orderId);
-                        if (!OrderSeenManager.isSeen(requireContext(), orderId)) {
+                        // Key kết hợp ID và trạng thái để nếu đổi trạng thái sẽ hiện badge lại
+                        String seenKey = orderId + "_delivered";
+                        currentDeliveredIds.add(seenKey);
+                        if (!OrderSeenManager.isSeen(requireContext(), seenKey)) {
                             unseenCount++;
                         }
                     }
@@ -524,17 +526,12 @@ public class ProfileFragment extends Fragment {
                         if (returnStatus == null || returnStatus.equals("none")) continue;
 
                         String orderId = doc.getId();
-                        currentReturnedIds.add(orderId);
+                        // Key kết hợp để khi admin cập nhật trạng thái trả hàng (duyệt/từ chối) thì badge sẽ hiện lại
+                        String seenKey = orderId + "_" + returnStatus;
+                        currentReturnedIds.add(seenKey);
 
-                        // 1. Đang xử lý: requested, approved -> Luôn hiện badge
-                        if (returnStatus.equals("requested") || returnStatus.equals("approved")) {
+                        if (!OrderSeenManager.isSeen(requireContext(), seenKey)) {
                             badgeCount++;
-                        }
-                        // 2. Đã xong: completed, rejected -> Chỉ hiện nếu chưa xem
-                        else if (returnStatus.equals("completed") || returnStatus.equals("rejected")) {
-                            if (!OrderSeenManager.isSeen(requireContext(), orderId)) {
-                                badgeCount++;
-                            }
                         }
                     }
                     if (badgeCount > 0) {

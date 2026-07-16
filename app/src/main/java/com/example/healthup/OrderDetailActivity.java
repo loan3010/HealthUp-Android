@@ -411,9 +411,9 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
     }
 
     private void populateUI(Order order) {
-        // Mark delivered orders as seen
+        // Mark delivered orders as seen (status-aware)
         if ("delivered".equalsIgnoreCase(order.getStatus())) {
-            OrderSeenManager.markAsSeen(this, order.getId());
+            OrderSeenManager.markAsSeen(this, order.getId() + "_delivered");
         }
 
         String status = order.getStatus().toLowerCase();
