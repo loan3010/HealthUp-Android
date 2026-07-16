@@ -44,9 +44,11 @@
     </androidx.appcompat.widget.Toolbar>
 
     <androidx.core.widget.NestedScrollView
+        android:id="@+id/scrollView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:fillViewport="true"
+        app:layout_constraintBottom_toTopOf="@id/cvBottomActions"
         app:layout_constraintTop_toBottomOf="@id/toolbar">
 
         <LinearLayout
@@ -658,13 +660,31 @@
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Sticky Bottom Actions -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cvBottomActions"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:cardBackgroundColor="@color/white"
+        app:cardElevation="8dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:shapeAppearanceOverlay="@style/ShapeAppearanceOverlay.App.TopRounded">
+
+        <LinearLayout
+            android:id="@+id/lnBottomActionsContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
             <!-- Action Buttons for Delivered -->
             <LinearLayout
                 android:id="@+id/lnDeliveredActions"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="16dp"
                 android:orientation="vertical"
                 android:visibility="gone">
 
@@ -724,8 +744,6 @@
                 style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="16dp"
                 android:text="Huỷ đơn hàng"
                 android:textAllCaps="false"
                 android:textColor="@color/error"
@@ -740,8 +758,6 @@
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="16dp"
                 android:backgroundTint="@color/primary"
                 android:text="Mua lại"
                 android:textAllCaps="false"
@@ -757,8 +773,6 @@
                 style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
-                android:layout_marginTop="32dp"
-                android:layout_marginBottom="16dp"
                 android:text="Đã nhận được hàng"
                 android:textAllCaps="false"
                 android:textColor="@color/white"
@@ -767,6 +781,6 @@
                 app:cornerRadius="12dp" />
 
         </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
+    </com.google.android.material.card.MaterialCardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

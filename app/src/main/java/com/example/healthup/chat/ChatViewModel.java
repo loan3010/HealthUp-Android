@@ -796,32 +796,6 @@ public class ChatViewModel extends ViewModel {
         card.setCategoryChoices(new ArrayList<>(DEFAULT_CHAT_CATEGORIES));
         addLocal(card, nextLocalSort());
         recompute();
-
-        FirebaseFirestore.getInstance().collection("categories")
-                .get()
-                .addOnSuccessListener(snap -> {
-                    if (snap == null || snap.isEmpty()) {
-                        return;
-                    }
-                    List<String> names = new ArrayList<>();
-                    for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
-                        String name = doc.getString("name");
-                        if (name != null && !name.trim().isEmpty()) {
-                            names.add(name.trim());
-                        }
-                    }
-                    if (names.isEmpty()) {
-                        return;
-                    }
-                    Collections.sort(names);
-                    for (ChatMessage local : localMessages) {
-                        if ("local_category_pick".equals(local.getId())) {
-                            local.setCategoryChoices(names);
-                            break;
-                        }
-                    }
-                    recompute();
-                });
     }
 
     /** Buyer tapped a category chip inside the category-pick bubble. */

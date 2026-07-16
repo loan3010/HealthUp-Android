@@ -617,6 +617,17 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
                 binding.tvRefundCancelledInfo.setVisibility(View.GONE);
             }
         }
+
+        updateBottomActionsVisibility();
+    }
+
+    private void updateBottomActionsVisibility() {
+        boolean hasActions = binding.lnDeliveredActions.getVisibility() == View.VISIBLE ||
+                binding.btnCancelOrder.getVisibility() == View.VISIBLE ||
+                binding.btnRebuyFull.getVisibility() == View.VISIBLE ||
+                binding.btnConfirmReceived.getVisibility() == View.VISIBLE;
+
+        binding.cvBottomActions.setVisibility(hasActions ? View.VISIBLE : View.GONE);
     }
 
 
