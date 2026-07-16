@@ -39,8 +39,11 @@ import com.google.firebase.firestore.Source;
 
 
 import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.OrderSeenManager;
 import java.text.NumberFormat;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Set;
 
 
 public class ProfileFragment extends Fragment {
@@ -65,6 +68,9 @@ public class ProfileFragment extends Fragment {
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping, badgeDelivered, badgeReturned;
     private ProgressBar progressTichLuy;
+
+    private Set<String> currentDeliveredIds = new HashSet<>();
+    private Set<String> currentReturnedIds = new HashSet<>();
 
 
     @Nullable
@@ -198,12 +204,22 @@ public class ProfileFragment extends Fragment {
                 openOrderHistoryWithTab(3));
 
 
-        view.findViewById(R.id.order_delivered).setOnClickListener(v ->
-                openOrderHistoryWithTab(4));
+        view.findViewById(R.id.order_delivered).setOnClickListener(v -> {
+            if (!currentDeliveredIds.isEmpty()) {
+                OrderSeenManager.markMultipleAsSeen(requireContext(), currentDeliveredIds);
+                badgeDelivered.setVisibility(View.GONE);
+            }
+            openOrderHistoryWithTab(4);
+        });
 
 
-        view.findViewById(R.id.order_returned).setOnClickListener(v ->
-                openOrderHistoryWithTab(5));
+        view.findViewById(R.id.order_returned).setOnClickListener(v -> {
+            if (!currentReturnedIds.isEmpty()) {
+                OrderSeenManager.markMultipleAsSeen(requireContext(), currentReturnedIds);
+                badgeReturned.setVisibility(View.GONE);
+            }
+            openOrderHistoryWithTab(5);
+        });
 
 
         View btnSwitchAccount = view.findViewById(R.id.btn_switch_account);
@@ -434,6 +450,7 @@ public class ProfileFragment extends Fragment {
         }
 
         // ✅ RESET UI mặc định trước khi load dữ liệu thực tế
+        resetBadges();
         updateLoyaltyUi(0L);
 
         FirebaseUser firebaseUser = currentUser;
@@ -465,12 +482,68 @@ public class ProfileFragment extends Fragment {
     private void loadOrderCountsAndSpentAmount(String uid) {
         if (uid == null) return;
 
-        // Fetch counts for all statuses
+        // Fetch counts for active statuses
         fetchCount(uid, "pending", badgePending);
         fetchCount(uid, "confirmed", badgePickup);
         fetchCount(uid, "shipping", badgeShipping);
-        fetchCount(uid, "delivered", badgeDelivered);
-        fetchCount(uid, "returned", badgeReturned);
+
+        // ✅ Logic đặc biệt cho Đã giao (Delivered)
+        currentDeliveredIds.clear();
+        db.collection("orders")
+                .whereEqualTo("userId", uid)
+                .whereEqualTo("status", "delivered")
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (!isAdded()) return;
+                    int unseenCount = 0;
+                    for (DocumentSnapshot doc : snap) {
+                        String orderId = doc.getId();
+                        currentDeliveredIds.add(orderId);
+                        if (!OrderSeenManager.isSeen(requireContext(), orderId)) {
+                            unseenCount++;
+                        }
+                    }
+                    if (unseenCount > 0) {
+                        badgeDelivered.setText(String.valueOf(unseenCount));
+                        badgeDelivered.setVisibility(View.VISIBLE);
+                    } else {
+                        badgeDelivered.setVisibility(View.GONE);
+                    }
+                });
+
+        // ✅ Logic đặc biệt cho Trả hàng (Returned)
+        currentReturnedIds.clear();
+        db.collection("orders")
+                .whereEqualTo("userId", uid)
+                .get()
+                .addOnSuccessListener(snap -> {
+                    if (!isAdded()) return;
+                    int badgeCount = 0;
+                    for (DocumentSnapshot doc : snap) {
+                        String returnStatus = doc.getString("returnStatus");
+                        if (returnStatus == null || returnStatus.equals("none")) continue;
+
+                        String orderId = doc.getId();
+                        currentReturnedIds.add(orderId);
+
+                        // 1. Đang xử lý: requested, approved -> Luôn hiện badge
+                        if (returnStatus.equals("requested") || returnStatus.equals("approved")) {
+                            badgeCount++;
+                        }
+                        // 2. Đã xong: completed, rejected -> Chỉ hiện nếu chưa xem
+                        else if (returnStatus.equals("completed") || returnStatus.equals("rejected")) {
+                            if (!OrderSeenManager.isSeen(requireContext(), orderId)) {
+                                badgeCount++;
+                            }
+                        }
+                    }
+                    if (badgeCount > 0) {
+                        badgeReturned.setText(String.valueOf(badgeCount));
+                        badgeReturned.setVisibility(View.VISIBLE);
+                    } else {
+                        badgeReturned.setVisibility(View.GONE);
+                    }
+                });
 
         // ✅ FIX: Hạng thành viên chỉ tính đơn đã giao.
         // Tự động tính lại spentAmount từ danh sách đơn hàng thực tế

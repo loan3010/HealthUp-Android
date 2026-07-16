@@ -14,6 +14,7 @@ import com.example.healthup.databinding.ActivityReturnRefundHistoryDetailBinding
 import com.example.healthup.databinding.ItemOrderProductBinding;
 import com.example.healthup.databinding.ItemTimelineStepBinding;
 import com.example.healthup.util.FullscreenImagePager;
+import com.example.healthup.util.OrderSeenManager;
 import com.example.healthup.util.ReturnProgressHelper;
 import com.example.models.Order;
 import com.example.models.OrderItem;
@@ -138,6 +139,11 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
     }
 
     private void populateUI() {
+        // Mark completed or rejected return as seen
+        if ("completed".equalsIgnoreCase(order.getReturnStatus()) || "rejected".equalsIgnoreCase(order.getReturnStatus())) {
+            OrderSeenManager.markAsSeen(this, order.getId());
+        }
+
         String handling = ReturnProgressHelper.normalizeHandling(order.getReturnHandling());
         boolean isReship = ReturnProgressHelper.isReship(handling);
         boolean isRejected = Order.RETURN_REJECTED.equals(order.getReturnStatus());

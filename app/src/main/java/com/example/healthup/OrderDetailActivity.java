@@ -20,6 +20,8 @@ import com.example.healthup.databinding.DialogLoadingBinding;
 import com.example.healthup.databinding.DialogSuccessBinding;
 import com.example.healthup.databinding.ItemOrderProductBinding;
 import com.example.healthup.databinding.LayoutBottomSheetCancelOrderBinding;
+import com.example.healthup.util.LocaleHelper;
+import com.example.healthup.util.OrderSeenManager;
 import com.example.models.Order;
 import com.example.models.OrderItem;
 import com.example.models.ReturnReason;
@@ -409,6 +411,11 @@ public class OrderDetailActivity extends BaseAppCompatActivity {
     }
 
     private void populateUI(Order order) {
+        // Mark delivered orders as seen
+        if ("delivered".equalsIgnoreCase(order.getStatus())) {
+            OrderSeenManager.markAsSeen(this, order.getId());
+        }
+
         String status = order.getStatus().toLowerCase();
         
         if ("pending".equals(status)) {
