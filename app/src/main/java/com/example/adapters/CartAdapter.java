@@ -237,11 +237,11 @@ public class CartAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
 
 
 
+        // Out-of-stock line can still open variant picker so buyer can switch to an in-stock SKU.
         if (h.tvVariant != null) {
-            h.tvVariant.setEnabled(!isOutOfStock);
-            h.tvVariant.setOnClickListener(v -> {
-                if (!isOutOfStock) listener.onEditVariant(item);
-            });
+            h.tvVariant.setEnabled(true);
+            h.tvVariant.setAlpha(1f);
+            h.tvVariant.setOnClickListener(v -> listener.onEditVariant(item));
         }
         if (h.btnRemove != null) {
             h.btnRemove.setOnClickListener(v -> listener.onRemove(item));

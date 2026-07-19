@@ -971,7 +971,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
     @Override
     public void onEditVariant(CartItem item) {
         EditCartItemBottomSheet sheet = new EditCartItemBottomSheet(item,
-                (weight, flavor, packageType, quantity, price, variantId, variantName) -> {
+                (weight, flavor, packageType, quantity, price, variantId, variantName, stock) -> {
                     item.setWeight(weight);
                     item.setFlavor(flavor);
                     item.setPackageType(packageType);
@@ -980,6 +980,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                     item.setOriginalPrice(price);
                     item.setVariantId(variantId);
                     item.setVariantName(variantName);
+                    item.setStock(Math.max(0, stock));
                     
                     if (adapter != null) {
                         adapter.notifyDataSetChanged();
@@ -996,6 +997,7 @@ public class CartFragment extends Fragment implements CartAdapter.Listener {
                         updates.put("originalPrice", price);
                         updates.put("variantId", variantId);
                         updates.put("variantName", variantName);
+                        updates.put("stock", Math.max(0, stock));
                         updates.put("updatedAt", com.google.firebase.Timestamp.now());
                         if (item.getImageUrl() != null && !item.getImageUrl().isEmpty()) {
                             updates.put("imageUrl", item.getImageUrl());
