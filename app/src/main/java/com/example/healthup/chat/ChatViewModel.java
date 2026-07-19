@@ -375,6 +375,9 @@ public class ChatViewModel extends ViewModel {
         conversationRegistration = chatRepository.listenConversation(id, conv -> {
             Conversation previous = conversation.getValue();
             conversation.setValue(conv);
+            if (!sellerMode && conv != null && conv.isBuyerUnread()) {
+                chatRepository.markBuyerRead(id);
+            }
             if (!sellerMode && conv != null && conv.isHumanMode()) {
                 clearLocalBotContent();
                 recompute();

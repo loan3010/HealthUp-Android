@@ -2,6 +2,7 @@
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/bg_cream"
@@ -148,24 +149,46 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <ImageButton
-                android:id="@+id/btn_chat"
+            <FrameLayout
+                android:id="@+id/btn_chat_wrap"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
                 android:layout_alignParentEnd="true"
                 android:layout_centerVertical="true"
-                android:background="@drawable/bg_icon_circle_white"
-                android:elevation="2dp"
-                android:padding="10dp"
-                android:src="@drawable/ic_chat"
-                app:tint="@color/text_gray"
-                android:contentDescription="Chat" />
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <ImageButton
+                    android:id="@+id/btn_chat"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="@drawable/bg_icon_circle_white"
+                    android:elevation="2dp"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_chat"
+                    app:tint="@color/text_gray"
+                    android:contentDescription="Chat" />
+
+                <TextView
+                    android:id="@+id/tvProfileChatBadge"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:layout_gravity="top|end"
+                    android:background="@drawable/bg_badge_red"
+                    android:gravity="center"
+                    android:textColor="@color/white"
+                    android:textSize="9sp"
+                    android:textStyle="bold"
+                    android:visibility="gone"
+                    tools:text="1"
+                    tools:visibility="visible" />
+            </FrameLayout>
 
             <ImageButton
                 android:id="@+id/btn_settings"
                 android:layout_width="40dp"
                 android:layout_height="40dp"
-                android:layout_toStartOf="@id/btn_chat"
+                android:layout_toStartOf="@id/btn_chat_wrap"
                 android:layout_centerVertical="true"
                 android:layout_marginEnd="12dp"
                 android:background="@drawable/bg_icon_circle_white"

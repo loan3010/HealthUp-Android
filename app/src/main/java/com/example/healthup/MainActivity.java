@@ -6,6 +6,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
@@ -18,6 +19,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 
 import com.example.healthup.admin.AdminActivity;
+import com.example.healthup.data.repository.ChatRepository;
 import com.example.healthup.ui.notify.NotifyPermissionDialogFragment;
 import com.example.healthup.ui.welcome.WelcomePromoBottomSheet;
 import com.example.healthup.util.AccountDisabledWatcher;
@@ -62,7 +64,9 @@ public class MainActivity extends BaseAppCompatActivity {
             );
 
     private BottomNavigationView navView;
+    private View fabChatContainer;
     private FloatingActionButton fabChat;
+    private TextView tvChatBadge;
     private FloatingChatBubbleController floatingChatBubble;
     private View rootLayout;
     private boolean isKeyboardShowing = false;
@@ -72,6 +76,7 @@ public class MainActivity extends BaseAppCompatActivity {
     private Intent deferredIntent;
     private ListenerRegistration cartListener;
     private ListenerRegistration notifBadgeListener;
+    private ListenerRegistration chatBadgeListener;
     private FirebaseAuth.AuthStateListener authStateListener;
     private long lastBackPressAt;
     /** When true, Back from overlay flows (Buy Now checkout) finishes this Main → previous Activity. */
@@ -96,18 +101,24 @@ public class MainActivity extends BaseAppCompatActivity {
 
         navView = findViewById(R.id.bottom_navigation);
 
+        fabChatContainer = findViewById(R.id.fabChatContainer);
         fabChat = findViewById(R.id.fabChat);
+        tvChatBadge = findViewById(R.id.tvChatBadge);
         View mainRoot = findViewById(R.id.main_root);
         View dismissZone = findViewById(R.id.chatDismissZone);
-        if (fabChat != null && mainRoot instanceof ViewGroup) {
+        View bubbleTarget = fabChatContainer != null ? fabChatContainer : fabChat;
+        if (bubbleTarget != null && mainRoot instanceof ViewGroup) {
             floatingChatBubble = new FloatingChatBubbleController(
                     this,
-                    fabChat,
+                    bubbleTarget,
                     (ViewGroup) mainRoot,
                     () -> openBuyerChat(),
                     dismissZone);
             floatingChatBubble.attach();
-            fabChat.setOnClickListener(v -> openBuyerChat());
+            bubbleTarget.setOnClickListener(v -> openBuyerChat());
+            if (fabChat != null) {
+                fabChat.setOnClickListener(v -> openBuyerChat());
+            }
         }
 
         applySystemBarInsets();
@@ -219,7 +230,11 @@ public class MainActivity extends BaseAppCompatActivity {
             if (navView != null) {
                 navView.setVisibility(hideNavigation ? View.GONE : View.VISIBLE);
             }
-            if (fabChat != null) {
+            if (fabChatContainer != null) {
+                boolean showBubble = !hideNavigation
+                        && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
+                fabChatContainer.setVisibility(showBubble ? View.VISIBLE : View.GONE);
+            } else if (fabChat != null) {
                 boolean showBubble = !hideNavigation
                         && (floatingChatBubble == null || !floatingChatBubble.isDismissed());
                 fabChat.setVisibility(showBubble ? View.VISIBLE : View.GONE);
@@ -281,6 +296,11 @@ public class MainActivity extends BaseAppCompatActivity {
                     if (error != null || value == null) return;
                     int unread = 0;
                     for (com.google.firebase.firestore.DocumentSnapshot doc : value.getDocuments()) {
+                        String type = doc.getString("type");
+                        // Chat unread is shown on the chat bubble, not the notifications tab.
+                        if ("CHAT_STAFF_REPLY".equalsIgnoreCase(type)) {
+                            continue;
+                        }
                         Boolean read = doc.getBoolean("read");
                         if (read == null || !read) {
                             unread++;
@@ -288,6 +308,43 @@ public class MainActivity extends BaseAppCompatActivity {
                     }
                     updateNotificationBadge(unread);
                 });
+    }
+
+    private void setupChatBadgeListener() {
+        if (chatBadgeListener != null) {
+            chatBadgeListener.remove();
+            chatBadgeListener = null;
+        }
+
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            updateChatBadgeUi(0);
+            return;
+        }
+
+        String convId = new ChatRepository().supportConversationId(user.getUid());
+        chatBadgeListener = FirebaseFirestore.getInstance()
+                .collection("conversations")
+                .document(convId)
+                .addSnapshotListener((value, error) -> {
+                    if (error != null) {
+                        return;
+                    }
+                    boolean unread = value != null
+                            && value.exists()
+                            && Boolean.TRUE.equals(value.getBoolean("buyerUnread"));
+                    updateChatBadgeUi(unread ? 1 : 0);
+                });
+    }
+
+    private void updateChatBadgeUi(int count) {
+        if (tvChatBadge == null) return;
+        if (count <= 0) {
+            tvChatBadge.setVisibility(View.GONE);
+            return;
+        }
+        tvChatBadge.setVisibility(View.VISIBLE);
+        tvChatBadge.setText(count > 99 ? "99+" : String.valueOf(count));
     }
 
     private void updateNotificationBadge(int count) {
@@ -329,6 +386,7 @@ public class MainActivity extends BaseAppCompatActivity {
             authStateListener = firebaseAuth -> {
                 setupCartBadgeListener();
                 setupNotificationBadgeListener();
+                setupChatBadgeListener();
             };
         }
         FirebaseAuth.getInstance().addAuthStateListener(authStateListener);
@@ -356,6 +414,9 @@ public class MainActivity extends BaseAppCompatActivity {
         }
         if (notifBadgeListener != null) {
             notifBadgeListener.remove();
+        }
+        if (chatBadgeListener != null) {
+            chatBadgeListener.remove();
         }
         super.onDestroy();
     }

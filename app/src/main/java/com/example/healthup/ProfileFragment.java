@@ -30,11 +30,13 @@ import com.google.firebase.auth.FirebaseUser;
 import com.example.healthup.account.AccountManagementActivity;
 import com.example.healthup.account.SavedAccountStore;
 import com.example.healthup.admin.AdminActivity;
+import com.example.healthup.data.repository.ChatRepository;
 import com.example.healthup.util.StaffRoleHelper;
 import com.example.healthup.util.UserPhoneLookup;
 import com.example.healthup.util.UserProfileResolver;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.ListenerRegistration;
 import com.google.firebase.firestore.Source;
 
 
@@ -67,7 +69,9 @@ public class ProfileFragment extends Fragment {
     private View rowAdminPanel;
     private TextView tvName, tvUsername, tvTier, tvSpent, tvProgressHint;
     private TextView badgePending, badgePickup, badgeShipping, badgeDelivered, badgeReturned;
+    private TextView tvProfileChatBadge;
     private ProgressBar progressTichLuy;
+    private ListenerRegistration chatBadgeListener;
 
     private Set<String> currentDeliveredIds = new HashSet<>();
     private Set<String> currentReturnedIds = new HashSet<>();
@@ -100,6 +104,7 @@ public class ProfileFragment extends Fragment {
         badgeShipping = view.findViewById(R.id.badge_shipping);
         badgeDelivered = view.findViewById(R.id.badge_delivered);
         badgeReturned = view.findViewById(R.id.badge_returned);
+        tvProfileChatBadge = view.findViewById(R.id.tvProfileChatBadge);
 
 
         mAuth = FirebaseAuth.getInstance();
@@ -141,8 +146,53 @@ public class ProfileFragment extends Fragment {
             updateAuthUi(view);
             loadUserData(true);
         }
+        listenChatBadge();
     }
 
+    @Override
+    public void onPause() {
+        stopChatBadgeListener();
+        super.onPause();
+    }
+
+    private void listenChatBadge() {
+        stopChatBadgeListener();
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user == null) {
+            updateProfileChatBadge(false);
+            return;
+        }
+        String convId = new ChatRepository().supportConversationId(user.getUid());
+        chatBadgeListener = FirebaseFirestore.getInstance()
+                .collection("conversations")
+                .document(convId)
+                .addSnapshotListener((value, error) -> {
+                    if (!isAdded() || error != null) {
+                        return;
+                    }
+                    boolean unread = value != null
+                            && value.exists()
+                            && Boolean.TRUE.equals(value.getBoolean("buyerUnread"));
+                    updateProfileChatBadge(unread);
+                });
+    }
+
+    private void stopChatBadgeListener() {
+        if (chatBadgeListener != null) {
+            chatBadgeListener.remove();
+            chatBadgeListener = null;
+        }
+    }
+
+    private void updateProfileChatBadge(boolean unread) {
+        if (tvProfileChatBadge == null) return;
+        if (unread) {
+            tvProfileChatBadge.setVisibility(View.VISIBLE);
+            tvProfileChatBadge.setText("1");
+        } else {
+            tvProfileChatBadge.setVisibility(View.GONE);
+        }
+    }
 
     private void applyHeaderWindowInsets(View view) {
         View header = view.findViewById(R.id.profile_header);

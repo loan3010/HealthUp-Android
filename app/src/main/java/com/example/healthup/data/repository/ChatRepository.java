@@ -409,7 +409,6 @@ public class ChatRepository {
         convRef.collection("messages").add(data)
                 .addOnSuccessListener(ref -> {
                     updateLastMessage(convRef, preview, message.getSenderType());
-                    maybeNotifyBuyerOfStaffReply(conversationId, message, preview);
                     if (callback != null) {
                         callback.onComplete(true);
                     }
@@ -421,44 +420,11 @@ public class ChatRepository {
                 });
     }
 
-    /**
-     * When staff replies, write an in-app notification for the buyer (same inbox as
-     * order alerts). Staff can create under users/{buyerId}/notifications per rules.
-     */
-    private void maybeNotifyBuyerOfStaffReply(@NonNull String conversationId,
-                                              @NonNull ChatMessage message,
-                                              @Nullable String preview) {
-        if (!ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
-            return;
-        }
-        firestore.collection("conversations").document(conversationId).get()
-                .addOnSuccessListener(doc -> {
-                    if (doc == null || !doc.exists()) {
-                        return;
-                    }
-                    String buyerId = doc.getString("buyerId");
-                    if (buyerId == null || buyerId.trim().isEmpty()) {
-                        return;
-                    }
-                    String body = preview != null && !preview.trim().isEmpty()
-                            ? preview.trim()
-                            : "Bạn có tin nhắn mới từ nhân viên hỗ trợ.";
-                    if (body.length() > 120) {
-                        body = body.substring(0, 117) + "…";
-                    }
-                    Map<String, Object> notif = new HashMap<>();
-                    notif.put("type", "CHAT_STAFF_REPLY");
-                    notif.put("title", "Tin nhắn từ HealthUp");
-                    notif.put("body", body);
-                    notif.put("message", body);
-                    notif.put("conversationId", conversationId);
-                    notif.put("refId", conversationId);
-                    notif.put("read", false);
-                    notif.put("createdAt", com.google.firebase.Timestamp.now());
-                    firestore.collection("users").document(buyerId)
-                            .collection("notifications")
-                            .add(notif);
-                });
+    public void markBuyerRead(@NonNull String conversationId) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("buyerUnread", false);
+        firestore.collection("conversations").document(conversationId)
+                .set(data, SetOptions.merge());
     }
 
     private void updateLastMessage(@NonNull DocumentReference convRef,
@@ -468,11 +434,12 @@ public class ChatRepository {
         data.put("lastMessage", text != null ? text : "");
         data.put("lastMessageAt", FieldValue.serverTimestamp());
         data.put("updatedAt", FieldValue.serverTimestamp());
-        // Buyer message → staff needs attention; staff reply → clear staff badge.
+        // Buyer message → staff badge; staff reply → buyer badge (no inbox notification).
         if (ChatMessage.SENDER_USER.equals(senderType)) {
             data.put("staffUnread", true);
         } else if (ChatMessage.SENDER_SELLER.equals(senderType)) {
             data.put("staffUnread", false);
+            data.put("buyerUnread", true);
         }
         convRef.set(data, SetOptions.merge());
     }
@@ -651,6 +618,8 @@ public class ChatRepository {
         c.setSessionBucket(doc.getString("sessionBucket"));
         Boolean staffUnread = doc.getBoolean("staffUnread");
         c.setStaffUnread(staffUnread != null && staffUnread);
+        Boolean buyerUnread = doc.getBoolean("buyerUnread");
+        c.setBuyerUnread(buyerUnread != null && buyerUnread);
         c.setBuyerUsername(doc.getString("buyerUsername"));
         c.setBuyerPhone(doc.getString("buyerPhone"));
         Object participants = doc.get("participantIds");

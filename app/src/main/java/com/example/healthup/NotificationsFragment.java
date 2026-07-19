@@ -277,6 +277,9 @@ public class NotificationsFragment extends Fragment {
 
         for (QueryDocumentSnapshot doc : snapshot) {
             NotificationItem item = parseNotification(doc);
+            if (item.getNotificationType() == NotificationType.CHAT_STAFF_REPLY) {
+                continue;
+            }
             if (item.getTitle() != null && !item.getTitle().isEmpty()) {
                 items.add(item);
                 

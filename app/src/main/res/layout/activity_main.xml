@@ -4,6 +4,8 @@
 
     xmlns:app="http://schemas.android.com/apk/res-auto"
 
+    xmlns:tools="http://schemas.android.com/tools"
+
     android:id="@+id/main_root"
 
     android:layout_width="match_parent"
@@ -76,23 +78,63 @@
 
 
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
+    <FrameLayout
 
-        android:id="@+id/fabChat"
+        android:id="@+id/fabChatContainer"
 
         android:layout_width="wrap_content"
 
         android:layout_height="wrap_content"
 
-        android:contentDescription="@string/chat_open"
+        android:clipChildren="false"
 
-        android:elevation="10dp"
+        android:clipToPadding="false"
 
-        android:src="@drawable/ic_chat_bot"
+        android:elevation="10dp">
 
-        app:backgroundTint="@color/brand_primary"
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
 
-        app:tint="@color/white" />
+            android:id="@+id/fabChat"
+
+            android:layout_width="wrap_content"
+
+            android:layout_height="wrap_content"
+
+            android:contentDescription="@string/chat_open"
+
+            android:src="@drawable/ic_chat_bot"
+
+            app:backgroundTint="@color/brand_primary"
+
+            app:tint="@color/white" />
+
+        <TextView
+
+            android:id="@+id/tvChatBadge"
+
+            android:layout_width="18dp"
+
+            android:layout_height="18dp"
+
+            android:layout_gravity="top|end"
+
+            android:background="@drawable/bg_badge_red"
+
+            android:gravity="center"
+
+            android:textColor="@color/white"
+
+            android:textSize="10sp"
+
+            android:textStyle="bold"
+
+            android:visibility="gone"
+
+            tools:text="1"
+
+            tools:visibility="visible" />
+
+    </FrameLayout>
 
 
 
@@ -135,4 +177,3 @@
 
 
 </FrameLayout>
-

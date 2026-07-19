@@ -45,6 +45,8 @@ public class Conversation {
     private String sessionBucket;
     /** True when the buyer sent a message staff has not opened yet. */
     private boolean staffUnread;
+    /** True when staff sent a message the buyer has not opened yet. */
+    private boolean buyerUnread;
     private String buyerUsername;
     private String buyerPhone;
 
@@ -189,6 +191,14 @@ public class Conversation {
 
     public void setStaffUnread(boolean staffUnread) {
         this.staffUnread = staffUnread;
+    }
+
+    public boolean isBuyerUnread() {
+        return buyerUnread;
+    }
+
+    public void setBuyerUnread(boolean buyerUnread) {
+        this.buyerUnread = buyerUnread;
     }
 
     public String getBuyerUsername() {
