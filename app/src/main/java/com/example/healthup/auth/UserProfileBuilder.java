@@ -102,11 +102,14 @@ public final class UserProfileBuilder {
     public static Map<String, Object> buildGoogleLinkUpdates(@NonNull String googleEmail) {
         String normalized = normalizeStoredEmail(googleEmail);
         Map<String, Object> updates = new HashMap<>();
-        updates.put("email", normalized);
+        // IMPORTANT: do NOT overwrite "email" (the synthetic Auth login email) nor
+        // "authProvider". Password sign-in resolves the Auth email from "email" and the
+        // account keeps its password credential — Google is only an *additional* provider.
+        // Overwriting these turned linked accounts into "Google-only", breaking both
+        // password login and password reset.
         updates.put("displayEmail", normalized);
         updates.put("emailVerified", true);
         updates.put("googleLinked", true);
-        updates.put("authProvider", AUTH_PROVIDER_GOOGLE);
         return updates;
     }
 }

@@ -754,7 +754,8 @@
     <string name="admin_status_cancelled">Đã hủy</string>
     <string name="admin_status_cancel_requested">Yêu cầu hủy</string>
     <string name="admin_status_returned">Trả hàng</string>
-    <string name="admin_sort_order_newest">Mới nhất</string>
+    <string name="admin_sort_order_priority">Ưu tiên xử lý</string>
+    <string name="admin_sort_order_newest">Mới tạo nhất</string>
     <string name="admin_sort_order_oldest">Cũ nhất</string>
     <string name="admin_orders_result_summary">Hiển thị %1$d / %2$d đơn · %3$s</string>
     <string name="admin_orders_overdue_all">Có %1$d đơn chưa xử lý quá %2$d giờ</string>
@@ -764,6 +765,8 @@
     <string name="admin_filter_active">Đang hoạt động</string>
     <string name="admin_filter_draft">Bản nháp</string>
     <string name="admin_products_result_summary">%1$d sản phẩm · %2$s</string>
+    <string name="admin_products_low_stock_summary">%1$d sản phẩm · %2$s — chạm đây hoặc chạm lại tab Đang hoạt động để xem đủ</string>
+    <string name="admin_products_low_stock_cleared">Đã hiện tất cả sản phẩm đang hoạt động</string>
     <string name="admin_save_draft">Lưu nháp</string>
     <string name="admin_draft_saved">Đã lưu bản nháp</string>
     <string name="admin_publish_product">Đăng sản phẩm</string>

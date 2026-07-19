@@ -80,6 +80,8 @@ public class Order implements Serializable {
     private java.util.Date returnRequestedAt;
     private String returnRejectReason;
     private List<Map<String, Object>> returnItems;
+    /** Amount to refund for this return (selected items), not necessarily full order total. */
+    private double refundAmount;
 
     private boolean stockDeducted;
     private boolean stockRestored;
@@ -316,4 +318,40 @@ public class Order implements Serializable {
 
     public List<Map<String, Object>> getReturnItems() { return returnItems; }
     public void setReturnItems(List<Map<String, Object>> returnItems) { this.returnItems = returnItems; }
+
+    public double getRefundAmount() { return refundAmount; }
+    public void setRefundAmount(double refundAmount) { this.refundAmount = refundAmount; }
+
+    /**
+     * Prefer stored {@code refundAmount}; otherwise sum {@code returnItems} (price × qty).
+     * Falls back to {@code totalPrice} only when neither is available (legacy full-order returns).
+     */
+    public double resolveRefundAmount() {
+        if (refundAmount > 0) {
+            return refundAmount;
+        }
+        double fromItems = sumReturnItemsAmount();
+        if (fromItems > 0) {
+            return fromItems;
+        }
+        return Math.max(0, totalPrice);
+    }
+
+    public double sumReturnItemsAmount() {
+        if (returnItems == null || returnItems.isEmpty()) {
+            return 0;
+        }
+        double sum = 0;
+        for (Map<String, Object> row : returnItems) {
+            if (row == null) continue;
+            Object priceObj = row.get("price");
+            Object qtyObj = row.get("quantity");
+            double price = priceObj instanceof Number ? ((Number) priceObj).doubleValue() : 0;
+            int qty = qtyObj instanceof Number ? ((Number) qtyObj).intValue() : 0;
+            if (price > 0 && qty > 0) {
+                sum += price * qty;
+            }
+        }
+        return sum;
+    }
 }

@@ -4,13 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/bg_cream">
+    android:background="@color/bg_cream"
+    android:clipChildren="false"
+    android:clipToPadding="false">
 
 
     <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:background="@color/bg_cream"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         app:elevation="0dp"
         app:liftOnScroll="false">
 
@@ -20,7 +24,10 @@
             android:layout_height="wrap_content"
             android:minHeight="56dp"
             android:paddingTop="30dp"
-            android:paddingHorizontal="16dp">
+            android:paddingBottom="8dp"
+            android:paddingHorizontal="16dp"
+            android:clipChildren="false"
+            android:clipToPadding="false">
 
 
             <ImageButton
@@ -38,6 +45,9 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
+                android:includeFontPadding="true"
+                android:paddingTop="2dp"
+                android:paddingBottom="2dp"
                 android:text="Yêu thích"
                 android:textColor="@color/text_dark"
                 android:textSize="18sp"
@@ -95,8 +105,11 @@
             <LinearLayout
                 android:id="@+id/layout_header_actions"
                 android:layout_width="wrap_content"
-                android:layout_height="match_parent"
+                android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
+                android:layout_centerVertical="true"
+                android:clipChildren="false"
+                android:clipToPadding="false"
                 android:gravity="center_vertical"
                 android:orientation="horizontal">
 
@@ -117,6 +130,9 @@
                     android:id="@+id/btn_edit"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:includeFontPadding="true"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
                     android:text="Chỉnh sửa"
                     android:textColor="@color/primary_green"
                     android:textSize="16sp"

@@ -245,11 +245,14 @@ public final class StockManager {
                         for (Map<String, Object> v : variants) {
                             currentTotalSold += readInt(v.get("sold"), 0);
                         }
-                        if (currentTotalSold <= 0) {
-                            // First tracked sale: continue from mock baseline (not from 0 → 1).
+                        if (currentTotalSold <= 0 && !Boolean.TRUE.equals(snap.getBoolean("adminCreated"))) {
+                            // Legacy seed data: continue from mock baseline (not from 0 → 1).
                             int reviews = readInt(snap.get("reviewCount"), 0);
                             int baseline = Product.computeMockSold(snap.getId(), reviews);
                             variant.put("sold", baseline + qty);
+                        } else if (currentTotalSold <= 0) {
+                            // Admin-added product: genuine sales start from 0.
+                            variant.put("sold", qty);
                         } else {
                             variant.put("sold", currentVariantSold + qty);
                         }
@@ -308,7 +311,8 @@ public final class StockManager {
             if (totalDelta < 0) {
                 int qty = -totalDelta;
                 int currentSold = readInt(snap.get("sold"), readInt(snap.get("soldCount"), 0));
-                if (currentSold <= 0) {
+                if (currentSold <= 0 && !Boolean.TRUE.equals(snap.getBoolean("adminCreated"))) {
+                    // Legacy seed data continues from a mock baseline; admin-added starts from 0.
                     int reviews = readInt(snap.get("reviewCount"), 0);
                     currentSold = Product.computeMockSold(snap.getId(), reviews);
                 }

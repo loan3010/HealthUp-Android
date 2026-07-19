@@ -488,6 +488,24 @@ public class FirebaseManager {
             Double total = doc.getDouble("totalPrice");
             if (total == null) total = 0.0;
 
+            double refundAmount = 0;
+            if (returnItems != null) {
+                for (Map<String, Object> row : returnItems) {
+                    if (row == null) continue;
+                    Object priceObj = row.get("price");
+                    Object qtyObj = row.get("quantity");
+                    double price = priceObj instanceof Number ? ((Number) priceObj).doubleValue() : 0;
+                    int qty = qtyObj instanceof Number ? ((Number) qtyObj).intValue() : 0;
+                    if (price > 0 && qty > 0) {
+                        refundAmount += price * qty;
+                    }
+                }
+            }
+            // Legacy / full-order return when no line items were selected.
+            if (refundAmount <= 0) {
+                refundAmount = total;
+            }
+
             com.google.firebase.firestore.WriteBatch batch = db.batch();
             Map<String, Object> updates = new HashMap<>();
             // Keep delivered so order stays in Đã giao; returnStatus drives Trả hàng tab
@@ -500,16 +518,17 @@ public class FirebaseManager {
             updates.put("returnStep", 0);
             updates.put("returnRequestedAt", Timestamp.now());
             updates.put("returnRejectReason", com.google.firebase.firestore.FieldValue.delete());
+            updates.put("refundAmount", refundAmount);
             if (returnItems != null) {
                 updates.put("returnItems", returnItems);
             }
             updates.put("updatedAt", Timestamp.now());
             batch.update(db.collection("orders").document(orderId), updates);
 
-            // Giảm tích lũy vì đơn hàng đang bị yêu cầu trả (Logic từ main)
-            if (buyerId != null) {
+            // Only reverse loyalty points for the refunded portion (not the whole order).
+            if (buyerId != null && refundAmount > 0) {
                 batch.update(db.collection("users").document(buyerId),
-                        "spentAmount", com.google.firebase.firestore.FieldValue.increment(-total));
+                        "spentAmount", com.google.firebase.firestore.FieldValue.increment(-refundAmount));
             }
 
             Map<String, Object> history = new HashMap<>();

@@ -97,6 +97,10 @@ public final class SavedAccountStore {
     }
 
     public static boolean upsert(@NonNull Context context, @NonNull SavedAccount account) {
+        // Drop stale cards that share the same phone/email under a different Auth UID
+        // (common after Google-link tests that briefly create orphan Google sessions).
+        removeDuplicatesOf(context, account);
+
         if (!canStore(context, account.uid)) {
             return false;
         }
@@ -107,6 +111,70 @@ public final class SavedAccountStore {
         map.put(account.uid, account);
         persistList(context, new ArrayList<>(map.values()));
         return true;
+    }
+
+    /**
+     * Remove other saved cards that look like the same real person (same phone or same
+     * real email) but a different Firebase Auth UID. Keeps {@code keep.uid}.
+     */
+    public static void removeDuplicatesOf(@NonNull Context context, @NonNull SavedAccount keep) {
+        String keepPhone = TextUtils.isEmpty(keep.phone)
+                ? ""
+                : PhoneNormalizer.normalize(keep.phone);
+        String keepEmail = TextUtils.isEmpty(keep.email)
+                ? ""
+                : keep.email.trim().toLowerCase(Locale.ROOT);
+        boolean keepHasEmail = !TextUtils.isEmpty(keepEmail) && keepEmail.contains("@");
+
+        List<String> toRemove = new ArrayList<>();
+        for (SavedAccount existing : getAll(context)) {
+            if (keep.uid.equals(existing.uid)) {
+                continue;
+            }
+            boolean samePhone = !TextUtils.isEmpty(keepPhone)
+                    && !TextUtils.isEmpty(existing.phone)
+                    && keepPhone.equals(PhoneNormalizer.normalize(existing.phone));
+            boolean sameEmail = keepHasEmail
+                    && !TextUtils.isEmpty(existing.email)
+                    && keepEmail.equals(existing.email.trim().toLowerCase(Locale.ROOT));
+            if (samePhone || sameEmail) {
+                toRemove.add(existing.uid);
+            }
+        }
+        for (String uid : toRemove) {
+            // Prefer keeping the quick-login password on the surviving card when possible.
+            String orphanPassword = getPassword(context, uid);
+            if (!TextUtils.isEmpty(orphanPassword) && TextUtils.isEmpty(getPassword(context, keep.uid))) {
+                savePassword(context, keep.uid, orphanPassword);
+            }
+            remove(context, uid);
+        }
+    }
+
+    /** One-shot cleanup for cards already on device before the dedupe fix. */
+    public static void pruneDuplicates(@NonNull Context context) {
+        pruneDuplicates(context, null);
+    }
+
+    /**
+     * Collapse duplicate cards. When {@code preferredUid} is set (usually the logged-in
+     * user), that card wins over others that share the same phone/email.
+     */
+    public static void pruneDuplicates(@NonNull Context context, @Nullable String preferredUid) {
+        if (!TextUtils.isEmpty(preferredUid)) {
+            for (SavedAccount account : getAll(context)) {
+                if (preferredUid.equals(account.uid)) {
+                    removeDuplicatesOf(context, account);
+                    break;
+                }
+            }
+        }
+        List<SavedAccount> accounts = getAll(context);
+        // Walk newest-first so the most recently upserted (last in list) wins.
+        for (int i = accounts.size() - 1; i >= 0; i--) {
+            removeDuplicatesOf(context, accounts.get(i));
+            accounts = getAll(context);
+        }
     }
 
     public static void remove(@NonNull Context context, @NonNull String uid) {

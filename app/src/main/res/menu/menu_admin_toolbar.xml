@@ -8,8 +8,7 @@
         app:showAsAction="always" />
     <item
         android:id="@+id/action_admin_chat"
-        android:icon="@drawable/ic_chat"
         android:title="@string/admin_chat_customers"
-        app:iconTint="@color/white"
+        app:actionLayout="@layout/menu_admin_chat_action"
         app:showAsAction="always" />
 </menu>

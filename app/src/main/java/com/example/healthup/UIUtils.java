@@ -150,6 +150,13 @@ public class UIUtils {
             }
         }
 
+        // Chat / action controls must receive the first tap while the IME is open.
+        // Hiding the keyboard here (with adjustResize) cancels the click — Send would
+        // only work on the second press.
+        if (isTouchInsideKeepImeRegion(activity, event)) {
+            return;
+        }
+
         if (focused instanceof EditText) {
             if (isTouchInsideView(focused, event)) {
                 return;
@@ -162,6 +169,28 @@ public class UIUtils {
         if (isImeVisible(activity)) {
             hideKeyboard(activity);
         }
+    }
+
+    /**
+     * Regions where a tap should NOT dismiss the IME (Send, attach, whole chat input bar).
+     */
+    private static boolean isTouchInsideKeepImeRegion(Activity activity, MotionEvent event) {
+        int[] ids = {
+                R.id.chatInputBar,
+                R.id.chatSend,
+                R.id.chatAttach,
+                R.id.chatMic,
+                R.id.chatInput
+        };
+        for (int id : ids) {
+            View v = activity.findViewById(id);
+            if (v != null
+                    && v.getVisibility() == View.VISIBLE
+                    && isTouchInsideView(v, event)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static boolean isImeVisible(Activity activity) {

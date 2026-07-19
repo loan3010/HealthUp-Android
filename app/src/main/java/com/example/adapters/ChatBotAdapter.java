@@ -305,12 +305,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
             }
             if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                String staffLabel = itemView.getContext().getString(R.string.chat_sender_staff);
-                if (message.getSenderName() != null && !message.getSenderName().trim().isEmpty()) {
-                    name.setText(staffLabel + " · " + message.getSenderName().trim());
-                } else {
-                    name.setText(staffLabel);
-                }
+                name.setText(formatStaffDisplayName(itemView.getContext(), message.getSenderName()));
             } else if (staffView && ChatMessage.SENDER_USER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
                 name.setText(!TextUtils.isEmpty(customerDisplayName)
@@ -414,12 +409,7 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
 
             if (ChatMessage.SENDER_SELLER.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
-                String staffLabel = itemView.getContext().getString(R.string.chat_sender_staff);
-                if (message.getSenderName() != null && !message.getSenderName().trim().isEmpty()) {
-                    name.setText(staffLabel + " · " + message.getSenderName().trim());
-                } else {
-                    name.setText(staffLabel);
-                }
+                name.setText(formatStaffDisplayName(itemView.getContext(), message.getSenderName()));
             } else if (ChatMessage.SENDER_BOT.equals(message.getSenderType())) {
                 name.setVisibility(View.VISIBLE);
                 name.setText(R.string.chat_sender_bot);
@@ -840,6 +830,26 @@ public class ChatBotAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder
         int top = (int) (ChatBubbleHelper.verticalPaddingTopDp(groupPosition) * density);
         int bottom = (int) (ChatBubbleHelper.verticalPaddingBottomDp(groupPosition) * density);
         itemView.setPadding(itemView.getPaddingLeft(), top, itemView.getPaddingRight(), bottom);
+    }
+
+    /**
+     * Show "Nhân viên" alone when senderName is empty/generic; only append a real name
+     * when it differs (e.g. "Nhân viên · Mai"). Avoids "Nhân viên · Nhân viên".
+     */
+    @NonNull
+    private static String formatStaffDisplayName(@NonNull android.content.Context context,
+                                                 @Nullable String senderName) {
+        String staffLabel = context.getString(R.string.chat_sender_staff);
+        if (TextUtils.isEmpty(senderName)) {
+            return staffLabel;
+        }
+        String trimmed = senderName.trim();
+        if (trimmed.equalsIgnoreCase(staffLabel)
+                || trimmed.equalsIgnoreCase("Staff")
+                || trimmed.equalsIgnoreCase("Admin")) {
+            return staffLabel;
+        }
+        return staffLabel + " · " + trimmed;
     }
 
     private static String formatMessageTime(@NonNull ChatMessage message) {

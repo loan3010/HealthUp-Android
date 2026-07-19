@@ -67,6 +67,8 @@ public class Product implements Serializable {
     private boolean isHot;
     private boolean hidden;
     private boolean draft;
+    /** True for products created in-app by admin (real sold starts at 0, no mock brand seeding). */
+    private boolean adminCreated;
 
     private boolean hasVariants;
     private List<ProductVariant> variants;
@@ -156,9 +158,14 @@ public class Product implements Serializable {
     public int getSoldCount() {
         int real = getRealSoldCount();
         if (real > 0) return real;
+        // Admin-added products genuinely start at 0; only legacy seed data gets a mock baseline.
+        if (adminCreated) return 0;
         return computeMockSold(id, getReviewCount());
     }
     public void setSoldCount(int soldCount) { this.soldCount = soldCount; }
+
+    public boolean isAdminCreated() { return adminCreated; }
+    public void setAdminCreated(boolean adminCreated) { this.adminCreated = adminCreated; }
 
     /**
      * Deterministic “random” baseline from product id — stable across opens, no server script.

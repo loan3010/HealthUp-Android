@@ -205,6 +205,8 @@ public class NotificationAdapter extends RecyclerView.Adapter<RecyclerView.ViewH
                     return R.drawable.ic_heart_filled;
                 case REVIEW_REMINDER:
                     return R.drawable.ic_star;
+                case CHAT_STAFF_REPLY:
+                    return R.drawable.ic_chat;
                 default:
                     return R.drawable.ic_notification_bell;
             }

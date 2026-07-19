@@ -54,6 +54,7 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
     private boolean isHidden;
     private boolean isDraft;
     private int loadedReviewCount;
+    private String loadedProductCode = "";
 
     private TextInputEditText etName, etPrice, etOriginalPrice, etStock, etImage, etDescription;
     private TextInputEditText etProductCode;
@@ -158,8 +159,9 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         switchHidden.setChecked(isHidden);
         switchHidden.setOnCheckedChangeListener((buttonView, isChecked) -> isHidden = isChecked);
         etName.setText(product.getName());
-        if (!TextUtils.isEmpty(product.getProductCode())) {
-            etProductCode.setText(product.getProductCode());
+        loadedProductCode = product.getProductCode() != null ? product.getProductCode().trim() : "";
+        if (!TextUtils.isEmpty(loadedProductCode)) {
+            etProductCode.setText(loadedProductCode);
         } else {
             etProductCode.setText(R.string.admin_product_code_pending);
         }
@@ -640,7 +642,12 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
         }
 
         Product product = new Product();
-        if (isEdit) product.setId(productId);
+        if (isEdit) {
+            product.setId(productId);
+            // Preserve the existing product code so re-saving an edit never
+            // consumes a new sequence number from meta/productCodes.
+            product.setProductCode(loadedProductCode);
+        }
         product.setDraft(asDraft);
         product.setHidden(asDraft ? false : isHidden);
         product.setName(name);
@@ -670,18 +677,9 @@ public class AdminProductEditActivity extends BaseAppCompatActivity {
                 totalSold += Math.max(0, variant.getSold());
             }
             product.setStock(totalStock);
-            if (totalSold <= 0) {
-                // Seed mock so client never shows 0 sold next to reviews.
-                String seedKey = isEdit && productId != null && !productId.isEmpty()
-                        ? productId
-                        : textOf(etName);
-                int mock = Product.computeMockSold(seedKey, loadedReviewCount);
-                product.setSold(mock);
-                product.setSoldCount(mock);
-            } else {
-                product.setSold(totalSold);
-                product.setSoldCount(totalSold);
-            }
+            // New products start at 0 sold; edits keep their real recorded sold.
+            product.setSold(Math.max(0, totalSold));
+            product.setSoldCount(Math.max(0, totalSold));
 
             // Keep legacy fields in sync for older clients
             List<String> legacyFlavors = new ArrayList<>();

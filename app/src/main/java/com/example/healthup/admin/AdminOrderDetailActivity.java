@@ -385,6 +385,10 @@ public class AdminOrderDetailActivity extends BaseAppCompatActivity {
         if (currentOrder.getReturnRequestedAt() != null) {
             addInfoLine("Gửi lúc: " + dateFormat.format(currentOrder.getReturnRequestedAt()));
         }
+        double refund = currentOrder.resolveRefundAmount();
+        if (refund > 0 && currentOrder.hasActiveReturn()) {
+            addInfoLine("Số tiền hoàn: " + priceFormat.format(refund) + " đ");
+        }
         List<Map<String, Object>> returnItems = currentOrder.getReturnItems();
         if (returnItems != null && !returnItems.isEmpty()) {
             StringBuilder items = new StringBuilder("Sản phẩm trả: ");

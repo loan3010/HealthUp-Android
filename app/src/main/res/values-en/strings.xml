@@ -732,7 +732,8 @@
     <string name="admin_status_cancelled">Cancelled</string>
     <string name="admin_status_cancel_requested">Cancel Requested</string>
     <string name="admin_status_returned">Returned</string>
-    <string name="admin_sort_order_newest">Newest</string>
+    <string name="admin_sort_order_priority">Priority</string>
+    <string name="admin_sort_order_newest">Newest created</string>
     <string name="admin_sort_order_oldest">Oldest</string>
     <string name="admin_orders_result_summary">Showing %1$d / %2$d orders · %3$s</string>
     <string name="admin_orders_overdue_all">%1$d unprocessed orders over %2$d hours</string>
@@ -742,6 +743,8 @@
     <string name="admin_filter_active">Active</string>
     <string name="admin_filter_draft">Draft</string>
     <string name="admin_products_result_summary">%1$d products · %2$s</string>
+    <string name="admin_products_low_stock_summary">%1$d products · %2$s — tap here or retap Active to show all</string>
+    <string name="admin_products_low_stock_cleared">Showing all active products</string>
     <string name="admin_save_draft">Save Draft</string>
     <string name="admin_draft_saved">Draft saved</string>
     <string name="admin_publish_product">Publish Product</string>

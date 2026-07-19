@@ -88,7 +88,10 @@ public class PasswordResetRepository {
                     QueryDocumentSnapshot userDoc =
                             (QueryDocumentSnapshot) query.getDocuments().get(0);
                     Boolean googleLinked = userDoc.getBoolean("googleLinked");
-                    if (googleLinked != null && googleLinked) {
+                    boolean hasAppPassword = AppPasswordHelper.canUseAppPasswordLogin(userDoc);
+                    // Only block reset for Google-ONLY accounts. If the account also has a
+                    // password (phone+password that later linked Google), allow reset.
+                    if (googleLinked != null && googleLinked && !hasAppPassword) {
                         callback.onResult(SendOtpResult.GOOGLE_LINKED, "");
                         return;
                     }

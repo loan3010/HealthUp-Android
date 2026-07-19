@@ -97,6 +97,10 @@ public class AccountManagementActivity extends BaseAppCompatActivity implements 
     private void refreshList() {
         FirebaseUser current = firebaseAuth.getCurrentUser();
         String activeUid = current != null ? current.getUid() : "";
+        // Collapse leftover duplicate cards from earlier Google-link / orphan Auth UIDs.
+        // Prefer keeping the currently signed-in account when emails/phones collide.
+        SavedAccountStore.pruneDuplicates(this, activeUid);
+
         List<SavedAccount> accounts = SavedAccountStore.getAll(this);
         adapter.submit(accounts, activeUid);
         boolean empty = accounts.isEmpty();

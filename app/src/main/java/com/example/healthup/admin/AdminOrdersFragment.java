@@ -42,6 +42,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
     private static final String PREF_DISMISSED_OVERDUE_COUNT = "dismissed_overdue_count";
 
     private static final List<String> SORT_KEYS = Arrays.asList(
+            AdminOrderListHelper.SORT_PRIORITY,
             AdminOrderListHelper.SORT_NEWEST,
             AdminOrderListHelper.SORT_OLDEST
     );
@@ -73,7 +74,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
     private OrderPagerAdapter pagerAdapter;
 
     private String currentFilter = AdminOrderSearchHelper.FILTER_ALL;
-    private String currentSort = AdminOrderListHelper.SORT_NEWEST;
+    private String currentSort = AdminOrderListHelper.SORT_PRIORITY;
     private int lastShownOverdueCount;
 
     private final ViewPager2.OnPageChangeCallback pageChangeCallback = new ViewPager2.OnPageChangeCallback() {
@@ -107,6 +108,7 @@ public class AdminOrdersFragment extends Fragment implements AdminOrderAdapter.L
         }
 
         List<String> sortLabels = Arrays.asList(
+                getString(R.string.admin_sort_order_priority),
                 getString(R.string.admin_sort_order_newest),
                 getString(R.string.admin_sort_order_oldest)
         );

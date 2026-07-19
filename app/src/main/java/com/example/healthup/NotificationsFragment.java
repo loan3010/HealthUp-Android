@@ -554,6 +554,9 @@ public class NotificationsFragment extends Fragment {
         String returnId = resolveReturnId(item);
 
         switch (type) {
+            case CHAT_STAFF_REPLY:
+                startActivity(ChatActivity.buyerIntent(requireContext()));
+                break;
             case ORDER_RETURN_REQUESTED:
             case ORDER_RETURN_APPROVED:
             case ORDER_RETURN_REJECTED:

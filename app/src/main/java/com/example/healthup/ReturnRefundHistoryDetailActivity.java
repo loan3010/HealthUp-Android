@@ -8,6 +8,8 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import com.bumptech.glide.Glide;
 import com.example.healthup.databinding.ActivityReturnRefundHistoryDetailBinding;
@@ -28,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
     private ActivityReturnRefundHistoryDetailBinding binding;
@@ -63,9 +66,8 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
                     .get()
                     .addOnSuccessListener(doc -> {
                         if (doc.exists()) {
-                            order = doc.toObject(Order.class);
+                            order = com.example.healthup.admin.AdminRepository.parseOrderDocument(doc);
                             if (order != null) {
-                                order.setId(doc.getId());
                                 populateUI();
                             }
                         }
@@ -203,7 +205,7 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
             binding.lnRefundAmountRow.setVisibility(View.VISIBLE);
             binding.lnRefundMethodRow.setVisibility(View.VISIBLE);
             binding.lnShippingAddressRow.setVisibility(View.GONE);
-            binding.tvRefundAmount.setText(df.format(order.getTotalPrice()));
+            binding.tvRefundAmount.setText(df.format(order.resolveRefundAmount()));
             fetchRealRefundDetailAndPopulate();
         }
 
@@ -232,57 +234,105 @@ public class ReturnRefundHistoryDetailActivity extends BaseAppCompatActivity {
         });
 
         binding.lnItemsContainer.removeAllViews();
-        if (order.getItems() == null) return;
-        for (OrderItem item : order.getItems()) {
-            ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(getLayoutInflater(), binding.lnItemsContainer, false);
-            pBinding.tvProductName.setText(item.getName());
-            pBinding.tvVariant.setText(item.getVariantLabel());
-            pBinding.tvPrice.setText(df.format(item.getPrice()));
-            pBinding.tvQuantity.setText("x" + item.getQuantity());
-
-            if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
-                pBinding.tvPriceOld.setVisibility(View.VISIBLE);
-                pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
-                pBinding.tvPriceOld.setPaintFlags(pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
-            } else {
+        // Prefer return line-items (partial missing/defective refund) over full order items.
+        List<Map<String, Object>> returnRows = order.getReturnItems();
+        if (returnRows != null && !returnRows.isEmpty()) {
+            for (Map<String, Object> row : returnRows) {
+                if (row == null) continue;
+                ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
+                        getLayoutInflater(), binding.lnItemsContainer, false);
+                Object name = row.get("name");
+                Object variant = row.get("variantLabel");
+                Object priceObj = row.get("price");
+                Object qtyObj = row.get("quantity");
+                Object imagePathObj = row.get("imageUrl");
+                Object productIdObj = row.get("productId");
+                double price = priceObj instanceof Number ? ((Number) priceObj).doubleValue() : 0;
+                int qty = qtyObj instanceof Number ? ((Number) qtyObj).intValue() : 0;
+                String productId = productIdObj != null ? String.valueOf(productIdObj) : "";
+                pBinding.tvProductName.setText(name != null ? String.valueOf(name) : "");
+                pBinding.tvVariant.setText(variant != null ? String.valueOf(variant) : "");
+                pBinding.tvPrice.setText(df.format(price));
+                pBinding.tvQuantity.setText("x" + qty);
                 pBinding.tvPriceOld.setVisibility(View.GONE);
+                String imagePath = imagePathObj != null ? String.valueOf(imagePathObj) : "";
+                bindReturnItemImage(pBinding, imagePath);
+                View.OnClickListener toProductDetail = v -> {
+                    if (!productId.isEmpty()) {
+                        Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                        detailIntent.putExtra("productId", productId);
+                        startActivity(detailIntent);
+                    }
+                };
+                pBinding.imgProduct.setOnClickListener(toProductDetail);
+                pBinding.tvProductName.setOnClickListener(toProductDetail);
+                if (pBinding.btnAskProduct != null) {
+                    OrderItem chatItem = new OrderItem();
+                    chatItem.setProductId(productId);
+                    chatItem.setName(name != null ? String.valueOf(name) : "");
+                    chatItem.setVariantLabel(variant != null ? String.valueOf(variant) : "");
+                    pBinding.btnAskProduct.setOnClickListener(v ->
+                            OrderChatHelper.openProductChat(
+                                    this, order, binding.tvOrderCode.getText().toString(), chatItem));
+                }
+                binding.lnItemsContainer.addView(pBinding.getRoot());
             }
+        } else if (order.getItems() != null) {
+            for (OrderItem item : order.getItems()) {
+                ItemOrderProductBinding pBinding = ItemOrderProductBinding.inflate(
+                        getLayoutInflater(), binding.lnItemsContainer, false);
+                pBinding.tvProductName.setText(item.getName());
+                pBinding.tvVariant.setText(item.getVariantLabel());
+                pBinding.tvPrice.setText(df.format(item.getPrice()));
+                pBinding.tvQuantity.setText("x" + item.getQuantity());
 
-            String imagePath = item.getImageUrl();
-            if (imagePath != null && !imagePath.isEmpty()) {
-                String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
-                Object loadTarget;
-                if (cleanPath.startsWith("images/")) {
-                    loadTarget = "file:///android_asset/" + cleanPath;
-                } else if (imagePath.startsWith("http")) {
-                    loadTarget = imagePath;
+                if (item.getOriginalPrice() > item.getPrice() && item.getOriginalPrice() > 0) {
+                    pBinding.tvPriceOld.setVisibility(View.VISIBLE);
+                    pBinding.tvPriceOld.setText(df.format(item.getOriginalPrice()));
+                    pBinding.tvPriceOld.setPaintFlags(
+                            pBinding.tvPriceOld.getPaintFlags() | android.graphics.Paint.STRIKE_THRU_TEXT_FLAG);
                 } else {
-                    loadTarget = "file:///android_asset/images/products/" + cleanPath;
+                    pBinding.tvPriceOld.setVisibility(View.GONE);
                 }
-                Glide.with(this)
-                        .load(loadTarget)
-                        .placeholder(R.drawable.ic_launcher_background)
-                        .error(R.drawable.ic_launcher_background)
-                        .into(pBinding.imgProduct);
-            } else {
-                pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
+
+                bindReturnItemImage(pBinding, item.getImageUrl() != null ? item.getImageUrl() : "");
+                if (pBinding.btnAskProduct != null) {
+                    pBinding.btnAskProduct.setOnClickListener(v ->
+                            OrderChatHelper.openProductChat(
+                                    this, order, binding.tvOrderCode.getText().toString(), item));
+                }
+                View.OnClickListener toProductDetail = v -> {
+                    if (item.getProductId() != null) {
+                        Intent detailIntent = new Intent(this, ProductDetailActivity.class);
+                        detailIntent.putExtra("productId", item.getProductId());
+                        startActivity(detailIntent);
+                    }
+                };
+                pBinding.imgProduct.setOnClickListener(toProductDetail);
+                pBinding.tvProductName.setOnClickListener(toProductDetail);
+                binding.lnItemsContainer.addView(pBinding.getRoot());
             }
+        }
+    }
 
-            pBinding.btnAskProduct.setOnClickListener(v ->
-                    OrderChatHelper.openProductChat(
-                            this, order, binding.tvOrderCode.getText().toString(), item));
-
-            binding.lnItemsContainer.addView(pBinding.getRoot());
-
-            View.OnClickListener toProductDetail = v -> {
-                if (item.getProductId() != null) {
-                    Intent detailIntent = new Intent(this, ProductDetailActivity.class);
-                    detailIntent.putExtra("productId", item.getProductId());
-                    startActivity(detailIntent);
-                }
-            };
-            pBinding.imgProduct.setOnClickListener(toProductDetail);
-            pBinding.tvProductName.setOnClickListener(toProductDetail);
+    private void bindReturnItemImage(@NonNull ItemOrderProductBinding pBinding, @NonNull String imagePath) {
+        if (!imagePath.isEmpty()) {
+            String cleanPath = imagePath.startsWith("/") ? imagePath.substring(1) : imagePath;
+            Object loadTarget;
+            if (cleanPath.startsWith("images/")) {
+                loadTarget = "file:///android_asset/" + cleanPath;
+            } else if (imagePath.startsWith("http") || imagePath.startsWith("data:")) {
+                loadTarget = imagePath;
+            } else {
+                loadTarget = "file:///android_asset/images/products/" + cleanPath;
+            }
+            Glide.with(this)
+                    .load(loadTarget)
+                    .placeholder(R.drawable.ic_launcher_background)
+                    .error(R.drawable.ic_launcher_background)
+                    .into(pBinding.imgProduct);
+        } else {
+            pBinding.imgProduct.setImageResource(R.drawable.ic_launcher_background);
         }
     }
 

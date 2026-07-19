@@ -12,6 +12,7 @@ public enum NotificationType {
     ORDER_RETURN_APPROVED,
     ORDER_RETURN_REJECTED,
     ORDER_UPDATE,
+    CHAT_STAFF_REPLY,
     PROMO,
     PAYMENT,
     WISHLIST_SALE,

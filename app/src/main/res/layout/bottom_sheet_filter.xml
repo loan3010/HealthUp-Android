@@ -208,6 +208,11 @@
                 android:valueTo="1000000"
                 android:stepSize="5000"
                 app:thumbColor="@color/primary_green"
+                app:thumbWidth="20dp"
+                app:thumbHeight="20dp"
+                app:thumbElevation="2dp"
+                app:thumbTrackGapSize="0dp"
+                app:trackStopIndicatorSize="0dp"
                 app:trackColorActive="@color/primary_green"
                 app:trackColorInactive="@color/light_green"
                 app:values="@array/initial_slider_values" />

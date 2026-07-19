@@ -240,6 +240,9 @@ public class LinkGooglePasswordActivity extends BaseAppCompatActivity {
             onDone.run();
             return;
         }
+        // Also drop the orphan from local account switcher (otherwise the same email
+        // appears as multiple cards under different Auth UIDs).
+        com.example.healthup.account.SavedAccountStore.remove(this, orphanUid);
         firestore.collection("users").document(orphanUid).delete()
                 .addOnCompleteListener(task -> onDone.run());
     }

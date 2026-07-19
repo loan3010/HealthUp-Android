@@ -220,34 +220,40 @@
                     android:padding="12dp"
                     android:background="@drawable/bg_shipping_selected">
 
-                    <TextView
-                        android:id="@+id/tvShippingStandardTitle"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:text="Giao tiêu chuẩn"
-                        android:textColor="@color/text_dark"
-                        android:textSize="14sp" />
-
+                    <!-- Title + price on one row so discounted price never overlaps date text -->
                     <RelativeLayout
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="4dp">
+                        android:layout_height="wrap_content">
                         <TextView
-                            android:id="@+id/tvShippingStandardInfo"
+                            android:id="@+id/tvShippingStandardTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="Đảm bảo nhận hàng từ ..."
-                            android:textColor="@color/text_gray"
-                            android:textSize="12sp" />
+                            android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@id/tvShippingStandardPrice"
+                            android:layout_marginEnd="8dp"
+                            android:text="Giao tiêu chuẩn"
+                            android:textColor="@color/text_dark"
+                            android:textSize="14sp" />
                         <TextView
                             android:id="@+id/tvShippingStandardPrice"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
+                            android:gravity="end"
+                            android:maxLines="2"
                             android:text="₫ 21.000"
                             android:textColor="@color/text_dark"
                             android:textSize="14sp" />
                     </RelativeLayout>
+
+                    <TextView
+                        android:id="@+id/tvShippingStandardInfo"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="Đảm bảo nhận hàng từ ..."
+                        android:textColor="@color/text_gray"
+                        android:textSize="12sp" />
                 </LinearLayout>
 
                 <LinearLayout
@@ -265,6 +271,9 @@
                             android:id="@+id/tvShippingFastTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:layout_alignParentStart="true"
+                            android:layout_toStartOf="@id/tvShippingFastPrice"
+                            android:layout_marginEnd="8dp"
                             android:text="Giao nhanh"
                             android:textColor="@color/text_dark"
                             android:textStyle="bold"
@@ -274,13 +283,15 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_alignParentEnd="true"
+                            android:gravity="end"
+                            android:maxLines="2"
                             android:text="₫ 45.000"
                             android:textColor="@color/text_dark"
                             android:textSize="14sp" />
                     </RelativeLayout>
                     <TextView
                         android:id="@+id/tvShippingFastInfo"
-                        android:layout_width="wrap_content"
+                        android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="4dp"
                         android:text="Nhận hàng trong vòng 2 giờ"

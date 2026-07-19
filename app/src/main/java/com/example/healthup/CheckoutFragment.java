@@ -400,7 +400,7 @@ public class CheckoutFragment extends Fragment {
         calendar.add(java.util.Calendar.DAY_OF_YEAR, 5);
         String end = sdf.format(calendar.getTime());
         
-        tvShippingStandardInfo.setText("Đảm bảo nhận hàng từ " + start + " -\n" + end);
+        tvShippingStandardInfo.setText("Đảm bảo nhận hàng từ " + start + " - " + end);
     }
 
     private void setupListeners() {

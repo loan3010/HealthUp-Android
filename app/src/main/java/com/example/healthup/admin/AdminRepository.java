@@ -549,6 +549,12 @@ public class AdminRepository {
                 List<Map<String, Object>> returnItems = (List<Map<String, Object>>) returnItemsRaw;
                 order.setReturnItems(returnItems);
             }
+            Double refundAmount = doc.getDouble("refundAmount");
+            if (refundAmount != null && refundAmount > 0) {
+                order.setRefundAmount(refundAmount);
+            } else if (order.getReturnItems() != null && !order.getReturnItems().isEmpty()) {
+                order.setRefundAmount(order.sumReturnItemsAmount());
+            }
             Boolean stockDeducted = doc.getBoolean("stockDeducted");
             if (stockDeducted != null) {
                 order.setStockDeducted(stockDeducted);
@@ -1161,6 +1167,15 @@ public class AdminRepository {
         batch.set(db.collection("orders").document(orderId).collection("history").document(), history);
     }
 
+    /**
+     * Notify the buyer about an admin-driven order change.
+     *
+     * <p>Note: this intentionally does NOT write to {@code admin_notifications}. The
+     * admin inbox is reserved for buyer-initiated events (new order, cancel, delivered,
+     * return request). Admin-triggered actions don't need to notify the admin who just
+     * performed them. {@code adminBody} is kept in the signature for callers/history but
+     * is no longer pushed to the admin inbox.
+     */
     private void notifyBuyerAndAdmin(@NonNull WriteBatch batch,
                                      @NonNull Order order,
                                      @NonNull String type,
@@ -1168,42 +1183,26 @@ public class AdminRepository {
                                      @NonNull String buyerBody,
                                      @NonNull String adminBody) {
         String buyerId = order.getUserId();
+        if (TextUtils.isEmpty(buyerId)) {
+            return;
+        }
         String code = displayCode(order);
         boolean isReturn = type.toUpperCase(Locale.US).contains("RETURN");
-        if (!TextUtils.isEmpty(buyerId)) {
-            Map<String, Object> buyerNotif = new HashMap<>();
-            buyerNotif.put("type", type);
-            buyerNotif.put("title", buyerTitle);
-            buyerNotif.put("body", buyerBody);
-            buyerNotif.put("message", buyerBody);
-            buyerNotif.put("refId", order.getId());
-            buyerNotif.put("orderId", order.getId());
-            if (isReturn) {
-                buyerNotif.put("returnId", order.getId());
-                buyerNotif.put("returnRequestId", order.getId());
-            }
-            buyerNotif.put("orderCode", code);
-            buyerNotif.put("read", false);
-            buyerNotif.put("createdAt", Timestamp.now());
-            batch.set(db.collection("users").document(buyerId).collection("notifications").document(), buyerNotif);
-        }
-
-        Map<String, Object> adminNotif = new HashMap<>();
-        adminNotif.put("type", type);
-        adminNotif.put("title", buyerTitle);
-        adminNotif.put("body", adminBody);
-        adminNotif.put("message", adminBody);
-        adminNotif.put("orderId", order.getId());
-        adminNotif.put("refId", order.getId());
+        Map<String, Object> buyerNotif = new HashMap<>();
+        buyerNotif.put("type", type);
+        buyerNotif.put("title", buyerTitle);
+        buyerNotif.put("body", buyerBody);
+        buyerNotif.put("message", buyerBody);
+        buyerNotif.put("refId", order.getId());
+        buyerNotif.put("orderId", order.getId());
         if (isReturn) {
-            adminNotif.put("returnId", order.getId());
-            adminNotif.put("returnRequestId", order.getId());
+            buyerNotif.put("returnId", order.getId());
+            buyerNotif.put("returnRequestId", order.getId());
         }
-        adminNotif.put("orderCode", code);
-        adminNotif.put("buyerId", buyerId != null ? buyerId : "");
-        adminNotif.put("read", false);
-        adminNotif.put("createdAt", Timestamp.now());
-        batch.set(db.collection("admin_notifications").document(), adminNotif);
+        buyerNotif.put("orderCode", code);
+        buyerNotif.put("read", false);
+        buyerNotif.put("createdAt", Timestamp.now());
+        batch.set(db.collection("users").document(buyerId).collection("notifications").document(), buyerNotif);
     }
 
     @NonNull

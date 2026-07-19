@@ -118,6 +118,22 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         refreshPagesAndSummary();
     }
 
+    /** Exit dashboard low-stock focus while staying on Đang hoạt động. */
+    private void clearLowStockModeIfNeeded() {
+        if (!lowStockMode) {
+            return;
+        }
+        lowStockMode = false;
+        productFilter = FILTER_ACTIVE;
+        if (viewPager != null) {
+            viewPager.setCurrentItem(indexForFilter(FILTER_ACTIVE), false);
+        }
+        refreshPagesAndSummary();
+        if (getContext() != null) {
+            Toast.makeText(requireContext(), R.string.admin_products_low_stock_cleared, Toast.LENGTH_SHORT).show();
+        }
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
@@ -200,6 +216,26 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
         tabMediator = new TabLayoutMediator(tabFilters, viewPager, (tab, position) ->
                 tab.setText(baseLabelForFilter(FILTERS.get(position))));
         tabMediator.attach();
+
+        // Dashboard "Sắp hết hàng" lands on Đang hoạt động + lowStockMode.
+        // Tap the same tab again to clear and show all active products.
+        tabFilters.addOnTabSelectedListener(new TabLayout.OnTabSelectedListener() {
+            @Override
+            public void onTabSelected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabUnselected(TabLayout.Tab tab) {
+            }
+
+            @Override
+            public void onTabReselected(TabLayout.Tab tab) {
+                clearLowStockModeIfNeeded();
+            }
+        });
+        if (tvResultSummary != null) {
+            tvResultSummary.setOnClickListener(v -> clearLowStockModeIfNeeded());
+        }
 
         fab.setOnClickListener(v -> openEditScreen(null));
         fab.setOnLongClickListener(v -> {
@@ -323,8 +359,13 @@ public class AdminProductsFragment extends Fragment implements AdminProductAdapt
                 Math.min(viewPager != null ? viewPager.getCurrentItem() : 0, FILTERS.size() - 1))));
         if (tvResultSummary != null) {
             String summaryLabel = buildSummaryLabel(filterLabelFor(productFilter));
-            tvResultSummary.setText(getString(R.string.admin_products_result_summary,
-                    current.size(), summaryLabel));
+            if (lowStockMode) {
+                tvResultSummary.setText(getString(R.string.admin_products_low_stock_summary,
+                        current.size(), summaryLabel));
+            } else {
+                tvResultSummary.setText(getString(R.string.admin_products_result_summary,
+                        current.size(), summaryLabel));
+            }
         }
         if (tabFilters == null) return;
         Map<String, Integer> counts = buildFilterCounts(query);

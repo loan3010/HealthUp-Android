@@ -44,7 +44,9 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
     private MaterialToolbar toolbar;
     private BottomNavigationView bottomNav;
     private TextView tvNotifBadge;
+    private TextView tvChatBadge;
     private ListenerRegistration notifBadgeListener;
+    private ListenerRegistration chatBadgeListener;
     private View rootLayout;
     private boolean isKeyboardShowing;
 
@@ -287,6 +289,14 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
                     startActivity(new Intent(this, AdminNotificationsActivity.class)));
             updateNotifBadgeUi(0);
         }
+        MenuItem chatItem = menu.findItem(R.id.action_admin_chat);
+        if (chatItem != null && chatItem.getActionView() != null) {
+            View actionView = chatItem.getActionView();
+            tvChatBadge = actionView.findViewById(R.id.tvAdminChatBadge);
+            actionView.setOnClickListener(v ->
+                    startActivity(new Intent(this, SellerChatListActivity.class)));
+            updateChatBadgeUi(0);
+        }
         return true;
     }
 
@@ -308,6 +318,7 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
     protected void onStart() {
         super.onStart();
         listenUnreadNotifications();
+        listenUnreadChats();
     }
 
     @Override
@@ -315,6 +326,10 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
         if (notifBadgeListener != null) {
             notifBadgeListener.remove();
             notifBadgeListener = null;
+        }
+        if (chatBadgeListener != null) {
+            chatBadgeListener.remove();
+            chatBadgeListener = null;
         }
         super.onStop();
     }
@@ -329,13 +344,37 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
                 .addSnapshotListener((snap, error) -> {
                     if (error != null || snap == null) return;
                     int unread = 0;
-                    for (com.google.firebase.firestore.DocumentSnapshot doc : snap.getDocuments()) {
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
                         Boolean read = doc.getBoolean("read");
                         if (read == null || !read) {
                             unread++;
                         }
                     }
                     updateNotifBadgeUi(unread);
+                });
+    }
+
+    private void listenUnreadChats() {
+        if (chatBadgeListener != null) {
+            chatBadgeListener.remove();
+            chatBadgeListener = null;
+        }
+        // Count unread on client to avoid requiring a composite index.
+        chatBadgeListener = FirebaseFirestore.getInstance()
+                .collection("conversations")
+                .whereEqualTo("sessionBucket", "active")
+                .addSnapshotListener((snap, error) -> {
+                    if (error != null || snap == null) {
+                        updateChatBadgeUi(0);
+                        return;
+                    }
+                    int unread = 0;
+                    for (DocumentSnapshot doc : snap.getDocuments()) {
+                        if (Boolean.TRUE.equals(doc.getBoolean("staffUnread"))) {
+                            unread++;
+                        }
+                    }
+                    updateChatBadgeUi(unread);
                 });
     }
 
@@ -347,6 +386,16 @@ public class AdminActivity extends BaseAppCompatActivity implements AdminNavigat
         }
         tvNotifBadge.setVisibility(View.VISIBLE);
         tvNotifBadge.setText(count > 99 ? "99+" : String.valueOf(count));
+    }
+
+    private void updateChatBadgeUi(int count) {
+        if (tvChatBadge == null) return;
+        if (count <= 0) {
+            tvChatBadge.setVisibility(View.GONE);
+            return;
+        }
+        tvChatBadge.setVisibility(View.VISIBLE);
+        tvChatBadge.setText(count > 99 ? "99+" : String.valueOf(count));
     }
 
     @Override
